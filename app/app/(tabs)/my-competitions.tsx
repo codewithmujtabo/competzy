@@ -1,4 +1,16 @@
-import { Brand, CategoryAccent, CategoryBg, CategoryEmoji } from "@/constants/theme";
+import { Button, Card, EmptyState, Pill } from "@/components/ui";
+import {
+  Brand,
+  CategoryAccent,
+  CategoryBg,
+  CategoryEmoji,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
 import { useUser, type Registration } from "@/context/AuthContext";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -15,64 +27,26 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as favoritesService from "@/services/favorites.service";
 import type { Favorite } from "@/services/favorites.service";
 
-const TABS = ["Saved", "Applications", "Joined"] as const;
-type TabType = (typeof TABS)[number];
+const TABS = [
+  { key: "Saved", label: "Saved", emoji: "💙" },
+  { key: "Applications", label: "Applications", emoji: "📝" },
+  { key: "Joined", label: "Joined", emoji: "🏅" },
+] as const;
+type TabKey = (typeof TABS)[number]["key"];
 
-const STATUS_CFG: Record<string, { label: string; bg: string; color: string }> = {
-  pending_payment: { label: "Payment Required", bg: "#DBEAFE", color: "#1D4ED8" },
-  pending_review:  { label: "Under Review",     bg: "#FEF3C7", color: "#92400E" },
-  approved:        { label: "Approved",         bg: "#D1FAE5", color: "#065F46" },
-  rejected:        { label: "Rejected",         bg: "#FEE2E2", color: "#B91C1C" },
-  paid:            { label: "Approved",         bg: "#D1FAE5", color: "#065F46" },
-  completed:       { label: "Completed",        bg: "#E0E7FF", color: "#4338CA" },
-  // legacy statuses
-  pending_approval: { label: "Under Review",   bg: "#FEF3C7", color: "#92400E" },
-  registered:       { label: "Payment Required", bg: "#DBEAFE", color: "#1D4ED8" },
+const STATUS_LABEL: Record<string, { label: string; tone: any }> = {
+  pending_payment: { label: "Payment Required", tone: "info" },
+  pending_review:  { label: "Awaiting Review", tone: "info" },
+  approved:        { label: "Approved",     tone: "success" },
+  rejected:        { label: "Rejected",       tone: "danger" },
+  paid:            { label: "Approved",     tone: "success" },
+  completed:       { label: "Completed",       tone: "brand" },
+  pending_approval:{ label: "Under Review",      tone: "warning" },
+  registered:      { label: "Payment Required", tone: "info" },
 };
 
 function formatCurrency(amount: number) {
-  return amount === 0 ? "Free" : `Rp ${amount.toLocaleString("id-ID")}`;
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const config = STATUS_CFG[status] || {
-    label: status,
-    bg: "#E2E8F0",
-    color: "#475569",
-  };
-
-  return (
-    <View style={[styles.statusBadge, { backgroundColor: config.bg }]}>
-      <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
-    </View>
-  );
-}
-
-function EmptyState({
-  emoji,
-  title,
-  body,
-  actionLabel,
-  onAction,
-}: {
-  emoji: string;
-  title: string;
-  body: string;
-  actionLabel?: string;
-  onAction?: () => void;
-}) {
-  return (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyEmoji}>{emoji}</Text>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyBody}>{body}</Text>
-      {actionLabel && onAction ? (
-        <Pressable style={styles.primaryButton} onPress={onAction}>
-          <Text style={styles.primaryButtonText}>{actionLabel}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
+  return amount === 0 ? "FREE" : `Rp ${amount.toLocaleString("id-ID")}`;
 }
 
 export default function MyCompetitionsScreen() {
@@ -80,13 +54,13 @@ export default function MyCompetitionsScreen() {
   const insets = useSafeAreaInsets();
   const { registrations, registerCompetition, refreshRegistrations } = useUser();
 
-  const [activeTab, setActiveTab] = useState<TabType>("Applications");
+  const [activeTab, setActiveTab] = useState<TabKey>("Applications");
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [busyCompId, setBusyCompId] = useState<string | null>(null);
-  const refreshRegistrationsRef = useRef(refreshRegistrations);
-  const loadFavoritesRef = useRef<() => Promise<void>>(async () => {});
+  const refreshRef = useRef(refreshRegistrations);
+  const loadFavRef = useRef<() => Promise<void>>(async () => {});
 
   const loadFavorites = useCallback(async () => {
     setLoadingFavorites(true);
@@ -101,48 +75,41 @@ export default function MyCompetitionsScreen() {
   }, []);
 
   useEffect(() => {
-    refreshRegistrationsRef.current = refreshRegistrations;
+    refreshRef.current = refreshRegistrations;
   }, [refreshRegistrations]);
-
   useEffect(() => {
-    loadFavoritesRef.current = loadFavorites;
+    loadFavRef.current = loadFavorites;
   }, [loadFavorites]);
 
   useFocusEffect(
     useCallback(() => {
-      void refreshRegistrationsRef.current();
-      void loadFavoritesRef.current();
+      void refreshRef.current();
+      void loadFavRef.current();
     }, [])
   );
 
-  const registeredCompetitionIds = useMemo(
-    () => new Set(registrations.map((registration) => registration.compId)),
+  const registeredIds = useMemo(
+    () => new Set(registrations.map((r) => r.compId)),
     [registrations]
   );
 
   const savedItems = useMemo(
-    () => favorites.filter((favorite) => !registeredCompetitionIds.has(favorite.id)),
-    [favorites, registeredCompetitionIds]
+    () => favorites.filter((f) => !registeredIds.has(f.id)),
+    [favorites, registeredIds]
   );
-
   const applications = useMemo(
     () =>
-      registrations.filter((registration) =>
-        ["pending_payment", "pending_review", "rejected",
-         "pending_approval", "registered"].includes(registration.status)
+      registrations.filter((r) =>
+        ["pending_payment", "pending_review", "rejected", "pending_approval", "registered"].includes(r.status)
       ),
     [registrations]
   );
-
   const joinedItems = useMemo(
-    () =>
-      registrations.filter((registration) =>
-        ["approved", "paid", "completed"].includes(registration.status)
-      ),
+    () => registrations.filter((r) => ["approved", "paid", "completed"].includes(r.status)),
     [registrations]
   );
 
-  const tabCounts = {
+  const tabCounts: Record<TabKey, number> = {
     Saved: savedItems.length,
     Applications: applications.length,
     Joined: joinedItems.length,
@@ -158,9 +125,9 @@ export default function MyCompetitionsScreen() {
     try {
       setBusyCompId(favorite.id);
       await favoritesService.remove(favorite.id);
-      setFavorites((current) => current.filter((item) => item.id !== favorite.id));
+      setFavorites((c) => c.filter((i) => i.id !== favorite.id));
     } catch {
-      Alert.alert("Error", "Failed to remove this competition from saved list.");
+      Alert.alert("Error", "Failed to remove from saved list.");
     } finally {
       setBusyCompId(null);
     }
@@ -169,28 +136,25 @@ export default function MyCompetitionsScreen() {
   const handleApplyFromSaved = async (favorite: Favorite) => {
     try {
       setBusyCompId(favorite.id);
-      const registration = await registerCompetition(favorite.id, {
+      const reg = await registerCompetition(favorite.id, {
         competitionName: favorite.name,
         fee: favorite.fee,
         category: favorite.category,
       });
       await favoritesService.remove(favorite.id).catch(() => undefined);
-      setFavorites((current) => current.filter((item) => item.id !== favorite.id));
+      setFavorites((c) => c.filter((i) => i.id !== favorite.id));
 
-      if (favorite.fee > 0 && registration.status === "pending_payment") {
-        router.push({
-          pathname: "/(payment)/pay",
-          params: { registrationId: registration.id },
-        });
+      if (favorite.fee > 0 && reg.status === "pending_payment") {
+        router.push({ pathname: "/(payment)/pay", params: { registrationId: reg.id } });
       } else {
         setActiveTab("Applications");
         Alert.alert(
           "Registration Submitted",
-          "Your application is under admin review. You'll be notified once it's approved."
+          "Your registration is under admin review. You'll be notified when it's approved."
         );
       }
     } catch (err: any) {
-      Alert.alert("Application Failed", err.message || "Unable to apply for this competition.");
+      Alert.alert("Registration Failed", err.message || "Unable to register for this competition.");
     } finally {
       setBusyCompId(null);
     }
@@ -198,164 +162,119 @@ export default function MyCompetitionsScreen() {
 
   const renderSavedCard = ({ item }: { item: Favorite }) => {
     const accent = CategoryAccent[item.category ?? ""] ?? Brand.primary;
-    const bg = CategoryBg[item.category ?? ""] ?? "#EEF2FF";
+    const bg = CategoryBg[item.category ?? ""] ?? Brand.primarySoft;
     const emoji = CategoryEmoji[item.category ?? ""] ?? "🏆";
-
     return (
-      <View style={[styles.card, { borderLeftColor: accent }]}>
-        <View style={styles.cardHeader}>
-          <View style={[styles.iconWrap, { backgroundColor: bg }]}>
-            <Text style={styles.iconEmoji}>{emoji}</Text>
-          </View>
-          <View style={styles.cardMain}>
-            <Pressable onPress={() => router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.id } })}>
-              <Text style={[styles.cardTitle, {}]}>{item.name}</Text>
-            </Pressable>
-            <Text style={styles.cardMeta}>
-              {item.organizer_name} • {item.category}
-            </Text>
-            <Text style={styles.cardPrice}>{formatCurrency(item.fee)}</Text>
-          </View>
-        </View>
-
+      <Card accentColor={accent}>
+        <CardHeader emoji={emoji} bg={bg} title={item.name} subtitle={`${item.organizer_name} • ${item.category}`} onTitlePress={() => router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.id } })} />
+        <Text style={[Type.title, { marginTop: Spacing.sm }]}>{formatCurrency(item.fee)}</Text>
         <View style={styles.actionRow}>
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => handleRemoveFavorite(item)}
-            disabled={busyCompId === item.id}
-          >
-            <Text style={styles.secondaryButtonText}>
-              {busyCompId === item.id ? "Removing..." : "Remove"}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={styles.primaryButtonInline}
-            onPress={() => handleApplyFromSaved(item)}
-            disabled={busyCompId === item.id}
-          >
-            <Text style={styles.primaryButtonText}>
-              {busyCompId === item.id ? "Applying..." : "Apply"}
-            </Text>
-          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Button
+              label={busyCompId === item.id ? "Menghapus..." : "Remove"}
+              variant="ghost"
+              fullWidth
+              onPress={() => handleRemoveFavorite(item)}
+              disabled={busyCompId === item.id}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button
+              label={busyCompId === item.id ? "Applying..." : "Apply"}
+              fullWidth
+              onPress={() => handleApplyFromSaved(item)}
+              loading={busyCompId === item.id}
+            />
+          </View>
         </View>
-      </View>
+      </Card>
     );
   };
 
   const renderApplicationCard = ({ item }: { item: Registration }) => {
-    const category = item.meta?.category as string | undefined;
-    const accent = CategoryAccent[category ?? ""] ?? Brand.primary;
-    const bg = CategoryBg[category ?? ""] ?? "#EEF2FF";
-    const emoji = CategoryEmoji[category ?? ""] ?? "📝";
-
+    const cat = item.meta?.category as string | undefined;
+    const accent = CategoryAccent[cat ?? ""] ?? Brand.primary;
+    const bg = CategoryBg[cat ?? ""] ?? Brand.primarySoft;
+    const emoji = CategoryEmoji[cat ?? ""] ?? "📝";
+    const status = STATUS_LABEL[item.status];
     return (
-      <View style={[styles.card, { borderLeftColor: accent }]}>
-        <View style={styles.cardHeader}>
-          <View style={[styles.iconWrap, { backgroundColor: bg }]}>
-            <Text style={styles.iconEmoji}>{emoji}</Text>
-          </View>
-          <View style={styles.cardMain}>
-            <Pressable onPress={() => router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.compId } })}>
-              <Text style={[styles.cardTitle, {}]}>{item.competitionName}</Text>
-            </Pressable>
-            <Text style={styles.cardMeta}>{formatCurrency(item.fee)}</Text>
-            <StatusBadge status={item.status} />
-            {item.registrationNumber ? (
-              <View style={styles.regNumberBadge}>
-                <Text style={styles.regNumberText}>{item.registrationNumber}</Text>
-              </View>
-            ) : null}
-            {(item.status === "pending_payment" || item.status === "registered") ? (
-              <Text style={styles.helperText}>
-                Complete your payment to submit your application.
-              </Text>
-            ) : null}
-            {(item.status === "pending_review" || item.status === "pending_approval") ? (
-              <Text style={styles.helperText}>
-                Your application is under admin review. You'll be notified once approved.
-              </Text>
-            ) : null}
-            {item.status === "rejected" ? (
-              <Text style={styles.helperText}>
-                Your registration was not approved. Contact support for more details.
-              </Text>
-            ) : null}
-          </View>
+      <Card accentColor={accent}>
+        <CardHeader emoji={emoji} bg={bg} title={item.competitionName} subtitle={formatCurrency(item.fee)} onTitlePress={() => router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.compId } })} />
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm, marginTop: Spacing.md }}>
+          {status ? <Pill label={status.label} tone={status.tone} size="sm" /> : null}
+          {item.registrationNumber ? (
+            <Pill label={item.registrationNumber} tone="brand" size="sm" />
+          ) : null}
         </View>
-
+        {(item.status === "pending_payment" || item.status === "registered") ? (
+          <Text style={[Type.bodySm, { marginTop: Spacing.md }]}>
+            Completedkan pembayaran untuk mengirim pendaftaran.
+          </Text>
+        ) : null}
+        {item.status === "pending_review" ? (
+          <Text style={[Type.bodySm, { marginTop: Spacing.md }]}>
+            Payment received. Awaiting final admin review.
+          </Text>
+        ) : null}
+        {item.status === "pending_approval" ? (
+          <Text style={[Type.bodySm, { marginTop: Spacing.md }]}>
+            Your registration is under admin review. You will be notified.
+          </Text>
+        ) : null}
+        {item.status === "rejected" ? (
+          <Text style={[Type.bodySm, { marginTop: Spacing.md, color: Brand.error }]}>
+            Your registration was not approved. Contact support for details.
+          </Text>
+        ) : null}
         <View style={styles.actionRow}>
           {item.fee > 0 && (item.status === "pending_payment" || item.status === "registered") ? (
-            <Pressable
-              style={styles.primaryButtonInline}
+            <Button
+              label="Pay Now"
+              fullWidth
               onPress={() =>
-                router.push({
-                  pathname: "/(payment)/pay",
-                  params: { registrationId: item.id },
-                })
+                router.push({ pathname: "/(payment)/pay", params: { registrationId: item.id } })
               }
-            >
-              <Text style={styles.primaryButtonText}>Pay Now</Text>
-            </Pressable>
+            />
           ) : (
-            <Pressable
-              style={styles.secondaryButton}
+            <Button
+              label="View Competition"
+              variant="secondary"
+              fullWidth
               onPress={() =>
-                router.push({
-                  pathname: "/(tabs)/competitions/[id]",
-                  params: { id: item.compId },
-                })
+                router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.compId } })
               }
-            >
-              <Text style={styles.secondaryButtonText}>View Competition</Text>
-            </Pressable>
+            />
           )}
         </View>
-      </View>
+      </Card>
     );
   };
 
   const renderJoinedCard = ({ item }: { item: Registration }) => {
-    const category = item.meta?.category as string | undefined;
-    const accent = CategoryAccent[category ?? ""] ?? Brand.primary;
-    const bg = CategoryBg[category ?? ""] ?? "#EEF2FF";
-    const emoji = CategoryEmoji[category ?? ""] ?? "🏅";
-
+    const cat = item.meta?.category as string | undefined;
+    const accent = CategoryAccent[cat ?? ""] ?? Brand.success;
+    const bg = CategoryBg[cat ?? ""] ?? Brand.successSoft;
+    const emoji = CategoryEmoji[cat ?? ""] ?? "🏅";
     return (
-      <View style={[styles.card, { borderLeftColor: accent }]}>
-        <View style={styles.cardHeader}>
-          <View style={[styles.iconWrap, { backgroundColor: bg }]}>
-            <Text style={styles.iconEmoji}>{emoji}</Text>
-          </View>
-          <View style={styles.cardMain}>
-            <Pressable onPress={() => router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.compId } })}>
-              <Text style={[styles.cardTitle, {}]}>{item.competitionName}</Text>
-            </Pressable>
-            <Text style={styles.cardMeta}>{formatCurrency(item.fee)}</Text>
-            <StatusBadge status={item.status} />
-            {item.registrationNumber ? (
-              <View style={styles.regNumberBadge}>
-                <Text style={styles.regNumberText}>{item.registrationNumber}</Text>
-              </View>
-            ) : null}
-            <Text style={styles.helperText}>
-              View competition details, schedule, platform, venue, and participant instructions.
-            </Text>
-          </View>
+      <Card accentColor={accent}>
+        <CardHeader emoji={emoji} bg={bg} title={item.competitionName} subtitle={formatCurrency(item.fee)} onTitlePress={() => router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.compId } })} />
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm, marginTop: Spacing.md }}>
+          <Pill label="✓ Bergabung" tone="success" size="sm" />
+          {item.registrationNumber ? <Pill label={item.registrationNumber} tone="brand" size="sm" /> : null}
         </View>
-
-        <Pressable
-          style={styles.primaryButtonInline}
-          onPress={() =>
-            router.push({
-              pathname: "/(tabs)/my-registration-details",
-              params: { id: item.id },
-            })
-          }
-        >
-          <Text style={styles.primaryButtonText}>Details</Text>
-        </Pressable>
-      </View>
+        <Text style={[Type.bodySm, { marginTop: Spacing.md }]}>
+          View competition details, schedule, platform, venue, and participant instructions.
+        </Text>
+        <View style={styles.actionRow}>
+          <Button
+            label="View Details"
+            fullWidth
+            onPress={() =>
+              router.push({ pathname: "/(tabs)/my-registration-details", params: { id: item.id } })
+            }
+          />
+        </View>
+      </Card>
     );
   };
 
@@ -363,63 +282,75 @@ export default function MyCompetitionsScreen() {
     activeTab === "Saved" ? savedItems : activeTab === "Applications" ? applications : joinedItems;
 
   return (
-    <View
-      style={[
-        styles.container,
-        { paddingTop: insets.top + 16, paddingBottom: 24 },
-      ]}
-    >
-      <Text style={styles.title}>My Competitions</Text>
-      <Text style={styles.subtitle}>
-        Saved competitions, applications in review, and competitions you already joined.
-      </Text>
+    <View style={[styles.container, { paddingTop: insets.top + Spacing.lg }]}>
+      <View style={{ paddingHorizontal: Spacing.xl }}>
+        <Text style={Type.displayMd}>My Competitions</Text>
+        <Text style={[Type.body, { color: TextColor.secondary, marginTop: Spacing.xs }]}>
+          Saved competitions, active applications, and ones you've joined.
+        </Text>
 
-      <View style={styles.tabBar}>
-        {TABS.map((tab) => (
-          <Pressable
-            key={tab}
-            style={[styles.tabButton, activeTab === tab && styles.tabButtonActive]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text
-              style={[styles.tabText, activeTab === tab && styles.tabTextActive]}
-            >
-              {tab}
-            </Text>
-            {tabCounts[tab] > 0 ? (
-              <View style={styles.tabCount}>
-                <Text style={styles.tabCountText}>{tabCounts[tab]}</Text>
-              </View>
-            ) : null}
-          </Pressable>
-        ))}
+        <View style={styles.tabBar}>
+          {TABS.map((tab) => {
+            const active = activeTab === tab.key;
+            const count = tabCounts[tab.key];
+            return (
+              <Pressable
+                key={tab.key}
+                style={({ pressed }) => [
+                  styles.tabBtn,
+                  active && styles.tabBtnActive,
+                  pressed && { opacity: 0.85 },
+                ]}
+                onPress={() => setActiveTab(tab.key)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+              >
+                <Text style={{ fontSize: 14 }}>{tab.emoji}</Text>
+                <Text
+                  style={{
+                    ...Type.label,
+                    color: active ? Brand.primary : TextColor.secondary,
+                    fontSize: 13,
+                  }}
+                >
+                  {tab.label}
+                </Text>
+                {count > 0 ? (
+                  <View style={[styles.countDot, active && { backgroundColor: Brand.primary }]}>
+                    <Text style={[styles.countText, active && { color: "#FFFFFF" }]}>{count}</Text>
+                  </View>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       {activeTab === "Saved" && loadingFavorites ? (
         <EmptyState
           emoji="⏳"
-          title="Loading saved competitions"
-          body="Pull again in a moment if this takes too long."
+          title="Loading..."
+          message="Pull down to refresh if it takes too long."
         />
       ) : currentData.length === 0 ? (
         <EmptyState
-          emoji={activeTab === "Saved" ? "💙" : activeTab === "Applications" ? "🧾" : "🏁"}
+          emoji={activeTab === "Saved" ? "💙" : activeTab === "Applications" ? "📋" : "🏁"}
           title={
             activeTab === "Saved"
-              ? "No saved competitions"
+              ? "Nothing saved yet"
               : activeTab === "Applications"
               ? "No active applications"
               : "No joined competitions yet"
           }
-          body={
+          message={
             activeTab === "Saved"
-              ? "Save competitions from the detail page, then apply when you are ready."
+              ? "Save competitions from the detail page, then apply when ready."
               : activeTab === "Applications"
-              ? "Applications appear here after you apply and before admin approves them."
-              : "Once your application is approved, the details will appear here."
+              ? "Applications appear here after you apply and wait for approval."
+              : "Once your application is approved, details will appear here."
           }
-          actionLabel={activeTab === "Saved" ? "Browse Competitions" : undefined}
-          onAction={activeTab === "Saved" ? () => router.push("/(tabs)/competitions") : undefined}
+          ctaLabel={activeTab === "Saved" ? "Browse Competitions" : undefined}
+          onCta={activeTab === "Saved" ? () => router.push("/(tabs)/competitions") : undefined}
         />
       ) : (
         <FlatList
@@ -427,14 +358,8 @@ export default function MyCompetitionsScreen() {
           keyExtractor={(item: any) => item.favorite_id || item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
-          ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={Brand.primary}
-            />
-          }
+          ItemSeparatorComponent={renderSep}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Brand.primary} />}
           renderItem={
             activeTab === "Saved"
               ? (renderSavedCard as any)
@@ -448,211 +373,92 @@ export default function MyCompetitionsScreen() {
   );
 }
 
+function CardHeader({
+  emoji,
+  bg,
+  title,
+  subtitle,
+  onTitlePress,
+}: {
+  emoji: string;
+  bg: string;
+  title: string;
+  subtitle: string;
+  onTitlePress?: () => void;
+}) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+      <View style={[styles.emojiTile, { backgroundColor: bg }]}>
+        <Text style={{ fontSize: 24 }}>{emoji}</Text>
+      </View>
+      <View style={{ flex: 1, marginLeft: Spacing.md }}>
+        <Pressable onPress={onTitlePress} hitSlop={4}>
+          <Text style={Type.title} numberOfLines={2}>
+            {title}
+          </Text>
+        </Pressable>
+        <Text style={[Type.bodySm, { marginTop: 4 }]} numberOfLines={1}>
+          {subtitle}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const renderSep = () => <View style={{ height: Spacing.md }} />;
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-    paddingHorizontal: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  subtitle: {
-    marginTop: 6,
-    marginBottom: 20,
-    color: "#64748B",
-    lineHeight: 20,
-  },
+  container: { flex: 1, backgroundColor: Surface.background },
   tabBar: {
     flexDirection: "row",
-    backgroundColor: "#E2E8F0",
-    borderRadius: 18,
+    backgroundColor: Surface.cardAlt,
+    borderRadius: Radius.lg,
     padding: 4,
-    marginBottom: 18,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.lg,
     gap: 4,
   },
-  tabButton: {
+  tabBtn: {
     flex: 1,
-    minHeight: 46,
-    borderRadius: 14,
+    minHeight: 44,
+    borderRadius: Radius.md,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    gap: 6,
+    gap: Spacing.xs,
   },
-  tabButtonActive: {
-    backgroundColor: "#FFFFFF",
+  tabBtnActive: {
+    backgroundColor: Surface.card,
+    ...Shadow.sm,
   },
-  tabText: {
-    color: "#475569",
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  tabTextActive: {
-    color: Brand.primary,
-  },
-  tabCount: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: "#EEF2FF",
+  countDot: {
+    minWidth: 22,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Brand.primarySoft,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 5,
   },
-  tabCountText: {
+  countText: {
     color: Brand.primary,
     fontSize: 11,
     fontWeight: "800",
   },
   listContent: {
-    paddingBottom: 24,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing["3xl"],
   },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    borderLeftWidth: 4,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  iconWrap: {
+  emojiTile: {
     width: 52,
     height: 52,
-    borderRadius: 16,
+    borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
-  },
-  iconEmoji: {
-    fontSize: 26,
-  },
-  cardMain: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  cardMeta: {
-    marginTop: 4,
-    color: "#64748B",
-    fontSize: 13,
-  },
-  cardPrice: {
-    marginTop: 8,
-    color: "#111827",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-  helperText: {
-    marginTop: 10,
-    color: "#64748B",
-    lineHeight: 20,
-    fontSize: 13,
-  },
-  statusBadge: {
-    alignSelf: "flex-start",
-    marginTop: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  regNumberBadge: {
-    alignSelf: "flex-start",
-    marginTop: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    backgroundColor: "#EEF2FF",
-    borderRadius: 6,
-  },
-  regNumberText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#4338CA",
-    letterSpacing: 0.5,
   },
   actionRow: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-  },
-  primaryButtonInline: {
-    flex: 1,
-    backgroundColor: Brand.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryButton: {
-    marginTop: 18,
-    backgroundColor: Brand.primary,
-    borderRadius: 14,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
-    fontSize: 14,
-  },
-  secondaryButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-  },
-  secondaryButtonText: {
-    color: "#334155",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-  emptyState: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    paddingVertical: 52,
-    paddingHorizontal: 24,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderStyle: "dashed",
-  },
-  emptyEmoji: {
-    fontSize: 44,
-    marginBottom: 14,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  emptyBody: {
-    textAlign: "center",
-    color: "#64748B",
-    lineHeight: 22,
+    gap: Spacing.md,
+    marginTop: Spacing.lg,
   },
 });
