@@ -7,8 +7,8 @@ export default function SchoolPendingPage() {
   const router = useRouter();
   const { user, logout } = useSchool();
 
-  const status = (user as any)?.schoolVerificationStatus as 'pending_verification' | 'rejected' | undefined;
-  const reason = (user as any)?.schoolRejectionReason as string | undefined;
+  const status = user?.schoolVerificationStatus;
+  const reason = user?.schoolRejectionReason;
   const isRejected = status === 'rejected';
 
   return (

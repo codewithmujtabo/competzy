@@ -1,16 +1,38 @@
-import { Brand } from "@/constants/theme";
+import { Card, Pill } from "@/components/ui";
+import {
+  Brand,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
 import { useUser } from "@/context/AuthContext";
 import { router, useFocusEffect } from "expo-router";
 import React from "react";
 import {
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const ROLE_LABEL: Record<string, string> = {
+  student: "Student",
+  parent: "Parent",
+  teacher: "Teacher",
+  school_admin: "School Admin",
+};
+const ROLE_EMOJI: Record<string, string> = {
+  student: "🎒",
+  parent: "👨‍👩‍👧",
+  teacher: "📖",
+  school_admin: "🏫",
+};
 
 export default function ProfileScreen() {
   const { user, registrations, refreshRegistrations } = useUser();
@@ -25,178 +47,117 @@ export default function ProfileScreen() {
   const fullName = (user as any)?.fullName ?? (user as any)?.name ?? "—";
   const initial = fullName.charAt(0).toUpperCase();
   const photoUrl = (user as any)?.photoUrl || (user as any)?.avatarUrl;
+  const kid = (user as any)?.kid;
   const API_BASE = process.env.EXPO_PUBLIC_API_URL?.replace("/api", "") || "";
-
-  const roleLabel: Record<string, string> = {
-    student: "Student",
-    parent: "Parent",
-    teacher: "Teacher",
-    school_admin: "School Admin",
-  };
-  const roleMeta: Record<string, string> = {
-    student: "👨‍🎓",
-    parent: "👨‍👩‍👧",
-    teacher: "👨‍🏫",
-    school_admin: "👔",
-  };
   const role = (user as any)?.role ?? "student";
-  const roleDisplay = roleLabel[role] ?? role;
-  const roleIcon = roleMeta[role] ?? "👤";
 
-  // Only show registration stats for students
   const totalComps = role === "student" ? registrations.length : 0;
   const completed = role === "student" ? registrations.filter((r) => r.status === "completed").length : 0;
   const active = role === "student" ? registrations.filter((r) => r.status === "paid").length : 0;
 
   const menuItems = [
-    {
-      emoji: "👤",
-      label: "Edit Profile",
-      onPress: () => router.push("/(tabs)/profile/edit"),
-    },
+    { emoji: "👤", label: "Edit Profile", onPress: () => router.push("/(tabs)/profile/edit") },
     ...(role === "student"
       ? [
-          {
-            emoji: "📄",
-            label: "Document Vault",
-            onPress: () => router.push("/(tabs)/profile/document-vault"),
-          },
-          {
-            emoji: "🏆",
-            label: "Competition History",
-            onPress: () => router.push("/(tabs)/profile/history"),
-          },
-          {
-            emoji: "👨‍👩‍👧",
-            label: "Link Parent Account",
-            onPress: () => router.push("/(tabs)/profile/link-parent"),
-          },
+          { emoji: "📄", label: "Document Vault", onPress: () => router.push("/(tabs)/profile/document-vault") },
+          { emoji: "🏆", label: "Competition History", onPress: () => router.push("/(tabs)/profile/history") },
+          { emoji: "👨‍👩‍👧", label: "Link Parent Account", onPress: () => router.push("/(tabs)/profile/link-parent") },
         ]
       : []),
     ...(role === "school_admin"
       ? [
-          {
-            emoji: "📊",
-            label: "School Dashboard",
-            onPress: () => router.push("/school-dashboard"),
-          },
-          {
-            emoji: "📤",
-            label: "Bulk Registration",
-            onPress: () => router.push("/bulk-registration"),
-          },
+          { emoji: "📊", label: "School Dashboard", onPress: () => router.push("/school-dashboard") },
+          { emoji: "📤", label: "Bulk Registration", onPress: () => router.push("/bulk-registration") },
         ]
       : []),
-    {
-      emoji: "🔔",
-      label: "Notifications",
-      onPress: () => router.push("/(tabs)/notifications"),
-    },
-    {
-      emoji: "⚙️",
-      label: "Account Settings",
-      onPress: () => {}, // TODO: Implement in future sprint
-    },
-    {
-      emoji: "❓",
-      label: "Help & FAQ",
-      onPress: () => {}, // TODO: Implement in future sprint
-    },
+    { emoji: "🔔", label: "Notifications", onPress: () => router.push("/(tabs)/notifications") },
+    { emoji: "⚙️", label: "Account Settings", onPress: () => {} },
+    { emoji: "❓", label: "Help & FAQ", onPress: () => {} },
   ];
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{
-        paddingTop: insets.top + 16,
-        paddingBottom: 40,
-      }}
+      contentContainerStyle={{ paddingTop: insets.top + Spacing.lg, paddingBottom: Spacing["4xl"] }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Avatar card */}
-      <View style={styles.avatarCard}>
-        {/* Avatar with ring */}
+      {/* Hero card */}
+      <View style={styles.hero}>
+        <View style={styles.heroBlob} />
         <View style={styles.avatarRing}>
           <View style={styles.avatar}>
             {photoUrl ? (
-              <Image
-                source={{ uri: `${API_BASE}${photoUrl}` }}
-                style={styles.avatarImage}
-              />
+              <Image source={{ uri: `${API_BASE}${photoUrl}` }} style={styles.avatarImage} />
             ) : (
               <Text style={styles.avatarInitial}>{initial}</Text>
             )}
           </View>
         </View>
-
-        <Text style={styles.name}>{fullName}</Text>
-
+        <Text style={[Type.h1, { color: "#FFFFFF", marginTop: Spacing.lg, textAlign: "center" }]}>
+          {fullName}
+        </Text>
         <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>
-            {roleIcon} {roleDisplay}
-          </Text>
+          <Text style={{ fontSize: 14, marginRight: 6 }}>{ROLE_EMOJI[role] ?? "👤"}</Text>
+          <Text style={{ ...Type.label, color: "#FFFFFF", fontSize: 13 }}>{ROLE_LABEL[role] ?? role}</Text>
         </View>
-
-        {((user as any)?.city || (user as any)?.school) && (
-          <Text style={styles.meta}>
-            {[(user as any)?.school, (user as any)?.city]
-              .filter(Boolean)
-              .join(" · ")}
+        {kid ? (
+          <Text style={[Type.caption, { color: "rgba(255,255,255,0.85)", marginTop: Spacing.sm, fontVariant: ["tabular-nums"] }]}>
+            ID: {kid}
           </Text>
-        )}
+        ) : null}
+        {((user as any)?.city || (user as any)?.school) ? (
+          <Text style={[Type.bodySm, { color: "rgba(255,255,255,0.85)", marginTop: Spacing.xs, textAlign: "center" }]}>
+            {[(user as any)?.school, (user as any)?.city].filter(Boolean).join(" · ")}
+          </Text>
+        ) : null}
       </View>
 
-      {/* Live stats row - Students only */}
-      {role === "student" && (
+      {/* Stats row — students only */}
+      {role === "student" ? (
         <View style={styles.statsRow}>
           {[
-            { label: "Total", value: String(totalComps) },
-            { label: "Active", value: String(active) },
-            { label: "Completed", value: String(completed) },
+            { label: "Total", value: totalComps },
+            { label: "Active", value: active },
+            { label: "Completed", value: completed },
           ].map((s, i) => (
-            <View
-              key={s.label}
-            style={[
-              styles.statItem,
-              i < 2 && styles.statItemBorder,
-            ]}
-          >
-            <Text style={styles.statValue}>{s.value}</Text>
-            <Text style={styles.statLabel}>{s.label}</Text>
-          </View>
-        ))}
+            <View key={s.label} style={[styles.statItem, i < 2 && styles.statBorder]}>
+              <Text style={[Type.h1, { color: Brand.primary }]}>{s.value}</Text>
+              <Text style={[Type.caption, { marginTop: 2 }]}>{s.label}</Text>
+            </View>
+          ))}
         </View>
-      )}
+      ) : null}
 
       {/* Menu */}
-      <View style={styles.menuCard}>
+      <Card padding={0} style={styles.menuCard}>
         {menuItems.map((item, i) => (
-          <TouchableOpacity
+          <Pressable
             key={item.label}
-            style={[
+            onPress={item.onPress}
+            android_ripple={{ color: "rgba(99,102,241,0.06)" }}
+            style={({ pressed }) => [
               styles.menuItem,
               i < menuItems.length - 1 && styles.menuItemBorder,
+              pressed && { backgroundColor: Brand.primarySoft },
             ]}
-            onPress={item.onPress}
-            activeOpacity={0.7}
           >
-            <View style={styles.menuIconWrap}>
-              <Text style={styles.menuEmoji}>{item.emoji}</Text>
+            <View style={styles.menuIcon}>
+              <Text style={{ fontSize: 18 }}>{item.emoji}</Text>
             </View>
-            <Text style={styles.menuLabel}>{item.label}</Text>
-            <Text style={styles.menuChevron}>›</Text>
-          </TouchableOpacity>
+            <Text style={[Type.body, { flex: 1, fontWeight: "600" }]}>{item.label}</Text>
+            <Text style={{ fontSize: 22, color: TextColor.tertiary, fontWeight: "300" }}>›</Text>
+          </Pressable>
         ))}
-      </View>
+      </Card>
 
       {/* Sign out */}
-      <TouchableOpacity
-        style={styles.signOutBtn}
+      <Pressable
         onPress={() => router.replace("/(auth)/login" as any)}
-        activeOpacity={0.8}
+        style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.85 }]}
+        accessibilityRole="button"
       >
-        <Text style={styles.signOutText}>🚪 Sign Out</Text>
-      </TouchableOpacity>
+        <Text style={{ ...Type.button, color: Brand.error }}>Sign Out</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -204,125 +165,94 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
-    paddingHorizontal: 20,
+    backgroundColor: Surface.background,
+    paddingHorizontal: Spacing.xl,
   },
-
-  // Avatar card
-  avatarCard: {
+  hero: {
+    backgroundColor: Brand.primary,
+    borderRadius: Radius["3xl"],
+    paddingVertical: Spacing["3xl"],
+    paddingHorizontal: Spacing.xl,
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    marginBottom: 14,
-    shadowColor: Brand.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    overflow: "hidden",
+    ...Shadow.lg,
+  },
+  heroBlob: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: Brand.primaryLight,
+    opacity: 0.25,
+    top: -90,
+    right: -60,
   },
   avatarRing: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: Brand.primaryLight,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "rgba(255,255,255,0.25)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
-    padding: 3,
+    padding: 4,
   },
   avatar: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: Brand.primary,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInitial: { fontSize: 36, fontWeight: "800", color: "#fff" },
-  avatarImage: { width: 84, height: 84, borderRadius: 42 },
-  name: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginBottom: 8,
-    textAlign: "center",
-  },
+  avatarInitial: { fontSize: 36, fontWeight: "800", color: Brand.primary },
+  avatarImage: { width: 88, height: 88, borderRadius: 44 },
   roleBadge: {
-    backgroundColor: "#EEF2FF",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 5,
-    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs + 2,
+    marginTop: Spacing.md,
   },
-  roleBadgeText: { fontSize: 13, fontWeight: "700", color: Brand.primary },
-  meta: { fontSize: 13, color: "#94A3B8", textAlign: "center" },
-
-  // Stats row
   statsRow: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    paddingVertical: 18,
-    marginBottom: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    backgroundColor: Surface.card,
+    borderRadius: Radius.xl,
+    paddingVertical: Spacing.lg,
+    marginTop: Spacing.lg,
+    ...Shadow.sm,
   },
   statItem: { flex: 1, alignItems: "center" },
-  statItemBorder: {
-    borderRightWidth: 1,
-    borderRightColor: "#F1F5F9",
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: Brand.primary,
-    marginBottom: 3,
-  },
-  statLabel: { fontSize: 11, color: "#94A3B8", fontWeight: "600" },
-
-  // Menu card
+  statBorder: { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: Surface.divider },
   menuCard: {
-    backgroundColor: "#fff",
-    borderRadius: 18,
-    marginBottom: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    marginTop: Spacing.lg,
     overflow: "hidden",
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 15,
-    gap: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md + 2,
+    gap: Spacing.md,
   },
-  menuItemBorder: { borderBottomWidth: 1, borderBottomColor: "#F8FAFC" },
-  menuIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "#F8FAFC",
+  menuItemBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Surface.divider,
+  },
+  menuIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: Radius.md,
+    backgroundColor: Brand.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
-  menuEmoji: { fontSize: 18 },
-  menuLabel: { flex: 1, fontSize: 15, fontWeight: "600", color: "#0F172A" },
-  menuChevron: { fontSize: 22, color: "#CBD5E1", fontWeight: "300" },
-
-  // Sign out
-  signOutBtn: {
-    backgroundColor: "#FEF2F2",
-    borderRadius: 14,
-    paddingVertical: 15,
+  signOut: {
+    backgroundColor: Brand.errorSoft,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.md + 2,
     alignItems: "center",
+    marginTop: Spacing.lg,
   },
-  signOutText: { fontSize: 15, fontWeight: "700", color: "#EF4444" },
 });

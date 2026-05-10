@@ -36,6 +36,9 @@ export interface AuthUser {
   full_name: string;
   role: string;
   school_id?: string;
+  kid?: string;
+  schoolVerificationStatus?: 'pending_verification' | 'verified' | 'rejected';
+  schoolRejectionReason?: string;
 }
 
 export interface Pagination {

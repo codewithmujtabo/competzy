@@ -48,11 +48,10 @@ function SchoolLayoutInner({ children }: { children: React.ReactNode }) {
 
   // School-admin users whose school isn't verified yet land on /school-pending.
   // school_admin only — teachers can be linked to verified schools and don't go through approval.
-  const verificationStatus = (user as any)?.schoolVerificationStatus as 'pending_verification' | 'verified' | 'rejected' | undefined;
   if (
     user?.role === 'school_admin' &&
-    verificationStatus &&
-    verificationStatus !== 'verified' &&
+    user.schoolVerificationStatus &&
+    user.schoolVerificationStatus !== 'verified' &&
     !pathname.includes('/school-pending')
   ) {
     if (typeof window !== 'undefined') router.replace('/school-pending');

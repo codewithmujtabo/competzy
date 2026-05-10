@@ -9,11 +9,21 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Brand } from "@/constants/theme";
+import {
+  Brand,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
 import { useUser } from "@/context/AuthContext";
 import { getMyChildren, acceptInvitation } from "@/services/parents.service";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -264,7 +274,11 @@ export default function ChildrenScreen() {
         transparent
         onRequestClose={() => setShowPinModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Enter PIN Code</Text>
@@ -313,247 +327,166 @@ export default function ChildrenScreen() {
               )}
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  scrollContent: {
-    padding: 16,
-  },
+  container: { flex: 1, backgroundColor: Surface.background },
+  scrollContent: { padding: Spacing.xl },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: Spacing.xl,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#1E293B",
-  },
+  headerTitle: { ...Type.displayMd },
   addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: Brand.primary,
     alignItems: "center",
     justifyContent: "center",
+    ...Shadow.md,
   },
-  loader: {
-    marginTop: 40,
-  },
+  loader: { marginTop: Spacing["3xl"] },
   childCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: Surface.card,
+    borderRadius: Radius["2xl"],
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    ...Shadow.md,
   },
   childCardHighlighted: {
     borderWidth: 2,
-    borderColor: "#818CF8",
-    shadowColor: "#6366F1",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 4,
+    borderColor: Brand.primary,
+    backgroundColor: Brand.primarySoft,
   },
   childHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   childAvatar: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Brand.primary,
+    backgroundColor: Brand.primarySoft,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
-  childAvatarText: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  childInfo: {
-    flex: 1,
-  },
-  childName: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1E293B",
-    marginBottom: 2,
-  },
-  childDetails: {
-    fontSize: 14,
-    color: "#64748B",
-    marginBottom: 2,
-  },
-  childEmail: {
-    fontSize: 12,
-    color: "#94A3B8",
-  },
+  childAvatarText: { fontSize: 24, fontWeight: "800", color: Brand.primary },
+  childInfo: { flex: 1 },
+  childName: { ...Type.title, fontSize: 17 },
+  childDetails: { ...Type.bodySm, marginTop: 2 },
+  childEmail: { ...Type.caption, marginTop: 2 },
   registrationsSection: {
-    borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
-    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Surface.divider,
+    paddingTop: Spacing.lg,
   },
   highlightBanner: {
     alignSelf: "flex-start",
-    backgroundColor: "#EEF2FF",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginBottom: 14,
+    backgroundColor: Brand.primarySoft,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs + 2,
+    marginBottom: Spacing.md,
   },
-  highlightBannerText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#4338CA",
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748B",
-    marginBottom: 12,
-  },
+  highlightBannerText: { ...Type.label, color: Brand.primary, fontSize: 12 },
+  sectionTitle: { ...Type.label, marginBottom: Spacing.md },
   regCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 12,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 8,
-    marginBottom: 8,
+    padding: Spacing.md,
+    backgroundColor: Surface.cardAlt,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.sm,
   },
   regCardHighlighted: {
-    backgroundColor: "#EEF2FF",
+    backgroundColor: Brand.primarySoft,
     borderWidth: 1,
-    borderColor: "#C7D2FE",
+    borderColor: Brand.primary,
   },
-  regInfo: {
-    flex: 1,
-    marginRight: 8,
-  },
-  regName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1E293B",
-    marginBottom: 2,
-  },
-  regCategory: {
-    fontSize: 12,
-    color: "#64748B",
-    marginBottom: 2,
-  },
-  regDate: {
-    fontSize: 11,
-    color: "#94A3B8",
-  },
+  regInfo: { flex: 1, marginRight: Spacing.sm },
+  regName: { ...Type.title, fontSize: 14 },
+  regCategory: { ...Type.caption, marginTop: 2 },
+  regDate: { ...Type.caption, marginTop: 2 },
   badge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: Spacing.sm + 2,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: Radius.sm,
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: "#fff",
+    fontWeight: "700",
+    color: "#FFFFFF",
     textTransform: "uppercase",
   },
-  emptyText: {
-    fontSize: 14,
-    color: "#94A3B8",
-    textAlign: "center",
-    marginVertical: 8,
-  },
+  emptyText: { ...Type.bodySm, textAlign: "center", marginVertical: Spacing.sm },
   emptyState: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
+    paddingVertical: Spacing["5xl"],
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1E293B",
-    marginTop: 16,
-    marginBottom: 8,
-  },
+  emptyTitle: { ...Type.h2, marginTop: Spacing.lg, marginBottom: Spacing.sm },
   emptySubtitle: {
-    fontSize: 14,
-    color: "#64748B",
+    ...Type.body,
+    color: TextColor.secondary,
     textAlign: "center",
-    paddingHorizontal: 32,
+    paddingHorizontal: Spacing["3xl"],
   },
   retryButton: {
-    marginTop: 16,
+    marginTop: Spacing.lg,
     backgroundColor: Brand.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.lg,
   },
-  retryButtonText: {
-    color: "#fff",
-    fontWeight: "700",
-  },
+  retryButtonText: { color: "#FFFFFF", fontWeight: "700" },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(15, 23, 42, 0.55)",
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    paddingBottom: 40,
+    backgroundColor: Surface.card,
+    borderTopLeftRadius: Radius["3xl"],
+    borderTopRightRadius: Radius["3xl"],
+    padding: Spacing["2xl"],
+    paddingBottom: Spacing["3xl"],
   },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1E293B",
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    marginBottom: 20,
-  },
+  modalTitle: { ...Type.h2 },
+  modalSubtitle: { ...Type.body, color: TextColor.secondary, marginBottom: Spacing.lg },
   input: {
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 8,
-    padding: 12,
+    borderColor: Surface.border,
+    borderRadius: Radius.lg,
+    padding: Spacing.md + 2,
     fontSize: 16,
-    color: "#1E293B",
-    marginBottom: 12,
+    color: TextColor.primary,
+    marginBottom: Spacing.md,
+    backgroundColor: Surface.card,
   },
   submitButton: {
     backgroundColor: Brand.primary,
-    borderRadius: 8,
-    padding: 14,
+    borderRadius: Radius.pill,
+    padding: Spacing.md + 2,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: Spacing.sm,
+    ...Shadow.md,
   },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  submitButtonDisabled: { opacity: 0.6 },
+  submitButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
 });

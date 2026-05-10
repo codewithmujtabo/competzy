@@ -1,25 +1,43 @@
-import { Brand } from "@/constants/theme";
+import { Button } from "@/components/ui";
+import {
+  Brand,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
 import React from "react";
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function WebPortalRedirectScreen() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 40 }]}>
-      <Text style={styles.emoji}>🖥️</Text>
-      <Text style={styles.title}>Admin Panel</Text>
-      <Text style={styles.subtitle}>
+    <View style={[styles.container, { paddingTop: insets.top + Spacing["3xl"] }]}>
+      <View style={styles.iconTile}>
+        <Text style={{ fontSize: 56 }}>🖥️</Text>
+      </View>
+      <Text style={[Type.displayMd, { textAlign: "center", marginTop: Spacing.xl }]}>
+        Admin Panel
+      </Text>
+      <Text
+        style={[
+          Type.body,
+          { color: TextColor.secondary, textAlign: "center", marginTop: Spacing.md },
+        ]}
+      >
         The admin dashboard is on the web portal. Please open it in a browser to manage competitions, users, and reviews.
       </Text>
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => Linking.openURL("https://competzy.id/admin")}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.buttonText}>Open Web Portal</Text>
-      </TouchableOpacity>
+      <View style={{ marginTop: Spacing["2xl"] }}>
+        <Button
+          label="Open Web Portal"
+          onPress={() => Linking.openURL("https://competzy.id/admin")}
+          size="lg"
+        />
+      </View>
     </View>
   );
 }
@@ -27,38 +45,18 @@ export default function WebPortalRedirectScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: Surface.background,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    paddingHorizontal: Spacing["2xl"],
+  },
+  iconTile: {
+    width: 120,
+    height: 120,
+    borderRadius: Radius["3xl"],
+    backgroundColor: Brand.primarySoft,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  emoji: {
-    fontSize: 64,
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginBottom: 12,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 22,
-    marginBottom: 32,
-  },
-  button: {
-    backgroundColor: Brand.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700",
+    ...Shadow.lg,
   },
 });
