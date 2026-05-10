@@ -78,10 +78,31 @@ router.post("/invite-parent", authMiddleware, async (req: Request, res: Response
 
     let deliveryMethod: "email" | "debug" = "email";
     let emailSent = false;
+    let smtpError: string | undefined;
 
     if (smtpReady) {
-      await sendParentInvitationEmail(normalizedEmail, pin, studentName);
-      emailSent = true;
+      try {
+        await sendParentInvitationEmail(normalizedEmail, pin, studentName);
+        emailSent = true;
+      } catch (mailErr: any) {
+        // SMTP credentials misconfigured or provider unreachable. Don't lose the
+        // invitation: if debug mode is on, fall through and surface the PIN to
+        // the student so they can share it manually.
+        smtpError = mailErr?.message ?? "SMTP error";
+        console.error("[Parent Invite] email send failed:", smtpError);
+        if (!debugMode) {
+          await client.query("ROLLBACK");
+          res.status(502).json({
+            message:
+              "Could not send invitation email. The email service is not responding — please try again later or contact support.",
+          });
+          return;
+        }
+        deliveryMethod = "debug";
+        console.log(
+          `[Parent Invite Debug after SMTP failure] student=${studentId} parentEmail=${normalizedEmail} pin=${pin}`
+        );
+      }
     } else if (debugMode) {
       deliveryMethod = "debug";
       console.log(
@@ -101,7 +122,9 @@ router.post("/invite-parent", authMiddleware, async (req: Request, res: Response
       invitationId: result.rows[0].id,
       message: emailSent
         ? "Invitation sent successfully"
-        : "Invitation created in debug mode. Use the PIN shown for testing.",
+        : smtpError
+          ? "Email service unavailable — share the PIN below with your parent manually."
+          : "Invitation created in debug mode. Use the PIN shown for testing.",
       deliveryMethod,
       emailSent,
       ...(debugMode ? { debugPin: pin, debugEmail: normalizedEmail } : {}),
