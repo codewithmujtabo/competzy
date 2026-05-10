@@ -1,18 +1,26 @@
 import { AppInput } from "@/components/common/AppInput";
+import { Button, Card, Pill } from "@/components/ui";
 import * as authService from "@/services/auth.service";
-import { Brand } from "@/constants/theme";
+import {
+  Brand,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
 import { useUser } from "@/context/AuthContext";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,19 +31,19 @@ export default function ClaimAccountScreen() {
   const params = useLocalSearchParams<{ phone: string; fullName: string; email: string }>();
 
   const [fullName, setFullName] = useState(params.fullName ?? "");
-  const [email, setEmail]       = useState(params.email ?? "");
+  const [email, setEmail] = useState(params.email ?? "");
   const [password, setPassword] = useState("");
-  const [showPwd, setShowPwd]   = useState(false);
-  const [loading, setLoading]   = useState(false);
-  const [errors, setErrors]     = useState<Record<string, string>>({});
+  const [showPwd, setShowPwd] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   function validate() {
     const e: Record<string, string> = {};
-    if (!fullName.trim()) e.fullName = "Full name is required";
+    if (!fullName.trim()) e.fullName = "Name is required";
     if (!email.trim()) e.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Enter a valid email";
     if (!password) e.password = "Password is required";
-    else if (password.length < 6) e.password = "Password must be at least 6 characters";
+    else if (password.length < 6) e.password = "Minimum 6 characters";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -61,7 +69,7 @@ export default function ClaimAccountScreen() {
     } catch (err: any) {
       const msg = err?.message?.toLowerCase() ?? "";
       if (msg.includes("email already")) {
-        Alert.alert("Email Taken", "This email is already registered. Try a different one or log in.");
+        Alert.alert("Email Already Registered", "This email is in use. Try another email or sign in.");
       } else {
         Alert.alert("Error", err?.message ?? "Failed to create account");
       }
@@ -76,75 +84,77 @@ export default function ClaimAccountScreen() {
       style={styles.container}
     >
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <View style={styles.badgeBox}>
-            <Text style={styles.badgeEmoji}>🏅</Text>
+        <View style={{ alignItems: "center", marginBottom: Spacing["2xl"] }}>
+          <View style={styles.badge}>
+            <Text style={{ fontSize: 36 }}>🏅</Text>
           </View>
-          <Text style={styles.title}>We Found Your Records!</Text>
-          <Text style={styles.subtitle}>
-            Your phone number matches our previous competition data.{"\n"}
-            Set a password to access your history and join new competitions.
+          <Text style={[Type.displayMd, { textAlign: "center", marginTop: Spacing.lg }]}>
+            We Found{"\n"}Your Records!
+          </Text>
+          <Text
+            style={[Type.body, { color: TextColor.secondary, textAlign: "center", marginTop: Spacing.sm }]}
+          >
+            Your phone matches our previous competition records. Set a password to view your history and join new competitions.
           </Text>
         </View>
 
-        <View style={styles.infoBanner}>
-          <Text style={styles.infoText}>Phone verified: {params.phone}</Text>
+        <View style={{ alignSelf: "center", marginBottom: Spacing.lg }}>
+          <Pill label={`✓ HP terverifikasi: ${params.phone}`} tone="success" />
         </View>
 
-        <View style={styles.form}>
-          <AppInput
-            label="Full Name"
-            placeholder="Your full name"
-            value={fullName}
-            onChangeText={setFullName}
-            autoCapitalize="words"
-            error={errors.fullName}
-            editable={!loading}
-          />
-          <AppInput
-            label="Email"
-            placeholder="e.g. student@email.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            error={errors.email}
-            editable={!loading}
-          />
-          <AppInput
-            label="Password"
-            placeholder="Choose a password (min 6 characters)"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPwd}
-            error={errors.password}
-            editable={!loading}
-          />
-          <TouchableOpacity onPress={() => setShowPwd(v => !v)}>
-            <Text style={styles.togglePwd}>{showPwd ? "Hide" : "Show"} password</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.btn, loading && styles.btnDisabled]}
-            onPress={handleClaim}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.btnText}>Create Account & View My Records</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        <Card>
+          <View style={{ gap: Spacing.lg }}>
+            <AppInput
+              label="Full Name"
+              placeholder="Your full name"
+              value={fullName}
+              onChangeText={setFullName}
+              autoCapitalize="words"
+              error={errors.fullName}
+              editable={!loading}
+            />
+            <AppInput
+              label="Email"
+              placeholder="e.g. student@email.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              error={errors.email}
+              editable={!loading}
+            />
+            <AppInput
+              label="Password"
+              placeholder="Minimum 6 characters"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPwd}
+              error={errors.password}
+              editable={!loading}
+            />
+            <Pressable onPress={() => setShowPwd((v) => !v)} hitSlop={8}>
+              <Text style={[Type.label, { color: Brand.primary }]}>
+                {showPwd ? "Hide" : "Show"} password
+              </Text>
+            </Pressable>
+            <Button
+              label="Create Account & View History"
+              onPress={handleClaim}
+              loading={loading}
+              fullWidth
+              size="lg"
+            />
+          </View>
+        </Card>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
-            <Text style={styles.footerLink}>Sign In</Text>
-          </TouchableOpacity>
+          <Text style={[Type.body, { color: TextColor.secondary }]}>Already have an account? </Text>
+          <Pressable onPress={() => router.replace("/(auth)/login")} hitSlop={8}>
+            <Text style={[Type.body, { color: Brand.primary, fontWeight: "700" }]}>Sign In</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -152,29 +162,20 @@ export default function ClaimAccountScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
-  scroll:    { paddingHorizontal: 20, paddingBottom: 40 },
-  header:    { alignItems: "center", marginBottom: 24 },
-  badgeBox:  {
-    width: 64, height: 64, borderRadius: 18,
-    backgroundColor: Brand.primary + "20",
-    justifyContent: "center", alignItems: "center", marginBottom: 16,
-  },
-  badgeEmoji: { fontSize: 34 },
-  title:      { fontSize: 26, fontWeight: "800", color: "#0F172A", marginBottom: 10, textAlign: "center" },
-  subtitle:   { fontSize: 14, color: "#64748B", textAlign: "center", lineHeight: 22 },
-  infoBanner: {
-    backgroundColor: "#EEF2FF", borderRadius: 10,
-    paddingVertical: 10, paddingHorizontal: 14, marginBottom: 20,
+  container: { flex: 1, backgroundColor: Surface.background },
+  scroll: { paddingHorizontal: Spacing.xl, paddingBottom: Spacing["4xl"] },
+  badge: {
+    width: 80,
+    height: 80,
+    borderRadius: Radius["2xl"],
+    backgroundColor: Brand.primarySoft,
     alignItems: "center",
+    justifyContent: "center",
+    ...Shadow.md,
   },
-  infoText: { fontSize: 13, color: Brand.primary, fontWeight: "600", fontVariant: ["tabular-nums"] },
-  form:       { gap: 16, marginBottom: 24 },
-  togglePwd:  { color: Brand.primary, fontSize: 13, fontWeight: "600", marginTop: -8 },
-  btn:        { backgroundColor: Brand.primary, borderRadius: 12, paddingVertical: 15, alignItems: "center" },
-  btnDisabled: { opacity: 0.6 },
-  btnText:    { color: "#fff", fontSize: 15, fontWeight: "700" },
-  footer:     { flexDirection: "row", justifyContent: "center", gap: 4 },
-  footerText: { fontSize: 13, color: "#64748B" },
-  footerLink: { fontSize: 13, color: Brand.primary, fontWeight: "700" },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: Spacing["2xl"],
+  },
 });

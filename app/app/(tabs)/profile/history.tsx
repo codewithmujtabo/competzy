@@ -1,6 +1,15 @@
-import { Brand } from "@/constants/theme";
+import { Button, Card, EmptyState, Pill, ScreenHeader } from "@/components/ui";
+import {
+  Brand,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
 import * as historicalService from "@/services/historical.service";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -18,16 +27,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Tab = "claimed" | "search";
 
-function ResultBadge({ result }: { result: string | null }) {
+function ResultPill({ result }: { result: string | null }) {
   if (!result) return null;
-  const isPassed = result === "PASSED";
-  return (
-    <View style={[styles.resultBadge, { backgroundColor: isPassed ? "#D1FAE5" : "#FEE2E2" }]}>
-      <Text style={[styles.resultBadgeText, { color: isPassed ? "#065F46" : "#B91C1C" }]}>
-        {isPassed ? "Passed" : "Failed"}
-      </Text>
-    </View>
-  );
+  const passed = result === "PASSED";
+  return <Pill label={passed ? "Passed" : "Failed"} tone={passed ? "success" : "danger"} size="sm" />;
 }
 
 export default function HistoryScreen() {
@@ -63,14 +66,12 @@ export default function HistoryScreen() {
 
   const claimMutation = useMutation({
     mutationFn: (id: string) => historicalService.claim(id),
-    onSuccess: (_, id) => {
-      Alert.alert("Claimed", "Record added to your competition history.");
+    onSuccess: () => {
+      Alert.alert("Success", "Record added to your history.");
       queryClient.invalidateQueries({ queryKey: ["historicalMyRecords"] });
       queryClient.invalidateQueries({ queryKey: ["historicalSearch"] });
     },
-    onError: (err: any) => {
-      Alert.alert("Error", err.message || "Failed to claim record.");
-    },
+    onError: (err: any) => Alert.alert("Error", err.message || "Failed to add."),
   });
 
   const unclaimMutation = useMutation({
@@ -79,9 +80,7 @@ export default function HistoryScreen() {
       Alert.alert("Removed", "Record removed from your history.");
       refetchClaimed();
     },
-    onError: (err: any) => {
-      Alert.alert("Error", err.message || "Failed to remove record.");
-    },
+    onError: (err: any) => Alert.alert("Error", err.message || "Failed to remove."),
   });
 
   const handleSearch = () => {
@@ -94,293 +93,196 @@ export default function HistoryScreen() {
   };
 
   const handleUnclaim = (id: string, compName: string | null) => {
-    Alert.alert(
-      "Remove Record",
-      `Remove "${compName ?? "this record"}" from your history?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Remove", style: "destructive", onPress: () => unclaimMutation.mutate(id) },
-      ]
-    );
+    Alert.alert("Remove Record", `Remove "${compName ?? "this record"}" from history?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Remove", style: "destructive", onPress: () => unclaimMutation.mutate(id) },
+    ]);
   };
 
   const claimedIds = new Set(claimed.map((r) => r.id));
 
   const renderClaimedCard = ({ item }: { item: historicalService.ClaimedRecord }) => (
-    <View style={styles.card}>
-      <View style={styles.cardTop}>
-        <View style={styles.cardInfo}>
-          <Text style={styles.compName}>{item.compName ?? "Unknown Competition"}</Text>
-          <Text style={styles.compMeta}>
+    <Card>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: Spacing.md }}>
+        <View style={{ flex: 1 }}>
+          <Text style={Type.title}>{item.compName ?? "Kompetisi"}</Text>
+          <Text style={[Type.bodySm, { marginTop: 4 }]}>
             {[item.compYear, item.compCategory, item.eventPart].filter(Boolean).join(" · ")}
           </Text>
           {item.schoolName ? (
-            <Text style={styles.schoolName}>{item.schoolName}</Text>
+            <Text style={[Type.caption, { marginTop: 2 }]}>{item.schoolName}</Text>
           ) : null}
         </View>
-        <ResultBadge result={item.result} />
+        <ResultPill result={item.result} />
       </View>
-      <Pressable
-        style={styles.removeButton}
-        onPress={() => handleUnclaim(item.id, item.compName)}
-        disabled={unclaimMutation.isPending}
-      >
-        <Text style={styles.removeButtonText}>Remove</Text>
-      </Pressable>
-    </View>
+      <View style={{ alignSelf: "flex-start", marginTop: Spacing.md }}>
+        <Button label="Remove" variant="ghost" size="sm" onPress={() => handleUnclaim(item.id, item.compName)} disabled={unclaimMutation.isPending} />
+      </View>
+    </Card>
   );
 
-  const renderSearchCard = ({ item }: { item: historicalService.HistoricalRecord }) => {
-    const alreadyClaimed = claimedIds.has(item.id);
+  const renderSearchCard = (item: historicalService.HistoricalRecord) => {
+    const already = claimedIds.has(item.id);
     return (
-      <View style={styles.card}>
-        <View style={styles.cardTop}>
-          <View style={styles.cardInfo}>
-            <Text style={styles.participantName}>{item.fullName}</Text>
-            <Text style={styles.compName}>{item.compName ?? "Unknown Competition"}</Text>
-            <Text style={styles.compMeta}>
+      <Card key={item.id}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: Spacing.md }}>
+          <View style={{ flex: 1 }}>
+            <Text style={Type.title}>{item.fullName}</Text>
+            <Text style={[Type.bodySm, { color: Brand.primary, marginTop: 2 }]}>
+              {item.compName ?? "Kompetisi"}
+            </Text>
+            <Text style={[Type.caption, { marginTop: 4 }]}>
               {[item.compYear, item.compCategory, item.eventPart].filter(Boolean).join(" · ")}
             </Text>
             {item.schoolName ? (
-              <Text style={styles.schoolName}>{item.schoolName}</Text>
+              <Text style={[Type.caption, { marginTop: 2 }]}>{item.schoolName}</Text>
             ) : null}
           </View>
-          <ResultBadge result={item.result} />
+          <ResultPill result={item.result} />
         </View>
-        {alreadyClaimed ? (
-          <View style={styles.claimedTag}>
-            <Text style={styles.claimedTagText}>In Your History</Text>
-          </View>
-        ) : (
-          <Pressable
-            style={[styles.claimButton, claimMutation.isPending && { opacity: 0.6 }]}
-            onPress={() => claimMutation.mutate(item.id)}
-            disabled={claimMutation.isPending}
-          >
-            <Text style={styles.claimButtonText}>Add to My History</Text>
-          </Pressable>
-        )}
-      </View>
+        <View style={{ marginTop: Spacing.md, alignSelf: "flex-start" }}>
+          {already ? (
+            <Pill label="In your history" tone="success" />
+          ) : (
+            <Button
+              label="Add to History"
+              size="sm"
+              onPress={() => claimMutation.mutate(item.id)}
+              loading={claimMutation.isPending}
+            />
+          )}
+        </View>
+      </Card>
     );
   };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.backArrow}>‹</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>Competition History</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader title="Competition History" />
 
       <View style={styles.tabBar}>
-        <Pressable
-          style={[styles.tabButton, tab === "claimed" && styles.tabButtonActive]}
-          onPress={() => setTab("claimed")}
-        >
-          <Text style={[styles.tabText, tab === "claimed" && styles.tabTextActive]}>
-            My Records {claimed.length > 0 ? `(${claimed.length})` : ""}
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[styles.tabButton, tab === "search" && styles.tabButtonActive]}
-          onPress={() => setTab("search")}
-        >
-          <Text style={[styles.tabText, tab === "search" && styles.tabTextActive]}>
-            Find & Claim
-          </Text>
-        </Pressable>
+        {(["claimed", "search"] as Tab[]).map((t) => (
+          <Pressable
+            key={t}
+            style={({ pressed }) => [styles.tab, tab === t && styles.tabActive, pressed && { opacity: 0.85 }]}
+            onPress={() => setTab(t)}
+          >
+            <Text style={{ ...Type.label, color: tab === t ? Brand.primary : TextColor.tertiary, fontSize: 14 }}>
+              {t === "claimed" ? `My Records${claimed.length > 0 ? ` (${claimed.length})` : ""}` : "Find & Claim"}
+            </Text>
+          </Pressable>
+        ))}
       </View>
 
       {tab === "claimed" ? (
         isLoadingClaimed ? (
-          <ActivityIndicator style={{ marginTop: 40 }} color={Brand.primary} />
+          <ActivityIndicator style={{ marginTop: Spacing["3xl"] }} color={Brand.primary} />
         ) : claimed.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🏆</Text>
-            <Text style={styles.emptyTitle}>No historical records yet</Text>
-            <Text style={styles.emptyBody}>
-              Your past Eduversal competition records will appear here after auto-linking, or
-              you can search and claim them in the "Find & Claim" tab.
-            </Text>
-          </View>
+          <EmptyState
+            emoji="🏆"
+            title="No history yet"
+            message="Your past Eduversal records will appear here after auto-linking, or search in the Find & Claim tab."
+          />
         ) : (
           <FlatList
             data={claimed}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
+            ItemSeparatorComponent={renderSep}
             renderItem={renderClaimedCard}
           />
         )
       ) : (
         <ScrollView contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled">
-          <Text style={styles.searchHint}>
-            Search your name as it appeared in Eduversal competitions to find and claim records.
-          </Text>
-
-          <TextInput
-            style={styles.input}
-            placeholder="Your name (min 3 chars)"
-            placeholderTextColor="#94A3B8"
-            value={searchName}
-            onChangeText={setSearchName}
-            returnKeyType="search"
-            onSubmitEditing={handleSearch}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="School name (optional)"
-            placeholderTextColor="#94A3B8"
-            value={searchSchool}
-            onChangeText={setSearchSchool}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Competition name e.g. EMC (optional)"
-            placeholderTextColor="#94A3B8"
-            value={searchCompName}
-            onChangeText={setSearchCompName}
-          />
-
-          <Pressable
-            style={[styles.searchButton, isSearching && { opacity: 0.6 }]}
-            onPress={handleSearch}
-            disabled={isSearching}
-          >
-            <Text style={styles.searchButtonText}>
-              {isSearching ? "Searching..." : "Search"}
+          <Card variant="tinted" tint={Brand.infoSoft}>
+            <Text style={[Type.body, { color: Brand.info, lineHeight: 22 }]}>
+              Search your name as it appears in Eduversal records to find and claim your history.
             </Text>
-          </Pressable>
+          </Card>
 
-          {hasSearched && !isSearching && searchResults.length === 0 && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyTitle}>No records found</Text>
-              <Text style={styles.emptyBody}>
-                Try a different name spelling or leave school/competition blank.
-              </Text>
+          <View style={{ marginTop: Spacing.lg, gap: Spacing.md }}>
+            <TextInput
+              style={styles.input}
+              placeholder="Your name (min 3 chars)"
+              placeholderTextColor={TextColor.tertiary}
+              value={searchName}
+              onChangeText={setSearchName}
+              returnKeyType="search"
+              onSubmitEditing={handleSearch}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="School name (optional)"
+              placeholderTextColor={TextColor.tertiary}
+              value={searchSchool}
+              onChangeText={setSearchSchool}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Competition name e.g. EMC (optional)"
+              placeholderTextColor={TextColor.tertiary}
+              value={searchCompName}
+              onChangeText={setSearchCompName}
+            />
+            <Button
+              label={isSearching ? "Searching..." : "Search"}
+              onPress={handleSearch}
+              loading={isSearching}
+              fullWidth
+              size="lg"
+            />
+          </View>
+
+          {hasSearched && !isSearching && searchResults.length === 0 ? (
+            <View style={{ marginTop: Spacing["2xl"] }}>
+              <EmptyState emoji="🔍" title="Not found" message="Try a different name spelling or leave school/competition blank." />
             </View>
-          )}
+          ) : null}
 
-          {searchResults.map((item) => (
-            <View key={item.id}>{renderSearchCard({ item })}</View>
-          ))}
+          <View style={{ marginTop: Spacing.lg, gap: Spacing.md }}>
+            {searchResults.map(renderSearchCard)}
+          </View>
         </ScrollView>
       )}
     </View>
   );
 }
 
+const renderSep = () => <View style={{ height: Spacing.md }} />;
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  backArrow: { fontSize: 28, color: "#0F172A", lineHeight: 32 },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
+  container: { flex: 1, backgroundColor: Surface.background },
   tabBar: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    backgroundColor: Surface.cardAlt,
+    borderRadius: Radius.lg,
+    padding: 4,
+    marginHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
-  tabButton: {
+  tab: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
     alignItems: "center",
   },
-  tabButtonActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: Brand.primary,
+  tabActive: {
+    backgroundColor: Surface.card,
+    ...Shadow.sm,
   },
-  tabText: { fontSize: 14, fontWeight: "600", color: "#64748B" },
-  tabTextActive: { color: Brand.primary },
-  listContent: { padding: 16, paddingBottom: 32, gap: 12 },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    gap: 10,
-  },
-  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  cardInfo: { flex: 1, marginRight: 8 },
-  participantName: { fontSize: 15, fontWeight: "700", color: "#0F172A" },
-  compName: { fontSize: 14, fontWeight: "600", color: "#1E40AF", marginTop: 2 },
-  compMeta: { fontSize: 12, color: "#64748B", marginTop: 3 },
-  schoolName: { fontSize: 12, color: "#475569", marginTop: 2 },
-  resultBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-  },
-  resultBadgeText: { fontSize: 11, fontWeight: "700" },
-  removeButton: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: "#FEE2E2",
-  },
-  removeButtonText: { color: "#B91C1C", fontWeight: "700", fontSize: 13 },
-  claimButton: {
-    backgroundColor: Brand.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-    alignSelf: "flex-start",
-  },
-  claimButtonText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
-  claimedTag: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: "#D1FAE5",
-    borderRadius: 8,
-  },
-  claimedTagText: { color: "#065F46", fontWeight: "700", fontSize: 12 },
-  emptyState: { alignItems: "center", paddingVertical: 40, paddingHorizontal: 24 },
-  emptyEmoji: { fontSize: 42, marginBottom: 12 },
-  emptyTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A", marginBottom: 8 },
-  emptyBody: { textAlign: "center", color: "#64748B", lineHeight: 22 },
-  searchHint: {
-    color: "#475569",
-    lineHeight: 22,
-    marginBottom: 16,
+  listContent: {
+    padding: Spacing.xl,
+    paddingBottom: Spacing["3xl"],
   },
   input: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Surface.card,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderColor: Surface.border,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md + 2,
     fontSize: 15,
-    color: "#0F172A",
-    marginBottom: 10,
+    color: TextColor.primary,
+    ...Shadow.sm,
   },
-  searchButton: {
-    backgroundColor: Brand.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  searchButtonText: { color: "#FFFFFF", fontWeight: "800", fontSize: 15 },
 });
