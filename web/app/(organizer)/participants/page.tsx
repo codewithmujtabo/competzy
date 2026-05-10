@@ -14,11 +14,15 @@ interface Registration {
 }
 
 const STATUS_CLS: Record<string, string> = {
-  pending_approval: 'badge-yellow',
-  registered:       'badge-indigo',
-  paid:             'badge-green',
+  pending_approval: 'badge-yellow',  // not paid, awaiting first admin gate
+  registered:       'badge-indigo',  // approved pre-payment, can pay
+  pending_review:   'badge-blue',    // paid, awaiting final review
+  approved:         'badge-green',   // fully approved
+  paid:             'badge-green',   // legacy: same as approved
   rejected:         'badge-red',
 };
+
+const ACTIONABLE_STATUSES = new Set(['pending_approval', 'pending_review']);
 
 function Spinner() { return <span className="spin" />; }
 
@@ -29,6 +33,9 @@ export default function OrganizerParticipants() {
   const [loading, setLoading]     = useState(false);
   const [loadingComps, setLoadingComps] = useState(true);
   const [msg, setMsg]             = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy]           = useState<string | null>(null);
+  const [rejectId, setRejectId]   = useState<string | null>(null);
+  const [reason, setReason]       = useState('');
 
   useEffect(() => {
     organizerHttp.get<Competition[]>('/organizers/competitions')
@@ -47,27 +54,38 @@ export default function OrganizerParticipants() {
   }, [selectedComp]);
 
   const approve = async (id: string) => {
+    setBusy(id);
     try {
       await organizerHttp.post(`/organizers/registrations/${id}/approve`, {});
-      setMsg({ ok: true, text: 'Registration approved!' });
+      setMsg({ ok: true, text: 'Registration approved — student notified.' });
       if (selectedComp) {
         const r = await organizerHttp.get<Registration[]>(`/organizers/competitions/${selectedComp}/registrations`);
         setRegistrations(r);
       }
-    } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message });
+    } finally {
+      setBusy(null);
+    }
   };
 
-  const reject = async (id: string) => {
-    const reason = prompt('Rejection reason:');
-    if (!reason?.trim()) return;
+  const handleRejectSubmit = async () => {
+    if (!rejectId || !reason.trim()) return;
+    setBusy(rejectId);
     try {
-      await organizerHttp.post(`/organizers/registrations/${id}/reject`, { reason });
-      setMsg({ ok: true, text: 'Registration rejected.' });
+      await organizerHttp.post(`/organizers/registrations/${rejectId}/reject`, { reason: reason.trim() });
+      setMsg({ ok: true, text: 'Registration rejected — student notified.' });
       if (selectedComp) {
         const r = await organizerHttp.get<Registration[]>(`/organizers/competitions/${selectedComp}/registrations`);
         setRegistrations(r);
       }
-    } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message });
+    } finally {
+      setBusy(null);
+      setRejectId(null);
+      setReason('');
+    }
   };
 
   const exportCsv = () => {
@@ -90,6 +108,39 @@ export default function OrganizerParticipants() {
       </div>
 
       {msg && <div className={`toast ${msg.ok ? 'toast-ok' : 'toast-err'}`} style={{ marginBottom: 16 }}>{msg.ok ? '✓' : '⚠'} {msg.text}</div>}
+
+      {/* Reject modal */}
+      {rejectId && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999,
+        }}>
+          <div className="card" style={{ width: 420, padding: 28 }}>
+            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Reject Registration</div>
+            <textarea
+              className="input"
+              rows={3}
+              placeholder="Reason for rejection (required)…"
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              style={{ width: '100%', resize: 'vertical', marginBottom: 14 }}
+            />
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => { setRejectId(null); setReason(''); }}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ background: '#EF4444', borderColor: '#EF4444' }}
+                disabled={!reason.trim() || busy === rejectId}
+                onClick={handleRejectSubmit}
+              >
+                {busy === rejectId ? 'Rejecting…' : 'Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Competition selector */}
       <div style={{ marginBottom: 20 }}>
@@ -149,13 +200,18 @@ export default function OrganizerParticipants() {
                         {new Date(r.createdAt).toLocaleDateString()}
                       </td>
                       <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>
-                        {r.status === 'pending_approval' ? (
+                        {ACTIONABLE_STATUSES.has(r.status) ? (
                           <div style={{ display: 'flex', gap: 6 }}>
-                            <button className="btn btn-primary" onClick={() => approve(r.id)}
+                            <button className="btn btn-primary"
+                              disabled={busy === r.id}
+                              onClick={() => approve(r.id)}
                               style={{ padding: '4px 10px', fontSize: 11, background: '#22c55e', border: 'none' }}>
-                              Approve
+                              {busy === r.id ? '…' : 'Approve'}
                             </button>
-                            <button className="btn btn-danger" onClick={() => reject(r.id)} style={{ padding: '4px 10px', fontSize: 11 }}>
+                            <button className="btn btn-danger"
+                              disabled={busy === r.id}
+                              onClick={() => { setRejectId(r.id); setReason(''); }}
+                              style={{ padding: '4px 10px', fontSize: 11 }}>
                               Reject
                             </button>
                           </div>
