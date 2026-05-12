@@ -121,13 +121,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Hidden legacy admin screens — kept so Expo Router doesn't 404 */}
-      <Tabs.Screen name="admin-competitions" options={{ href: null }} />
-      <Tabs.Screen name="admin-students" options={{ href: null }} />
-      <Tabs.Screen name="admin-reviews" options={{ href: null }} />
-      <Tabs.Screen name="admin-competition-form" options={{ href: null }} />
-      <Tabs.Screen name="admin-competition-registrations" options={{ href: null }} />
-
       {/* ALL ROLES: Notifications tab */}
       <Tabs.Screen
         name="notifications"

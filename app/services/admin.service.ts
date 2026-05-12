@@ -1,4 +1,4 @@
-import { API_URL } from "@/constants/api";
+import { API_BASE_URL as API_URL } from "@/config/api";
 import { getToken } from "./token.service";
 
 const getAuthHeaders = async () => {

@@ -462,20 +462,20 @@ T21 (MinIO) ──────────────► T22 (storage migration
 
 ## Known Issues / Quirks
 
-- `next.config.ts` exists in `web/` alongside `next.config.mjs` — the `.ts` one is inert (ignored by Next.js 14) but should be deleted eventually.
-- `web/tsconfig.tsbuildinfo` is committed — it's a build cache file. Add to `.gitignore` eventually.
-- `app/constants/api.ts` and `app/config/api.ts` both exist — app uses `config/api.ts`. The constants one is legacy.
+- ~~`next.config.ts` exists in `web/` alongside `next.config.mjs`.~~ Removed.
+- ~~`web/tsconfig.tsbuildinfo` is committed.~~ Untracked + `*.tsbuildinfo` gitignored.
+- ~~`app/constants/api.ts` and `app/config/api.ts` both exist.~~ Legacy `constants/api.ts` deleted; `admin.service.ts` now imports from `config/api.ts` directly.
 - Competition `id` column is `TEXT` (not UUID) — changed in migration `1744070500000`. IDs look like `comp_emc_2026_main`.
 - ~~The `students` and `parents` tables have orphaned `parent_school_id` columns (Sprint 7 to drop).~~ Dropped on `students` in Sprint 15 migration `1747300000000`. `parents` table never had the column despite earlier comments.
 - Disk folder renamed `kompetix/` → `competzy/` on May 8, 2026. Reopen any IDE workspace, terminal tab, or Claude Code session that pointed at the old path: `/Users/<you>/Desktop/All/Internship Eduversal/competzy/`.
 - DB rename history: `beyond_classroom` → `kompetix` (May 6, 2026, local only) → `competzy` (May 8, 2026, local **applied ✅**). VPS still pending: `ALTER DATABASE … RENAME TO competzy;` + update `DATABASE_URL`.
 - Registration number prefix rebranded `KMP-2026-XXXXX` → `CTZ-2026-XXXXX` on May 8, 2026 via migration `1746800000000_rebrand-registration-prefix-to-CTZ.sql`. Existing rows keep their `KMP-` numbers; only new rows pick up the new default.
-- There are 3 registrations with status `approved` in the DB (legacy status, pre-T28). These are displayed correctly with a green badge but cannot be acted on via the approval UI. Not a bug — they predate the `pending_approval` flow.
+- ~~There are 3 registrations with status `approved` in the DB (legacy status, pre-T28).~~ Migration `1747600000000_promote-legacy-approved-registrations.sql` promotes them to `paid` (free comp or settled-payment) or `registered` (paid comp, no settled payment). Run on VPS to clear them there too.
 - `competitions.tsx` defaults `userRole` to `""` (not "student") when user context hasn't loaded. Guard: `useEffect` redirects teachers/admins away. Same change in `_layout.tsx`.
 - `pay.tsx` polling: after browser close (any path), calls `GET /api/payments/verify/:registrationId` up to 6× with 3s gaps. The verify endpoint calls Midtrans Status API and force-updates DB — this is what makes sandbox work without a live webhook. In production the webhook arrives first and verify is a no-op.
 - **Sprint 14 dual-auth quirk:** auth middleware accepts both Authorization Bearer header AND `competzy_token` cookie. This means existing localStorage-based logins (from before the cookie migration) continue to work in the wild as long as the JWT hasn't expired. Once everyone re-logins or the JWT TTL elapses (7 days), only cookies will be in use.
 - **Sprint 14 retention sweep**: kicks in nightly. If you accidentally delete a doc-related `competition_date` in the past, the next 02:00 run will soft-delete those docs. Use `restore()` from `query-helpers.ts` to recover.
-- **`/uploads/...` static path is still served unsigned** for backward-compat in dev. Production nginx config should remove or block this path so signed URLs are the only access path.
+- **`/uploads/...` static path is still served unsigned by the backend** for backward-compat in dev. Production nginx config (`deploy/nginx.conf`) now returns 404 for `/uploads/` on `api.competzy.com`, so signed URLs are the only public access path.
 - **Cookie auth single-session caveat**: one browser → one session. Admins who used to keep admin + organizer tabs open simultaneously must now use two browsers or two profiles.
 - **`docs/PROJECT_PLAN.md` and `docs/PROJECT_PLAN.docx`** are out-of-sync with this CLAUDE.md after Sprint 14–16. Treat CLAUDE.md as the source of truth; update PROJECT_PLAN later if needed for stakeholder reporting.
 

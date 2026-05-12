@@ -17,5 +17,5 @@
     "paths": { "@/*": ["./*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "_src-vite-legacy", "_server-legacy", "_vite.config-legacy.ts"]
+  "exclude": ["node_modules"]
 }

@@ -16,9 +16,26 @@ export default function PrivacyPage() {
     }}>
       <Link href="/" style={{ color: 'var(--text-3)', fontSize: 13 }}>← Back</Link>
 
+      <div role="alert" style={{
+        marginTop: 16,
+        padding: '14px 18px',
+        background: '#FEF3C7',
+        border: '1px solid #F59E0B',
+        borderRadius: 8,
+        color: '#78350F',
+        fontSize: 14,
+        fontWeight: 600,
+        lineHeight: 1.5,
+      }}>
+        ⚠ DRAFT — NOT FOR PRODUCTION
+        <div style={{ fontWeight: 400, marginTop: 4 }}>
+          This document has not been reviewed by counsel. It must not be relied on as legal terms until reviewed and approved.
+        </div>
+      </div>
+
       <h1 style={{ fontFamily: 'var(--ff-display)', fontSize: 32, marginTop: 24 }}>Privacy Policy</h1>
       <p style={{ color: 'var(--text-3)', fontSize: 13, fontFamily: 'var(--ff-mono)', marginBottom: 32 }}>
-        DRAFT · NOT FOR PRODUCTION · Last reviewed: <em>pending legal review</em>
+        Last reviewed: <em>pending legal review</em>
       </p>
 
       <p>

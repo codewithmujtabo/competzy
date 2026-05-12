@@ -69,7 +69,7 @@ export default function LoginScreen() {
   function onSuccess(user: any) {
     fetchUser(user?.id);
     const userRole = user?.role;
-    if (userRole === "admin") router.replace("/(tabs)/admin-competitions");
+    if (userRole === "admin") router.replace("/(tabs)/web-portal-redirect");
     else if (userRole === "teacher") router.replace("/(tabs)/teacher-dashboard");
     else if (userRole === "parent") router.replace("/(tabs)/children");
     else if (userRole === "school_admin") router.replace("/(tabs)/profile");
