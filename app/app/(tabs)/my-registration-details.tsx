@@ -26,7 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function formatDate(date?: string | null) {
   if (!date) return "-";
-  return new Date(date).toLocaleString("id-ID", {
+  return new Date(date).toLocaleString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -90,15 +90,17 @@ export default function MyRegistrationDetailsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={styles.hero}>
-          <Text style={[Type.bodySm, { color: "rgba(255,255,255,0.8)" }]}>
+          <View style={styles.heroBlobYellow} />
+          <View style={styles.heroBlobCoral} />
+          <Text style={[Type.label, { color: "rgba(255,255,255,0.85)", letterSpacing: 0.5 }]}>
             {competition.organizerName} • {competition.category}
           </Text>
           <Text style={[Type.h1, { color: "#FFFFFF", marginTop: Spacing.sm }]}>
             {competition.name}
           </Text>
-          <View style={{ marginTop: Spacing.lg, flexDirection: "row", gap: Spacing.sm }}>
+          <View style={{ marginTop: Spacing.lg, flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm }}>
             <Pill
-              label={registration.status === "completed" ? "✓ Completed" : "✓ Approved / Bergabung"}
+              label={registration.status === "completed" ? "✓ Completed" : "✓ Approved / Joined"}
               tone="success"
             />
             {registration.registrationNumber ? (
@@ -107,7 +109,7 @@ export default function MyRegistrationDetailsScreen() {
           </View>
         </View>
 
-        <Card>
+        <Card variant="playful">
           <Text style={Type.h3}>What You Need To Know</Text>
           <Text style={[Type.body, { marginTop: Spacing.md }]}>
             {competition.participantInstructions?.trim() ||
@@ -115,7 +117,7 @@ export default function MyRegistrationDetailsScreen() {
           </Text>
         </Card>
 
-        <Card>
+        <Card variant="playful">
           <Text style={Type.h3}>Important Details</Text>
           <View style={{ marginTop: Spacing.md, gap: Spacing.md }}>
             <Row label="Competition Date" value={formatDate(competition.competitionDate)} />
@@ -129,8 +131,8 @@ export default function MyRegistrationDetailsScreen() {
           ) : null}
         </Card>
 
-        <Card>
-          <Text style={Type.h3}>Round & Jadwal</Text>
+        <Card variant="playful">
+          <Text style={Type.h3}>Round & Schedule</Text>
           {competition.rounds.length > 0 ? (
             <View style={{ marginTop: Spacing.md, gap: Spacing.md }}>
               {competition.rounds.map((round) => (
@@ -145,7 +147,7 @@ export default function MyRegistrationDetailsScreen() {
                   <View style={{ marginTop: Spacing.md, gap: Spacing.sm }}>
                     <Row label="Starts" value={formatDate(round.startDate)} />
                     <Row label="Exam" value={formatDate(round.examDate)} />
-                    <Row label="Lokasi/Platform" value={round.location?.trim() || "-"} />
+                    <Row label="Location/Platform" value={round.location?.trim() || "-"} />
                   </View>
                 </View>
               ))}
@@ -158,7 +160,7 @@ export default function MyRegistrationDetailsScreen() {
         </Card>
 
         {registration.profileSnapshot && Object.keys(registration.profileSnapshot).length > 0 ? (
-          <Card>
+          <Card variant="playful">
             <Text style={Type.h3}>Profile at Registration</Text>
             <Text style={[Type.bodySm, { marginTop: Spacing.sm }]}>
               Your profile snapshot captured at registration.
@@ -226,11 +228,33 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.primary,
     borderRadius: Radius["3xl"],
     padding: Spacing["2xl"],
-    ...Shadow.lg,
+    overflow: "hidden",
+    position: "relative",
+    ...Shadow.playful,
+  },
+  heroBlobYellow: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: Brand.sunshine,
+    opacity: 0.22,
+    top: -50,
+    right: -40,
+  },
+  heroBlobCoral: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: Brand.coral,
+    opacity: 0.18,
+    bottom: -50,
+    left: -30,
   },
   roundCard: {
     backgroundColor: Surface.cardAlt,
-    borderRadius: Radius.xl,
+    borderRadius: Radius["2xl"],
     padding: Spacing.lg,
   },
 });

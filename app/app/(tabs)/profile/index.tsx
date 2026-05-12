@@ -1,4 +1,4 @@
-import { Card, Pill } from "@/components/ui";
+import { Card, GeometricHeader, StatTile } from "@/components/ui";
 import {
   Brand,
   Radius,
@@ -9,6 +9,7 @@ import {
   Type,
 } from "@/constants/theme";
 import { useUser } from "@/context/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import React from "react";
 import {
@@ -27,11 +28,19 @@ const ROLE_LABEL: Record<string, string> = {
   teacher: "Teacher",
   school_admin: "School Admin",
 };
-const ROLE_EMOJI: Record<string, string> = {
-  student: "🎒",
-  parent: "👨‍👩‍👧",
-  teacher: "📖",
-  school_admin: "🏫",
+
+const ROLE_ICON: Record<string, React.ComponentProps<typeof Ionicons>["name"]> = {
+  student:      "school-outline",
+  parent:       "people-outline",
+  teacher:      "book-outline",
+  school_admin: "business-outline",
+};
+
+type MenuItem = {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
+  tint: string;
+  onPress: () => void;
 };
 
 export default function ProfileScreen() {
@@ -52,112 +61,138 @@ export default function ProfileScreen() {
   const role = (user as any)?.role ?? "student";
 
   const totalComps = role === "student" ? registrations.length : 0;
-  const completed = role === "student" ? registrations.filter((r) => r.status === "completed").length : 0;
-  const active = role === "student" ? registrations.filter((r) => r.status === "paid").length : 0;
+  const completed  = role === "student" ? registrations.filter((r) => r.status === "completed").length : 0;
+  const active     = role === "student" ? registrations.filter((r) => r.status === "paid").length : 0;
 
-  const menuItems = [
-    { emoji: "👤", label: "Edit Profile", onPress: () => router.push("/(tabs)/profile/edit") },
+  const menuItems: MenuItem[] = [
+    { icon: "person-circle-outline", label: "Edit Profile",         tint: Brand.primarySoft, onPress: () => router.push("/(tabs)/profile/edit") },
     ...(role === "student"
       ? [
-          { emoji: "📄", label: "Document Vault", onPress: () => router.push("/(tabs)/profile/document-vault") },
-          { emoji: "🏆", label: "Competition History", onPress: () => router.push("/(tabs)/profile/history") },
-          { emoji: "👨‍👩‍👧", label: "Link Parent Account", onPress: () => router.push("/(tabs)/profile/link-parent") },
+          { icon: "document-attach-outline" as const, label: "Document Vault",       tint: Brand.skySoft,    onPress: () => router.push("/(tabs)/profile/document-vault") },
+          { icon: "trophy-outline"          as const, label: "Competition History",  tint: Brand.sunshineSoft, onPress: () => router.push("/(tabs)/profile/history") },
+          { icon: "people-outline"          as const, label: "Link Parent Account",  tint: Brand.mintSoft,   onPress: () => router.push("/(tabs)/profile/link-parent") },
         ]
       : []),
     ...(role === "school_admin"
       ? [
-          { emoji: "📊", label: "School Dashboard", onPress: () => router.push("/school-dashboard") },
-          { emoji: "📤", label: "Bulk Registration", onPress: () => router.push("/bulk-registration") },
+          { icon: "bar-chart-outline" as const, label: "School Dashboard",   tint: Brand.skySoft,    onPress: () => router.push("/school-dashboard") },
+          { icon: "cloud-upload-outline" as const, label: "Bulk Registration", tint: Brand.coralSoft, onPress: () => router.push("/bulk-registration") },
         ]
       : []),
-    { emoji: "🔔", label: "Notifications", onPress: () => router.push("/(tabs)/notifications") },
-    { emoji: "⚙️", label: "Account Settings", onPress: () => {} },
-    { emoji: "❓", label: "Help & FAQ", onPress: () => {} },
+    { icon: "notifications-outline", label: "Notifications",    tint: Brand.coralSoft,  onPress: () => router.push("/(tabs)/notifications") },
+    { icon: "settings-outline",      label: "Account Settings", tint: Surface.cardAlt,  onPress: () => {} },
+    { icon: "help-circle-outline",   label: "Help & FAQ",       tint: Surface.cardAlt,  onPress: () => {} },
   ];
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingTop: insets.top + Spacing.lg, paddingBottom: Spacing["4xl"] }}
+      contentContainerStyle={{ paddingBottom: Spacing["4xl"] }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Hero card */}
-      <View style={styles.hero}>
-        <View style={styles.heroBlob} />
-        <View style={styles.avatarRing}>
-          <View style={styles.avatar}>
-            {photoUrl ? (
-              <Image source={{ uri: `${API_BASE}${photoUrl}` }} style={styles.avatarImage} />
-            ) : (
-              <Text style={styles.avatarInitial}>{initial}</Text>
-            )}
+      {/* Geometric hero header */}
+      <GeometricHeader height={260 + insets.top} palette="purple">
+        <View style={[styles.heroContent, { paddingTop: insets.top + Spacing["2xl"] }]}>
+          <View style={styles.avatarRing}>
+            <View style={styles.avatar}>
+              {photoUrl ? (
+                <Image source={{ uri: `${API_BASE}${photoUrl}` }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarInitial}>{initial}</Text>
+              )}
+            </View>
           </View>
-        </View>
-        <Text style={[Type.h1, { color: "#FFFFFF", marginTop: Spacing.lg, textAlign: "center" }]}>
-          {fullName}
-        </Text>
-        <View style={styles.roleBadge}>
-          <Text style={{ fontSize: 14, marginRight: 6 }}>{ROLE_EMOJI[role] ?? "👤"}</Text>
-          <Text style={{ ...Type.label, color: "#FFFFFF", fontSize: 13 }}>{ROLE_LABEL[role] ?? role}</Text>
-        </View>
-        {kid ? (
-          <Text style={[Type.caption, { color: "rgba(255,255,255,0.85)", marginTop: Spacing.sm, fontVariant: ["tabular-nums"] }]}>
-            ID: {kid}
+          <Text style={[Type.h1, { color: "#FFFFFF", marginTop: Spacing.lg, textAlign: "center" }]}>
+            {fullName}
           </Text>
-        ) : null}
-        {((user as any)?.city || (user as any)?.school) ? (
-          <Text style={[Type.bodySm, { color: "rgba(255,255,255,0.85)", marginTop: Spacing.xs, textAlign: "center" }]}>
-            {[(user as any)?.school, (user as any)?.city].filter(Boolean).join(" · ")}
-          </Text>
-        ) : null}
-      </View>
+          <View style={styles.roleBadge}>
+            <Ionicons name={ROLE_ICON[role] ?? "person-outline"} size={14} color="#FFFFFF" />
+            <Text style={{ ...Type.label, color: "#FFFFFF", fontSize: 13, marginLeft: 6 }}>
+              {ROLE_LABEL[role] ?? role}
+            </Text>
+          </View>
+          {kid ? (
+            <Text style={[Type.caption, { color: "rgba(255,255,255,0.9)", marginTop: Spacing.sm, fontVariant: ["tabular-nums"] }]}>
+              ID: {kid}
+            </Text>
+          ) : null}
+          {((user as any)?.city || (user as any)?.school) ? (
+            <Text style={[Type.bodySm, { color: "rgba(255,255,255,0.9)", marginTop: Spacing.xs, textAlign: "center" }]}>
+              {[(user as any)?.school, (user as any)?.city].filter(Boolean).join(" · ")}
+            </Text>
+          ) : null}
+        </View>
+      </GeometricHeader>
 
-      {/* Stats row — students only */}
-      {role === "student" ? (
-        <View style={styles.statsRow}>
-          {[
-            { label: "Total", value: totalComps },
-            { label: "Active", value: active },
-            { label: "Completed", value: completed },
-          ].map((s, i) => (
-            <View key={s.label} style={[styles.statItem, i < 2 && styles.statBorder]}>
-              <Text style={[Type.h1, { color: Brand.primary }]}>{s.value}</Text>
-              <Text style={[Type.caption, { marginTop: 2 }]}>{s.label}</Text>
-            </View>
+      <View style={{ paddingHorizontal: Spacing.xl, marginTop: Spacing.lg }}>
+        {/* Stats — students only, playful tiles */}
+        {role === "student" ? (
+          <View style={styles.statsRow}>
+            <StatTile
+              label="Total"
+              value={totalComps}
+              tint={Brand.primarySoft}
+              accent={Brand.navy}
+              icon={<Ionicons name="trophy" size={20} color={Brand.primary} />}
+              style={{ flex: 1 }}
+            />
+            <StatTile
+              label="Active"
+              value={active}
+              tint={Brand.sunshineSoft}
+              accent={Brand.navy}
+              icon={<Ionicons name="flash" size={20} color={Brand.warning} />}
+              style={{ flex: 1 }}
+            />
+            <StatTile
+              label="Done"
+              value={completed}
+              tint={Brand.mintSoft}
+              accent={Brand.navy}
+              icon={<Ionicons name="checkmark-circle" size={20} color={Brand.success} />}
+              style={{ flex: 1 }}
+            />
+          </View>
+        ) : null}
+
+        {/* Menu */}
+        <Card variant="playful" padding={0} style={styles.menuCard}>
+          {menuItems.map((item, i) => (
+            <Pressable
+              key={item.label}
+              onPress={item.onPress}
+              android_ripple={{ color: `${Brand.primary}10` }}
+              style={({ pressed }) => [
+                styles.menuItem,
+                i < menuItems.length - 1 && styles.menuItemBorder,
+                pressed && { backgroundColor: Brand.primarySoft },
+              ]}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: item.tint }]}>
+                <Ionicons name={item.icon} size={20} color={Brand.navy} />
+              </View>
+              <Text style={[Type.body, { flex: 1, fontWeight: "700", color: TextColor.primary }]}>
+                {item.label}
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={TextColor.tertiary} />
+            </Pressable>
           ))}
-        </View>
-      ) : null}
+        </Card>
 
-      {/* Menu */}
-      <Card padding={0} style={styles.menuCard}>
-        {menuItems.map((item, i) => (
-          <Pressable
-            key={item.label}
-            onPress={item.onPress}
-            android_ripple={{ color: "rgba(99,102,241,0.06)" }}
-            style={({ pressed }) => [
-              styles.menuItem,
-              i < menuItems.length - 1 && styles.menuItemBorder,
-              pressed && { backgroundColor: Brand.primarySoft },
-            ]}
-          >
-            <View style={styles.menuIcon}>
-              <Text style={{ fontSize: 18 }}>{item.emoji}</Text>
-            </View>
-            <Text style={[Type.body, { flex: 1, fontWeight: "600" }]}>{item.label}</Text>
-            <Text style={{ fontSize: 22, color: TextColor.tertiary, fontWeight: "300" }}>›</Text>
-          </Pressable>
-        ))}
-      </Card>
+        {/* Sign out */}
+        <Pressable
+          onPress={() => router.replace("/(auth)/login" as any)}
+          style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
+          accessibilityRole="button"
+        >
+          <Ionicons name="log-out-outline" size={18} color={Brand.error} style={{ marginRight: 8 }} />
+          <Text style={{ ...Type.button, color: Brand.error }}>Sign Out</Text>
+        </Pressable>
 
-      {/* Sign out */}
-      <Pressable
-        onPress={() => router.replace("/(auth)/login" as any)}
-        style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.85 }]}
-        accessibilityRole="button"
-      >
-        <Text style={{ ...Type.button, color: Brand.error }}>Sign Out</Text>
-      </Pressable>
+        <Text style={[Type.caption, { textAlign: "center", marginTop: Spacing["2xl"], color: TextColor.tertiary }]}>
+          Keep Learning ✨
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -166,50 +201,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Surface.background,
-    paddingHorizontal: Spacing.xl,
   },
-  hero: {
-    backgroundColor: Brand.primary,
-    borderRadius: Radius["3xl"],
-    paddingVertical: Spacing["3xl"],
-    paddingHorizontal: Spacing.xl,
+  heroContent: {
     alignItems: "center",
-    overflow: "hidden",
-    ...Shadow.lg,
-  },
-  heroBlob: {
-    position: "absolute",
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: Brand.primaryLight,
-    opacity: 0.25,
-    top: -90,
-    right: -60,
+    paddingHorizontal: Spacing.xl,
   },
   avatarRing: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "rgba(255,255,255,0.25)",
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: "rgba(255,255,255,0.28)",
     alignItems: "center",
     justifyContent: "center",
     padding: 4,
+    ...Shadow.lg,
   },
   avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInitial: { fontSize: 36, fontWeight: "800", color: Brand.primary },
-  avatarImage: { width: 88, height: 88, borderRadius: 44 },
+  avatarInitial: { fontSize: 40, fontWeight: "900", color: Brand.primary },
+  avatarImage:   { width: 96, height: 96, borderRadius: 48 },
   roleBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.22)",
     borderRadius: Radius.pill,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs + 2,
@@ -217,14 +237,8 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
-    backgroundColor: Surface.card,
-    borderRadius: Radius.xl,
-    paddingVertical: Spacing.lg,
-    marginTop: Spacing.lg,
-    ...Shadow.sm,
+    gap: Spacing.md,
   },
-  statItem: { flex: 1, alignItems: "center" },
-  statBorder: { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: Surface.divider },
   menuCard: {
     marginTop: Spacing.lg,
     overflow: "hidden",
@@ -241,18 +255,19 @@ const styles = StyleSheet.create({
     borderBottomColor: Surface.divider,
   },
   menuIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: Radius.md,
-    backgroundColor: Brand.primarySoft,
+    width: 40,
+    height: 40,
+    borderRadius: Radius.lg,
     alignItems: "center",
     justifyContent: "center",
   },
   signOut: {
+    flexDirection: "row",
     backgroundColor: Brand.errorSoft,
-    borderRadius: Radius.lg,
+    borderRadius: Radius["2xl"],
     paddingVertical: Spacing.md + 2,
     alignItems: "center",
+    justifyContent: "center",
     marginTop: Spacing.lg,
   },
 });

@@ -45,13 +45,13 @@ function ButtonImpl({
   const palette = (() => {
     switch (variant) {
       case "primary":
-        return { bg: Brand.primary, fg: "#FFFFFF", press: Brand.primaryDark, ring: undefined };
+        return { bg: Brand.primary, fg: "#FFFFFF", press: Brand.primaryDark };
       case "secondary":
-        return { bg: Brand.primarySoft, fg: Brand.primary, press: "#E0E7FF", ring: undefined };
+        return { bg: Brand.primarySoft, fg: Brand.primary, press: Brand.navySoft };
       case "ghost":
-        return { bg: "transparent", fg: Brand.primary, press: Brand.primarySoft, ring: undefined };
+        return { bg: "transparent", fg: Brand.primary, press: Brand.primarySoft };
       case "destructive":
-        return { bg: Brand.error, fg: "#FFFFFF", press: "#DC2626", ring: undefined };
+        return { bg: Brand.error, fg: "#FFFFFF", press: "#C73E54" };
     }
   })();
 
@@ -72,7 +72,8 @@ function ButtonImpl({
           flexDirection: "row",
           alignSelf: fullWidth ? "stretch" : "flex-start",
           opacity: isDisabled ? 0.5 : 1,
-          ...(variant === "primary" && !isDisabled ? Shadow.md : null),
+          ...(variant === "primary" && !isDisabled ? Shadow.playful : null),
+          ...(pressed && !isDisabled ? { transform: [{ scale: 0.97 }] } : null),
         },
         style,
       ]}

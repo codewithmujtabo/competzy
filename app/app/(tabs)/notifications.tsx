@@ -8,6 +8,9 @@ import {
   Text as TextColor,
   Type,
 } from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
+
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 import { useUser } from "@/context/AuthContext";
 import * as notificationsService from "@/services/notifications.service";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,19 +27,19 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const TYPE_EMOJI: Record<string, string> = {
-  registration: "📋",
-  payment: "💳",
-  competition: "🏆",
-  deadline: "⏰",
-  approval: "✅",
-  child: "👨‍👩‍👧",
-  parent_link: "🔗",
-};
+const TYPE_ICON: { match: string; icon: IoniconName; tint: string }[] = [
+  { match: "deadline",    icon: "alarm",                tint: Brand.coralSoft    },
+  { match: "approval",    icon: "checkmark-circle",     tint: Brand.mintSoft     },
+  { match: "payment",     icon: "card",                 tint: Brand.sunshineSoft },
+  { match: "competition", icon: "trophy",               tint: Brand.primarySoft  },
+  { match: "registration", icon: "document-text",       tint: Brand.skySoft      },
+  { match: "child",       icon: "people",               tint: Brand.primarySoft  },
+  { match: "parent_link", icon: "link",                 tint: Brand.primarySoft  },
+];
 
-function emojiForType(type: string) {
-  for (const k of Object.keys(TYPE_EMOJI)) if (type.includes(k)) return TYPE_EMOJI[k];
-  return "🔔";
+function iconForType(type: string): { icon: IoniconName; tint: string } {
+  for (const t of TYPE_ICON) if (type.includes(t.match)) return { icon: t.icon, tint: t.tint };
+  return { icon: "notifications", tint: Brand.primarySoft };
 }
 
 function relativeDate(d: string) {
@@ -48,7 +51,7 @@ function relativeDate(d: string) {
   if (hr < 24) return `${hr} hr ago`;
   const day = Math.floor(hr / 24);
   if (day < 7) return `${day} days ago`;
-  return new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(d).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
 }
 
 export default function NotificationsScreen() {
@@ -123,7 +126,13 @@ export default function NotificationsScreen() {
         <View style={styles.heading}>
           <Text style={Type.displayMd}>Notifications</Text>
         </View>
-        <EmptyState emoji="😕" title="Failed to load notifications" ctaLabel="Try again" onCta={() => refetch()} />
+        <EmptyState
+          icon={<Ionicons name="cloud-offline-outline" size={44} color={Brand.error} />}
+          tint={Brand.errorSoft}
+          title="Failed to load notifications"
+          ctaLabel="Try again"
+          onCta={() => refetch()}
+        />
       </View>
     );
   }
@@ -152,7 +161,7 @@ export default function NotificationsScreen() {
 
       {notifications.length === 0 ? (
         <EmptyState
-          emoji="🔔"
+          icon={<Ionicons name="notifications-outline" size={44} color={Brand.primary} />}
           title="No notifications yet"
           message={
             userRole === "parent"
@@ -170,21 +179,16 @@ export default function NotificationsScreen() {
           contentContainerStyle={styles.listContent}
           ItemSeparatorComponent={renderSep}
           renderItem={({ item }) => {
-            const emoji = emojiForType(item.type);
+            const { icon, tint } = iconForType(item.type);
             return (
               <Card
                 onPress={() => handlePress(item)}
-                variant={item.read ? "elevated" : "tinted"}
-                tint={Brand.primarySoft}
+                variant={item.read ? "elevated" : "playful"}
+                accentColor={item.read ? undefined : Brand.primary}
               >
                 <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                  <View
-                    style={[
-                      styles.iconTile,
-                      { backgroundColor: item.read ? Surface.cardAlt : "#FFFFFF" },
-                    ]}
-                  >
-                    <Text style={{ fontSize: 22 }}>{emoji}</Text>
+                  <View style={[styles.iconTile, { backgroundColor: tint }]}>
+                    <Ionicons name={icon} size={22} color={Brand.navy} />
                   </View>
                   <View style={{ flex: 1, marginLeft: Spacing.md }}>
                     <View style={{ flexDirection: "row", alignItems: "center" }}>

@@ -1,4 +1,5 @@
 import { AppInput } from "@/components/common/AppInput";
+import { ScreenHeader } from "@/components/ui";
 import {
   Brand,
   Radius,
@@ -239,19 +240,13 @@ export default function ProfileEditScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top }]}
     >
+      <ScreenHeader title="Edit Profile" onBack={() => router.back()} />
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 60 }]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backBtnText}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Edit Profile</Text>
-        </View>
 
         {/* Profile Photo */}
         <View style={styles.photoSection}>
@@ -416,11 +411,7 @@ export default function ProfileEditScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Surface.background },
-  scrollContent: { paddingHorizontal: Spacing.xl, paddingBottom: Spacing["4xl"] },
-  header: { marginBottom: Spacing["2xl"] },
-  backBtn: { marginBottom: Spacing.md, alignSelf: "flex-start" },
-  backBtnText: { ...Type.label, color: Brand.primary },
-  title: { ...Type.displayMd },
+  scrollContent: { paddingHorizontal: Spacing.xl, paddingBottom: Spacing["4xl"], paddingTop: Spacing.md },
 
   photoSection: { alignItems: "center", marginBottom: Spacing["3xl"] },
   photoWrapper: { position: "relative" },

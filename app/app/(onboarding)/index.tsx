@@ -1,12 +1,14 @@
 import {
   Brand,
   Radius,
+  Shadow,
   Spacing,
   Surface,
   Text as TextColor,
   Type,
 } from "@/constants/theme";
 import { Button } from "@/components/ui";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
@@ -23,7 +25,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const slides = [
   {
     id: "1",
-    emoji: "🏆",
+    icon: "trophy" as const,
     accent: Brand.primary,
     accentSoft: Brand.primarySoft,
     title: "One Place for\nAll Competitions",
@@ -32,18 +34,18 @@ const slides = [
   },
   {
     id: "2",
-    emoji: "📋",
-    accent: "#7C3AED",
-    accentSoft: "#F5F3FF",
+    icon: "flash" as const,
+    accent: Brand.coral,
+    accentSoft: Brand.coralSoft,
     title: "Register & Pay\nIn Just Minutes",
     description:
       "Fill the form once, pick your favorite payment method, and get instant confirmation. Simple and secure.",
   },
   {
     id: "3",
-    emoji: "🎓",
-    accent: Brand.secondary,
-    accentSoft: Brand.secondarySoft,
+    icon: "school" as const,
+    accent: Brand.navy,
+    accentSoft: Brand.sunshineSoft,
     title: "Track Results &\nGrow Further",
     description:
       "Download your e-certificate, track your ranking, and discover the next competition that matches your interests and grade.",
@@ -55,9 +57,12 @@ type Slide = (typeof slides)[number];
 function OnboardingSlide({ item, width }: { item: Slide; width: number }) {
   return (
     <View style={[styles.slide, { width }]}>
-      <View style={[styles.blob, { backgroundColor: item.accentSoft }]} />
-      <View style={[styles.emojiTile, { shadowColor: item.accent }]}>
-        <Text style={styles.emoji}>{item.emoji}</Text>
+      <View style={[styles.blobLarge, { backgroundColor: item.accentSoft }]} />
+      <View style={[styles.blobSmall, { backgroundColor: item.accent, opacity: 0.18 }]} />
+      <View style={[styles.iconTile, { shadowColor: item.accent, backgroundColor: "#FFFFFF" }]}>
+        <View style={[styles.iconInner, { backgroundColor: item.accentSoft }]}>
+          <Ionicons name={item.icon} size={64} color={item.accent} />
+        </View>
       </View>
       <Text style={[styles.title, { color: item.accent }]}>{item.title}</Text>
       <Text style={styles.description}>{item.description}</Text>
@@ -161,28 +166,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing["3xl"],
     paddingBottom: Spacing["2xl"],
   },
-  blob: {
+  blobLarge: {
     position: "absolute",
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    top: "16%",
-    opacity: 0.6,
+    width: 340,
+    height: 340,
+    borderRadius: 170,
+    top: "12%",
+    opacity: 0.55,
   },
-  emojiTile: {
-    width: 144,
-    height: 144,
-    borderRadius: 36,
-    backgroundColor: "#FFFFFF",
+  blobSmall: {
+    position: "absolute",
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    top: "8%",
+    right: "8%",
+  },
+  iconTile: {
+    width: 168,
+    height: 168,
+    borderRadius: Radius["4xl"],
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing["3xl"],
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 10,
+    padding: 8,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.24,
+    shadowRadius: 28,
+    elevation: 12,
   },
-  emoji: { fontSize: 64 },
+  iconInner: {
+    flex: 1,
+    width: "100%",
+    borderRadius: Radius["3xl"],
+    alignItems: "center",
+    justifyContent: "center",
+  },
   title: {
     fontSize: 30,
     fontWeight: "800",

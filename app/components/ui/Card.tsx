@@ -1,8 +1,8 @@
 import React, { memo } from "react";
 import { Pressable, View, ViewProps, ViewStyle, StyleSheet } from "react-native";
-import { Radius, Shadow, Spacing, Surface } from "@/constants/theme";
+import { Brand, Radius, Shadow, Spacing, Surface } from "@/constants/theme";
 
-type Variant = "elevated" | "flat" | "outline" | "tinted";
+type Variant = "elevated" | "flat" | "outline" | "tinted" | "playful";
 
 type Props = ViewProps & {
   variant?: Variant;
@@ -27,11 +27,12 @@ function CardImpl({
   ...rest
 }: Props) {
   const baseStyle: ViewStyle = {
-    borderRadius: Radius[radius],
+    borderRadius: variant === "playful" ? Radius["3xl"] : Radius[radius],
     padding: padding === 0 ? 0 : Spacing[padding],
     backgroundColor:
       variant === "tinted" ? tint ?? Surface.cardAlt : Surface.card,
     ...(variant === "elevated" ? Shadow.md : null),
+    ...(variant === "playful" ? Shadow.lg : null),
     ...(variant === "outline"
       ? { borderWidth: StyleSheet.hairlineWidth, borderColor: Surface.border }
       : null),
@@ -44,7 +45,7 @@ function CardImpl({
     return (
       <Pressable
         onPress={onPress}
-        android_ripple={{ color: "rgba(99,102,241,0.08)" }}
+        android_ripple={{ color: `${Brand.primary}14` }}
         style={({ pressed }) => [
           baseStyle,
           pressed && { transform: [{ scale: 0.985 }], opacity: 0.96 },

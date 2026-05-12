@@ -4,3 +4,6 @@ export { Pill } from "./Pill";
 export { SectionHeader } from "./SectionHeader";
 export { EmptyState } from "./EmptyState";
 export { ScreenHeader } from "./ScreenHeader";
+export { SubjectCircle } from "./SubjectCircle";
+export { StatTile } from "./StatTile";
+export { GeometricHeader } from "./GeometricHeader";

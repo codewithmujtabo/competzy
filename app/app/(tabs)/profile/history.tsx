@@ -105,7 +105,7 @@ export default function HistoryScreen() {
     <Card>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: Spacing.md }}>
         <View style={{ flex: 1 }}>
-          <Text style={Type.title}>{item.compName ?? "Kompetisi"}</Text>
+          <Text style={Type.title}>{item.compName ?? "Competition"}</Text>
           <Text style={[Type.bodySm, { marginTop: 4 }]}>
             {[item.compYear, item.compCategory, item.eventPart].filter(Boolean).join(" · ")}
           </Text>
@@ -129,7 +129,7 @@ export default function HistoryScreen() {
           <View style={{ flex: 1 }}>
             <Text style={Type.title}>{item.fullName}</Text>
             <Text style={[Type.bodySm, { color: Brand.primary, marginTop: 2 }]}>
-              {item.compName ?? "Kompetisi"}
+              {item.compName ?? "Competition"}
             </Text>
             <Text style={[Type.caption, { marginTop: 4 }]}>
               {[item.compYear, item.compCategory, item.eventPart].filter(Boolean).join(" · ")}

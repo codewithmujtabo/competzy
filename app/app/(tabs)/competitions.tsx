@@ -2,7 +2,6 @@ import {
   Brand,
   CategoryAccent,
   CategoryBg,
-  CategoryEmoji,
   GradeBg,
   GradeText,
   Radius,
@@ -12,7 +11,8 @@ import {
   Type,
   Text as TextColor,
 } from "@/constants/theme";
-import { Button, Card, EmptyState, Pill, SectionHeader } from "@/components/ui";
+import { Button, Card, EmptyState, Pill, SectionHeader, SubjectCircle } from "@/components/ui";
+import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@/context/AuthContext";
 import { useRouter } from "expo-router";
 import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
@@ -41,7 +41,7 @@ function formatPrice(fee: number) {
 
 function formatDeadline(date: string | null) {
   if (!date) return "-";
-  return new Date(date).toLocaleDateString("id-ID", {
+  return new Date(date).toLocaleDateString("en-US", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -94,12 +94,11 @@ const CompetitionCard = memo(function CompetitionCard({
   const firstCat = cats[0] || "General";
   const accent = CategoryAccent[firstCat] ?? Brand.primary;
   const catBg = CategoryBg[firstCat] ?? Brand.primarySoft;
-  const emoji = CategoryEmoji[firstCat] ?? "🏆";
   const urgency = getDeadlineStatus(item.regCloseDate);
   const grades = item.gradeLevel.split(",").map((g: string) => g.trim()).filter(Boolean);
 
   return (
-    <Card onPress={() => onPress(item)} accentColor={accent} style={{ position: "relative" }}>
+    <Card variant="playful" onPress={() => onPress(item)} accentColor={accent} style={{ position: "relative" }}>
       <Pressable
         onPress={(e) => {
           e.stopPropagation();
@@ -108,19 +107,21 @@ const CompetitionCard = memo(function CompetitionCard({
         hitSlop={10}
         style={({ pressed }) => [
           styles.heartBtn,
-          pressed && { opacity: 0.6, transform: [{ scale: 0.94 }] },
+          pressed && { opacity: 0.6, transform: [{ scale: 0.92 }] },
         ]}
         accessibilityRole="button"
         accessibilityLabel={isFavorited ? "Remove from favorites" : "Add to favorites"}
       >
-        <Text style={{ fontSize: 18 }}>{isFavorited ? "❤️" : "🤍"}</Text>
+        <Ionicons
+          name={isFavorited ? "heart" : "heart-outline"}
+          size={20}
+          color={isFavorited ? Brand.error : TextColor.tertiary}
+        />
       </Pressable>
 
       <View style={{ paddingRight: 36 }}>
         <View style={styles.cardEmojiRow}>
-          <View style={[styles.emojiTile, { backgroundColor: catBg }]}>
-            <Text style={{ fontSize: 22 }}>{emoji}</Text>
-          </View>
+          <SubjectCircle label={item.name} size={52} />
           <View style={{ flex: 1 }}>
             <Text style={[Type.title, { lineHeight: 22 }]} numberOfLines={2}>
               {item.name}
@@ -183,19 +184,16 @@ const RecommendedCard = memo(function RecommendedCard({
   const cats = item.category.split("\n").map((c: string) => c.trim()).filter(Boolean);
   const firstCat = cats[0] || "General";
   const accent = CategoryAccent[firstCat] ?? Brand.primary;
-  const catBg = CategoryBg[firstCat] ?? Brand.primarySoft;
-  const emoji = CategoryEmoji[firstCat] ?? "🏆";
   const urgency = getDeadlineStatus(item.regCloseDate);
 
   return (
     <Card
+      variant="playful"
       onPress={() => onPress(item)}
       style={{ width: 220, marginRight: Spacing.md }}
       padding="lg"
     >
-      <View style={[styles.recoEmoji, { backgroundColor: catBg }]}>
-        <Text style={{ fontSize: 28 }}>{emoji}</Text>
-      </View>
+      <SubjectCircle label={item.name} size={56} />
       <Text style={[Type.title, { marginTop: Spacing.md }]} numberOfLines={2}>
         {item.name}
       </Text>
@@ -373,7 +371,9 @@ export default function DiscoverScreen() {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <ScrollView contentContainerStyle={styles.parentScroll}>
           <View style={styles.parentHero}>
-            <Text style={{ fontSize: 32 }}>👨‍👩‍👧</Text>
+            <View style={styles.parentHeroBadge}>
+              <Ionicons name="people" size={26} color={Brand.sunshine} />
+            </View>
             <Text style={[Type.displayMd, { color: "#FFFFFF", marginTop: Spacing.md }]}>
               Parent Home
             </Text>
@@ -565,11 +565,13 @@ export default function DiscoverScreen() {
         <View style={styles.heroBlock}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <View style={{ flex: 1 }}>
-              <Text style={[Type.bodySm, { color: TextColor.tertiary }]}>Welcome 👋</Text>
-              <Text style={[Type.displayMd, { marginTop: 2 }]}>Hello, {displayName}!</Text>
+              <Text style={[Type.label, { color: TextColor.tertiary }]}>WELCOME BACK</Text>
+              <Text style={[Type.displayMd, { marginTop: 2, color: Brand.navy }]}>
+                Hi, {displayName}!
+              </Text>
             </View>
             <View style={styles.heroBadge}>
-              <Text style={{ fontSize: 28 }}>🏆</Text>
+              <Ionicons name="trophy" size={28} color={Brand.sunshine} />
             </View>
           </View>
           <Text style={[Type.body, { color: TextColor.secondary, marginTop: Spacing.sm }]}>
@@ -583,7 +585,7 @@ export default function DiscoverScreen() {
         {registrations.length > 0 && recommendations.length > 0 ? (
           <View style={{ marginTop: Spacing.xl }}>
             <SectionHeader
-              title="✨ For You"
+              title="For You"
               subtitle="Based on your interests and history"
               marginTop={0}
             />
@@ -618,16 +620,28 @@ export default function DiscoverScreen() {
                     style={({ pressed }) => [
                       styles.catChip,
                       isActive
-                        ? { backgroundColor: accent }
+                        ? { backgroundColor: accent, ...Shadow.playful }
                         : { backgroundColor: bg },
-                      pressed && { opacity: 0.8 },
+                      pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
                     ]}
                     accessibilityRole="button"
                     accessibilityState={{ selected: isActive }}
                   >
-                    <Text style={{ fontSize: 16, marginRight: 6 }}>
-                      {CategoryEmoji[cat] ?? "🏷️"}
-                    </Text>
+                    <View
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: 11,
+                        backgroundColor: isActive ? "rgba(255,255,255,0.25)" : accent,
+                        marginRight: 8,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text style={{ ...Type.label, color: isActive ? "#FFFFFF" : "#FFFFFF", fontSize: 12 }}>
+                        {cat.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
                     <Text
                       style={{
                         ...Type.label,
@@ -648,7 +662,7 @@ export default function DiscoverScreen() {
         {activeCategory ? (
           <View style={styles.activeFilters}>
             <Text style={[Type.label, { color: TextColor.secondary }]}>
-              Kategori: {activeCategory}
+              Category: {activeCategory}
             </Text>
             <Pressable
               onPress={() => setActiveCategory(null)}
@@ -690,7 +704,7 @@ export default function DiscoverScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Search bar — kept OUTSIDE FlatList so it doesn't unmount on every keystroke */}
       <View style={styles.searchWrap}>
-        <Text style={{ fontSize: 18, marginRight: Spacing.sm }}>🔍</Text>
+        <Ionicons name="search" size={20} color={TextColor.tertiary} style={{ marginRight: Spacing.sm }} />
         <TextInput
           placeholder="Search competitions, organizers, categories..."
           placeholderTextColor={TextColor.tertiary}
@@ -703,7 +717,7 @@ export default function DiscoverScreen() {
         />
         {query.length > 0 ? (
           <Pressable onPress={() => setQuery("")} hitSlop={10} style={styles.searchClear}>
-            <Text style={{ color: TextColor.secondary, fontWeight: "700" }}>✕</Text>
+            <Ionicons name="close" size={16} color={TextColor.secondary} />
           </Pressable>
         ) : null}
       </View>
@@ -828,13 +842,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: Spacing.md,
   },
-  emojiTile: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -876,15 +883,6 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
 
-  // Recommended
-  recoEmoji: {
-    width: 56,
-    height: 56,
-    borderRadius: Radius.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
   // Skeleton
   skLine: { height: 14, backgroundColor: Surface.cardAlt, borderRadius: 6, width: "80%" },
 
@@ -896,7 +894,15 @@ const styles = StyleSheet.create({
     padding: Spacing["2xl"],
     marginTop: Spacing.lg,
     marginHorizontal: Spacing.xl,
-    ...Shadow.lg,
+    ...Shadow.playful,
+  },
+  parentHeroBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: Radius.pill,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   statRow: {
     flexDirection: "row",

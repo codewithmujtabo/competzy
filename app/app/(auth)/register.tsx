@@ -1,6 +1,6 @@
 import { AppInput } from "@/components/common/AppInput";
 import { AppAutocomplete } from "@/components/common/AppAutocomplete";
-import { Button, Card, Pill } from "@/components/ui";
+import { Button, Card, Pill, ScreenHeader } from "@/components/ui";
 import * as authService from "@/services/auth.service";
 import * as regionsService from "@/services/regions.service";
 import * as schoolsService from "@/services/schools.service";
@@ -201,12 +201,9 @@ export default function RegisterScreen() {
   // ─── Step 1: Role ────────────────────────────────────────────────────────
   if (step === "role") {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + Spacing.lg }]}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <ScreenHeader title="Create Account" onBack={() => router.back()} />
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Pressable onPress={() => router.back()} hitSlop={12} style={{ alignSelf: "flex-start", marginBottom: Spacing.lg }}>
-            <Text style={[Type.label, { color: Brand.primary }]}>← Back to Login</Text>
-          </Pressable>
-
           <View style={{ alignItems: "center", marginBottom: Spacing["2xl"] }}>
             <View style={styles.logoTile}>
               <Text style={{ fontSize: 32 }}>👋</Text>
@@ -350,17 +347,12 @@ export default function RegisterScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={[styles.container, { paddingTop: insets.top }]}
     >
+      <ScreenHeader title="Complete Your Profile" onBack={() => setStep("role")} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: Spacing.xl }}>
-          <Pressable onPress={() => setStep("role")} hitSlop={12} style={{ marginRight: Spacing.md }}>
-            <Text style={[Type.label, { color: Brand.primary }]}>← Back</Text>
-          </Pressable>
-          <Text style={Type.h2}>Complete Your Profile</Text>
-        </View>
 
         <Card>
           <Text style={Type.label}>BASIC INFO</Text>

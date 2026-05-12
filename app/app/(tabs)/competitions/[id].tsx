@@ -1,9 +1,8 @@
-import { Button, Card, Pill, ScreenHeader } from "@/components/ui";
+import { Button, Card, Pill, ScreenHeader, SubjectCircle } from "@/components/ui";
 import {
   Brand,
   CategoryAccent,
   CategoryBg,
-  CategoryEmoji,
   Radius,
   Shadow,
   Spacing,
@@ -11,6 +10,7 @@ import {
   Text as TextColor,
   Type,
 } from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import * as competitionsService from "@/services/competitions.service";
@@ -35,7 +35,7 @@ function formatPrice(fee: number) {
 
 function formatDate(d: string | null) {
   if (!d) return "-";
-  return new Date(d).toLocaleDateString("id-ID", {
+  return new Date(d).toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -151,7 +151,6 @@ export default function CompetitionDetailPage() {
   const firstCat = cats[0] || "General";
   const accent = CategoryAccent[firstCat] ?? Brand.primary;
   const accentBg = CategoryBg[firstCat] ?? Brand.primarySoft;
-  const emoji = CategoryEmoji[firstCat] ?? "🏆";
 
   const ctaLabel = isClosed
     ? "Registration Closed"
@@ -187,9 +186,15 @@ export default function CompetitionDetailPage() {
               accessibilityRole="button"
               accessibilityLabel={isFavorited ? "Remove from favorites" : "Add to favorites"}
             >
-              <Text style={{ fontSize: 18 }}>
-                {loadingFavorite ? "⏳" : isFavorited ? "❤️" : "🤍"}
-              </Text>
+              {loadingFavorite ? (
+                <ActivityIndicator size="small" color={Brand.primary} />
+              ) : (
+                <Ionicons
+                  name={isFavorited ? "heart" : "heart-outline"}
+                  size={20}
+                  color={isFavorited ? Brand.error : TextColor.tertiary}
+                />
+              )}
             </Pressable>
           )
         }
@@ -198,9 +203,9 @@ export default function CompetitionDetailPage() {
       <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={[styles.hero, { backgroundColor: accentBg }]}>
-          <View style={styles.heroEmoji}>
-            <Text style={{ fontSize: 44 }}>{emoji}</Text>
-          </View>
+          <View style={styles.heroBlobA} />
+          <View style={styles.heroBlobB} />
+          <SubjectCircle label={comp.name} size={96} />
           <Text style={[Type.h1, { textAlign: "center", marginTop: Spacing.lg }]} numberOfLines={3}>
             {comp.name}
           </Text>
@@ -282,12 +287,12 @@ export default function CompetitionDetailPage() {
         <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg }}>
           {activeTab === "overview" ? (
             <View style={{ gap: Spacing.lg }}>
-              <Card>
-                <Text style={Type.h3}>About Kompetisi</Text>
+              <Card variant="playful">
+                <Text style={Type.h3}>About Competition</Text>
                 <Text style={[Type.body, { marginTop: Spacing.sm }]}>{comp.description}</Text>
               </Card>
 
-              <Card>
+              <Card variant="playful">
                 <Text style={Type.h3}>Important Dates</Text>
                 <View style={{ marginTop: Spacing.md, gap: Spacing.md }}>
                   <Row label="Registration opens" value={formatDate(comp.regOpenDate)} />
@@ -297,8 +302,8 @@ export default function CompetitionDetailPage() {
               </Card>
 
               {cats.length > 1 ? (
-                <Card>
-                  <Text style={Type.h3}>Kategori</Text>
+                <Card variant="playful">
+                  <Text style={Type.h3}>Categories</Text>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm, marginTop: Spacing.md }}>
                     {cats.map((cat) => (
                       <Pill key={cat} label={cat} tone="brand" />
@@ -311,7 +316,7 @@ export default function CompetitionDetailPage() {
 
           {activeTab === "registration" ? (
             <View style={{ gap: Spacing.lg }}>
-              <Card>
+              <Card variant="playful">
                 <Text style={Type.h3}>Registration Status</Text>
                 <View style={{ marginTop: Spacing.md }}>
                   <Pill
@@ -320,7 +325,7 @@ export default function CompetitionDetailPage() {
                   />
                 </View>
               </Card>
-              <Card>
+              <Card variant="playful">
                 <Text style={Type.h3}>Required Documents</Text>
                 {comp.requiredDocs.length > 0 ? (
                   <View style={{ marginTop: Spacing.md, gap: Spacing.sm }}>
@@ -428,20 +433,33 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   hero: {
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing["2xl"],
-    paddingBottom: Spacing["2xl"],
+    paddingTop: Spacing["3xl"],
+    paddingBottom: Spacing["3xl"],
     alignItems: "center",
-    borderBottomLeftRadius: Radius["3xl"],
-    borderBottomRightRadius: Radius["3xl"],
+    borderBottomLeftRadius: Radius["4xl"],
+    borderBottomRightRadius: Radius["4xl"],
+    overflow: "hidden",
+    position: "relative",
   },
-  heroEmoji: {
-    width: 88,
-    height: 88,
-    borderRadius: Radius["2xl"],
+  heroBlobA: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    ...Shadow.md,
+    opacity: 0.45,
+    top: -90,
+    right: -60,
+  },
+  heroBlobB: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: Brand.sunshine,
+    opacity: 0.18,
+    bottom: -60,
+    left: -30,
   },
   heroPills: {
     flexDirection: "row",

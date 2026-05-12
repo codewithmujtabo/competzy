@@ -1,10 +1,12 @@
 import React, { memo } from "react";
 import { Text, View, ViewStyle } from "react-native";
-import { Brand, Radius, Spacing, Type, Text as TextColor } from "@/constants/theme";
+import { Brand, Radius, Shadow, Spacing, Type, Text as TextColor } from "@/constants/theme";
 import { Button } from "./Button";
 
 type Props = {
-  emoji?: string;
+  emoji?: string;                 // legacy: pass an emoji string
+  icon?: React.ReactNode;         // preferred: pass an Ionicons / vector icon
+  tint?: string;                  // override badge background
   title: string;
   message?: string;
   ctaLabel?: string;
@@ -12,7 +14,7 @@ type Props = {
   style?: ViewStyle;
 };
 
-function EmptyStateImpl({ emoji = "✨", title, message, ctaLabel, onCta, style }: Props) {
+function EmptyStateImpl({ emoji, icon, tint, title, message, ctaLabel, onCta, style }: Props) {
   return (
     <View
       style={[
@@ -27,16 +29,17 @@ function EmptyStateImpl({ emoji = "✨", title, message, ctaLabel, onCta, style 
     >
       <View
         style={{
-          width: 96,
-          height: 96,
+          width: 104,
+          height: 104,
           borderRadius: Radius.pill,
-          backgroundColor: Brand.primarySoft,
+          backgroundColor: tint ?? Brand.primarySoft,
           alignItems: "center",
           justifyContent: "center",
           marginBottom: Spacing.xl,
+          ...Shadow.sm,
         }}
       >
-        <Text style={{ fontSize: 44 }}>{emoji}</Text>
+        {icon ?? <Text style={{ fontSize: 44 }}>{emoji ?? "✨"}</Text>}
       </View>
       <Text style={[Type.h2, { textAlign: "center" }]}>{title}</Text>
       {message ? (

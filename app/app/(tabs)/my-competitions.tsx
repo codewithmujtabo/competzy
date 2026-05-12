@@ -1,9 +1,7 @@
-import { Button, Card, EmptyState, Pill } from "@/components/ui";
+import { Button, Card, EmptyState, Pill, SubjectCircle } from "@/components/ui";
 import {
   Brand,
   CategoryAccent,
-  CategoryBg,
-  CategoryEmoji,
   Radius,
   Shadow,
   Spacing,
@@ -11,6 +9,7 @@ import {
   Text as TextColor,
   Type,
 } from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
 import { useUser, type Registration } from "@/context/AuthContext";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -28,9 +27,9 @@ import * as favoritesService from "@/services/favorites.service";
 import type { Favorite } from "@/services/favorites.service";
 
 const TABS = [
-  { key: "Saved", label: "Saved", emoji: "💙" },
-  { key: "Applications", label: "Applications", emoji: "📝" },
-  { key: "Joined", label: "Joined", emoji: "🏅" },
+  { key: "Saved",        label: "Saved",        icon: "heart-outline"            as const },
+  { key: "Applications", label: "Applications", icon: "document-text-outline"    as const },
+  { key: "Joined",       label: "Joined",       icon: "trophy-outline"           as const },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -162,11 +161,9 @@ export default function MyCompetitionsScreen() {
 
   const renderSavedCard = ({ item }: { item: Favorite }) => {
     const accent = CategoryAccent[item.category ?? ""] ?? Brand.primary;
-    const bg = CategoryBg[item.category ?? ""] ?? Brand.primarySoft;
-    const emoji = CategoryEmoji[item.category ?? ""] ?? "🏆";
     return (
-      <Card accentColor={accent}>
-        <CardHeader emoji={emoji} bg={bg} title={item.name} subtitle={`${item.organizer_name} • ${item.category}`} onTitlePress={() => router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.id } })} />
+      <Card variant="playful" accentColor={accent}>
+        <CardHeader title={item.name} subtitle={`${item.organizer_name} • ${item.category}`} onTitlePress={() => router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.id } })} />
         <Text style={[Type.title, { marginTop: Spacing.sm }]}>{formatCurrency(item.fee)}</Text>
         <View style={styles.actionRow}>
           <View style={{ flex: 1 }}>
@@ -194,12 +191,10 @@ export default function MyCompetitionsScreen() {
   const renderApplicationCard = ({ item }: { item: Registration }) => {
     const cat = item.meta?.category as string | undefined;
     const accent = CategoryAccent[cat ?? ""] ?? Brand.primary;
-    const bg = CategoryBg[cat ?? ""] ?? Brand.primarySoft;
-    const emoji = CategoryEmoji[cat ?? ""] ?? "📝";
     const status = STATUS_LABEL[item.status];
     return (
-      <Card accentColor={accent}>
-        <CardHeader emoji={emoji} bg={bg} title={item.competitionName} subtitle={formatCurrency(item.fee)} onTitlePress={() => router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.compId } })} />
+      <Card variant="playful" accentColor={accent}>
+        <CardHeader title={item.competitionName} subtitle={formatCurrency(item.fee)} onTitlePress={() => router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.compId } })} />
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm, marginTop: Spacing.md }}>
           {status ? <Pill label={status.label} tone={status.tone} size="sm" /> : null}
           {item.registrationNumber ? (
@@ -208,7 +203,7 @@ export default function MyCompetitionsScreen() {
         </View>
         {(item.status === "pending_payment" || item.status === "registered") ? (
           <Text style={[Type.bodySm, { marginTop: Spacing.md }]}>
-            Completedkan pembayaran untuk mengirim pendaftaran.
+            Complete the payment to submit your registration.
           </Text>
         ) : null}
         {item.status === "pending_review" ? (
@@ -253,13 +248,11 @@ export default function MyCompetitionsScreen() {
   const renderJoinedCard = ({ item }: { item: Registration }) => {
     const cat = item.meta?.category as string | undefined;
     const accent = CategoryAccent[cat ?? ""] ?? Brand.success;
-    const bg = CategoryBg[cat ?? ""] ?? Brand.successSoft;
-    const emoji = CategoryEmoji[cat ?? ""] ?? "🏅";
     return (
-      <Card accentColor={accent}>
-        <CardHeader emoji={emoji} bg={bg} title={item.competitionName} subtitle={formatCurrency(item.fee)} onTitlePress={() => router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.compId } })} />
+      <Card variant="playful" accentColor={accent}>
+        <CardHeader title={item.competitionName} subtitle={formatCurrency(item.fee)} onTitlePress={() => router.push({ pathname: "/(tabs)/competitions/[id]", params: { id: item.compId } })} />
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm, marginTop: Spacing.md }}>
-          <Pill label="✓ Bergabung" tone="success" size="sm" />
+          <Pill label="✓ Joined" tone="success" size="sm" />
           {item.registrationNumber ? <Pill label={item.registrationNumber} tone="brand" size="sm" /> : null}
         </View>
         <Text style={[Type.bodySm, { marginTop: Spacing.md }]}>
@@ -305,7 +298,11 @@ export default function MyCompetitionsScreen() {
                 accessibilityRole="tab"
                 accessibilityState={{ selected: active }}
               >
-                <Text style={{ fontSize: 14 }}>{tab.emoji}</Text>
+                <Ionicons
+                  name={tab.icon}
+                  size={16}
+                  color={active ? Brand.primary : TextColor.secondary}
+                />
                 <Text
                   style={{
                     ...Type.label,
@@ -328,13 +325,26 @@ export default function MyCompetitionsScreen() {
 
       {activeTab === "Saved" && loadingFavorites ? (
         <EmptyState
-          emoji="⏳"
+          icon={<Ionicons name="hourglass-outline" size={44} color={Brand.primary} />}
           title="Loading..."
           message="Pull down to refresh if it takes too long."
         />
       ) : currentData.length === 0 ? (
         <EmptyState
-          emoji={activeTab === "Saved" ? "💙" : activeTab === "Applications" ? "📋" : "🏁"}
+          icon={
+            <Ionicons
+              name={
+                activeTab === "Saved"
+                  ? "heart-outline"
+                  : activeTab === "Applications"
+                  ? "document-text-outline"
+                  : "trophy-outline"
+              }
+              size={44}
+              color={Brand.primary}
+            />
+          }
+          tint={Brand.primarySoft}
           title={
             activeTab === "Saved"
               ? "Nothing saved yet"
@@ -374,23 +384,17 @@ export default function MyCompetitionsScreen() {
 }
 
 function CardHeader({
-  emoji,
-  bg,
   title,
   subtitle,
   onTitlePress,
 }: {
-  emoji: string;
-  bg: string;
   title: string;
   subtitle: string;
   onTitlePress?: () => void;
 }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-      <View style={[styles.emojiTile, { backgroundColor: bg }]}>
-        <Text style={{ fontSize: 24 }}>{emoji}</Text>
-      </View>
+      <SubjectCircle label={title} size={52} />
       <View style={{ flex: 1, marginLeft: Spacing.md }}>
         <Pressable onPress={onTitlePress} hitSlop={4}>
           <Text style={Type.title} numberOfLines={2}>
@@ -448,13 +452,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: Spacing.xl,
     paddingBottom: Spacing["3xl"],
-  },
-  emojiTile: {
-    width: 52,
-    height: 52,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
   },
   actionRow: {
     flexDirection: "row",
