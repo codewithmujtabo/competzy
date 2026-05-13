@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { emcHttp } from '@/lib/api/client';
-import { useEmcAuth } from '@/lib/auth/emc-context';
+import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
-import { EMC } from '@/lib/competitions/emc';
+import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
 
 interface RegistrationRow {
   id: string;
@@ -18,7 +18,7 @@ interface RegistrationRow {
 const STATUS_COPY: Record<string, { title: string; body: string; cta?: string }> = {
   pending_payment: {
     title: 'Your seat is held.',
-    body:  'Complete your payment to lock in your EMC 2026 spot.',
+    body:  'Complete your payment to lock in your spot.',
     cta:   'Continue to payment',
   },
   pending_review: {
@@ -39,14 +39,23 @@ const STATUS_COPY: Record<string, { title: string; body: string; cta?: string }>
   },
 };
 
-export default function EmcDashboardPage() {
-  const { user, logout } = useEmcAuth();
-  const { comp } = usePortalComp(EMC.slug);
-  const router = useRouter();
+export default function CompetitionDashboardPage() {
+  const params = useParams<{ slug: string }>();
+  const slug   = params?.slug ?? '';
+  const config = getCompetitionConfig(slug);
+  const paths  = competitionPaths(slug);
+
+  const { user, logout } = useCompetitionAuth();
+  const { comp }         = usePortalComp(slug);
+  const router           = useRouter();
 
   const [regs, setRegs]     = useState<RegistrationRow[] | null>(null);
   const [enroll, setEnroll] = useState(false);
   const [err, setErr]       = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!config) notFound();
+  }, [config]);
 
   const refresh = async (compId?: string | null) => {
     try {
@@ -79,18 +88,20 @@ export default function EmcDashboardPage() {
 
   const signOut = async () => {
     await logout();
-    router.replace(EMC.loginPath);
+    router.replace(paths.login);
   };
+
+  if (!config) return null;
 
   const reg = regs?.[0];
   const copy = reg ? STATUS_COPY[reg.status] : null;
 
   return (
-    <div className="portal-page" style={{ ['--portal-accent' as string]: EMC.accent }}>
+    <div className="portal-page" style={{ ['--portal-accent' as string]: config.accent }}>
       <div className="portal-page-inner">
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
           <div>
-            <span className="form-eyebrow">{EMC.shortName} 2026</span>
+            <span className="form-eyebrow">{config.shortName} 2026</span>
             <h1 style={{ fontFamily: 'var(--ff-display)', fontWeight: 400, fontSize: 28, color: '#0d0d1a', margin: '4px 0 0' }}>
               Hi {user?.fullName || user?.full_name || 'there'} 👋
             </h1>
@@ -109,7 +120,7 @@ export default function EmcDashboardPage() {
           </div>
         ) : reg ? (
           <div style={{ background: '#f7f7fb', borderRadius: 14, padding: 28 }}>
-            <div style={{ font: '500 11px/1 var(--ff-mono)', textTransform: 'uppercase', letterSpacing: '.12em', color: EMC.accent, marginBottom: 8 }}>
+            <div style={{ font: '500 11px/1 var(--ff-mono)', textTransform: 'uppercase', letterSpacing: '.12em', color: config.accent, marginBottom: 8 }}>
               Status · {reg.status.replace(/_/g, ' ')}
             </div>
             <h2 style={{ fontFamily: 'var(--ff-display)', fontWeight: 400, fontSize: 22, color: '#0d0d1a', margin: '4px 0 8px' }}>
@@ -132,26 +143,26 @@ export default function EmcDashboardPage() {
         ) : (
           <div style={{ background: '#f7f7fb', borderRadius: 14, padding: 32, textAlign: 'center' }}>
             <h2 style={{ fontFamily: 'var(--ff-display)', fontWeight: 400, fontSize: 22, color: '#0d0d1a', marginBottom: 8 }}>
-              Welcome to EMC 2026
+              Welcome to {config.wordmark}
             </h2>
             <p style={{ color: '#4c4c6a', fontSize: 14, marginBottom: 22 }}>
               You don’t have a registration yet. Enroll now to claim your spot.
             </p>
             <button className="btn-portal" onClick={enrollNow} disabled={enroll || !comp?.id} style={{ width: 'auto', padding: '12px 22px' }}>
-              {enroll ? 'Enrolling…' : 'Register for EMC 2026'}
+              {enroll ? 'Enrolling…' : `Register for ${config.shortName} 2026`}
             </button>
             {!comp?.id && (
               <p style={{ color: '#a04400', fontSize: 12, marginTop: 12 }}>
-                EMC 2026 isn’t configured yet. Ask an admin to run the latest migration.
+                {config.shortName} 2026 isn’t configured yet. Ask an admin to run the latest migration.
               </p>
             )}
           </div>
         )}
 
         <div style={{ marginTop: 28, padding: 18, border: '1px dashed #d8d8e6', borderRadius: 12, color: '#6b6b80', fontSize: 13 }}>
-          The full student EMC experience (materials, sessions, certificates) is coming next.
+          The full participant experience (materials, sessions, certificates) is coming next.
           For now this dashboard shows your registration status only.{' '}
-          <Link href="/" style={{ color: EMC.accent, fontWeight: 500 }}>Visit Competzy hub →</Link>
+          <Link href="/" style={{ color: config.accent, fontWeight: 500 }}>Visit Competzy hub →</Link>
         </div>
       </div>
     </div>

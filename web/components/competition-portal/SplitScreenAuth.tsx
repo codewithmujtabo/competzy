@@ -3,7 +3,7 @@
 // Mobile collapses to single column (form only, brand becomes a slim header).
 
 import type { ReactNode } from 'react';
-import type { CompetitionPortalConfig } from '@/lib/competitions/emc';
+import type { CompetitionPortalConfig } from '@/lib/competitions/registry';
 import { BrandPanel } from './BrandPanel';
 
 interface Props {

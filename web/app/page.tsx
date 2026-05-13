@@ -9,7 +9,8 @@
 //   admin                  → /dashboard
 //   organizer              → /organizer-dashboard
 //   school_admin / teacher → /school-dashboard
-//   student / parent       → /emc/dashboard   (slug-routed in Phase C)
+//   student / parent       → /competitions/[DEFAULT_COMPETITION_SLUG]/dashboard
+// (Wave 2 will replace the slug default with a `/competitions` catalog page.)
 // If a session cookie is already present, we surface a "continue or switch"
 // chooser instead of auto-redirecting.
 
@@ -22,8 +23,14 @@ import type { AuthUser } from '@/types';
 import {
   MailIcon, LockIcon, EyeIcon, EyeOffIcon, ArrowRightIcon, PhoneIcon,
 } from '@/components/competition-portal/icons';
+import {
+  DEFAULT_COMPETITION_SLUG,
+  competitionPaths,
+} from '@/lib/competitions/registry';
 
 type Mode = 'email' | 'phone';
+
+const defaultCompetition = competitionPaths(DEFAULT_COMPETITION_SLUG);
 
 function destinationFor(role: string): string {
   switch (role) {
@@ -32,7 +39,7 @@ function destinationFor(role: string): string {
     case 'school_admin':
     case 'teacher':      return '/school-dashboard';
     case 'student':
-    case 'parent':       return '/emc/dashboard';
+    case 'parent':       return defaultCompetition.dashboard;
     default:             return '/dashboard';
   }
 }
@@ -464,7 +471,7 @@ export default function UnifiedLogin() {
 
               <div className="portal-switch">
                 New to Competzy?&nbsp;
-                <Link href="/emc/register">Create a student account</Link>
+                <Link href={defaultCompetition.register}>Create a student account</Link>
               </div>
 
               <div className="hub-secondary-links">

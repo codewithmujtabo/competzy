@@ -1,7 +1,7 @@
 // Left panel of the split-screen auth — gradient + competition wordmark +
 // tagline. Parametrised by competition config so ISPO/OSEBI/etc. can reuse it.
 
-import type { CompetitionPortalConfig } from '@/lib/competitions/emc';
+import type { CompetitionPortalConfig } from '@/lib/competitions/registry';
 
 export function BrandPanel({ config }: { config: CompetitionPortalConfig }) {
   const [from, to] = config.gradient;
