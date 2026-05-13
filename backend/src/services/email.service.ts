@@ -69,6 +69,42 @@ export async function sendTempPasswordEmail(email: string, tempPassword: string,
   });
 }
 
+export async function sendPasswordResetEmail(
+  email: string,
+  resetUrl: string,
+  fullName: string | null,
+): Promise<void> {
+  const greeting = fullName ? `Hello ${fullName},` : "Hello,";
+  await sendMailOrThrow({
+    from: env.SMTP_FROM,
+    to: email,
+    subject: "Reset your Competzy password",
+    text: `${greeting}
+
+We received a request to reset your Competzy password. Open the link below to set a new one:
+
+${resetUrl}
+
+This link is valid for 15 minutes.
+
+If you didn't request this, you can safely ignore this email — your password won't change.`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #4F46E5;">Competzy</h2>
+        <p>${greeting}</p>
+        <p>We received a request to reset your Competzy password. Click the button below to set a new one:</p>
+        <p style="margin: 24px 0; text-align: center;">
+          <a href="${resetUrl}" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: bold;">Reset password</a>
+        </p>
+        <p style="color: #666; font-size: 14px;">Or paste this link into your browser:</p>
+        <p style="color: #4F46E5; font-size: 13px; word-break: break-all;">${resetUrl}</p>
+        <p style="color: #666; font-size: 14px;">This link is valid for <strong>15 minutes</strong>.</p>
+        <p style="color: #999; font-size: 12px; margin-top: 24px;">If you didn't request this, you can safely ignore this email — your password won't change.</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendParentInvitationEmail(email: string, pin: string, studentName: string): Promise<void> {
   await sendMailOrThrow({
     from: env.SMTP_FROM,

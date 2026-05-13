@@ -367,6 +367,21 @@ tbody tr:hover td { background: var(--bg-elevated); color: var(--text-1); }
   margin-bottom: 16px;
 }
 
+/* Inline validation hint under an input. Subtle red so it doesn't compete
+   with .portal-error (which is for top-of-form failures). */
+.portal-hint {
+  margin-top: 6px;
+  font: 500 12px/1.4 var(--ff-body);
+  color: #c43232;
+}
+.portal-hint code {
+  background: #fff5f5;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--ff-mono);
+  font-size: 11px;
+}
+
 /* Force light background on the entire (competitions) tree even when
    the rest of the admin app is in dark mode. */
 .auth-split, .portal-page { color-scheme: light; }
@@ -531,4 +546,62 @@ tbody tr:hover td { background: var(--bg-elevated); color: var(--text-1); }
   border: 1px solid #ececf4;
   border-radius: 20px;
   padding: 36px;
+}
+
+/* ── Email / Phone sign-in mode toggle ──────────────────────────────────── */
+.hub-mode-toggle {
+  display: inline-flex;
+  padding: 4px;
+  background: #f4f4fa;
+  border: 1px solid #e4e4ee;
+  border-radius: 12px;
+  margin-bottom: 22px;
+  gap: 2px;
+}
+.hub-mode-toggle-btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 18px;
+  font: 600 13px/1 var(--ff-body);
+  color: #6b6b80;
+  cursor: pointer;
+  transition: background var(--ease), color var(--ease);
+}
+.hub-mode-toggle-btn:hover { color: #0d0d1a; }
+.hub-mode-toggle-btn.is-active {
+  background: #fff;
+  color: var(--portal-accent, #0d7377);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+}
+
+/* ── Skeleton loader (form-panel hydrate state) ─────────────────────────── */
+@keyframes hub-skeleton-pulse {
+  0%   { opacity: 0.55; }
+  50%  { opacity: 0.85; }
+  100% { opacity: 0.55; }
+}
+.hub-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.hub-skeleton > * {
+  background: linear-gradient(90deg, #ececf4 0%, #f5f5fa 50%, #ececf4 100%);
+  border-radius: 8px;
+  animation: hub-skeleton-pulse 1.4s ease-in-out infinite;
+}
+.hub-skeleton-eyebrow { height: 12px; width: 38%; }
+.hub-skeleton-title   { height: 28px; width: 65%; border-radius: 10px; }
+.hub-skeleton-line    { height: 14px; width: 80%; }
+.hub-skeleton-input   { height: 46px; width: 100%; border-radius: 12px; }
+.hub-skeleton-button  { height: 48px; width: 100%; border-radius: 12px; }
+
+/* ── Narrow-viewport polish for the unified login + new auth pages ──────── */
+@media (max-width: 600px) {
+  .hub-form-panel { padding: 28px 18px; }
+  .form-panel h1 { font-size: 28px; line-height: 1.2; }
+  .form-panel .form-subtitle { font-size: 14px; }
+  .hub-rights, .hub-legal { font-size: 11px; }
 }

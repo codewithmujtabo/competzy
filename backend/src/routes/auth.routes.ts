@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { createHash, randomBytes } from "crypto";
 import { pool } from "../config/database";
 import { env } from "../config/env";
 import {
@@ -7,10 +8,15 @@ import {
   generateToken,
   generateOtp,
 } from "../services/auth.service";
-import { sendOtpEmail } from "../services/email.service";
+import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service";
 import { sendPhoneOtp, verifyPhoneOtp, toE164 } from "../services/twilio.service";
 import { authMiddleware } from "../middleware/auth";
-import { otpSendLimiter, otpVerifyLimiter, authLimiter } from "../middleware/rate-limit";
+import {
+  otpSendLimiter,
+  otpVerifyLimiter,
+  authLimiter,
+  passwordResetLimiter,
+} from "../middleware/rate-limit";
 
 const router = Router();
 
@@ -385,6 +391,127 @@ router.post("/phone/verify-otp", otpVerifyLimiter, async (req: Request, res: Res
   } catch (err: any) {
     console.error("Phone verify-otp error:", err);
     res.status(500).json({ message: err.message || "OTP verification failed" });
+  }
+});
+
+// ── POST /api/auth/forgot-password ────────────────────────────────────────
+// Email-based password reset. We NEVER tell the caller whether the email
+// matched an account — always 200 — so the endpoint can't be used as an
+// account-enumeration oracle. The raw token only exists in the response
+// email; the DB stores its SHA-256 hash with a 15-minute TTL.
+const RESET_TOKEN_TTL_MIN = 15;
+
+function appBaseUrl(req: Request): string {
+  // Prefer the request's Origin header (matches whichever subdomain the
+  // user is on); fall back to the configured APP_URL for server-to-server
+  // calls or missing headers.
+  const origin = (req.headers.origin as string | undefined)?.trim();
+  if (origin && /^https?:\/\//.test(origin)) return origin.replace(/\/$/, "");
+  return env.APP_URL.replace(/\/$/, "");
+}
+
+router.post("/forgot-password", passwordResetLimiter, async (req: Request, res: Response) => {
+  try {
+    const email = (req.body?.email as string | undefined)?.trim().toLowerCase();
+    if (!email) {
+      res.status(400).json({ message: "Email is required" });
+      return;
+    }
+
+    const userResult = await pool.query(
+      "SELECT id, full_name FROM users WHERE LOWER(email) = $1 AND deleted_at IS NULL",
+      [email],
+    );
+
+    if (userResult.rows.length > 0) {
+      const { id: userId, full_name: fullName } = userResult.rows[0];
+      const token = randomBytes(32).toString("hex");
+      const tokenHash = createHash("sha256").update(token).digest("hex");
+      const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MIN * 60 * 1000);
+
+      await pool.query(
+        "INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)",
+        [userId, tokenHash, expiresAt],
+      );
+
+      const resetUrl = `${appBaseUrl(req)}/reset-password?token=${token}`;
+      try {
+        await sendPasswordResetEmail(email, resetUrl, fullName);
+      } catch (mailErr) {
+        // Log but keep returning 200 so we don't reveal whether the email exists.
+        console.error("Password reset email send failed:", mailErr);
+      }
+    }
+
+    res.json({
+      message: "If an account exists with that email, we've sent a reset link. Check your inbox.",
+    });
+  } catch (err) {
+    console.error("Forgot-password error:", err);
+    res.status(500).json({ message: "Could not process request" });
+  }
+});
+
+// ── POST /api/auth/reset-password ─────────────────────────────────────────
+// Consumes a token from the email link, sets a new password, and marks the
+// token used. Single use; expired or already-used tokens fail with a generic
+// message that doesn't distinguish the two cases.
+router.post("/reset-password", passwordResetLimiter, async (req: Request, res: Response) => {
+  try {
+    const token = (req.body?.token as string | undefined)?.trim();
+    const password = req.body?.password as string | undefined;
+
+    if (!token || !password) {
+      res.status(400).json({ message: "Token and password are required" });
+      return;
+    }
+    if (password.length < 8) {
+      res.status(400).json({ message: "Password must be at least 8 characters" });
+      return;
+    }
+
+    const tokenHash = createHash("sha256").update(token).digest("hex");
+    const tokenResult = await pool.query(
+      `SELECT id, user_id
+         FROM password_reset_tokens
+        WHERE token_hash = $1
+          AND used_at IS NULL
+          AND expires_at > now()
+        LIMIT 1`,
+      [tokenHash],
+    );
+
+    if (tokenResult.rows.length === 0) {
+      res.status(400).json({ message: "Reset link is invalid or has expired. Request a new one." });
+      return;
+    }
+
+    const { id: tokenId, user_id: userId } = tokenResult.rows[0];
+    const passwordHash = await hashPassword(password);
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("UPDATE users SET password_hash = $1 WHERE id = $2", [passwordHash, userId]);
+      await client.query("UPDATE password_reset_tokens SET used_at = now() WHERE id = $1", [tokenId]);
+      // Invalidate every other outstanding reset token for this user — the
+      // simplest way to ensure one successful reset disables all stragglers.
+      await client.query(
+        "UPDATE password_reset_tokens SET used_at = now() WHERE user_id = $1 AND used_at IS NULL",
+        [userId],
+      );
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    res.json({ message: "Password updated. You can now sign in with the new password." });
+  } catch (err) {
+    console.error("Reset-password error:", err);
+    res.status(500).json({ message: "Could not reset password" });
   }
 });
 

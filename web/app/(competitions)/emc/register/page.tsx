@@ -29,8 +29,14 @@ export default function EmcRegisterPage() {
   const [province, setProvince]   = useState('');
   const [consent, setConsent]     = useState(false);
   const [error, setError]         = useState('');
+  const [emailTaken, setEmailTaken] = useState(false);
   const [warning, setWarning]     = useState('');
   const [submitting, setSubmit]   = useState(false);
+
+  // Light client-side validation. Backend re-validates everything.
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const phoneValid = phone === '' || /^\+?\d{8,15}$/.test(phone.replace(/[\s-]/g, ''));
+  const passwordTooShort = password.length > 0 && password.length < 8;
 
   // Already-logged-in: send straight to the right destination.
   useEffect(() => {
@@ -41,7 +47,8 @@ export default function EmcRegisterPage() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(''); setWarning(''); setSubmit(true);
+    if (!emailValid || password.length < 8 || !consent || !phoneValid) return;
+    setError(''); setEmailTaken(false); setWarning(''); setSubmit(true);
     try {
       // 1. Create the student account (auto-issues auth cookie).
       await emcHttp.post<SignupResponse>('/auth/signup', {
@@ -81,13 +88,28 @@ export default function EmcRegisterPage() {
 
       router.replace(EMC.dashboardPath);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-up failed');
+      const msg = err instanceof Error ? err.message : '';
+      if (/already registered/i.test(msg)) {
+        setEmailTaken(true);
+        setError('');
+      } else if (/at least 6 characters|password must be at least/i.test(msg)) {
+        setError('Password is too short. Use at least 8 characters.');
+      } else {
+        setError(msg || 'Could not create your account. Please try again.');
+      }
     } finally {
       setSubmit(false);
     }
   };
 
-  const canSubmit = !submitting && consent && fullName && email && password;
+  const canSubmit =
+    !submitting &&
+    consent &&
+    !!fullName.trim() &&
+    emailValid &&
+    !passwordTooShort &&
+    password.length >= 8 &&
+    phoneValid;
 
   return (
     <SplitScreenAuth config={EMC}>
@@ -98,6 +120,15 @@ export default function EmcRegisterPage() {
       </p>
 
       {error && <div className="portal-error">{error}</div>}
+      {emailTaken && (
+        <div className="portal-error">
+          That email is already registered.{' '}
+          <Link href="/" style={{ textDecoration: 'underline', fontWeight: 600 }}>
+            Sign in instead
+          </Link>{' '}
+          or use Forgot password.
+        </div>
+      )}
       {warning && <div className="portal-toast">{warning}</div>}
 
       <form onSubmit={submit}>
@@ -125,11 +156,17 @@ export default function EmcRegisterPage() {
               className="input-light"
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={e => { setEmail(e.target.value); setEmailTaken(false); }}
               required
               autoComplete="email"
+              aria-invalid={email.length > 0 && !emailValid}
             />
           </div>
+          {email.length > 0 && !emailValid && (
+            <div className="portal-hint" role="alert">
+              Please enter a valid email address.
+            </div>
+          )}
         </div>
 
         <div className="form-row">
@@ -144,12 +181,18 @@ export default function EmcRegisterPage() {
               value={phone}
               onChange={e => setPhone(e.target.value)}
               autoComplete="tel"
+              aria-invalid={!phoneValid}
             />
           </div>
+          {!phoneValid && (
+            <div className="portal-hint" role="alert">
+              Use the international format, e.g. <code>+628123456789</code>.
+            </div>
+          )}
         </div>
 
         <div className="form-row">
-          <label className="label-light" htmlFor="emc-pwd">Password (min 6 chars)</label>
+          <label className="label-light" htmlFor="emc-pwd">Password (min 8 chars)</label>
           <div className="icon-input-wrap">
             <LockIcon />
             <input
@@ -159,8 +202,9 @@ export default function EmcRegisterPage() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
+              aria-invalid={passwordTooShort}
             />
             <button
               type="button"
@@ -171,6 +215,11 @@ export default function EmcRegisterPage() {
               {showPwd ? <EyeOffIcon /> : <EyeIcon />}
             </button>
           </div>
+          {passwordTooShort && (
+            <div className="portal-hint" role="alert">
+              Password must be at least 8 characters.
+            </div>
+          )}
         </div>
 
         <div className="form-grid-2">
