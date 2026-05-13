@@ -6,7 +6,7 @@
 // `competitions` row on signup success.
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { useRouter, useParams, notFound } from 'next/navigation';
+import { useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { emcHttp } from '@/lib/api/client';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
@@ -21,7 +21,6 @@ import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 type SignupResponse = { token: string; user: { id: string; role: string } };
 
 export default function CompetitionRegisterPage() {
-  const router = useRouter();
   const params = useParams<{ slug: string }>();
   const slug   = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -55,9 +54,9 @@ export default function CompetitionRegisterPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace(user.role === 'admin' ? paths.admin : paths.dashboard);
+      window.location.assign(user.role === 'admin' ? paths.admin : paths.dashboard);
     }
-  }, [user, authLoading, router, paths.admin, paths.dashboard]);
+  }, [user, authLoading, paths.admin, paths.dashboard]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -86,17 +85,17 @@ export default function CompetitionRegisterPage() {
           const msg = regErr instanceof Error ? regErr.message : '';
           if (!/already exists/i.test(msg)) {
             setWarning(`Account created, but we couldn’t auto-enroll you in ${config?.wordmark ?? 'this competition'}: ${msg || 'unknown error'}. You can register from the dashboard.`);
-            setTimeout(() => router.replace(paths.dashboard), 1200);
+            setTimeout(() => window.location.assign(paths.dashboard), 1200);
             return;
           }
         }
       } else {
         setWarning(`Account created, but ${config?.wordmark ?? 'this competition'} isn’t configured in the database yet. Run the latest migration to enable enrollment.`);
-        setTimeout(() => router.replace(paths.dashboard), 1500);
+        setTimeout(() => window.location.assign(paths.dashboard), 1500);
         return;
       }
 
-      router.replace(paths.dashboard);
+      window.location.assign(paths.dashboard);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (/already registered/i.test(msg)) {

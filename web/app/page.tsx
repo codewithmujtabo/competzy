@@ -11,11 +11,18 @@
 //   school_admin / teacher → /school-dashboard
 //   student / parent       → /competitions/[DEFAULT_COMPETITION_SLUG]/dashboard
 // (Wave 2 will replace the slug default with a `/competitions` catalog page.)
-// If a session cookie is already present, we surface a "continue or switch"
-// chooser instead of auto-redirecting.
+//
+// Why we hard-nav (window.location.assign) instead of router.replace:
+// each per-role auth context (AuthProvider, OrganizerAuthProvider,
+// SchoolAuthProvider, CompetitionAuthProvider) hydrates from /auth/me
+// exactly once on mount. A client-side router.replace doesn't unmount the
+// root layout, so the AuthProvider keeps user=null from its initial
+// hydration (which ran BEFORE the login cookie existed). That makes the
+// destination layout bounce right back to /. A hard nav forces the whole
+// page tree to remount, the AuthProvider re-hydrates with the fresh
+// cookie, and the destination renders normally.
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { adminHttp } from '@/lib/api/client';
 import { useTheme } from '@/lib/theme/context';
@@ -44,13 +51,16 @@ function destinationFor(role: string): string {
   }
 }
 
+function goTo(role: string) {
+  // Hard nav — see comment block at top of file.
+  window.location.assign(destinationFor(role));
+}
+
 export default function UnifiedLogin() {
-  const router = useRouter();
   const { theme, toggle } = useTheme();
   const isDark = theme === 'dark';
 
   const [hydrating, setHydrating]     = useState(true);
-  const [existingUser, setExisting]   = useState<AuthUser | null>(null);
   const [mode, setMode]               = useState<Mode>('email');
 
   // Email/password state
@@ -67,35 +77,23 @@ export default function UnifiedLogin() {
 
   const [error, setError]             = useState('');
   const [submitting, setSubmit]       = useState(false);
-  const [switching, setSwitching]     = useState(false);
 
   // Light client-side validation. We don't gate submit on this — backend
   // still validates — but we surface inline hints when fields look off.
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const phoneValid = /^\+?\d{8,15}$/.test(phone.replace(/[\s-]/g, ''));
 
+  // If a live session cookie is already present, auto-redirect to the
+  // user's home — don't make them re-authenticate or choose. Uses hard
+  // nav so the destination's auth provider re-mounts cleanly.
   useEffect(() => {
     let cancelled = false;
     adminHttp
       .get<AuthUser>('/auth/me')
-      .then(me => { if (!cancelled) setExisting(me); })
-      .catch(() => { /* not signed in — fall through to form */ })
-      .finally(() => { if (!cancelled) setHydrating(false); });
+      .then(me => { if (!cancelled) goTo(me.role); })
+      .catch(() => { if (!cancelled) setHydrating(false); });
     return () => { cancelled = true; };
   }, []);
-
-  const continueToDashboard = () => {
-    if (existingUser) router.replace(destinationFor(existingUser.role));
-  };
-
-  const switchAccount = async () => {
-    setSwitching(true);
-    try {
-      await adminHttp.post('/auth/logout', {});
-    } catch { /* ignore — we just want the cookie cleared */ }
-    setExisting(null);
-    setSwitching(false);
-  };
 
   const switchMode = (m: Mode) => {
     if (m === mode || submitting) return;
@@ -114,7 +112,8 @@ export default function UnifiedLogin() {
       const res = await adminHttp.post<{ token: string; user: AuthUser }>(
         '/auth/login', { email, password },
       );
-      router.replace(destinationFor(res.user.role));
+      goTo(res.user.role);
+      // No setSubmit(false) — page is unmounting via hard nav.
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       // Backend returns "Invalid email or password" for a missing user OR a
@@ -124,7 +123,6 @@ export default function UnifiedLogin() {
       } else {
         setError(msg || 'Could not sign in. Please try again.');
       }
-    } finally {
       setSubmit(false);
     }
   };
@@ -144,6 +142,19 @@ export default function UnifiedLogin() {
     }
   };
 
+  const resendOtp = async () => {
+    if (submitting) return;
+    setError(''); setOtpInfo(''); setSubmit(true);
+    try {
+      await adminHttp.post('/auth/phone/send-otp', { phone });
+      setOtpInfo('Code resent.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not resend the code. Please try again.');
+    } finally {
+      setSubmit(false);
+    }
+  };
+
   const verifyOtp = async (e: FormEvent) => {
     e.preventDefault();
     if (otpCode.length < 4 || submitting) return;
@@ -153,7 +164,9 @@ export default function UnifiedLogin() {
         '/auth/phone/verify-otp', { phone, code: otpCode },
       );
       if (res.user) {
-        router.replace(destinationFor(res.user.role));
+        goTo(res.user.role);
+        // No setSubmit(false) — page is unmounting via hard nav.
+        return;
       } else if (res.historicalMatch) {
         // The phone matched a legacy record but no account exists yet — punt
         // to the register page where the matched name/email can prefill.
@@ -227,55 +240,6 @@ export default function UnifiedLogin() {
               <div className="hub-skeleton-input" />
               <div className="hub-skeleton-button" />
             </div>
-          ) : existingUser ? (
-            <>
-              <span className="form-eyebrow">Competzy · Web Portal</span>
-              <h1>Already signed in.</h1>
-              <p className="form-subtitle">
-                You&rsquo;re signed in as{' '}
-                <strong style={{ color: '#0d0d1a' }}>
-                  {existingUser.fullName || existingUser.full_name || existingUser.email}
-                </strong>{' '}
-                ({existingUser.role}).
-              </p>
-
-              <button
-                className="btn-portal"
-                onClick={continueToDashboard}
-                style={{ marginBottom: 12 }}
-              >
-                Continue to your dashboard
-                <ArrowRightIcon />
-              </button>
-
-              <button
-                onClick={switchAccount}
-                disabled={switching}
-                style={{
-                  width: '100%',
-                  background: '#fff',
-                  border: '1px solid #e4e4ee',
-                  borderRadius: 12,
-                  padding: 13,
-                  color: '#4c4c6a',
-                  font: '500 14px/1 var(--ff-body)',
-                  cursor: 'pointer',
-                }}
-              >
-                {switching ? 'Signing out…' : 'Sign out & switch account'}
-              </button>
-
-              <div className="hub-rights" style={{ marginTop: 22 }}>
-                Competzy &copy; 2026 &middot; All rights reserved
-              </div>
-              <div className="hub-legal">
-                <Link href="/privacy">Privacy</Link>
-                <span className="hub-legal-dot">&middot;</span>
-                <Link href="/terms">Terms</Link>
-                <span className="hub-legal-dot">&middot;</span>
-                <a href="mailto:hello@competzy.com">Contact</a>
-              </div>
-            </>
           ) : (
             <>
               <span className="form-eyebrow">Competzy · Web Portal</span>
@@ -459,7 +423,8 @@ export default function UnifiedLogin() {
                         <button
                           type="button"
                           className="link"
-                          onClick={() => sendOtp(new Event('submit') as unknown as FormEvent)}
+                          onClick={resendOtp}
+                          disabled={submitting}
                         >
                           Resend code
                         </button>
