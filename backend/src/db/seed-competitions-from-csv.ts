@@ -260,7 +260,7 @@ function parseKatalog(filePath: string, descriptions: Map<string, string>): Comp
       // Start new competition
       currentComp = {
         name: name.trim(),
-        organizerName: "Eduversal",
+        organizerName: "Competzy",
         category: category || "General",
         gradeLevel: grades || "1-12",
         websiteUrl: regLink,

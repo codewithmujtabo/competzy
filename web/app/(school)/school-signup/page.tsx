@@ -55,7 +55,7 @@ export default function SchoolSignupPage() {
           <p style={{ color: 'var(--text-2)', fontSize: 13, lineHeight: 1.6 }}>{SUCCESS_MSG}</p>
           <button
             className="btn btn-primary"
-            onClick={() => router.replace('/school-login')}
+            onClick={() => router.replace('/')}
             style={{ marginTop: 24, background: 'linear-gradient(135deg,#22c55e,#16a34a)', border: 'none', padding: '11px 24px' }}
           >
             Continue to Login
@@ -143,7 +143,7 @@ export default function SchoolSignupPage() {
         </form>
 
         <p style={{ textAlign: 'center', marginTop: 18, fontSize: 12, color: 'var(--text-3)' }}>
-          Already have an account? <Link href="/school-login" style={{ color: '#22c55e', textDecoration: 'none' }}>Sign in</Link>
+          Already have an account? <Link href="/" style={{ color: '#22c55e', textDecoration: 'none' }}>Sign in</Link>
         </p>
       </div>
     </div>

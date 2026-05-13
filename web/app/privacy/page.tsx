@@ -39,9 +39,9 @@ export default function PrivacyPage() {
       </p>
 
       <p>
-        Competzy (<em>"we", "us"</em>) is operated by Eduversal. This Privacy Policy explains
-        how we collect, use, store, and protect personal data of platform users in compliance
-        with the Personal Data Protection Law of Indonesia (UU PDP No. 27 / 2022).
+        Competzy (<em>"we", "us"</em>) is the platform you are using. This Privacy Policy
+        explains how we collect, use, store, and protect personal data of platform users in
+        compliance with the Personal Data Protection Law of Indonesia (UU PDP No. 27 / 2022).
       </p>
 
       <h2>1. Data we collect</h2>
@@ -97,7 +97,7 @@ export default function PrivacyPage() {
       <h2>8. Contact</h2>
       <p>
         Data Protection Officer: <a href="mailto:privacy@competzy.com">privacy@competzy.com</a>.
-        Postal: Eduversal, [address pending].
+        Postal: Competzy, [address pending].
       </p>
 
       <p style={{ marginTop: 48, color: 'var(--text-3)', fontSize: 12 }}>

@@ -181,7 +181,7 @@ export default function HistoryScreen() {
           <EmptyState
             emoji="🏆"
             title="No history yet"
-            message="Your past Eduversal records will appear here after auto-linking, or search in the Find & Claim tab."
+            message="Your past competition records will appear here after auto-linking, or search in the Find & Claim tab."
           />
         ) : (
           <FlatList
@@ -196,7 +196,7 @@ export default function HistoryScreen() {
         <ScrollView contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled">
           <Card variant="tinted" tint={Brand.infoSoft}>
             <Text style={[Type.body, { color: Brand.info, lineHeight: 22 }]}>
-              Search your name as it appears in Eduversal records to find and claim your history.
+              Search your name as it appears in past competition records to find and claim your history.
             </Text>
           </Card>
 

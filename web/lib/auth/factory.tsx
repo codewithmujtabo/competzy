@@ -10,7 +10,9 @@ type Http = {
 
 export interface RoleAuthCtx {
   user: AuthUser | null;
-  login: (email: string, password: string) => Promise<void>;
+  // Returns the authenticated user so callers can branch by role
+  // (e.g. EMC portal routes admin → /emc/admin vs student → /emc/dashboard).
+  login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
   loading: boolean;
 }
@@ -50,6 +52,7 @@ export function createRoleAuth(config: RoleAuthConfig) {
         throw new Error(deniedMessage);
       }
       setUser(res.user);
+      return res.user;
     };
 
     const logout = async () => {

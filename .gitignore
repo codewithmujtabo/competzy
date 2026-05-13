@@ -62,3 +62,4 @@ graphify-out/cache/
 # graphify local-machine state (interpreter path, scan root)
 graphify-out/.graphify_python
 graphify-out/.graphify_root
+graphify-out/.rebuild.lock

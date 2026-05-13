@@ -706,9 +706,19 @@ router.get("/segments", async (_req, res) => {
 router.get("/registrations/pending", async (req, res) => {
   try {
     const statusFilter = (req.query.status as string) || "pending_review";
-    const whereClause = statusFilter === "all"
-      ? ""
-      : `WHERE r.status = '${statusFilter}'`;
+    const compIdFilter = req.query.compId as string | undefined;
+
+    const where: string[] = [];
+    const values: unknown[] = [];
+    if (statusFilter !== "all") {
+      values.push(statusFilter);
+      where.push(`r.status = $${values.length}`);
+    }
+    if (compIdFilter) {
+      values.push(compIdFilter);
+      where.push(`r.comp_id = $${values.length}`);
+    }
+    const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
     const result = await pool.query(
       `SELECT
@@ -732,7 +742,8 @@ router.get("/registrations/pending", async (req, res) => {
       LEFT JOIN schools sc ON s.school_id = sc.id
       JOIN competitions c ON r.comp_id = c.id
       ${whereClause}
-      ORDER BY r.created_at DESC`
+      ORDER BY r.created_at DESC`,
+      values
     );
 
     res.json({

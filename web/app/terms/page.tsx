@@ -39,8 +39,8 @@ export default function TermsPage() {
 
       <h2>1. Who we are</h2>
       <p>
-        Competzy is a platform operated by Eduversal that lets students discover and register
-        for academic competitions in Indonesia and abroad.
+        Competzy is a platform that lets students discover and register for academic
+        competitions in Indonesia and abroad.
       </p>
 
       <h2>2. Eligibility</h2>

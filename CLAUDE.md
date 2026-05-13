@@ -245,13 +245,28 @@ EXPO_PUBLIC_API_URL=http://<MAC_LAN_IP>:3000/api
 
 ---
 
-## Current Task Status (as of May 9, 2026 — Session 5)
+## Current Task Status (as of May 13, 2026 — Session 10)
 
-**Sprints 0–16 fully complete locally. All backend code for the July 1 soft launch is shipped.**
-**Latest:** Sprint 14 (compliance & cookie auth) + Sprint 15 (Launch 1 polish) + Sprint 16 (school portal self-signup + achievement PDF) + Sprint 13/17 production templates.
+**Sprints 0–16 fully complete locally + Sprints 19 (Gen Z redesign) and 20 (unified login + de-brand) shipped + EMC Port Wave 1 in execution (4-phase).**
+**Latest milestone (Phase A):** Sprint 20 shipped — unified email/password login at `/` auto-routes by role; all per-role login pages (`/login`, `/organizer-login`, `/school-login`) removed; competition-portal scaffolding at `/emc/{register,dashboard,admin}` is live (renamed to slug-based routes in Phase C); migration `1748000000000_add-competition-slug` adds `competitions.slug` and seeds the EMC 2026 row de-branded; backend CORS allows any `http://localhost:<port>` in dev; migration `1747600000000` hot-fixed (`comp_id` column typo + `p.payment_status='settlement'`). All user-visible "Eduversal" references stripped — platform is Competzy-only.
 
-7 commits ahead of `origin/main` and `eduversal/main`:
+### EMC Port (begins 2026-05-13) — Wave 1 IN EXECUTION (4 phases)
+
+We're porting the feature set of the legacy `eduversal-team/emc` Laravel app onto Competzy's existing stack. 9 waves total, ~6–10 weeks. Wave 1 was re-scoped from "schema-only" into four sequential phases.
+
+- **Plan file:** `/Users/mujtabo/.claude/plans/resumption-prompt-paste-playful-bachman.md` (supersedes the earlier `image-1-yeah-when-unified-galaxy.md`).
+- **Cadence:** wave-by-wave — plan-mode session → ship → plan next wave. No mega-plan. Within a wave, one commit per phase + push to `feature/legacy-cleanup`.
+- **Wave 1 phases:** (A) cleanup + de-brand to Competzy-only ✅ this commit; (B) login + register polish (forgot-password, phone OTP, mobile-responsive); (C) generalize `/emc/*` → `/competitions/[slug]/*`; (D) 6 new migrations creating 31 multi-tenant tables.
+- **Wave 1 schema scope (Phase D):** 6 migrations `1748100000000`–`1748600000000` creating 31 tables (subjects, topics, subtopics, questions, answers, question_topics, proofreads, areas, test_centers, area_user, test_center_user, exams, exam_question, sessions, periods, answer_keys, paper_exams, paper_answers, webcams, voucher_groups, vouchers, products, orders, order_items, referrals, clicks, announcements, materials, suggestions, settings, accesses). UUID PKs, JSONB for legacy TEXT-JSON, soft-delete pattern matches Sprint 14.
+- **Skipped this wave:** `representatives` (already in our `schools` table), `tags`/`taggables` (Spatie polymorphic — not essential), Spatie permission tables (we keep `users.role` enum-as-text).
+- **Wave 2–9 preview:** (2) role enum + question-bank admin UI + **per-competition step-flow abstraction** + `/competitions` catalog landing, (3) online + paper exam delivery, (4) test-center / area / webcam proctoring, (5) vouchers + products + orders UI, (6) referrals + announcements + materials, (7) mobile rollout of student surfaces, (8) certificate PDF + QR verify + barcode, (9) data import from legacy `kompetisi.net` MySQL.
+- **Locked design decisions** (per user May 13, 2026 evening replanning): **Multi-tenant schema from day one** — content tables carry `comp_id` (tiered: 24 strict NOT NULL, 2 nullable on `announcements`/`materials`, 5 global on `areas`/`test_centers`/`settings`/pivots). **One app + one website for ALL competitions** — routes are slug-keyed `/competitions/[slug]/…`. **Per-competition step-flow engine in Wave 2**. Both online AND paper exam from day one. No `PortalUser`/cross-site SSO. Legacy users keep their data (Wave 9 import — now simpler thanks to multi-tenancy: every legacy row gets `comp_id = 'comp_emc_2026_main'`). Mobile in lockstep but operator-only features stay web-only. UX matches `competzy.com` marketing site palette + typography. **Brand is Competzy-only — no user-visible "Eduversal" references anywhere.**
+
+### Manual rollout still required (Sprint 13/17 — needs your access)
+
+8 commits ahead of `origin/main` and `eduversal/main` (Phase A of Wave 1 ships as commit #8; Phases B/C/D will push three more commits):
 ```
+<phase-A-sha>  chore(brand): ship unified login + de-brand to Competzy-only
 6f83ec6 feat(deploy): production infra templates (nginx, pm2, eas, k6, runbook)
 c7e117f feat(school): achievement PDF + school-named bulk-payment receipts
 83c4bbd feat(school): self-signup + admin verification + portal gating
@@ -263,7 +278,7 @@ d0fc10c feat(security): Sprint 14 compliance & hardening
 
 ### Manual rollout still required (Sprint 13/17 — needs your access)
 - **MinIO Docker on VPS** (T21): `docker run -d -p 9000:9000 -p 9001:9001 -e MINIO_ROOT_USER=... -e MINIO_ROOT_PASSWORD=... quay.io/minio/minio server /data --console-address :9001`, then set the 5 `MINIO_*` env vars in VPS `backend/.env`.
-- **Run all migrations on VPS:** `cd backend && npm run db:migrate` to apply `1746500000000` through `1747500000000`.
+- **Run all migrations on VPS:** `cd backend && npm run db:migrate` to apply `1746500000000` through `1748000000000` (and, after Wave 1 of the EMC port runs locally, also `1748100000000`–`1748600000000`).
 - **Rename DB on VPS:** `ALTER DATABASE kompetix RENAME TO competzy;` (or `beyond_classroom RENAME TO competzy;`). Update VPS `DATABASE_URL`.
 - **Production deploy:** copy `deploy/nginx.conf` to `/etc/nginx/sites-available/competzy.conf`; `pm2 start deploy/pm2.config.js --env production` after `npm run build` in `backend/` and `web/`. See `docs/RUNBOOK.md`.
 - **DNS + SSL:** A records for `competzy.com`, `api.competzy.com`, `admin.competzy.com`, `organizer.competzy.com`, `partner.competzy.com`, `compete.competzy.com`. Then `certbot --nginx -d ...`.
@@ -380,6 +395,15 @@ d0fc10c feat(security): Sprint 14 compliance & hardening
 | 19.4 | **Sprint 18 leakage mop-up** — fixed strings that escaped the English pass: `"Approved / Bergabung"` → `"Joined"`, `"Lokasi/Platform"` → `"Location/Platform"`, `compName ?? "Kompetisi"` → `"Competition"`, `"Round & Jadwal"` → `"Round & Schedule"`, `"Completedkan pembayaran…"` → `"Complete the payment…"`, `"✓ Bergabung"` → `"✓ Joined"`, `"Kategori:"` filter → `"Category:"`, `"About Kompetisi"` → `"About Competition"`, `Categories` heading. Date locale `id-ID` → `en-US` in 5 more files (my-registration-details, notifications, competitions, competitions/[id], profile/document-vault). Currency stays `id-ID` (period thousand separator). | `app/app/(tabs)/my-registration-details.tsx`, `app/app/(tabs)/my-competitions.tsx`, `app/app/(tabs)/competitions.tsx`, `app/app/(tabs)/competitions/[id].tsx`, `app/app/(tabs)/notifications.tsx`, `app/app/(tabs)/profile/document-vault.tsx`, `app/app/(tabs)/profile/history.tsx` |
 | 19.5 | **Back-nav holdouts unified** — Sprint 18.4 unified back affordance on 4 screens; 5 stragglers still had `"← Back"` text links. Replaced with circular-chevron `ScreenHeader` on `profile/edit`, `profile/document-vault`, `teacher-actions`, and both wizard steps in `(auth)/register` (the multi-step register keeps `setStep("role")` as the back action instead of `router.back()`). Pay screen's footer cancel link is intentionally left as text (it's not a header). Dead `backButton`/`backButtonText`/`title`/`header` styles removed. | `app/app/(tabs)/profile/edit.tsx`, `app/app/(tabs)/profile/document-vault.tsx`, `app/app/(tabs)/teacher-actions.tsx`, `app/app/(auth)/register.tsx` |
 
+### SPRINT 20 — Unified Login + De-Brand to Competzy (May 13, 2026 Session 10) — Phase A of EMC Wave 1 ✅ COMPLETE
+| Task | What | Key files |
+|---|---|---|
+| 20.1 | **Ship May 12–13 working tree** — unified email/password login at `/` (split-screen, role auto-route, session detection, theme toggle); per-role login pages deleted (`/login`, `/organizer-login`, `/school-login`); competition-portal scaffolding (`/emc/{register,dashboard,admin}` with generic `SplitScreenAuth` + `BrandPanel` + `CompetitionAuthProvider`); slug migration `1748000000000_add-competition-slug` (adds `competitions.slug` + seeds EMC 2026 de-branded); backend CORS opens any `http://localhost:<port>` in dev. | `web/app/page.tsx`, `web/app/(competitions)/emc/{register,dashboard,admin}/*`, `web/components/competition-portal/*`, `web/lib/auth/{factory,emc-context}.tsx`, `web/lib/competitions/emc.ts`, `backend/migrations/1748000000000_add-competition-slug.sql`, `backend/src/index.ts` |
+| 20.2 | **Migration `1747600000000` hot-fix** — column-name typos: `competition_id` → `comp_id`, `p.status='settled'` → `p.payment_status='settlement'`. | `backend/migrations/1747600000000_promote-legacy-approved-registrations.sql` |
+| 20.3 | **De-brand to Competzy-only** — every user-visible "Eduversal" / "Eduversal Foundation" string replaced with Competzy or competition-specific names: login page brand label + footers (4 strings), generic `BrandPanel` label + footer (2 strings), EMC wordmark (`Eduversal Mathematics Competition` → `Mathematics Competition`), Privacy + Terms boilerplate ("operated by Eduversal" → platform-neutral), mobile profile/history copy (2 strings), Achievement PDF footer + subtitle (2 strings), `schools.routes.ts` spec comment. Seed data: `organizer_name: "Eduversal Foundation"` → `"Competzy Foundation"` in `seed.ts` (3 rows), `organizerName: "Eduversal"` → `"Competzy"` in `seed-competitions-from-csv.ts`. Slug migration `1748000000000` body de-branded + idempotent `UPDATE` clauses appended so any previously-seeded local DB row gets renamed on re-run. | `web/app/page.tsx`, `web/components/competition-portal/BrandPanel.tsx`, `web/lib/competitions/emc.ts`, `web/app/{terms,privacy}/page.tsx`, `app/app/(tabs)/profile/history.tsx`, `backend/src/routes/schools.routes.ts`, `backend/src/db/{seed,seed-competitions-from-csv}.ts`, `backend/migrations/1748000000000_add-competition-slug.sql` |
+| 20.4 | **Intentionally kept** (internal-only) — test fixture emails `admin@eduversal.com` / `organizer@eduversal.com` (working dev credentials); historical-import script's `Eduversal_Database.xlsx` filename ref; migration header comments mentioning Eduversal as data source; historical sprint logs in CLAUDE.md. See `feedback_brand_competzy_only.md` for the rule. | n/a |
+| 20.5 | **`.gitignore`** — added `graphify-out/.rebuild.lock` so the local rebuild lock doesn't keep appearing in `git status`. | `.gitignore` |
+
 ### SPRINT 16 — School Portal Soft Launch (May 9, 2026 Session 5) ✅ COMPLETE
 | Task | What | Key files |
 |---|---|---|
@@ -487,6 +511,8 @@ T21 (MinIO) ──────────────► T22 (storage migration
 - **`/uploads/...` static path is still served unsigned by the backend** for backward-compat in dev. Production nginx config (`deploy/nginx.conf`) now returns 404 for `/uploads/` on `api.competzy.com`, so signed URLs are the only public access path.
 - **Cookie auth single-session caveat**: one browser → one session. Admins who used to keep admin + organizer tabs open simultaneously must now use two browsers or two profiles.
 - **`docs/PROJECT_PLAN.md` and `docs/PROJECT_PLAN.docx`** are out-of-sync with this CLAUDE.md after Sprint 14–16. Treat CLAUDE.md as the source of truth; update PROJECT_PLAN later if needed for stakeholder reporting.
+- **Brand rule (Sprint 20):** platform is Competzy-only — no user-visible "Eduversal" references. Internal dev artifacts (test fixture emails `admin@eduversal.com` / `organizer@eduversal.com`, historical-import script's `Eduversal_Database.xlsx` filename ref, migration header comments) are intentionally kept. See memory `feedback_brand_competzy_only.md`. When in doubt, ask before stripping.
+- **EMC competition portal still on `/emc/*` paths** after Phase A; Phase C of Wave 1 generalizes to `/competitions/[slug]/*`. Until then, student/parent post-login routes to `/emc/dashboard`. After Phase C: `/competitions/emc-2026/dashboard`.
 
 ---
 

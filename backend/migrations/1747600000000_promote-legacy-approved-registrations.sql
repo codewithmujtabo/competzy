@@ -8,11 +8,15 @@
 --   * Paid comp with at least one settled payment  → 'paid'
 --   * Paid comp with no settled payment            → 'registered'
 
+-- Column-name fixes (2026-05-12):
+--   r.competition_id  →  r.comp_id           (registrations.comp_id is the actual column)
+--   p.status='settled' → p.payment_status='settlement'   (Midtrans's success label)
+
 UPDATE registrations r
 SET status = 'paid'
 FROM competitions c
 WHERE r.status = 'approved'
-  AND r.competition_id = c.id
+  AND r.comp_id = c.id
   AND COALESCE(c.fee, 0) = 0;
 
 UPDATE registrations r
@@ -21,7 +25,7 @@ WHERE r.status = 'approved'
   AND EXISTS (
     SELECT 1 FROM payments p
     WHERE p.registration_id = r.id
-      AND p.status = 'settled'
+      AND p.payment_status = 'settlement'
   );
 
 UPDATE registrations r

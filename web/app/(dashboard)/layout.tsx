@@ -11,7 +11,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router            = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) router.replace('/login');
+    if (!loading && !user) router.replace('/');
   }, [user, loading, router]);
 
   if (loading) {

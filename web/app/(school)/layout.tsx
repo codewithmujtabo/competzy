@@ -38,13 +38,13 @@ function SchoolLayoutInner({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
 
   useEffect(() => {
-    if (!loading && !user && !pathname.includes('/school-login') && !pathname.includes('/school-signup')) {
-      router.replace('/school-login');
+    if (!loading && !user && !pathname.includes('/school-signup')) {
+      router.replace('/');
     }
   }, [user, loading, pathname, router]);
 
-  // Pages that don't require an authenticated school user
-  if (pathname.includes('/school-login') || pathname.includes('/school-signup')) return <>{children}</>;
+  // school-signup remains reachable unauthenticated (no sidebar)
+  if (pathname.includes('/school-signup')) return <>{children}</>;
 
   // School-admin users whose school isn't verified yet land on /school-pending.
   // school_admin only — teachers can be linked to verified schools and don't go through approval.
@@ -66,7 +66,7 @@ function SchoolLayoutInner({ children }: { children: React.ReactNode }) {
     </div>
   );
 
-  const handleLogout = async () => { await logout(); router.replace('/school-login'); };
+  const handleLogout = async () => { await logout(); router.replace('/'); };
   
   // Выбираем навигацию в зависимости от роли пользователя
   const isAdmin = user.role === 'school_admin';

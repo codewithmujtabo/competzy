@@ -43,7 +43,7 @@ export default function SchoolPendingPage() {
 
         <button
           className="btn btn-ghost"
-          onClick={async () => { await logout(); router.replace('/school-login'); }}
+          onClick={async () => { await logout(); router.replace('/'); }}
           style={{ marginTop: 24 }}
         >
           Sign out

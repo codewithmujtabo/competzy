@@ -28,13 +28,8 @@ function OrganizerLayoutInner({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
 
   useEffect(() => {
-    if (!loading && !user && !pathname.includes('/organizer-login')) {
-      router.replace('/organizer-login');
-    }
+    if (!loading && !user) router.replace('/');
   }, [user, loading, pathname, router]);
-
-  // Show login page without sidebar
-  if (pathname.includes('/organizer-login')) return <>{children}</>;  
 
   if (loading || !user) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -44,7 +39,7 @@ function OrganizerLayoutInner({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     await logout();
-    router.replace('/organizer-login');
+    router.replace('/');
   };
 
   return (

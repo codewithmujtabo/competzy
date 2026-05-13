@@ -25,7 +25,7 @@ export default function SchoolStudents() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/school-login');
+      router.replace('/');
     }
   }, [user, loading, router]);
 
