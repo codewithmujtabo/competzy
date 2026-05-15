@@ -1,81 +1,83 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSchool } from '@/lib/auth/school-context';
+import { toast } from 'sonner';
+import { useSchool, schoolHttp } from '@/lib/auth/school-context';
+import { PageHeader } from '@/components/shell/page-header';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default function MyCompetitions() {
-  const { user, loading } = useSchool();
-  const router = useRouter();
-  const [competitions, setCompetitions] = useState([]);
-  const [loadingData, setLoadingData] = useState(true);
+interface CompetitionStudent {
+  id: string;
+  fullName?: string;
+  grade?: string;
+}
+interface TeacherCompetition {
+  id: string;
+  name: string;
+  category?: string;
+  fee?: number;
+  students?: CompetitionStudent[];
+}
+
+export default function MyCompetitionsPage() {
+  const { user } = useSchool();
+  const [competitions, setCompetitions] = useState<TeacherCompetition[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/');
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (user && user.role === 'teacher') {
-      fetch('/api/teachers/my-competitions', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('school_token')}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          setCompetitions(data.competitions || []);
-          setLoadingData(false);
-        })
-        .catch(err => {
-          console.error(err);
-          setLoadingData(false);
-        });
-    }
+    if (!user || user.role !== 'teacher') return;
+    schoolHttp
+      .get<{ competitions?: TeacherCompetition[] }>('/teachers/my-competitions')
+      .then((d) => setCompetitions(d.competitions || []))
+      .catch((e) => toast.error(e instanceof Error ? e.message : 'Failed to load competitions'))
+      .finally(() => setLoading(false));
   }, [user]);
 
-  if (loading || loadingData) {
-    return (
-      <div style={{ padding: '36px 40px', textAlign: 'center' }}>
-        <span className="spin" />
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 1060 }}>
-      <div className="fu" style={{ marginBottom: 32 }}>
-        <h1 style={{ fontFamily: 'var(--ff-display)', fontSize: 32, fontWeight: 400 }}>My Competitions</h1>
-        <p style={{ color: 'var(--text-3)' }}>
-          Competitions your students are registered for
-        </p>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        eyebrow="School"
+        title="My Competitions"
+        subtitle="Competitions your students are registered for."
+      />
 
-      {competitions.length === 0 ? (
-        <div className="card" style={{ padding: 48, textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-3)' }}>No competitions yet.</p>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
-            Your students haven't registered for any competitions yet.
-          </p>
+      {loading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
         </div>
+      ) : competitions.length === 0 ? (
+        <Card className="p-12 text-center text-sm text-muted-foreground">
+          Your students have not registered for any competitions yet.
+        </Card>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {competitions.map((comp: any) => (
-            <div key={comp.id} className="card" style={{ padding: 20 }}>
-              <h3 style={{ fontSize: 18, marginBottom: 12 }}>{comp.name}</h3>
-              <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12 }}>
-                {comp.category} {comp.fee > 0 ? `• Rp ${comp.fee.toLocaleString()}` : '• Free'}
+        <div className="space-y-4">
+          {competitions.map((comp) => (
+            <Card key={comp.id} className="gap-0 p-5">
+              <h3 className="font-serif text-lg font-medium text-foreground">{comp.name}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {comp.category || 'General'}
+                {' · '}
+                {comp.fee && comp.fee > 0 ? `Rp ${comp.fee.toLocaleString('id-ID')}` : 'Free'}
               </p>
-              <div>
-                <p className="label" style={{ marginBottom: 8 }}>Registered Students ({comp.students?.length || 0})</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {comp.students?.map((student: any) => (
-                    <span key={student.id} className="badge badge-indigo">
-                      {student.fullName} {student.grade && `(${student.grade})`}
-                    </span>
-                  ))}
-                </div>
+              <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+                Registered students ({comp.students?.length || 0})
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {comp.students && comp.students.length > 0 ? (
+                  comp.students.map((s) => (
+                    <Badge key={s.id} variant="secondary" className="font-normal">
+                      {s.fullName}
+                      {s.grade ? ` · ${s.grade}` : ''}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-sm text-muted-foreground">No students yet.</span>
+                )}
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}

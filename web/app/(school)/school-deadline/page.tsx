@@ -1,89 +1,107 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSchool } from '@/lib/auth/school-context';
+import { toast } from 'sonner';
+import { useSchool, schoolHttp } from '@/lib/auth/school-context';
+import { PageHeader } from '@/components/shell/page-header';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
-export default function Deadlines() {
-  const { user, loading } = useSchool();
-  const router = useRouter();
-  const [deadlines, setDeadlines] = useState([]);
-  const [loadingData, setLoadingData] = useState(true);
+interface Deadline {
+  id: string;
+  competition: string;
+  deadline: string;
+  daysLeft: number;
+  status: string;
+  registeredCount: number;
+}
+
+export default function DeadlinesPage() {
+  const { user } = useSchool();
+  const [deadlines, setDeadlines] = useState<Deadline[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/');
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (user && user.role === 'teacher') {
-      fetch('/api/teachers/upcoming-deadlines', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('school_token')}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          setDeadlines(data);
-          setLoadingData(false);
-        })
-        .catch(err => {
-          console.error(err);
-          setLoadingData(false);
-        });
-    }
+    if (!user || user.role !== 'teacher') return;
+    schoolHttp
+      .get<Deadline[]>('/teachers/upcoming-deadlines')
+      .then((d) => setDeadlines(Array.isArray(d) ? d : []))
+      .catch((e) => toast.error(e instanceof Error ? e.message : 'Failed to load deadlines'))
+      .finally(() => setLoading(false));
   }, [user]);
 
-  if (loading || loadingData) {
-    return (
-      <div style={{ padding: '36px 40px', textAlign: 'center' }}>
-        <span className="spin" />
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 1060 }}>
-      <div className="fu" style={{ marginBottom: 32 }}>
-        <h1 style={{ fontFamily: 'var(--ff-display)', fontSize: 32, fontWeight: 400 }}>Upcoming Deadlines</h1>
-        <p style={{ color: 'var(--text-3)' }}>
-          Competitions with registration deadlines in the next 30 days
-        </p>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        eyebrow="School"
+        title="Upcoming Deadlines"
+        subtitle="Competitions with a registration deadline in the next 30 days."
+      />
 
-      {deadlines.length === 0 ? (
-        <div className="card" style={{ padding: 48, textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-3)' }}>No upcoming deadlines.</p>
-        </div>
-      ) : (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-2)' }}>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Competition</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Deadline</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Days Left</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Your Students</th>
-                 </tr>
-              </thead>
-              <tbody>
-                {deadlines.map((dl: any) => (
-                  <tr key={dl.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px 16px', fontWeight: 500 }}>{dl.competition}</td>
-                    <td style={{ padding: '10px 16px' }}>{dl.deadline}</td>
-                    <td style={{ padding: '10px 16px' }}>
-                      <span className={`badge ${dl.status === 'urgent' ? 'badge-red' : 'badge-yellow'}`}>
+      <Card className="overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Competition</TableHead>
+                <TableHead>Deadline</TableHead>
+                <TableHead>Days left</TableHead>
+                <TableHead className="text-right">Your students</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={4}>
+                      <Skeleton className="h-8 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : deadlines.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-32 text-center text-sm text-muted-foreground">
+                    No upcoming deadlines.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                deadlines.map((dl) => (
+                  <TableRow key={dl.id}>
+                    <TableCell className="font-medium text-foreground">{dl.competition}</TableCell>
+                    <TableCell className="font-mono text-[12px] text-muted-foreground">{dl.deadline}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'border-transparent font-mono text-[10px]',
+                          dl.status === 'urgent'
+                            ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'
+                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+                        )}
+                      >
                         {dl.daysLeft} days
-                      </span>
-                     </td>
-                    <td style={{ padding: '10px 16px' }}>{dl.registeredCount} registered</td>
-                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground">
+                      {dl.registeredCount} registered
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
-      )}
+      </Card>
     </div>
   );
 }
