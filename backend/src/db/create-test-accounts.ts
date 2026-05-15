@@ -4,7 +4,7 @@ import * as bcrypt from "bcrypt";
 /**
  * Seed one test account per non-operator role (student, parent, teacher,
  * school_admin) with a shared known password, for QA / manual testing.
- * Idempotent — re-running resets the passwords.
+ * Idempotent — re-running resets the passwords and re-links the student roster.
  *
  *   npm run db:create-test-accounts
  *
@@ -30,6 +30,9 @@ async function createTestAccounts() {
     );
     const school: { id: string; name: string } | null = schoolRes.rows[0] ?? null;
 
+    // Capture each created user's id by role so we can wire links afterwards.
+    const ids: Record<string, string> = {};
+
     for (const a of ACCOUNTS) {
       const schoolId = a.role === "school_admin" && school ? school.id : null;
 
@@ -44,6 +47,7 @@ async function createTestAccounts() {
         [a.email, hash, a.fullName, a.role, schoolId]
       );
       const userId = ins.rows[0].id;
+      ids[a.role] = userId;
 
       if (a.role === "student") {
         await pool.query(
@@ -67,6 +71,43 @@ async function createTestAccounts() {
 
       console.log(`✅ ${a.role.padEnd(13)} ${a.email}`);
     }
+
+    // Give the test parent + teacher a roster of real students so the
+    // "My Children" / "My Students" screens have data to show in QA.
+    // The test student is always included; the rest are picked at random.
+    const rosterRes = await pool.query(
+      `SELECT u.id
+         FROM users u
+         JOIN students s ON s.id = u.id
+        WHERE u.role = 'student'
+          AND u.deleted_at IS NULL
+          AND s.deleted_at IS NULL
+          AND u.id <> $1
+        ORDER BY random()
+        LIMIT 5`,
+      [ids.student]
+    );
+    const studentIds = [ids.student, ...rosterRes.rows.map((r) => r.id as string)];
+
+    for (const studentId of studentIds) {
+      // Parent link — 'active' so the child shows with full details, not "pending".
+      await pool.query(
+        `INSERT INTO parent_student_links (parent_id, student_id, status, approved_at)
+         VALUES ($1, $2, 'active', NOW())
+         ON CONFLICT (parent_id, student_id)
+           DO UPDATE SET status = 'active', approved_at = NOW()`,
+        [ids.parent, studentId]
+      );
+      // Teacher roster link.
+      await pool.query(
+        `INSERT INTO teacher_student_links (teacher_id, student_id)
+         VALUES ($1, $2)
+         ON CONFLICT (teacher_id, student_id) DO NOTHING`,
+        [ids.teacher, studentId]
+      );
+    }
+
+    console.log(`✅ ${"roster".padEnd(13)} linked ${studentIds.length} student(s) to the test parent + teacher`);
 
     console.log(`\n🔑 Password for all four: ${PASSWORD}`);
     process.exit(0);

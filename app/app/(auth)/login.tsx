@@ -11,6 +11,7 @@ import {
   Type,
 } from "@/constants/theme";
 import { useUser } from "@/context/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -212,12 +213,15 @@ export default function LoginScreen() {
                 secureTextEntry={!showPassword}
                 error={errors.password}
                 editable={!loading}
+                rightIcon={
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={22}
+                    color={TextColor.tertiary}
+                  />
+                }
+                onRightIconPress={() => setShowPassword((v) => !v)}
               />
-              <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-                <Text style={[Type.label, { color: Brand.primary }]}>
-                  {showPassword ? "Hide" : "Show"} password
-                </Text>
-              </Pressable>
               <Button label="Sign In" onPress={handleEmailLogin} loading={loading} fullWidth size="lg" />
             </View>
           ) : (
