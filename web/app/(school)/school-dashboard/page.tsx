@@ -1,7 +1,26 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import {
+  ArrowRight,
+  Award,
+  CalendarClock,
+  CheckCircle2,
+  ClipboardList,
+  Clock,
+  CreditCard,
+  Star,
+  Trophy,
+  Upload,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { useSchool, schoolHttp } from '@/lib/auth/school-context';
+import { PageHeader } from '@/components/shell/page-header';
+import { StatCard } from '@/components/shell/stat-card';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface SchoolInfo {
   id: string;
@@ -11,14 +30,12 @@ interface SchoolInfo {
   province: string;
   studentCount: number;
 }
-
 interface Stats {
   total_students: number;
   active_registrations: number;
   pending_registrations: number;
   approved_registrations: number;
 }
-
 interface TeacherStats {
   totalStudents: number;
   totalRegistrations: number;
@@ -26,144 +43,135 @@ interface TeacherStats {
   activeStudents: number;
 }
 
-function StatCard({ label, value, icon, color }: { label: string; value: number | string; icon: string; color: string }) {
-  return (
-    <div className="card" style={{ padding: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <p style={{ fontFamily: 'var(--ff-mono)', fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>{label}</p>
-          <p style={{ fontSize: 28, fontFamily: 'var(--ff-display)', color: 'var(--text-1)' }}>{value}</p>
-        </div>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
+interface QuickLink {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  desc: string;
+  external?: boolean;
 }
 
-// Навигация для администратора
-const ADMIN_QUICK_LINKS = [
-  { href: '/school-students',       icon: '👨‍🎓', label: 'Student Roster',    desc: 'View and manage your students' },
-  { href: '/bulk-registration',     icon: '📋', label: 'Bulk Registration',   desc: 'Register multiple students at once' },
-  { href: '/school-registrations',  icon: '📊', label: 'Registrations',       desc: 'Track all student registrations' },
-  { href: '/bulk-payment',          icon: '💳', label: 'Bulk Payment',        desc: 'Pay for multiple registrations' },
-  // Native browser fetch — opens in a new tab as a PDF download. credentials: 'include' is automatic for same-origin navigations.
-  { href: '/api/schools/export/achievement.pdf', icon: '🏅', label: 'Achievement PDF', desc: 'Download student results report' },
+const ADMIN_QUICK: QuickLink[] = [
+  { href: '/school-students', icon: Users, label: 'Student Roster', desc: 'View and manage your students' },
+  { href: '/bulk-registration', icon: Upload, label: 'Bulk Registration', desc: 'Register multiple students at once' },
+  { href: '/school-registrations', icon: ClipboardList, label: 'Registrations', desc: 'Track all student registrations' },
+  { href: '/bulk-payment', icon: CreditCard, label: 'Bulk Payment', desc: 'Pay for multiple registrations' },
+  { href: '/api/schools/export/achievement.pdf', icon: Award, label: 'Achievement PDF', desc: 'Download the student results report', external: true },
 ];
 
-// Навигация для учителя
-const TEACHER_QUICK_LINKS = [
-  { href: '/school-my-students',    icon: '👨‍🎓', label: 'My Students',       desc: 'View your students' },
-  { href: '/school-my-competitions', icon: '🏆', label: 'My Competitions',    desc: 'Competitions your students joined' },
-  { href: '/school-registrations',  icon: '📊', label: 'Registrations',       desc: 'Track registrations' },
-  { href: '/school-deadlines',      icon: '⏰', label: 'Deadlines',           desc: 'Upcoming deadlines' },
+const TEACHER_QUICK: QuickLink[] = [
+  { href: '/school-my-students', icon: Users, label: 'My Students', desc: 'View your students' },
+  { href: '/school-my-competitions', icon: Trophy, label: 'My Competitions', desc: 'Competitions your students joined' },
+  { href: '/school-registrations', icon: ClipboardList, label: 'Registrations', desc: 'Track registrations' },
+  { href: '/school-deadline', icon: CalendarClock, label: 'Deadlines', desc: 'Upcoming deadlines' },
 ];
 
-export default function SchoolDashboard() {
+export default function SchoolDashboardPage() {
   const { user } = useSchool();
-  const [school, setSchool]   = useState<SchoolInfo | null>(null);
-  const [stats, setStats]     = useState<Stats | null>(null);
+  const [school, setSchool] = useState<SchoolInfo | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [teacherStats, setTeacherStats] = useState<TeacherStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const isAdmin = user?.role === 'school_admin';
-  const quickLinks = isAdmin ? ADMIN_QUICK_LINKS : TEACHER_QUICK_LINKS;
+  const quickLinks = isAdmin ? ADMIN_QUICK : TEACHER_QUICK;
 
   useEffect(() => {
     if (!user) return;
-
     if (isAdmin) {
-      // Запросы для администратора
       Promise.all([
         schoolHttp.get<SchoolInfo>('/schools/my-school').catch(() => null),
-        schoolHttp.get<{ students: unknown[]; pagination: { total: number } }>('/schools/students?limit=1').catch(() => ({ students: [], pagination: { total: 0 } })),
-        schoolHttp.get<{ registrations: { status: string }[] }>('/schools/registrations?limit=500').catch(() => ({ registrations: [] })),
-      ]).then(([schoolData, studentsData, regsData]) => {
-        if (schoolData) setSchool(schoolData);
-        const regs = regsData?.registrations || [];
-        setStats({
-          total_students:        schoolData?.studentCount || 0,
-          active_registrations:  regs.length,
-          pending_registrations: regs.filter(r => r.status === 'submitted' || r.status === 'pending').length,
-          approved_registrations: regs.filter(r => r.status === 'approved' || r.status === 'paid').length,
-        });
-        setLoading(false);
-      }).catch(() => setLoading(false));
+        schoolHttp
+          .get<{ registrations: { status: string }[] }>('/schools/registrations?limit=500')
+          .catch(() => ({ registrations: [] })),
+      ])
+        .then(([schoolData, regsData]) => {
+          if (schoolData) setSchool(schoolData);
+          const regs = regsData?.registrations || [];
+          setStats({
+            total_students: schoolData?.studentCount || 0,
+            active_registrations: regs.length,
+            pending_registrations: regs.filter((r) => r.status === 'submitted' || r.status === 'pending').length,
+            approved_registrations: regs.filter((r) => r.status === 'approved' || r.status === 'paid').length,
+          });
+        })
+        .finally(() => setLoading(false));
     } else {
-      // Запросы для учителя
-      Promise.all([
-        schoolHttp.get<TeacherStats>('/teachers/dashboard-summary').catch(() => null),
-        schoolHttp.get<{ students: unknown[] }>('/teachers/my-students').catch(() => ({ students: [] })),
-      ]).then(([summaryData, studentsData]) => {
-        if (summaryData) setTeacherStats(summaryData);
-        setLoading(false);
-      }).catch(() => setLoading(false));
+      schoolHttp
+        .get<TeacherStats>('/teachers/dashboard-summary')
+        .then((s) => setTeacherStats(s))
+        .catch(() => {})
+        .finally(() => setLoading(false));
     }
   }, [user, isAdmin]);
 
-  if (loading) {
-    return (
-      <div style={{ padding: '36px 40px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
-          {[...Array(4)].map((_, i) => <div key={i} className="card" style={{ padding: 20, height: 90, background: 'var(--bg-elevated)' }} />)}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 1060 }}>
-      {/* Header */}
-      <div className="fu" style={{ marginBottom: 36 }}>
-        <p style={{ fontFamily: 'var(--ff-mono)', fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 8 }}>Welcome back</p>
-        <h1 style={{ fontFamily: 'var(--ff-display)', fontSize: 36, fontWeight: 400 }}>
-          {user?.full_name} <span style={{ color: isAdmin ? '#3b82f6' : '#22c55e' }}>✦</span>
-        </h1>
-        {isAdmin && school && (
-          <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 6 }}>
-            {school.name} — {school.city}, {school.province}
-          </p>
-        )}
+    <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        eyebrow="Welcome back"
+        title={user?.full_name || 'School'}
+        subtitle={
+          isAdmin && school
+            ? `${school.name} — ${[school.city, school.province].filter(Boolean).join(', ')}`
+            : 'Monitor your students and their competition registrations.'
+        }
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="gap-0 p-5">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="mt-4 h-8 w-20" />
+            </Card>
+          ))
+        ) : isAdmin && stats ? (
+          <>
+            <StatCard label="Total Students" value={stats.total_students} icon={Users} accent="teal" />
+            <StatCard label="Active Registrations" value={stats.active_registrations} icon={ClipboardList} accent="indigo" />
+            <StatCard label="Pending Review" value={stats.pending_registrations} icon={Clock} accent="amber" />
+            <StatCard label="Approved" value={stats.approved_registrations} icon={CheckCircle2} accent="green" />
+          </>
+        ) : teacherStats ? (
+          <>
+            <StatCard label="My Students" value={teacherStats.totalStudents} icon={Users} accent="teal" />
+            <StatCard label="Registrations" value={teacherStats.totalRegistrations} icon={ClipboardList} accent="indigo" />
+            <StatCard label="Confirmed" value={teacherStats.confirmedRegistrations} icon={CheckCircle2} accent="green" />
+            <StatCard label="Active · 30d" value={teacherStats.activeStudents} icon={Star} accent="amber" />
+          </>
+        ) : null}
       </div>
 
-      {/* Stats */}
-      {isAdmin && stats ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
-          <StatCard label="Total Students"       value={stats.total_students}        icon="👨‍🎓" color="#3b82f6" />
-          <StatCard label="Active Registrations" value={stats.active_registrations}  icon="📋" color="#6366f1" />
-          <StatCard label="Pending Review"       value={stats.pending_registrations} icon="⏳" color="#f59e0b" />
-          <StatCard label="Approved"             value={stats.approved_registrations} icon="✅" color="#22c55e" />
+      <div>
+        <h2 className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+          Quick actions
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {quickLinks.map((l) => {
+            const Icon = l.icon;
+            const inner = (
+              <Card className="flex-row items-center gap-4 p-4 transition-colors group-hover:border-primary/40 group-hover:bg-accent/40">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Icon className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground">{l.label}</p>
+                  <p className="truncate text-xs text-muted-foreground">{l.desc}</p>
+                </div>
+                <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+              </Card>
+            );
+            return l.external ? (
+              <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" className="group">
+                {inner}
+              </a>
+            ) : (
+              <Link key={l.href} href={l.href} className="group">
+                {inner}
+              </Link>
+            );
+          })}
         </div>
-      ) : teacherStats ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
-          <StatCard label="My Students"       value={teacherStats.totalStudents}        icon="👨‍🎓" color="#22c55e" />
-          <StatCard label="Registrations"     value={teacherStats.totalRegistrations}   icon="📋" color="#22c55e" />
-          <StatCard label="Confirmed"         value={teacherStats.confirmedRegistrations} icon="✅" color="#22c55e" />
-          <StatCard label="Active (30d)"      value={teacherStats.activeStudents}       icon="⭐" color="#22c55e" />
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
-          {[...Array(4)].map((_, i) => <div key={i} className="card" style={{ padding: 20, height: 90 }} />)}
-        </div>
-      )}
-
-      {/* Quick links */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        {quickLinks.map(l => (
-          <a key={l.href} href={l.href} style={{ textDecoration: 'none' }}>
-            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 22px', cursor: 'pointer', transition: 'all var(--ease)' }}
-              onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.borderColor = 'var(--border-light)'; d.style.transform = 'translateY(-2px)'; }}
-              onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.borderColor = 'var(--border)'; d.style.transform = 'none'; }}>
-              <span style={{ fontSize: 26 }}>{l.icon}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 3 }}>{l.label}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{l.desc}</div>
-              </div>
-              <span style={{ color: 'var(--text-3)' }}>→</span>
-            </div>
-          </a>
-        ))}
       </div>
     </div>
   );
