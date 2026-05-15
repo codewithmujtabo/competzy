@@ -11,6 +11,7 @@ import {
   CategoryAccent,
   CategoryBg,
   CategoryEmoji,
+  FontFamily,
   Radius,
   Shadow,
   Spacing,
@@ -67,7 +68,7 @@ export default function TeacherCompetitionsScreen() {
 
   const renderCompetition = ({ item }: { item: MyCompetition }) => {
     const accent = CategoryAccent[item.category ?? ""] ?? Brand.primary;
-    const bg     = CategoryBg[item.category ?? ""] ?? "#EEF2FF";
+    const bg     = CategoryBg[item.category ?? ""] ?? Brand.primarySoft;
     const emoji  = CategoryEmoji[item.category ?? ""] ?? "🏆";
 
     return (
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md + 2,
     ...Shadow.md,
   },
-  addBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  addBtnText: { color: TextColor.inverse, fontFamily: FontFamily.bodyBold, fontSize: 14 },
   list: { paddingHorizontal: Spacing.xl, paddingBottom: Spacing["3xl"], paddingTop: Spacing.sm },
   card: {
     backgroundColor: Surface.card,
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
   iconEmoji: { fontSize: 24 },
   cardMeta: { flex: 1 },
   compName: { ...Type.title, fontSize: 15 },
-  compFee: { ...Type.bodySm, fontWeight: "600", marginTop: 3 },
+  compFee: { ...Type.bodySm, fontFamily: FontFamily.bodySemi, marginTop: 3 },
   compCategory: { ...Type.caption, marginTop: 3 },
   countBadge: {
     alignItems: "center",
@@ -196,8 +197,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
   },
-  countText: { fontSize: 22, fontWeight: "800", color: Brand.primary },
-  countLabel: { fontSize: 10, color: Brand.primary, fontWeight: "600", marginTop: 2 },
+  countText: { fontSize: 22, fontFamily: FontFamily.displayExtra, color: Brand.primary },
+  countLabel: { fontSize: 10, color: Brand.primary, fontFamily: FontFamily.bodySemi, marginTop: 2 },
   studentList: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Surface.divider,
@@ -214,10 +215,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: Spacing.sm + 2,
   },
-  studentAvatarText: { fontSize: 14, fontWeight: "800", color: Brand.primary },
+  studentAvatarText: { fontSize: 14, fontFamily: FontFamily.displayExtra, color: Brand.primary },
   studentRowInfo: { flex: 1 },
   studentRowName: { ...Type.title, fontSize: 14 },
   studentRegNum: { ...Type.caption, marginTop: 1 },
   statusPill: { borderRadius: Radius.pill, paddingHorizontal: Spacing.md, paddingVertical: 4 },
-  statusPillText: { fontSize: 11, fontWeight: "700" },
+  statusPillText: { fontSize: 11, fontFamily: FontFamily.bodyBold },
 });

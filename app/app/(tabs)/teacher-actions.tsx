@@ -14,6 +14,7 @@ import { router } from "expo-router";
 import { ScreenHeader } from "@/components/ui";
 import {
   Brand,
+  FontFamily,
   Radius,
   Shadow,
   Spacing,
@@ -22,14 +23,13 @@ import {
   Type,
 } from "@/constants/theme";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { getUpcomingDeadlines, type Deadline } from "@/services/teachers.service";
+import { getUpcomingDeadlines } from "@/services/teachers.service";
 
 export default function TeacherActionsScreen() {
   const { data: upcomingDeadlines, isLoading: isLoadingDeadlines } = useQuery({
     queryKey: ["upcomingDeadlines"],
     queryFn: getUpcomingDeadlines,
   });
-  const recentActivities: Deadline[] = [];
 
   const quickActions = [
     {
@@ -37,7 +37,7 @@ export default function TeacherActionsScreen() {
       icon: "trophy.fill",
       title: "Competitions",
       subtitle: "See which competitions your students joined",
-      color: "#4F46E5",
+      color: Brand.primary,
       onPress: () => router.push("/(tabs)/teacher-analytics"),
     },
     {
@@ -45,7 +45,7 @@ export default function TeacherActionsScreen() {
       icon: "chart.bar.fill",
       title: "View Reports",
       subtitle: "Detailed performance overview",
-      color: "#8B5CF6",
+      color: Brand.sky,
       onPress: () => router.push("/(tabs)/teacher-analytics"),
     },
     {
@@ -53,7 +53,7 @@ export default function TeacherActionsScreen() {
       icon: "calendar.badge.clock",
       title: "Deadlines",
       subtitle: "Competitions closing soon",
-      color: "#F59E0B",
+      color: Brand.coral,
       onPress: () => router.push("/(tabs)/teacher-dashboard"),
     },
     {
@@ -61,7 +61,7 @@ export default function TeacherActionsScreen() {
       icon: "person.3.fill",
       title: "My Students",
       subtitle: "View and manage your roster",
-      color: "#10B981",
+      color: Brand.success,
       onPress: () => router.push("/(tabs)/teacher-students"),
     },
   ];
@@ -149,7 +149,7 @@ export default function TeacherActionsScreen() {
               </View>
 
               <View style={styles.deadlineFooter}>
-                <IconSymbol name="person.2.fill" size={16} color="#64748B" />
+                <IconSymbol name="person.2.fill" size={16} color={TextColor.tertiary} />
                 <Text style={styles.deadlineCount}>
                   {item.registeredCount} students registered
                 </Text>
@@ -185,8 +185,8 @@ const styles = StyleSheet.create({
     backgroundColor: Surface.background,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    padding: Spacing.lg,
+    paddingBottom: Spacing["4xl"],
   },
   webPortalBanner: {
     backgroundColor: Brand.primarySoft,
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   webPortalBannerContent: { flex: 1, marginRight: Spacing.sm },
   webPortalBannerTitle: { ...Type.title, color: Brand.primary, fontSize: 14 },
   webPortalBannerBody: { ...Type.bodySm, color: Brand.primary, marginTop: 4 },
-  webPortalBannerArrow: { fontSize: 22, color: Brand.primary, fontWeight: "700" },
+  webPortalBannerArrow: { fontSize: 22, color: Brand.primary, fontFamily: FontFamily.bodyBold },
   actionsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -250,62 +250,29 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: Radius.pill,
   },
-  deadlineBadgeText: { fontSize: 12, fontWeight: "700" },
+  deadlineBadgeText: { fontSize: 12, fontFamily: FontFamily.bodyBold },
   deadlineFooter: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 12,
+    paddingTop: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
+    borderTopColor: Surface.divider,
   },
   deadlineCount: {
     fontSize: 13,
-    color: "#64748B",
+    color: TextColor.secondary,
     marginLeft: 6,
   },
-  activityCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  activityIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  activityInfo: {
-    flex: 1,
-  },
-  activityAction: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1E293B",
-    marginBottom: 2,
-  },
-  activityCompetition: {
-    fontSize: 13,
-    color: "#64748B",
-    marginBottom: 4,
-  },
-  activityTime: {
-    fontSize: 12,
-    color: "#94A3B8",
-  },
   loader: {
-    marginVertical: 40,
+    marginVertical: Spacing["4xl"],
   },
   emptyState: {
-    paddingVertical: 40,
+    paddingVertical: Spacing["4xl"],
     alignItems: "center",
   },
   emptyText: {
     fontSize: 14,
-    color: "#94A3B8",
+    color: TextColor.tertiary,
+    fontFamily: FontFamily.bodyMedium,
   },
 });

@@ -47,9 +47,8 @@ export default function TeacherDashboardScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
-          <View style={styles.heroBlob} />
           <Text style={[Type.bodySm, { color: "rgba(255,255,255,0.85)" }]}>Teacher Dashboard 👨‍🏫</Text>
-          <Text style={[Type.displayMd, { color: "#FFFFFF", marginTop: Spacing.xs }]}>
+          <Text style={[Type.displayMd, { color: TextColor.inverse, marginTop: Spacing.xs }]}>
             Hello, {firstName}!
           </Text>
           <Text style={[Type.body, { color: "rgba(255,255,255,0.9)", marginTop: Spacing.sm }]}>
@@ -146,18 +145,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius["3xl"],
     padding: Spacing["2xl"],
     margin: Spacing.xl,
-    overflow: "hidden",
     ...Shadow.lg,
-  },
-  heroBlob: {
-    position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: Brand.primaryLight,
-    opacity: 0.25,
-    top: -80,
-    right: -50,
   },
   loader: { marginVertical: Spacing["3xl"] },
   statRow: {
