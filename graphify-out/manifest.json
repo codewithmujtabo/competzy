@@ -1,6 +1,6 @@
 {
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/expo-env.d.ts": {
-    "mtime": 1778872189.4045856,
+    "mtime": 1778874004.938315,
     "hash": "0dd9dccdb4b08595bc83df70d6a154d3"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/eslint.config.js": {
@@ -20,8 +20,8 @@
     "hash": "d2866fe48fc332f02465719d8ad2cf16"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/app/_layout.tsx": {
-    "mtime": 1778431816.0932093,
-    "hash": "e91ef89272ca3cfd108090ca34f55f37"
+    "mtime": 1778873137.549556,
+    "hash": "8346a92a2ecc4d2f6f1f9dbe3398589f"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/app/school-dashboard.tsx": {
     "mtime": 1778431816.0937386,
@@ -60,8 +60,8 @@
     "hash": "ad0244e5674c5922aa5f413e49b992ab"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/app/(tabs)/_layout.tsx": {
-    "mtime": 1778568419.873333,
-    "hash": "a988f8363db51a1eb497ae751c5e3519"
+    "mtime": 1778873220.1954746,
+    "hash": "0d1b4328252924537b0a227a7774d5d9"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/app/(tabs)/teacher-analytics.tsx": {
     "mtime": 1778431816.0915399,
@@ -144,8 +144,8 @@
     "hash": "37d63ff3cfa7ae21eb7ab6467cbf828e"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/constants/theme.ts": {
-    "mtime": 1778572234.5826793,
-    "hash": "c4bd741d24ff9cf6a8d54f60366c9a76"
+    "mtime": 1778873119.757292,
+    "hash": "558d2e86a486e75abdee81b069f4fe5e"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/constants/interests.ts": {
     "mtime": 1776456315.0,
@@ -180,12 +180,12 @@
     "hash": "364de5f22d4b3df563a7cb0189c6036d"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/components/ui/GeometricHeader.tsx": {
-    "mtime": 1778572588.3295703,
-    "hash": "a811895a206d5f46fda9a018536fae31"
+    "mtime": 1778873197.9859114,
+    "hash": "09555062a112d661c60a57ece84810d1"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/components/ui/StatTile.tsx": {
-    "mtime": 1778572573.2431645,
-    "hash": "f340065a5310ed6f06b697fd8350a399"
+    "mtime": 1778873163.327488,
+    "hash": "353e08fac222598ea452acfc3d4cd6ef"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/components/ui/icon-symbol.ios.tsx": {
     "mtime": 1772980792.0,
@@ -208,8 +208,8 @@
     "hash": "16fb44eeef48b88167978b61c55406db"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/components/ui/Button.tsx": {
-    "mtime": 1778573775.2887914,
-    "hash": "e192c3180e5208e5a9989bdbdfe05b42"
+    "mtime": 1778873151.7799718,
+    "hash": "53f315bf20c5be8f7def9607fb562c6e"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/components/ui/EmptyState.tsx": {
     "mtime": 1778572822.602874,
@@ -1060,15 +1060,15 @@
     "hash": "cb4edce3c851b4a4cba62e89f6b55fd9"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/CLAUDE.md": {
-    "mtime": 1778872473.8245842,
-    "hash": "8593f1931406ef51ad048e3b0601f861"
+    "mtime": 1778874098.548877,
+    "hash": "f984beb7ba2de44e0951e8eff1b8f442"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/review.txt": {
     "mtime": 1777364548.0,
     "hash": "f362403a6bf7fc298fb5315fb26a1c44"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/graphify-out/converted/Eduversal_Database_28e6f532.md": {
-    "mtime": 1778872497.5129278,
+    "mtime": 1778874125.5258687,
     "hash": "59aa7f486b553570fe1464cb61184a4d"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/docs/PROJECT_PLAN.md": {
@@ -1076,7 +1076,7 @@
     "hash": "5a94dc9975ef67a52f3f19b2798f1e88"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/graphify-out/converted/PROJECT_PLAN_2edad175.md": {
-    "mtime": 1778872497.816435,
+    "mtime": 1778874125.8400567,
     "hash": "3dbbd89cd11df0b9a83a00a5ed741320"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/docs/RUNBOOK.md": {

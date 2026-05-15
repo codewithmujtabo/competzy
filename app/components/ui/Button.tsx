@@ -51,7 +51,7 @@ function ButtonImpl({
       case "ghost":
         return { bg: "transparent", fg: Brand.primary, press: Brand.primarySoft };
       case "destructive":
-        return { bg: Brand.error, fg: "#FFFFFF", press: "#C73E54" };
+        return { bg: Brand.error, fg: "#FFFFFF", press: "#B01F1F" };
     }
   })();
 
@@ -65,7 +65,7 @@ function ButtonImpl({
         {
           height: HEIGHT[size],
           paddingHorizontal: PAD_H[size],
-          borderRadius: Radius.pill,
+          borderRadius: Radius.xl,
           backgroundColor: pressed && !isDisabled ? palette.press : palette.bg,
           alignItems: "center",
           justifyContent: "center",
@@ -86,7 +86,7 @@ function ButtonImpl({
       ) : (
         <View style={styles.row}>
           {leadingIcon ? <View style={styles.iconLead}>{leadingIcon}</View> : null}
-          <Text style={[Type.button, { color: palette.fg, fontSize: size === "sm" ? 14 : 16 }]}>
+          <Text style={[Type.button, { color: palette.fg, fontSize: size === "sm" ? 13 : 15 }]}>
             {label}
           </Text>
           {trailingIcon ? <View style={styles.iconTrail}>{trailingIcon}</View> : null}

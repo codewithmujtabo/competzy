@@ -57,7 +57,7 @@ function StatTileImpl({
             {icon}
           </View>
         ) : null}
-        <Text style={{ ...Type.displayMd, fontSize: 26, color: accent }}>
+        <Text style={{ ...Type.displayMd, fontSize: 22, color: accent }}>
           {value}
         </Text>
       </View>
