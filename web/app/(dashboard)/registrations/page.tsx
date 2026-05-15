@@ -1,40 +1,72 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { registrationsApi } from '@/lib/api';
 import type { PendingRegistration } from '@/types';
-import { PageHeader, Spinner, Toast } from '@/components/ui';
+import { PageHeader } from '@/components/shell/page-header';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
 const STATUSES = [
-  { key: 'all',             label: 'All' },
-  { key: 'pending_review',  label: 'Pending Review' },
-  { key: 'approved',        label: 'Approved' },
-  { key: 'rejected',        label: 'Rejected' },
+  { key: 'all', label: 'All' },
+  { key: 'pending_review', label: 'Pending Review' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'rejected', label: 'Rejected' },
 ];
 
-const STATUS_CLS: Record<string, string> = {
-  pending_payment:  'badge-indigo',
-  pending_review:   'badge-yellow',
-  approved:         'badge-green',
-  rejected:         'badge-red',
-  paid:             'badge-green',
-  // legacy
-  pending_approval: 'badge-yellow',
-  registered:       'badge-indigo',
+const STATUS_STYLE: Record<string, string> = {
+  pending_review: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  pending_approval: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  pending_payment: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200',
+  registered: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200',
+  approved: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+  paid: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+  rejected: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
 };
 
 function formatFee(fee: number) {
   return fee === 0 ? 'Free' : `Rp ${fee.toLocaleString('id-ID')}`;
 }
 
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn('border-transparent font-mono text-[10px] capitalize', STATUS_STYLE[status] ?? 'bg-muted text-muted-foreground')}
+    >
+      {status.replace(/_/g, ' ')}
+    </Badge>
+  );
+}
+
 export default function RegistrationsPage() {
-  const [items, setItems]       = useState<PendingRegistration[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [tab, setTab]           = useState('all');
-  const [msg, setMsg]           = useState<{ ok: boolean; text: string } | null>(null);
-  const [busy, setBusy]         = useState<string | null>(null);
+  const [items, setItems] = useState<PendingRegistration[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('all');
+  const [busy, setBusy] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
-  const [reason, setReason]     = useState('');
+  const [reason, setReason] = useState('');
 
   const load = useCallback(async (status: string) => {
     setLoading(true);
@@ -42,27 +74,24 @@ export default function RegistrationsPage() {
       const r = await registrationsApi.listPending(status);
       setItems(r.pendingRegistrations ?? []);
     } catch (e) {
-      setMsg({ ok: false, text: (e as Error).message });
+      toast.error(e instanceof Error ? e.message : 'Failed to load registrations');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { load(tab); }, [tab, load]);
-
-  const flash = (ok: boolean, text: string) => {
-    setMsg({ ok, text });
-    setTimeout(() => setMsg(null), 4000);
-  };
+  useEffect(() => {
+    load(tab);
+  }, [tab, load]);
 
   const handleApprove = async (id: string) => {
     setBusy(id);
     try {
       await registrationsApi.approve(id);
-      setItems(prev => prev.filter(r => r.registrationId !== id));
-      flash(true, 'Registration approved — student notified.');
+      setItems((prev) => prev.filter((r) => r.registrationId !== id));
+      toast.success('Registration approved — student notified.');
     } catch (e) {
-      flash(false, (e as Error).message);
+      toast.error(e instanceof Error ? e.message : 'Failed to approve');
     } finally {
       setBusy(null);
     }
@@ -73,10 +102,10 @@ export default function RegistrationsPage() {
     setBusy(rejectId);
     try {
       await registrationsApi.reject(rejectId, reason.trim());
-      setItems(prev => prev.filter(r => r.registrationId !== rejectId));
-      flash(true, 'Registration rejected — student notified.');
+      setItems((prev) => prev.filter((r) => r.registrationId !== rejectId));
+      toast.success('Registration rejected — student notified.');
     } catch (e) {
-      flash(false, (e as Error).message);
+      toast.error(e instanceof Error ? e.message : 'Failed to reject');
     } finally {
       setBusy(null);
       setRejectId(null);
@@ -85,138 +114,172 @@ export default function RegistrationsPage() {
   };
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 1100 }}>
-      <PageHeader sub="Admin" title="Registrations" count={items.length} />
-      {msg && <Toast ok={msg.ok} msg={msg.text} />}
+    <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        eyebrow="Admin"
+        title="Registrations"
+        subtitle="Review competition registrations and approve or reject pending applications."
+      />
 
-      {/* Status tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-        {STATUSES.map(s => (
-          <button
-            key={s.key}
-            className={`btn ${tab === s.key ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setTab(s.key)}
-            style={{ padding: '5px 14px', fontSize: 12 }}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          {STATUSES.map((s) => (
+            <TabsTrigger key={s.key} value={s.key}>
+              {s.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
-      {/* Reject modal */}
-      {rejectId && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999,
-        }}>
-          <div className="card" style={{ width: 420, padding: 28 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Reject Registration</div>
-            <textarea
-              className="input"
-              rows={3}
-              placeholder="Reason for rejection (required)…"
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              style={{ width: '100%', resize: 'vertical', marginBottom: 14 }}
-            />
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button className="btn btn-ghost" onClick={() => { setRejectId(null); setReason(''); }}>
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                style={{ background: '#EF4444', borderColor: '#EF4444' }}
-                disabled={!reason.trim() || busy === rejectId}
-                onClick={handleRejectSubmit}
-              >
-                {busy === rejectId ? 'Rejecting…' : 'Reject'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="card fu" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          {loading ? (
-            <div style={{ padding: 48, textAlign: 'center' }}><Spinner /></div>
-          ) : items.length === 0 ? (
-            <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-3)', fontFamily: 'var(--ff-mono)', fontSize: 12 }}>
-              No registrations found
-            </div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Student</th>
-                  <th>School / Grade</th>
-                  <th>Competition</th>
-                  <th>Fee</th>
-                  <th>Status</th>
-                  <th>Submitted</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map(r => (
-                  <tr key={r.registrationId}>
-                    <td>
-                      <div style={{ fontWeight: 600, color: 'var(--text-1)' }}>{r.student.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--ff-mono)' }}>{r.student.email}</div>
+      <Card className="overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student</TableHead>
+                <TableHead>School / Grade</TableHead>
+                <TableHead>Competition</TableHead>
+                <TableHead>Fee</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Submitted</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={7}>
+                      <Skeleton className="h-9 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : items.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
+                    No registrations found in this view.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                items.map((r) => (
+                  <TableRow key={r.registrationId}>
+                    <TableCell>
+                      <div className="font-medium text-foreground">{r.student.name}</div>
+                      <div className="font-mono text-[11px] text-muted-foreground">{r.student.email}</div>
                       {r.student.phone && (
-                        <div style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--ff-mono)' }}>{r.student.phone}</div>
+                        <div className="font-mono text-[11px] text-muted-foreground">{r.student.phone}</div>
                       )}
-                    </td>
-                    <td>
-                      <div style={{ fontSize: 13 }}>{r.student.school || '—'}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Grade {r.student.grade || '—'}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{r.student.school || '—'}</div>
+                      <div className="text-xs text-muted-foreground">Grade {r.student.grade || '—'}</div>
                       {r.student.nisn && (
-                        <div style={{ fontSize: 10, color: 'var(--text-3)', fontFamily: 'var(--ff-mono)' }}>NISN {r.student.nisn}</div>
+                        <div className="font-mono text-[10px] text-muted-foreground">NISN {r.student.nisn}</div>
                       )}
-                    </td>
-                    <td style={{ fontWeight: 500, color: 'var(--text-1)' }}>{r.competition.name}</td>
-                    <td>
-                      <span className={`badge ${r.competition.fee === 0 ? 'badge-green' : 'badge-indigo'}`}>
+                    </TableCell>
+                    <TableCell className="font-medium text-foreground">{r.competition.name}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'border-transparent font-mono text-[10px]',
+                          r.competition.fee === 0
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                            : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200',
+                        )}
+                      >
                         {formatFee(r.competition.fee)}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge ${STATUS_CLS[r.status] ?? 'badge-gray'}`}>{r.status}</span>
-                    </td>
-                    <td style={{ fontFamily: 'var(--ff-mono)', fontSize: 11 }}>
-                      {new Date(r.registeredAt).toLocaleDateString('id-ID')}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={r.status} />
+                    </TableCell>
+                    <TableCell className="font-mono text-[11px] text-muted-foreground">
+                      {new Date(r.registeredAt).toLocaleDateString('en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </TableCell>
+                    <TableCell className="text-right">
                       {r.status === 'pending_review' ? (
-                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                          <button
-                            className="btn btn-primary"
-                            style={{ padding: '5px 14px', fontSize: 12 }}
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
                             disabled={busy === r.registrationId}
                             onClick={() => handleApprove(r.registrationId)}
                           >
                             {busy === r.registrationId ? '…' : 'Approve'}
-                          </button>
-                          <button
-                            className="btn btn-ghost"
-                            style={{ padding: '5px 14px', fontSize: 12, color: '#EF4444' }}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
                             disabled={busy === r.registrationId}
-                            onClick={() => { setRejectId(r.registrationId); setReason(''); }}
+                            onClick={() => {
+                              setRejectId(r.registrationId);
+                              setReason('');
+                            }}
                           >
                             Reject
-                          </button>
+                          </Button>
                         </div>
                       ) : (
-                        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>—</span>
+                        <span className="text-sm text-muted-foreground">—</span>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
-      </div>
+      </Card>
+
+      <Dialog
+        open={!!rejectId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejectId(null);
+            setReason('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject registration</DialogTitle>
+            <DialogDescription>
+              The student will be notified with the reason you provide below.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            rows={3}
+            autoFocus
+            placeholder="Reason for rejection (required)…"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectId(null);
+                setReason('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!reason.trim() || busy === rejectId}
+              onClick={handleRejectSubmit}
+            >
+              {busy === rejectId ? 'Rejecting…' : 'Reject registration'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

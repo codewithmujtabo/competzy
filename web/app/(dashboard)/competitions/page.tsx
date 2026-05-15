@@ -1,15 +1,57 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { competitionsApi } from '@/lib/api';
 import type { Competition } from '@/types';
-import { PageHeader, Spinner, Toast, Pager } from '@/components/ui';
+import { PageHeader } from '@/components/shell/page-header';
+import { Pager } from '@/components/shell/pager';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-const CATS = ['', 'Science', 'Math', 'Art', 'Sports', 'Technology', 'Literature', 'Music'];
+const CATEGORIES = ['Science', 'Math', 'Art', 'Sports', 'Technology', 'Literature', 'Music'];
+const FILTERS = [{ key: 'all', label: 'All' }, ...CATEGORIES.map((c) => ({ key: c, label: c }))];
+const LIMIT = 15;
 
 const FORM_DEFAULTS = {
-  name: '', organizer_name: '', category: '', grade_level: '',
-  fee: '0', description: '', reg_open_date: '', reg_close_date: '', competition_date: '',
+  name: '',
+  organizer_name: '',
+  category: '',
+  grade_level: '',
+  fee: '0',
+  description: '',
+  reg_open_date: '',
+  reg_close_date: '',
+  competition_date: '',
 };
 
 function fmtForInput(d?: string) {
@@ -17,227 +59,347 @@ function fmtForInput(d?: string) {
   return new Date(d).toISOString().split('T')[0];
 }
 
-function F({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div><label className="label">{label}</label>{children}</div>;
+function fmtDate(d?: string) {
+  return d
+    ? new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '—';
 }
 
-export default function Competitions() {
+function Field({
+  label,
+  required,
+  children,
+  className,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <Label className="mb-1.5 text-xs text-muted-foreground">
+        {label}
+        {required && <span className="text-destructive"> *</span>}
+      </Label>
+      {children}
+    </div>
+  );
+}
+
+export default function CompetitionsPage() {
   const [comps, setComps] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [cat, setCat] = useState('');
+  const [cat, setCat] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [form, setForm] = useState(FORM_DEFAULTS);
-  const LIMIT = 15;
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await competitionsApi.list({ page, limit: LIMIT, category: cat || undefined });
-     
+      const r = await competitionsApi.list({
+        page,
+        limit: LIMIT,
+        category: cat === 'all' ? undefined : cat,
+      });
       setComps(Array.isArray(r?.competitions) ? r.competitions : []);
       setTotal(r?.pagination?.total ?? 0);
-    } catch (e) { 
-      setMsg({ ok: false, text: (e as Error).message });
-      setComps([]); 
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to load competitions');
+      setComps([]);
       setTotal(0);
-    } finally { 
-      setLoading(false); 
+    } finally {
+      setLoading(false);
     }
-  };
-
-  useEffect(() => { 
-    load(); 
   }, [page, cat]);
 
-  const openAdd = () => { 
-    setEditId(null); 
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const openAdd = () => {
+    setEditId(null);
     setForm({ ...FORM_DEFAULTS });
-    setShowForm(true); 
+    setShowForm(true);
   };
 
   const openEdit = (c: Competition) => {
     setEditId(c.id);
     setForm({
-      name:             c.name,
-      organizer_name:   c.organizer_name,
-      category:         c.category        || '',
-      grade_level:      c.grade_level     || '',
-      fee:              String(c.fee ?? 0),
-      description:      c.description     || '',
-      reg_open_date:    fmtForInput(c.reg_open_date),
-      reg_close_date:   fmtForInput(c.reg_close_date),
+      name: c.name,
+      organizer_name: c.organizer_name,
+      category: c.category || '',
+      grade_level: c.grade_level || '',
+      fee: String(c.fee ?? 0),
+      description: c.description || '',
+      reg_open_date: fmtForInput(c.reg_open_date),
+      reg_close_date: fmtForInput(c.reg_close_date),
       competition_date: fmtForInput(c.competition_date),
     });
     setShowForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const closeForm = () => { 
-    setShowForm(false); 
-    setEditId(null); 
-    setForm({ ...FORM_DEFAULTS });
   };
 
   const save = async () => {
     if (!form.name || !form.organizer_name) return;
     setSaving(true);
     try {
-      const payload = { ...form, fee: parseInt(form.fee) || 0 };
+      const payload = { ...form, fee: parseInt(form.fee, 10) || 0 };
       if (editId) {
         await competitionsApi.update(editId, payload);
-        setMsg({ ok: true, text: 'Competition updated!' });
+        toast.success('Competition updated.');
       } else {
         await competitionsApi.create(payload);
-        setMsg({ ok: true, text: 'Competition created!' });
+        toast.success('Competition created.');
       }
-      closeForm(); 
+      setShowForm(false);
+      setEditId(null);
+      setForm({ ...FORM_DEFAULTS });
       load();
-    } catch (e) { 
-      setMsg({ ok: false, text: (e as Error).message }); 
-    } finally { 
-      setSaving(false); 
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save competition');
+    } finally {
+      setSaving(false);
     }
   };
 
   const remove = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"?`)) return;
-    try { 
-      await competitionsApi.delete(id); 
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    try {
+      await competitionsApi.delete(id);
+      toast.success('Competition deleted.');
       load();
-    } catch (e) { 
-      setMsg({ ok: false, text: (e as Error).message }); 
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to delete competition');
     }
   };
 
-  const fmtDate = (d?: string) =>
-    d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-
-  // ✅ Добавляем безопасную проверку
-  const hasComps = Array.isArray(comps) && comps.length > 0;
-
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 1060 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24 }}>
-        <PageHeader sub="Management" title="Competitions" count={total} />
-        <button className="btn btn-primary" onClick={showForm ? closeForm : openAdd} style={{ marginBottom: 28 }}>
-          {showForm ? '✕ Cancel' : '+ New'}
-        </button>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        eyebrow="Management"
+        title="Competitions"
+        subtitle="Create and manage the competitions listed on Competzy."
+        actions={
+          <Button onClick={openAdd}>
+            <Plus className="size-4" />
+            New competition
+          </Button>
+        }
+      />
 
-      {msg && <Toast ok={msg.ok} msg={msg.text} />}
+      <Tabs
+        value={cat}
+        onValueChange={(v) => {
+          setCat(v);
+          setPage(1);
+        }}
+      >
+        <TabsList>
+          {FILTERS.map((f) => (
+            <TabsTrigger key={f.key} value={f.key}>
+              {f.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
-      {showForm && (
-        <div className="card fu" style={{ marginBottom: 20, borderColor: editId ? 'rgba(99,102,241,.35)' : 'var(--border)' }}>
-          <p className="label" style={{ marginBottom: 18 }}>{editId ? '✎ Edit Competition' : 'New Competition'}</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginBottom: 14 }}>
-            <F label="Name *">
-              <input className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Olimpiade Matematika Nasional" />
-            </F>
-            <F label="Category">
-              <select className="input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                {CATS.map(c => <option key={c} value={c}>{c || 'Select…'}</option>)}
-              </select>
-            </F>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
-            <F label="Organizer *">
-              <input className="input" value={form.organizer_name} onChange={e => setForm(f => ({ ...f, organizer_name: e.target.value }))} placeholder="Kemendikbud" />
-            </F>
-            <F label="Grade Level">
-              <input className="input" value={form.grade_level} onChange={e => setForm(f => ({ ...f, grade_level: e.target.value }))} placeholder="SMP, SMA" />
-            </F>
-            <F label="Fee (IDR)">
-              <input className="input" type="number" value={form.fee} onChange={e => setForm(f => ({ ...f, fee: e.target.value }))} />
-            </F>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
-            <F label="Reg Open"><input className="input" type="date" value={form.reg_open_date} onChange={e => setForm(f => ({ ...f, reg_open_date: e.target.value }))} /></F>
-            <F label="Reg Close"><input className="input" type="date" value={form.reg_close_date} onChange={e => setForm(f => ({ ...f, reg_close_date: e.target.value }))} /></F>
-            <F label="Event Date"><input className="input" type="date" value={form.competition_date} onChange={e => setForm(f => ({ ...f, competition_date: e.target.value }))} /></F>
-          </div>
-          <div style={{ marginBottom: 18 }}>
-            <F label="Description">
-              <textarea className="input" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Describe the competition…" />
-            </F>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-primary" onClick={save} disabled={saving || !form.name || !form.organizer_name}>
-              {saving ? <Spinner /> : editId ? '✓' : '+'} {editId ? 'Save Changes' : 'Create'}
-            </button>
-            <button className="btn btn-ghost" onClick={closeForm}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-        {CATS.map(c => (
-          <button key={c} className={`btn ${cat === c ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => { setCat(c); setPage(1); }} style={{ padding: '5px 13px', fontSize: 12 }}>
-            {c || 'All'}
-          </button>
-        ))}
-      </div>
-
-      <div className="card fu" style={{ padding: 0, overflow: 'hidden', animationDelay: '.05s' }}>
-        <div style={{ overflowX: 'auto' }}>
-          {loading ? (
-            <div style={{ padding: 48, textAlign: 'center' }}><Spinner /></div>
-          ) : !hasComps ? (  // ✅ используем безопасную проверку
-            <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-3)', fontFamily: 'var(--ff-mono)', fontSize: 12 }}>
-              No competitions
-            </div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>Name</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>Category</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>Organizer</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>Fee</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>Close</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>Date</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {comps.map(c => (
-                  <tr key={c.id} style={{ background: editId === c.id ? 'rgba(99,102,241,.05)' : undefined }}>
-                    <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)', color: 'var(--text-1)', fontWeight: 500, maxWidth: 240 }}>
-                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
-                      {c.grade_level && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{c.grade_level}</div>}
-                    </td>
-                    <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>
-                      {c.category ? <span className="badge badge-indigo">{c.category}</span> : '—'}
-                    </td>
-                    <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)', fontSize: 12 }}>{c.organizer_name}</td>
-                    <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>
-                      {c.fee === 0 ? <span className="badge badge-green">Free</span> : `Rp ${c.fee.toLocaleString('id-ID')}`}
-                    </td>
-                    <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)', fontFamily: 'var(--ff-mono)', fontSize: 11 }}>
+      <Card className="overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Organizer</TableHead>
+                <TableHead>Fee</TableHead>
+                <TableHead>Reg. closes</TableHead>
+                <TableHead>Event date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={7}>
+                      <Skeleton className="h-9 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : comps.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
+                    No competitions found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                comps.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="max-w-[260px]">
+                      <div className="truncate font-medium text-foreground">{c.name}</div>
+                      {c.grade_level && (
+                        <div className="text-xs text-muted-foreground">{c.grade_level}</div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {c.category ? (
+                        <Badge variant="secondary" className="font-normal">
+                          {c.category}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">{c.organizer_name}</TableCell>
+                    <TableCell>
+                      {c.fee === 0 ? (
+                        <Badge
+                          variant="outline"
+                          className="border-transparent bg-emerald-100 font-mono text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                        >
+                          Free
+                        </Badge>
+                      ) : (
+                        <span className="text-sm tabular-nums">Rp {c.fee.toLocaleString('id-ID')}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono text-[11px] text-muted-foreground">
                       {fmtDate(c.reg_close_date)}
-                    </td>
-                    <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)', fontFamily: 'var(--ff-mono)', fontSize: 11 }}>
+                    </TableCell>
+                    <TableCell className="font-mono text-[11px] text-muted-foreground">
                       {fmtDate(c.competition_date)}
-                    </td>
-                    <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-ghost" onClick={() => openEdit(c)} style={{ padding: '4px 10px', fontSize: 11 }}>Edit</button>
-                        <button className="btn btn-danger" onClick={() => remove(c.id, c.name)} style={{ padding: '4px 10px', fontSize: 11 }}>Del</button>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1.5">
+                        <Button size="sm" variant="outline" onClick={() => openEdit(c)}>
+                          <Pencil className="size-3.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => remove(c.id, c.name)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
         <Pager page={page} total={total} limit={LIMIT} onChange={setPage} />
-      </div>
+      </Card>
+
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editId ? 'Edit competition' : 'New competition'}</DialogTitle>
+            <DialogDescription>
+              {editId
+                ? 'Update the competition details below.'
+                : 'Add a new competition to the Competzy catalog.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 sm:grid-cols-6">
+            <Field label="Name" required className="sm:col-span-4">
+              <Input
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Olimpiade Matematika Nasional"
+              />
+            </Field>
+            <Field label="Category" className="sm:col-span-2">
+              <Select
+                value={form.category || undefined}
+                onValueChange={(v) => setForm((f) => ({ ...f, category: v }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field label="Organizer" required className="sm:col-span-3">
+              <Input
+                value={form.organizer_name}
+                onChange={(e) => setForm((f) => ({ ...f, organizer_name: e.target.value }))}
+                placeholder="EMC Organizer"
+              />
+            </Field>
+            <Field label="Grade level" className="sm:col-span-2">
+              <Input
+                value={form.grade_level}
+                onChange={(e) => setForm((f) => ({ ...f, grade_level: e.target.value }))}
+                placeholder="SMP, SMA"
+              />
+            </Field>
+            <Field label="Fee (IDR)" className="sm:col-span-1">
+              <Input
+                type="number"
+                value={form.fee}
+                onChange={(e) => setForm((f) => ({ ...f, fee: e.target.value }))}
+              />
+            </Field>
+
+            <Field label="Reg. opens" className="sm:col-span-2">
+              <Input
+                type="date"
+                value={form.reg_open_date}
+                onChange={(e) => setForm((f) => ({ ...f, reg_open_date: e.target.value }))}
+              />
+            </Field>
+            <Field label="Reg. closes" className="sm:col-span-2">
+              <Input
+                type="date"
+                value={form.reg_close_date}
+                onChange={(e) => setForm((f) => ({ ...f, reg_close_date: e.target.value }))}
+              />
+            </Field>
+            <Field label="Event date" className="sm:col-span-2">
+              <Input
+                type="date"
+                value={form.competition_date}
+                onChange={(e) => setForm((f) => ({ ...f, competition_date: e.target.value }))}
+              />
+            </Field>
+
+            <Field label="Description" className="sm:col-span-6">
+              <textarea
+                rows={3}
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Describe the competition…"
+                className="flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              />
+            </Field>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowForm(false)}>
+              Cancel
+            </Button>
+            <Button onClick={save} disabled={saving || !form.name || !form.organizer_name}>
+              {saving ? 'Saving…' : editId ? 'Save changes' : 'Create competition'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
