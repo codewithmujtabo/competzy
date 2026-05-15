@@ -17,6 +17,7 @@
     "db:create-teacher": "ts-node src/db/create-teacher.ts",
     "db:create-question-maker": "ts-node src/db/create-question-maker.ts",
     "db:create-supervisor": "ts-node src/db/create-supervisor.ts",
+    "db:create-test-accounts": "ts-node src/db/create-test-accounts.ts",
     "db:init": "psql $DATABASE_URL < src/db/schema.sql",
     "db:import-historical": "ts-node src/db/import-historical.ts"
   },

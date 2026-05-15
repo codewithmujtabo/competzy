@@ -229,8 +229,10 @@ EXPO_PUBLIC_API_URL=http://<MAC_LAN_IP>:3000/api
 - `web/next.config.mjs` — API proxy config
 
 **Test accounts (local dev):**
-- Admin: `admin@eduversal.com` / (password set via `npm run db:create-admin` in backend)
-- Organizer: `organizer@eduversal.com` / (password set via `npm run db:create-organizer` in backend)
+- Admin: `admin@eduversal.com` / `admin123` (`npm run db:create-admin`)
+- Organizer: `organizer@eduversal.com` / `organizer123` (`npm run db:create-organizer`)
+- Student / Parent / Teacher / School-admin: `{student,parent,teacher,schooladmin}@test.local` / `Test123!` — all four seeded by `npm run db:create-test-accounts` (idempotent; teacher + school-admin link to the first verified school).
+- Question-maker / Supervisor: seeded by `npm run db:create-question-maker` / `db:create-supervisor` (default `qmaker@competzy.local` / `qmaker123`, `supervisor@competzy.local` / `supervisor123`; pass `-- <email> <password>` to override).
 
 ### Historical Data (IMPORTED ✅)
 - 63,365 real participant records imported into `historical_participants` table.
