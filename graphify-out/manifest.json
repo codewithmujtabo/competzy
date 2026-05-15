@@ -323,21 +323,25 @@
     "mtime": 1776941662.0,
     "hash": "904c0b71605544d90521b29e06dfbfa9"
   },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/postcss.config.mjs": {
+    "mtime": 1778840693.2283716,
+    "hash": "239f3ebf717465dc636818a1a619398d"
+  },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/next.config.mjs": {
-    "mtime": 1778235511.8793788,
-    "hash": "4b664f0992ff31c690dbefec3c59b26f"
+    "mtime": 1778843431.564704,
+    "hash": "0c2c50888410e9f0074650e057fe8d8c"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/next-env.d.ts": {
-    "mtime": 1777721071.3561103,
-    "hash": "b5ed9dd8b4c5ba8e5ab8e6a379c15838"
+    "mtime": 1778843495.404297,
+    "hash": "d0f8375ae1199dc7acd3977fc33b78b8"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/types/index.ts": {
     "mtime": 1778603903.8731332,
     "hash": "1d1fa6465fd6119068e7730e88a824c6"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/app/layout.tsx": {
-    "mtime": 1778569544.8033047,
-    "hash": "8bf75884348bf22e7c076ab2c13fa88a"
+    "mtime": 1778841018.2173765,
+    "hash": "d381d0e02a315b81862c48cd6fa5e7b1"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/app/page.tsx": {
     "mtime": 1778701274.1304545,
@@ -440,8 +444,8 @@
     "hash": "aec712c6cdc28fbaafacf54251d20157"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/app/(organizer)/organizer-competitions/[id]/page.tsx": {
-    "mtime": 1778132337.6153708,
-    "hash": "160d873d217e1c55600f9822acab86f3"
+    "mtime": 1778843348.0997078,
+    "hash": "8760f8595c2e20c71cccbfd9907e53e7"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/app/(organizer)/organizer-competitions/[id]/edit/page.tsx": {
     "mtime": 1778273129.908587,
@@ -460,8 +464,8 @@
     "hash": "5dc4fb5b04b533c7d36ced8f93b71507"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/app/(dashboard)/layout.tsx": {
-    "mtime": 1778607173.36585,
-    "hash": "372adb61e072ee7434bb7140b2dc564b"
+    "mtime": 1778841279.8375201,
+    "hash": "efaa1d1f075dd3d163c1e73f77f717d4"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/app/(dashboard)/page.tsx": {
     "mtime": 1777721324.487508,
@@ -476,8 +480,8 @@
     "hash": "bc2f7c41a7b1049d82ad3d086d051fd6"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/app/(dashboard)/dashboard/page.tsx": {
-    "mtime": 1778273456.3424025,
-    "hash": "d9b15a20a65ef303392d89d8abb5112d"
+    "mtime": 1778841349.4223971,
+    "hash": "fd4d893ecc8051a57d1b7dc54c1f970b"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/app/(dashboard)/users/page.tsx": {
     "mtime": 1778136378.2697976,
@@ -503,13 +507,97 @@
     "mtime": 1778136237.1164992,
     "hash": "70f0cc3e848e74e2ce92d1dce407af75"
   },
-  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/Sidebar.tsx": {
-    "mtime": 1778607365.6770082,
-    "hash": "742a1cb98aeeb9d455a83565a719907d"
-  },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/index.tsx": {
     "mtime": 1777659230.0358782,
     "hash": "3a67dba69c14b1b3b9f65833af80f07c"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/tabs.tsx": {
+    "mtime": 1778840875.8738647,
+    "hash": "3db2474e4c66b1e544bb514bf1024612"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/card.tsx": {
+    "mtime": 1778840875.6810753,
+    "hash": "5f465338c9c83716fd67bba76b9852d4"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/sheet.tsx": {
+    "mtime": 1778840875.9917843,
+    "hash": "70f191fcbd262095ddd6afbcc8bbf99d"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/scroll-area.tsx": {
+    "mtime": 1778840876.199527,
+    "hash": "8bf02de15eee0da6e5942ea2ff1c64c3"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/label.tsx": {
+    "mtime": 1778840875.7391262,
+    "hash": "e7e0c4ad98f3485ecd3c0ca516d0a8bf"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/sonner.tsx": {
+    "mtime": 1778840876.1620188,
+    "hash": "5dde0d04f3ecf6b5e812104aca12c546"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/tooltip.tsx": {
+    "mtime": 1778840876.1237261,
+    "hash": "c5acc9dbc05002c04a86b807f72f9817"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/avatar.tsx": {
+    "mtime": 1778840876.0565321,
+    "hash": "c0136d9a1c07129863348811dcc037e0"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/dialog.tsx": {
+    "mtime": 1778840875.9161756,
+    "hash": "716542a167fb7bda2fea4df346c54075"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/badge.tsx": {
+    "mtime": 1778840875.8002923,
+    "hash": "8510911fff59be294d64dbfc67f5c710"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/sidebar.tsx": {
+    "mtime": 1778840876.31838,
+    "hash": "4f422cd4673ac309f213d19e18a60c53"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/table.tsx": {
+    "mtime": 1778840875.7706513,
+    "hash": "908dde6e20d6ca61ef44ff007e66311f"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/separator.tsx": {
+    "mtime": 1778840876.0892842,
+    "hash": "31309c8fad1e9a91db2a4bdfb4988b45"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/button.tsx": {
+    "mtime": 1778840875.641985,
+    "hash": "5eb5c23dfc552fe75b9beeffacede350"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/dropdown-menu.tsx": {
+    "mtime": 1778840875.9539483,
+    "hash": "687ccb0d62020e2e0f9c1d894a825bd4"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/select.tsx": {
+    "mtime": 1778840875.8328795,
+    "hash": "8f59eda15860f917b57c8c427e6a6960"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/input.tsx": {
+    "mtime": 1778840875.7099788,
+    "hash": "186052fef4d6a678824a3ac70ec3bdec"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/ui/skeleton.tsx": {
+    "mtime": 1778840876.0231376,
+    "hash": "64033a08d89d382ad050d80cbb0cc98d"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/shell/chart-card.tsx": {
+    "mtime": 1778841145.8114274,
+    "hash": "69344e52271d88439c2aeeb6e6621dbf"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/shell/page-header.tsx": {
+    "mtime": 1778841133.197429,
+    "hash": "7af072e34459cfd672f965fe776f195c"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/shell/app-shell.tsx": {
+    "mtime": 1778841959.6717958,
+    "hash": "3cf13c2637db28f86c6ef02a7ff5eb5a"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/shell/stat-card.tsx": {
+    "mtime": 1778841140.612144,
+    "hash": "955c2dacbfba3580945c3334b158ca87"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/competition-portal/SplitScreenAuth.tsx": {
     "mtime": 1778700209.882832,
@@ -522,6 +610,14 @@
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/components/competition-portal/icons.tsx": {
     "mtime": 1778603935.7921813,
     "hash": "5c0632d6b3992afe694c84ad0e1a3381"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/hooks/use-mobile.ts": {
+    "mtime": 1778840876.24323,
+    "hash": "209b5193af16624cdd89d3591480dd48"
+  },
+  "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/lib/utils.ts": {
+    "mtime": 1778840695.0892165,
+    "hash": "fe365cc166b6f9814191b1a5636163cf"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/lib/auth/factory.tsx": {
     "mtime": 1778603897.45799,
@@ -552,8 +648,8 @@
     "hash": "10804b77f62760f4bef3946f99baf9b6"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/lib/theme/context.tsx": {
-    "mtime": 1778569557.572601,
-    "hash": "3270d5ffda636238339bce6807b30d52"
+    "mtime": 1778840998.4855208,
+    "hash": "b7e5c9f3c2fb0855fad5742d8247ca2e"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/web/lib/api/client.ts": {
     "mtime": 1778603900.1409593,
@@ -948,15 +1044,15 @@
     "hash": "cb4edce3c851b4a4cba62e89f6b55fd9"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/CLAUDE.md": {
-    "mtime": 1778840270.3620133,
-    "hash": "cdb71c26b30c8433964a73962cab2040"
+    "mtime": 1778843621.248704,
+    "hash": "fb4271b3a8ec560220c1c87200538698"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/app/review.txt": {
     "mtime": 1777364548.0,
     "hash": "f362403a6bf7fc298fb5315fb26a1c44"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/graphify-out/converted/Eduversal_Database_28e6f532.md": {
-    "mtime": 1778840292.2352133,
+    "mtime": 1778843647.3908792,
     "hash": "59aa7f486b553570fe1464cb61184a4d"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/docs/PROJECT_PLAN.md": {
@@ -964,7 +1060,7 @@
     "hash": "5a94dc9975ef67a52f3f19b2798f1e88"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/graphify-out/converted/PROJECT_PLAN_2edad175.md": {
-    "mtime": 1778840292.6169295,
+    "mtime": 1778843647.6732512,
     "hash": "3dbbd89cd11df0b9a83a00a5ed741320"
   },
   "/Users/mujtabo/Desktop/All/Internship Eduversal/competzy/docs/RUNBOOK.md": {

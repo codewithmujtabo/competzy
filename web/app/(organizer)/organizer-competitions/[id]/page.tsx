@@ -55,7 +55,7 @@ const STATUS_BADGE: Record<string, string> = {
 export default function CompetitionDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const id = (Array.isArray(params.id) ? params.id[0] : params.id) ?? '';
   
   const [competition, setCompetition] = useState<Competition | null>(null);
   const [loading, setLoading] = useState(true);
