@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { createHash, randomBytes } from "crypto";
 import { pool } from "../config/database";
+import { upsertSchoolFromNpsn } from "../db/upsert-school";
 import { env } from "../config/env";
 import {
   hashPassword,
@@ -186,6 +187,16 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
           "INSERT INTO students (id, school_name, grade, npsn, school_address) VALUES ($1, $2, $3, $4, $5)",
           [userId, roleData?.school || null, roleData?.grade || null, roleData?.npsn || null, roleData?.schoolAddress || null]
         );
+        // Surface the chosen school in the admin Schools directory (NPSN-keyed).
+        const schoolId = await upsertSchoolFromNpsn(
+          client,
+          roleData?.npsn,
+          roleData?.school,
+          roleData?.schoolAddress
+        );
+        if (schoolId) {
+          await client.query("UPDATE students SET school_id = $1 WHERE id = $2", [schoolId, userId]);
+        }
       } else if (role === "parent") {
         await client.query(
           "INSERT INTO parents (id, child_name, child_school, child_grade) VALUES ($1, $2, $3, $4)",
