@@ -1,7 +1,30 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
+import { ExternalLink } from 'lucide-react';
 import { adminHttp } from '@/lib/api/client';
+import { PageHeader } from '@/components/shell/page-header';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface PendingSchool {
   id: string;
@@ -17,148 +40,232 @@ interface PendingSchool {
   applicant: { id: string; name: string; email: string; phone: string | null } | null;
 }
 
-const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
-  pending_verification: { cls: 'badge-yellow', label: 'Pending' },
-  rejected:             { cls: 'badge-red',    label: 'Rejected' },
-};
-
 export default function SchoolsPendingPage() {
   const [schools, setSchools] = useState<PendingSchool[] | null>(null);
-  const [error, setError] = useState('');
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<PendingSchool | null>(null);
+  const [reason, setReason] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
-      const r = await adminHttp.get<PendingSchool[]>('/admin/schools/pending');
-      setSchools(r);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Failed to load'); }
-  };
+      setSchools(await adminHttp.get<PendingSchool[]>('/admin/schools/pending'));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to load applications');
+      setSchools([]);
+    }
+  }, []);
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const verify = async (s: PendingSchool) => {
     setBusyId(s.id);
     try {
       await adminHttp.post(`/admin/schools/${s.id}/verify`, {});
-      setMsg({ ok: true, text: `Verified ${s.name}` });
+      toast.success(`Verified ${s.name}.`);
       await load();
-    } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
-    finally { setBusyId(null); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to verify');
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const reject = async (s: PendingSchool) => {
-    const reason = window.prompt(`Reject ${s.name}? Provide a reason (sent to the coordinator):`);
-    if (!reason || !reason.trim()) return;
-    setBusyId(s.id);
+  const submitReject = async () => {
+    if (!rejectTarget || !reason.trim()) return;
+    setBusyId(rejectTarget.id);
     try {
-      await adminHttp.post(`/admin/schools/${s.id}/reject`, { reason });
-      setMsg({ ok: true, text: `Rejected ${s.name}` });
+      await adminHttp.post(`/admin/schools/${rejectTarget.id}/reject`, { reason: reason.trim() });
+      toast.success(`Rejected ${rejectTarget.name}.`);
+      setRejectTarget(null);
+      setReason('');
       await load();
-    } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
-    finally { setBusyId(null); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to reject');
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 1200 }}>
-      <div className="fu" style={{ marginBottom: 28 }}>
-        <p className="label" style={{ marginBottom: 6 }}>Verification Queue</p>
-        <h1 style={{ fontFamily: 'var(--ff-display)', fontSize: 32, fontWeight: 400 }}>School Applications</h1>
-        <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>
-          Approve schools so their coordinator can access the school portal (bulk registration, bulk payment, reports).
-        </p>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        eyebrow="Verification queue"
+        title="School Applications"
+        subtitle="Approve schools so their coordinator can access the school portal — bulk registration, bulk payment, and reports."
+      />
 
-      {error && <div className="toast toast-err" style={{ marginBottom: 16 }}>⚠ {error}</div>}
-      {msg && <div className={`toast ${msg.ok ? 'toast-ok' : 'toast-err'}`} style={{ marginBottom: 16 }}>{msg.ok ? '✓' : '⚠'} {msg.text}</div>}
-
-      {!schools && !error && <p style={{ color: 'var(--text-3)' }}>Loading…</p>}
-      {schools && schools.length === 0 && <p style={{ color: 'var(--text-3)' }}>No pending schools.</p>}
-
-      {schools && schools.length > 0 && (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead style={{ background: 'var(--bg-2)' }}>
-              <tr>
-                <th style={{ textAlign: 'left', padding: '12px 16px' }}>School</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px' }}>NPSN</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px' }}>Coordinator</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px' }}>Letter</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px' }}>Status</th>
-                <th style={{ textAlign: 'right', padding: '12px 16px' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {schools.map((s) => {
-                const badge = STATUS_BADGE[s.verificationStatus];
-                return (
-                  <tr key={s.id} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontWeight: 500 }}>{s.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+      <Card className="overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>School</TableHead>
+                <TableHead>NPSN</TableHead>
+                <TableHead>Coordinator</TableHead>
+                <TableHead>Letter</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {!schools ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={6}>
+                      <Skeleton className="h-9 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : schools.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
+                    No pending school applications.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                schools.map((s) => (
+                  <TableRow key={s.id}>
+                    <TableCell>
+                      <div className="font-medium text-foreground">{s.name}</div>
+                      <div className="text-xs text-muted-foreground">
                         {[s.city, s.province].filter(Boolean).join(', ') || '—'}
                       </div>
-                    </td>
-                    <td style={{ padding: '14px 16px', fontFamily: 'var(--ff-mono)' }}>{s.npsn}</td>
-                    <td style={{ padding: '14px 16px' }}>
+                    </TableCell>
+                    <TableCell className="font-mono text-[12px] text-muted-foreground">{s.npsn}</TableCell>
+                    <TableCell>
                       {s.applicant ? (
                         <>
-                          <div>{s.applicant.name}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{s.applicant.email}</div>
+                          <div className="text-sm">{s.applicant.name}</div>
+                          <div className="font-mono text-[11px] text-muted-foreground">
+                            {s.applicant.email}
+                          </div>
                         </>
-                      ) : '—'}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      {s.verificationLetterUrl
-                        ? <a href={s.verificationLetterUrl} target="_blank" rel="noopener" style={{ color: 'var(--accent)' }}>View ↗</a>
-                        : <span style={{ color: 'var(--text-3)' }}>—</span>}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span className={`badge ${badge.cls}`}>{badge.label}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {s.verificationLetterUrl ? (
+                        <a
+                          href={s.verificationLetterUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                        >
+                          View
+                          <ExternalLink className="size-3.5" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {s.verificationStatus === 'rejected' ? (
+                        <Badge
+                          variant="outline"
+                          className="border-transparent bg-red-100 font-mono text-[10px] text-red-800 dark:bg-red-950 dark:text-red-200"
+                        >
+                          Rejected
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="border-transparent bg-amber-100 font-mono text-[10px] text-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                        >
+                          Pending
+                        </Badge>
+                      )}
                       {s.rejectionReason && (
-                        <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>
+                        <div className="mt-1 max-w-[220px] text-xs text-muted-foreground">
                           {s.rejectionReason}
                         </div>
                       )}
-                    </td>
-                    <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    </TableCell>
+                    <TableCell className="text-right">
                       {s.verificationStatus === 'pending_verification' ? (
-                        <>
-                          <button
-                            className="btn btn-ghost"
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
                             disabled={busyId === s.id}
-                            onClick={() => reject(s)}
-                            style={{ marginRight: 6, color: '#ef4444' }}
+                            onClick={() => {
+                              setRejectTarget(s);
+                              setReason('');
+                            }}
                           >
                             Reject
-                          </button>
-                          <button
-                            className="btn btn-primary"
-                            disabled={busyId === s.id}
-                            onClick={() => verify(s)}
-                            style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', border: 'none' }}
-                          >
-                            Verify
-                          </button>
-                        </>
+                          </Button>
+                          <Button size="sm" disabled={busyId === s.id} onClick={() => verify(s)}>
+                            {busyId === s.id ? '…' : 'Verify'}
+                          </Button>
+                        </div>
                       ) : (
-                        <button
-                          className="btn btn-ghost"
+                        <Button
+                          size="sm"
+                          variant="outline"
                           disabled={busyId === s.id}
                           onClick={() => verify(s)}
                           title="Reset rejection and re-approve"
                         >
                           Re-verify
-                        </button>
+                        </Button>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
-      )}
+      </Card>
+
+      <Dialog
+        open={!!rejectTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRejectTarget(null);
+            setReason('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject {rejectTarget?.name}</DialogTitle>
+            <DialogDescription>
+              The reason is sent to the school coordinator by email.
+            </DialogDescription>
+          </DialogHeader>
+          <textarea
+            rows={3}
+            autoFocus
+            placeholder="Reason for rejection (required)…"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectTarget(null);
+                setReason('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!reason.trim() || busyId === rejectTarget?.id}
+              onClick={submitReject}
+            >
+              {busyId === rejectTarget?.id ? 'Rejecting…' : 'Reject application'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
