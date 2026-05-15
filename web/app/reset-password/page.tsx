@@ -1,44 +1,42 @@
 'use client';
 
 // Reset-password landing. Reads ?token=… from the URL, submits to
-// POST /api/auth/reset-password. Token is single-use server-side; client
+// POST /api/auth/reset-password. Token is single-use server-side; the client
 // just validates length + match and trusts the backend's verdict.
 
 import { Suspense, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowRight, Eye, EyeOff, Lock } from 'lucide-react';
 import { adminHttp } from '@/lib/api/client';
-import { useTheme } from '@/lib/theme/context';
-import {
-  LockIcon, EyeIcon, EyeOffIcon, ArrowRightIcon,
-} from '@/components/competition-portal/icons';
+import { HubAuthShell } from '@/components/hub-auth-shell';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 
 function ResetPasswordInner() {
-  const router  = useRouter();
-  const params  = useSearchParams();
-  const token   = params.get('token') ?? '';
-  const { theme, toggle } = useTheme();
-  const isDark  = theme === 'dark';
+  const router = useRouter();
+  const token = useSearchParams().get('token') ?? '';
 
-  const [password, setPassword]   = useState('');
-  const [confirm, setConfirm]     = useState('');
-  const [showPwd, setShowPwd]     = useState(false);
-  const [submitting, setSubmit]   = useState(false);
-  const [done, setDone]           = useState(false);
-  const [error, setError]         = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [submitting, setSubmit] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState('');
 
-  const tooShort  = password.length > 0 && password.length < 8;
-  const mismatch  = confirm.length > 0 && confirm !== password;
+  const tooShort = password.length > 0 && password.length < 8;
+  const mismatch = confirm.length > 0 && confirm !== password;
   const canSubmit = !!token && password.length >= 8 && confirm === password && !submitting;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    setError(''); setSubmit(true);
+    setError('');
+    setSubmit(true);
     try {
       await adminHttp.post('/auth/reset-password', { token, password });
       setDone(true);
-      // Send the user to sign-in after a short pause so they can read the success copy.
       setTimeout(() => router.replace('/'), 2200);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reset password. Please try again.');
@@ -48,162 +46,129 @@ function ResetPasswordInner() {
   };
 
   return (
-    <div className="auth-split hub-split" style={{ ['--portal-accent' as string]: '#0d7377' }}>
-      <div
-        className="brand-panel"
-        style={{ background: 'linear-gradient(135deg,#0d7377 0%,#14a085 60%,#1b7a6a 100%)' }}
-      >
-        <div className="brand-panel-grid" aria-hidden />
-        <div className="brand-panel-inner">
-          <div className="brand-panel-mark">
-            <div className="brand-panel-mark-disc">CZ</div>
-            <div className="brand-panel-mark-label">Competzy</div>
-          </div>
+    <HubAuthShell
+      headlineTop="Set a new"
+      headlineBottom="password."
+      caption="Almost there."
+      quote="Choose a password at least 8 characters long. We’ll sign you in next."
+    >
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
+        Competzy · Password reset
+      </p>
 
-          <div className="brand-panel-headline">
-            <div className="brand-panel-headline-1">Set a new</div>
-            <div className="brand-panel-headline-2">password.</div>
-          </div>
+      {!token ? (
+        <>
+          <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">Link is missing.</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            This page needs a reset token in the URL. The link in your email should bring you here
+            automatically.
+          </p>
+          <Button asChild size="lg" className="mt-6 w-full">
+            <Link href="/forgot-password">
+              Request a new link
+              <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </>
+      ) : done ? (
+        <>
+          <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">Password updated.</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            You can sign in with the new password now. Redirecting to sign-in…
+          </p>
+          <Button asChild size="lg" className="mt-6 w-full">
+            <Link href="/">
+              Sign in now
+              <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </>
+      ) : (
+        <>
+          <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">
+            Choose a new password.
+          </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Minimum 8 characters. Use something you don’t use elsewhere.
+          </p>
 
-          <div className="brand-panel-tagline">
-            <div className="brand-panel-fullname">Almost there.</div>
-            <div className="brand-panel-quote">
-              &ldquo;Choose a password at least 8 characters long. We&rsquo;ll sign you in next.&rdquo;
+          {error && (
+            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
             </div>
-          </div>
-
-          <div className="brand-panel-footer">&copy; 2026 Competzy</div>
-        </div>
-      </div>
-
-      <div className="form-panel hub-form-panel">
-        <button
-          onClick={toggle}
-          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          className="hub-theme-toggle"
-        >
-          {isDark ? '☀' : '☾'}
-        </button>
-
-        <div className="form-panel-inner">
-          {!token ? (
-            <>
-              <span className="form-eyebrow">Competzy · Password Reset</span>
-              <h1>Link is missing.</h1>
-              <p className="form-subtitle">
-                This page needs a reset token in the URL. The link in your email should bring you here automatically.
-              </p>
-              <Link href="/forgot-password" className="btn-portal" style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none' }}>
-                Request a new link
-                <ArrowRightIcon />
-              </Link>
-            </>
-          ) : done ? (
-            <>
-              <span className="form-eyebrow">Competzy · Password Reset</span>
-              <h1>Password updated.</h1>
-              <p className="form-subtitle">
-                You can sign in with the new password now. Redirecting to sign-in…
-              </p>
-              <Link href="/" className="btn-portal" style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none' }}>
-                Sign in now
-                <ArrowRightIcon />
-              </Link>
-            </>
-          ) : (
-            <>
-              <span className="form-eyebrow">Competzy · Password Reset</span>
-              <h1>Choose a new password.</h1>
-              <p className="form-subtitle">Minimum 8 characters. Use something you don&rsquo;t use elsewhere.</p>
-
-              {error && <div className="portal-error">{error}</div>}
-
-              <form onSubmit={submit} noValidate>
-                <div className="form-row">
-                  <label className="label-light" htmlFor="reset-pwd">New password</label>
-                  <div className="icon-input-wrap">
-                    <LockIcon />
-                    <input
-                      id="reset-pwd"
-                      className="input-light has-suffix"
-                      type={showPwd ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      required
-                      minLength={8}
-                      autoFocus
-                      aria-invalid={tooShort}
-                    />
-                    <button
-                      type="button"
-                      className="input-suffix"
-                      onClick={() => setShowPwd(v => !v)}
-                      aria-label={showPwd ? 'Hide password' : 'Show password'}
-                    >
-                      {showPwd ? <EyeOffIcon /> : <EyeIcon />}
-                    </button>
-                  </div>
-                  {tooShort && (
-                    <div className="portal-hint" role="alert">
-                      Password must be at least 8 characters.
-                    </div>
-                  )}
-                </div>
-
-                <div className="form-row">
-                  <label className="label-light" htmlFor="reset-confirm">Confirm password</label>
-                  <div className="icon-input-wrap">
-                    <LockIcon />
-                    <input
-                      id="reset-confirm"
-                      className="input-light"
-                      type={showPwd ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      value={confirm}
-                      onChange={e => setConfirm(e.target.value)}
-                      required
-                      aria-invalid={mismatch}
-                    />
-                  </div>
-                  {mismatch && (
-                    <div className="portal-hint" role="alert">
-                      Passwords don&rsquo;t match.
-                    </div>
-                  )}
-                </div>
-
-                <button className="btn-portal" type="submit" disabled={!canSubmit}>
-                  {submitting ? 'Updating…' : 'Update password'}
-                  {!submitting && <ArrowRightIcon />}
-                </button>
-              </form>
-
-              <div className="portal-switch">
-                <Link href="/">Back to sign in</Link>
-              </div>
-
-              <div className="hub-rights">
-                Competzy &copy; 2026 &middot; All rights reserved
-              </div>
-              <div className="hub-legal">
-                <Link href="/privacy">Privacy</Link>
-                <span className="hub-legal-dot">&middot;</span>
-                <Link href="/terms">Terms</Link>
-                <span className="hub-legal-dot">&middot;</span>
-                <a href="mailto:hello@competzy.com">Contact</a>
-              </div>
-            </>
           )}
-        </div>
-      </div>
-    </div>
+
+          <form onSubmit={submit} noValidate className="mt-5 space-y-4">
+            <div>
+              <Label htmlFor="reset-pwd" className="mb-1.5 text-xs text-muted-foreground">
+                New password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="reset-pwd"
+                  type={showPwd ? 'text' : 'password'}
+                  className="px-9"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  autoFocus
+                  aria-invalid={tooShort}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((v) => !v)}
+                  aria-label={showPwd ? 'Hide password' : 'Show password'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
+              {tooShort && (
+                <p className="mt-1 text-xs text-destructive">Password must be at least 8 characters.</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="reset-confirm" className="mb-1.5 text-xs text-muted-foreground">
+                Confirm password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="reset-confirm"
+                  type={showPwd ? 'text' : 'password'}
+                  className="pl-9"
+                  autoComplete="new-password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  required
+                  aria-invalid={mismatch}
+                />
+              </div>
+              {mismatch && <p className="mt-1 text-xs text-destructive">Passwords don’t match.</p>}
+            </div>
+
+            <Button type="submit" size="lg" className="w-full" disabled={!canSubmit}>
+              {submitting ? 'Updating…' : 'Update password'}
+              {!submitting && <ArrowRight className="size-4" />}
+            </Button>
+          </form>
+
+          <p className="mt-5 text-center text-sm text-muted-foreground">
+            <Link href="/" className="font-medium text-primary hover:underline">
+              Back to sign in
+            </Link>
+          </p>
+        </>
+      )}
+    </HubAuthShell>
   );
 }
 
 export default function ResetPasswordPage() {
-  // useSearchParams must be inside a Suspense boundary in Next.js 14+
   return (
     <Suspense fallback={null}>
       <ResetPasswordInner />
