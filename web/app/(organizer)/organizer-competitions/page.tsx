@@ -1,9 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { organizerHttp } from '@/lib/auth/organizer-context';
-import { organizerCompetitionsApi } from '@/lib/api';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
+import { Eye, Pencil, Plus } from 'lucide-react';
+import { organizerHttp } from '@/lib/auth/organizer-context';
+import { PageHeader } from '@/components/shell/page-header';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 interface Competition {
   id: string;
@@ -12,147 +27,189 @@ interface Competition {
   registrationStatus: string;
   registrationCount: number;
   regCloseDate?: string;
-  competitionDate?: string;
   fee: number;
 }
 
-const STATUS_BADGE: Record<string, { cls: string }> = {
-  'Open':        { cls: 'badge-green' },
-  'Coming Soon': { cls: 'badge-yellow' },
-  'Closed':      { cls: 'badge-red' },
-  'Draft':       { cls: 'badge-gray' },
+const STATUS_STYLE: Record<string, string> = {
+  Open: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+  'Coming Soon': 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  Closed: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
+  Draft: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
 };
 
-function Spinner() { return <span className="spin" />; }
-function fmtDate(d?: string) { return d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
+function fmtDate(d?: string) {
+  return d
+    ? new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+    : '—';
+}
 
-export default function OrganizerCompetitions() {
-  const [comps, setComps]     = useState<Competition[]>([]);
+export default function OrganizerCompetitionsPage() {
+  const [comps, setComps] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
-  const [msg, setMsg]         = useState<{ ok: boolean; text: string } | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await organizerHttp.get<Competition[]>('/organizers/competitions');
-      setComps(r);
-    } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
-    finally { setLoading(false); }
-  };
+      setComps(await organizerHttp.get<Competition[]>('/organizers/competitions'));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to load competitions');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const publish = async (id: string) => {
     try {
       await organizerHttp.post(`/organizers/competitions/${id}/publish`, {});
-      setMsg({ ok: true, text: 'Competition published!' });
+      toast.success('Competition published.');
       load();
-    } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to publish');
+    }
   };
 
   const close = async (id: string) => {
     if (!confirm('Close registration for this competition?')) return;
     try {
       await organizerHttp.post(`/organizers/competitions/${id}/close`, {});
-      setMsg({ ok: true, text: 'Registration closed.' });
+      toast.success('Registration closed.');
       load();
-    } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to close');
+    }
   };
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 1060 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 28 }}>
-        <div className="fu">
-          <p className="label" style={{ marginBottom: 6 }}>My Competitions</p>
-          <h1 style={{ fontFamily: 'var(--ff-display)', fontSize: 32, fontWeight: 400 }}>Competitions</h1>
-          <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>{comps.length} total</p>
-        </div>
-        <Link 
-          href="/organizer-competitions/new"
-          className="btn btn-primary"
-          style={{ marginBottom: 28, background: 'linear-gradient(135deg,#f59e0b,#f97316)', border: 'none' }}>
-          + New Competition
-        </Link>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        eyebrow="My competitions"
+        title="Competitions"
+        subtitle="Create, publish, and manage the competitions you organize."
+        actions={
+          <Button asChild>
+            <Link href="/organizer-competitions/new">
+              <Plus className="size-4" />
+              New competition
+            </Link>
+          </Button>
+        }
+      />
 
-      {msg && <div className={`toast ${msg.ok ? 'toast-ok' : 'toast-err'}`}>{msg.ok ? '✓' : '⚠'} {msg.text}</div>}
-
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          {loading ? (
-            <div style={{ padding: 48, textAlign: 'center' }}><Spinner /></div>
-          ) : comps.length === 0 ? (
-            <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
-              No competitions yet.{' '}
-              <Link href="/organizer-competitions/new" style={{ color: '#f59e0b', textDecoration: 'none' }}>
-                Create your first one →
-              </Link>
-            </div>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Category</th>
-                  <th>Status</th>
-                  <th>Registrations</th>
-                  <th>Fee</th>
-                  <th>Close Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comps.map(c => (
-                  <tr key={c.id}>
-                    <td style={{ color: 'var(--text-1)', fontWeight: 500, maxWidth: 260 }}>
-                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
-                    </td>
-                    <td>{c.category ? <span className="badge badge-indigo">{c.category}</span> : '—'}</td>
-                    <td>
-                      <span className={`badge ${STATUS_BADGE[c.registrationStatus]?.cls ?? 'badge-gray'}`}>
+      <Card className="overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Registrations</TableHead>
+                <TableHead>Fee</TableHead>
+                <TableHead>Reg. closes</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={7}>
+                      <Skeleton className="h-9 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : comps.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
+                    No competitions yet.{' '}
+                    <Link href="/organizer-competitions/new" className="font-medium text-primary hover:underline">
+                      Create your first one →
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                comps.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="max-w-[260px] truncate font-medium text-foreground">
+                      {c.name}
+                    </TableCell>
+                    <TableCell>
+                      {c.category ? (
+                        <Badge variant="secondary" className="font-normal">
+                          {c.category}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'border-transparent font-mono text-[10px]',
+                          STATUS_STYLE[c.registrationStatus] ?? 'bg-muted text-muted-foreground',
+                        )}
+                      >
                         {c.registrationStatus}
-                      </span>
-                    </td>
-                    <td style={{ fontFamily: 'var(--ff-mono)', fontSize: 12 }}>{c.registrationCount}</td>
-                    <td style={{ fontSize: 12 }}>
-                      {c.fee === 0
-                        ? <span className="badge badge-green">Free</span>
-                        : `Rp ${c.fee.toLocaleString('id-ID')}`}
-                    </td>
-                    <td style={{ fontFamily: 'var(--ff-mono)', fontSize: 11 }}>{fmtDate(c.regCloseDate)}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <Link 
-                          href={`/organizer-competitions/${c.id}`}
-                          className="btn btn-ghost" 
-                          style={{ padding: '4px 10px', fontSize: 11 }}>
-                          View
-                        </Link>
-                        <Link 
-                          href={`/organizer-competitions/${c.id}/edit`}
-                          className="btn btn-ghost" 
-                          style={{ padding: '4px 10px', fontSize: 11 }}>
-                          Edit
-                        </Link>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-[12px] text-muted-foreground">
+                      {c.registrationCount}
+                    </TableCell>
+                    <TableCell>
+                      {c.fee === 0 ? (
+                        <Badge
+                          variant="outline"
+                          className="border-transparent bg-emerald-100 font-mono text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                        >
+                          Free
+                        </Badge>
+                      ) : (
+                        <span className="text-sm tabular-nums">Rp {c.fee.toLocaleString('id-ID')}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono text-[11px] text-muted-foreground">
+                      {fmtDate(c.regCloseDate)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1.5">
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/organizer-competitions/${c.id}`}>
+                            <Eye className="size-3.5" />
+                          </Link>
+                        </Button>
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/organizer-competitions/${c.id}/edit`}>
+                            <Pencil className="size-3.5" />
+                          </Link>
+                        </Button>
                         {c.registrationStatus === 'Coming Soon' || c.registrationStatus === 'Draft' ? (
-                          <button className="btn btn-primary" onClick={() => publish(c.id)}
-                            style={{ padding: '4px 10px', fontSize: 11, background: '#22c55e', border: 'none' }}>
+                          <Button size="sm" onClick={() => publish(c.id)}>
                             Publish
-                          </button>
+                          </Button>
                         ) : c.registrationStatus === 'Open' ? (
-                          <button className="btn btn-danger" onClick={() => close(c.id)} style={{ padding: '4px 10px', fontSize: 11 }}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => close(c.id)}
+                          >
                             Close
-                          </button>
+                          </Button>
                         ) : null}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
