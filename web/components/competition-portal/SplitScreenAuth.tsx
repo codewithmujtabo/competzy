@@ -1,6 +1,6 @@
 // Split-screen layout for per-competition auth pages.
-// Left: branded gradient panel. Right: form content.
-// Mobile collapses to single column (form only, brand becomes a slim header).
+// Left: the competition's branded gradient panel. Right: the form.
+// Below lg the brand panel is hidden and the form takes the full width.
 
 import type { ReactNode } from 'react';
 import type { CompetitionPortalConfig } from '@/lib/competitions/registry';
@@ -13,12 +13,10 @@ interface Props {
 
 export function SplitScreenAuth({ config, children }: Props) {
   return (
-    <div className="auth-split" style={{ ['--portal-accent' as string]: config.accent }}>
+    <div className="grid min-h-screen lg:grid-cols-2">
       <BrandPanel config={config} />
-      <div className="form-panel">
-        <div className="form-panel-inner">
-          {children}
-        </div>
+      <div className="flex items-center justify-center bg-background px-6 py-12">
+        <div className="w-full max-w-md">{children}</div>
       </div>
     </div>
   );

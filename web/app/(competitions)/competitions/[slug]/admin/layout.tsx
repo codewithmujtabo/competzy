@@ -2,14 +2,15 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { useRouter, useParams, notFound } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
 
 export default function CompetitionAdminLayout({ children }: { children: ReactNode }) {
   const params = useParams<{ slug: string }>();
-  const slug   = params?.slug ?? '';
+  const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
-  const paths  = competitionPaths(slug);
+  const paths = competitionPaths(slug);
 
   const { user, loading } = useCompetitionAuth();
   const router = useRouter();
@@ -26,8 +27,8 @@ export default function CompetitionAdminLayout({ children }: { children: ReactNo
 
   if (!config || loading || !user || user.role !== 'admin') {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f7fb' }}>
-        <div className="spin" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
