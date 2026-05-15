@@ -1,7 +1,7 @@
 'use client';
 
 // Split-screen shell for the platform auth pages (forgot-password,
-// reset-password). Teal Competzy brand panel on the left, form on the right,
+// reset-password). The violet Competzy brand panel on the left, form on the right,
 // with the light/dark toggle. The `/` unified login uses the same visual
 // language inline (it has more moving parts).
 
@@ -24,7 +24,7 @@ export function HubAuthShell({ headlineTop, headlineBottom, caption, quote, chil
     <div className="grid min-h-screen lg:grid-cols-2">
       <div
         className="relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:flex"
-        style={{ background: 'linear-gradient(135deg,#0d7377 0%,#14a085 60%,#1b7a6a 100%)' }}
+        style={{ background: 'linear-gradient(135deg,#5627ff 0%,#6f47ff 55%,#3f18cc 100%)' }}
       >
         <div
           aria-hidden
