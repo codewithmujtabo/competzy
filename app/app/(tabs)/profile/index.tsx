@@ -45,7 +45,7 @@ type MenuItem = {
 };
 
 export default function ProfileScreen() {
-  const { user, registrations, refreshRegistrations } = useUser();
+  const { user, registrations, refreshRegistrations, logout } = useUser();
   const insets = useSafeAreaInsets();
 
   useFocusEffect(
@@ -180,9 +180,14 @@ export default function ProfileScreen() {
           ))}
         </Card>
 
-        {/* Sign out */}
+        {/* Sign out — clear the auth session, THEN navigate. Navigating
+            without logout() left the old user/role in context and leaked
+            it into the next login (e.g. admin → student showed Admin). */}
         <Pressable
-          onPress={() => router.replace("/(auth)/login" as any)}
+          onPress={async () => {
+            await logout();
+            router.replace("/(auth)/login" as any);
+          }}
           style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
           accessibilityRole="button"
         >
