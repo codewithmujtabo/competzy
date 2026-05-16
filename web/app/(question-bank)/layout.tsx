@@ -2,7 +2,15 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, FileText, FolderTree, LayoutGrid, Library, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  ClipboardCheck,
+  FileText,
+  FolderTree,
+  LayoutGrid,
+  Library,
+  Loader2,
+} from 'lucide-react';
 import { QuestionBankAuthProvider, useQuestionBankAuth } from '@/lib/auth/question-bank-context';
 import { QuestionBankProvider } from '@/lib/question-bank/context';
 import { AppShell, type NavSection } from '@/components/shell/app-shell';
@@ -43,6 +51,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
         { label: 'Dashboard', href: '/question-bank', icon: LayoutGrid, exact: true },
         { label: 'Taxonomy', href: '/question-bank/taxonomy', icon: FolderTree },
         { label: 'Questions', href: '/question-bank/questions', icon: FileText },
+        { label: 'Review', href: '/question-bank/review', icon: ClipboardCheck },
       ],
     },
     {
