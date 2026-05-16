@@ -408,6 +408,9 @@ export default function CompetitionDashboardPage() {
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="sm" asChild>
+              <Link href={competitionPaths(slug).announcements}>News</Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
               <Link href={competitionPaths(slug).store}>Store</Link>
             </Button>
             <Button variant="ghost" size="sm" asChild>
