@@ -74,6 +74,12 @@ const SOFT_DELETE_TABLES = new Set([
   "competition_flows",
   // Affiliated-competition credentials (1749100000000_affiliated-competitions.sql)
   "affiliated_credentials",
+  // EMC-port exam delivery (1748300000000_emc-exam-delivery.sql)
+  "exams",
+  "sessions",
+  "periods",
+  "paper_exams",
+  "paper_answers",
 ]);
 
 /**

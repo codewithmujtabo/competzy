@@ -4,6 +4,7 @@ import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/require-role";
 import { audit } from "../middleware/audit";
 import { liveFilter, compFilter, softDelete } from "../db/query-helpers";
+import { hasCompAccess } from "../services/comp-access.service";
 
 // Question-bank API (EMC Wave 6). The question bank belongs to NATIVE
 // competitions only — affiliated competitions have no bank. Routes are open to
@@ -19,22 +20,8 @@ router.use(authMiddleware);
 router.use(requireRole("admin", "organizer"));
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-
-// The competition must be native (affiliated comps have no question bank) and
-// the caller must own it: an admin owns every competition, an organizer only
-// the ones they created.
-async function hasCompAccess(userId: string, role: string, compId: string): Promise<boolean> {
-  const r = await pool.query(
-    "SELECT created_by, kind FROM competitions WHERE id = $1",
-    [compId]
-  );
-  if (r.rows.length === 0) return false;
-  const { created_by, kind } = r.rows[0];
-  if (kind !== "native") return false;
-  if (role === "admin") return true;
-  if (role === "organizer") return created_by === userId;
-  return false;
-}
+// `hasCompAccess` (native-competition + ownership gate) lives in
+// services/comp-access.service.ts — shared with exam.routes.ts.
 
 // Resolve a taxonomy/question row's comp_id, then check access. Returns the
 // comp_id, or null if the row is missing / soft-deleted / not accessible.
