@@ -167,7 +167,7 @@ export default function DocumentVaultScreen() {
         const asset = result.assets[0];
         showDocTypeSelector({
           uri:      asset.uri,
-          name:     `foto_${Date.now()}.jpg`,
+          name:     `photo_${Date.now()}.jpg`,
           mimeType: "image/jpeg",
         });
       }
@@ -188,7 +188,7 @@ export default function DocumentVaultScreen() {
         const asset = result.assets[0];
         showDocTypeSelector({
           uri:      asset.uri,
-          name:     `kamera_${Date.now()}.jpg`,
+          name:     `camera_${Date.now()}.jpg`,
           mimeType: "image/jpeg",
         });
       }
