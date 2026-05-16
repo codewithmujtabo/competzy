@@ -84,7 +84,7 @@ function currentHint(checkType: CheckType): string {
     case 'documents':
       return 'Upload the required documents in the Competzy app.';
     case 'payment':
-      return 'Head to the Competzy app to pay your registration fee.';
+      return 'Pay your registration fee to continue.';
     case 'approval':
       return 'An organizer is reviewing your registration — no action needed.';
     case 'none':
@@ -258,6 +258,7 @@ function Stepper({
         const hint = s.status === 'current' ? currentHint(s.checkType) : '';
         const showAccess = s.stepKey === 'external_access' && s.status !== 'upcoming';
         const showExam = s.stepKey === 'exam' && s.status !== 'upcoming';
+        const showPay = s.checkType === 'payment' && s.status === 'current';
         return (
           <li key={s.id} className="flex gap-4">
             <div className="flex flex-col items-center">
@@ -289,6 +290,11 @@ function Stepper({
               )}
               {showAccess && <AccessBlock externalUrl={externalUrl} credential={credential} />}
               {showExam && <ExamBlock compId={compId} slug={slug} />}
+              {showPay && (
+                <Button asChild size="sm" className="mt-2">
+                  <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
+                </Button>
+              )}
             </div>
           </li>
         );
@@ -458,6 +464,11 @@ export default function CompetitionDashboardPage() {
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {fallbackCopy?.body ?? `Status: ${reg.status}`}
                 </p>
+                {reg.status === 'pending_payment' && (
+                  <Button asChild className="mt-4 w-fit">
+                    <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
+                  </Button>
+                )}
               </>
             )}
           </Card>

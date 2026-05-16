@@ -31,6 +31,84 @@ async function canAccessRegistration(userId: string, registrationId: string): Pr
   return result.rows.length > 0;
 }
 
+// ── Wave 9: registration-fee voucher helpers ──────────────────────────────
+// A voucher_group is a batch of discount codes; voucher_groups.discounted is
+// the absolute fee a voucher-holder pays. Voucher npsn (when set) locks the
+// code to one school — matched against the registrant's school NPSN.
+
+interface RegContext {
+  compId: string;
+  fee: number;
+  studentNpsn: string | null;
+}
+
+async function loadRegContext(registrationId: string): Promise<RegContext | null> {
+  // students.id == users.id (1:1); students.npsn is the NPSN the student
+  // registered with — what a school-locked voucher is matched against.
+  const r = await pool.query(
+    `SELECT r.comp_id, c.fee, s.npsn AS student_npsn
+       FROM registrations r
+       JOIN competitions c ON c.id = r.comp_id
+       LEFT JOIN students s ON s.id = r.user_id
+      WHERE r.id = $1`,
+    [registrationId]
+  );
+  if (r.rows.length === 0) return null;
+  return {
+    compId: r.rows[0].comp_id,
+    fee: Number(r.rows[0].fee) || 0,
+    studentNpsn: r.rows[0].student_npsn ?? null,
+  };
+}
+
+interface VoucherCheck {
+  valid: boolean;
+  message?: string;
+  discountedFee?: number;
+}
+
+async function checkVoucher(
+  compId: string,
+  code: string,
+  studentNpsn: string | null
+): Promise<VoucherCheck> {
+  const r = await pool.query(
+    `SELECT v.npsn, v.used, v.max, vg.discounted, vg.is_active
+       FROM vouchers v
+       JOIN voucher_groups vg ON vg.id = v.group_id
+      WHERE v.comp_id = $1 AND v.code = $2
+        AND v.deleted_at IS NULL AND vg.deleted_at IS NULL
+      LIMIT 1`,
+    [compId, code]
+  );
+  if (r.rows.length === 0) {
+    return { valid: false, message: "Voucher code not found for this competition." };
+  }
+  const v = r.rows[0];
+  if (!v.is_active) {
+    return { valid: false, message: "This voucher batch is no longer active." };
+  }
+  if (v.used >= v.max) {
+    return { valid: false, message: "This voucher code has already been used." };
+  }
+  if (v.npsn && v.npsn !== studentNpsn) {
+    return { valid: false, message: "This voucher is reserved for a different school." };
+  }
+  return { valid: true, discountedFee: Number(v.discounted) || 0 };
+}
+
+// Idempotent redemption — links the voucher to the settling payment and bumps
+// `used`. The `payment_id IS NULL` guard makes a webhook+verify double-fire safe.
+async function redeemVoucher(compId: string, code: string, paymentDbId: string): Promise<void> {
+  await pool.query(
+    `UPDATE vouchers
+        SET used = used + 1, payment_id = $1, updated_at = now()
+      WHERE comp_id = $2 AND code = $3
+        AND payment_id IS NULL AND used < max AND deleted_at IS NULL`,
+    [paymentDbId, compId, code]
+  );
+}
+
 // ── POST /api/payments/webhook ────────────────────────────────────────────────
 // Midtrans calls this directly — no auth middleware.
 // https://docs.midtrans.com/reference/handling-notifications
@@ -78,7 +156,10 @@ router.post("/webhook", async (req: Request, res: Response) => {
 
     // ── Look up the payment record ─────────────────────────────────────────
     const paymentResult = await pool.query(
-      `SELECT id, registration_id FROM payments WHERE order_id = $1 LIMIT 1`,
+      `SELECT p.id, p.registration_id, r.comp_id, r.voucher_code
+         FROM payments p
+         LEFT JOIN registrations r ON r.id = p.registration_id
+        WHERE p.order_id = $1 LIMIT 1`,
       [order_id]
     );
 
@@ -89,7 +170,12 @@ router.post("/webhook", async (req: Request, res: Response) => {
       return;
     }
 
-    const { id: paymentDbId, registration_id } = paymentResult.rows[0];
+    const {
+      id: paymentDbId,
+      registration_id,
+      comp_id,
+      voucher_code,
+    } = paymentResult.rows[0];
 
     // ── Determine new statuses ─────────────────────────────────────────────
     // settlement = non-card success; capture + accept = card success
@@ -136,6 +222,12 @@ router.post("/webhook", async (req: Request, res: Response) => {
         [registration_id]
       );
 
+      // Redeem the registration-fee voucher, if one was applied. Idempotent —
+      // a webhook + verify-endpoint double-settle won't double-count.
+      if (voucher_code && comp_id) {
+        await redeemVoucher(comp_id, voucher_code, paymentDbId);
+      }
+
       const regResult = await pool.query(
         `SELECT r.user_id, r.comp_id, c.name as comp_name
          FROM registrations r
@@ -176,10 +268,11 @@ router.use(authMiddleware);
 // ── POST /api/payments/snap ───────────────────────────────────────────────────
 router.post("/snap", async (req: Request, res: Response) => {
   try {
-    const { registrationId, payerKind, payerUserId } = req.body as {
+    const { registrationId, payerKind, payerUserId, voucherCode } = req.body as {
       registrationId?: string;
       payerKind?: "self" | "parent" | "school" | "sponsor";
       payerUserId?: string;
+      voucherCode?: string;
     };
 
     if (!registrationId) {
@@ -206,15 +299,19 @@ router.post("/snap", async (req: Request, res: Response) => {
     // Load registration + competition + student user
     const result = await pool.query(
       `SELECT
-         r.id         AS reg_id,
-         r.status     AS reg_status,
-         c.name       AS competition_name,
+         r.id          AS reg_id,
+         r.status      AS reg_status,
+         r.comp_id     AS comp_id,
+         r.voucher_code AS persisted_voucher_code,
+         c.name        AS competition_name,
          c.fee,
          u.full_name,
-         u.email
+         u.email,
+         s.npsn        AS student_npsn
        FROM registrations r
        JOIN competitions c ON c.id = r.comp_id
        JOIN users u ON u.id = r.user_id
+       LEFT JOIN students s ON s.id = r.user_id
        WHERE r.id = $1`,
       [registrationId]
     );
@@ -236,9 +333,55 @@ router.post("/snap", async (req: Request, res: Response) => {
       return;
     }
 
-    // Re-use an existing pending Snap token to avoid duplicate charges
+    // ── Resolve the amount — apply a registration-fee voucher if present ────
+    // A code passed in the body wins (and is persisted onto the registration
+    // so the settlement webhook can redeem it); otherwise the persisted code.
+    const bodyVoucher = typeof voucherCode === "string" && voucherCode.trim()
+      ? voucherCode.trim()
+      : null;
+    const effectiveVoucher = bodyVoucher ?? (row.persisted_voucher_code || null);
+    let chargeAmount: number = row.fee;
+
+    if (effectiveVoucher) {
+      const check = await checkVoucher(row.comp_id, effectiveVoucher, row.student_npsn);
+      if (!check.valid) {
+        res.status(400).json({ message: check.message ?? "Invalid voucher code." });
+        return;
+      }
+      chargeAmount = check.discountedFee ?? row.fee;
+      if (row.persisted_voucher_code !== effectiveVoucher) {
+        await pool.query(
+          `UPDATE registrations SET voucher_code = $1, updated_at = now() WHERE id = $2`,
+          [effectiveVoucher, registrationId]
+        );
+      }
+    }
+
+    // A voucher that fully covers the fee — settle without Midtrans.
+    if (chargeAmount <= 0) {
+      const coveredOrderId = `COVERED-${registrationId}-${Date.now()}`.slice(0, 50);
+      const coveredPayment = await pool.query(
+        `INSERT INTO payments
+           (registration_id, user_id, amount, payment_status, order_id, payer_user_id, payer_kind)
+         VALUES ($1, $2, 0, 'settlement', $3, $4, $5)
+         RETURNING id`,
+        [registrationId, req.userId, coveredOrderId, resolvedPayerUserId, resolvedPayerKind]
+      );
+      await pool.query(
+        `UPDATE registrations SET status = 'pending_review', updated_at = now() WHERE id = $1`,
+        [registrationId]
+      );
+      if (effectiveVoucher) {
+        await redeemVoucher(row.comp_id, effectiveVoucher, coveredPayment.rows[0].id);
+      }
+      res.status(201).json({ covered: true, status: "pending_review" });
+      return;
+    }
+
+    // Re-use an existing pending Snap token to avoid duplicate charges — but
+    // only if its amount still matches (a voucher applied later changes it).
     const existing = await pool.query(
-      `SELECT id, snap_token, order_id FROM payments
+      `SELECT id, snap_token, order_id, amount FROM payments
        WHERE registration_id = $1
          AND payment_status = 'pending'
          AND snap_token IS NOT NULL
@@ -247,7 +390,7 @@ router.post("/snap", async (req: Request, res: Response) => {
       [registrationId]
     );
 
-    if (existing.rows.length > 0) {
+    if (existing.rows.length > 0 && Number(existing.rows[0].amount) === chargeAmount) {
       const { id, snap_token, order_id } = existing.rows[0];
       const subdomain = env.MIDTRANS_IS_PRODUCTION ? "app" : "app.sandbox";
       res.json({
@@ -264,7 +407,7 @@ router.post("/snap", async (req: Request, res: Response) => {
 
     const { snapToken, redirectUrl } = await createSnapToken({
       orderId,
-      amount:          row.fee,
+      amount:          chargeAmount,
       customerName:    row.full_name,
       customerEmail:   row.email,
       competitionName: row.competition_name,
@@ -275,7 +418,7 @@ router.post("/snap", async (req: Request, res: Response) => {
          (registration_id, user_id, amount, payment_status, snap_token, order_id, payer_user_id, payer_kind)
        VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7)
        RETURNING id`,
-      [registrationId, req.userId, row.fee, snapToken, orderId, resolvedPayerUserId, resolvedPayerKind]
+      [registrationId, req.userId, chargeAmount, snapToken, orderId, resolvedPayerUserId, resolvedPayerKind]
     );
 
     res.status(201).json({
@@ -290,6 +433,82 @@ router.post("/snap", async (req: Request, res: Response) => {
   }
 });
 
+
+// ── POST /api/payments/voucher/validate ──────────────────────────────────────
+// Live-checks a registration-fee voucher code. No mutation — the web pay page
+// calls this to preview the discounted fee before checkout.
+router.post("/voucher/validate", async (req: Request, res: Response) => {
+  try {
+    const { registrationId, code } = req.body as { registrationId?: string; code?: string };
+    if (!registrationId || !code || !code.trim()) {
+      res.status(400).json({ message: "registrationId and code are required" });
+      return;
+    }
+    if (!(await canAccessRegistration(req.userId!, registrationId))) {
+      res.status(404).json({ message: "Registration not found" });
+      return;
+    }
+    const ctx = await loadRegContext(registrationId);
+    if (!ctx) {
+      res.status(404).json({ message: "Registration not found" });
+      return;
+    }
+    const check = await checkVoucher(ctx.compId, code.trim(), ctx.studentNpsn);
+    res.json({
+      valid: check.valid,
+      message: check.message ?? null,
+      originalFee: ctx.fee,
+      discountedFee: check.valid ? check.discountedFee ?? null : null,
+    });
+  } catch (err) {
+    console.error("Validate voucher error:", err);
+    res.status(500).json({ message: "Failed to validate voucher" });
+  }
+});
+
+// ── PUT /api/payments/registration/:id/voucher ───────────────────────────────
+// Persists (or clears, with an empty code) the voucher chosen for a
+// registration. A non-empty code is validated first.
+router.put("/registration/:id/voucher", async (req: Request, res: Response) => {
+  try {
+    const registrationId = req.params.id as string;
+    const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+    if (!(await canAccessRegistration(req.userId!, registrationId))) {
+      res.status(404).json({ message: "Registration not found" });
+      return;
+    }
+    const ctx = await loadRegContext(registrationId);
+    if (!ctx) {
+      res.status(404).json({ message: "Registration not found" });
+      return;
+    }
+    if (!code) {
+      await pool.query(
+        `UPDATE registrations SET voucher_code = NULL, updated_at = now() WHERE id = $1`,
+        [registrationId]
+      );
+      res.json({ voucherCode: null, originalFee: ctx.fee, discountedFee: null });
+      return;
+    }
+    const check = await checkVoucher(ctx.compId, code, ctx.studentNpsn);
+    if (!check.valid) {
+      res.status(400).json({ message: check.message ?? "Invalid voucher code." });
+      return;
+    }
+    await pool.query(
+      `UPDATE registrations SET voucher_code = $1, updated_at = now() WHERE id = $2`,
+      [code, registrationId]
+    );
+    res.json({
+      voucherCode: code,
+      originalFee: ctx.fee,
+      discountedFee: check.discountedFee ?? null,
+    });
+  } catch (err) {
+    console.error("Set registration voucher error:", err);
+    res.status(500).json({ message: "Failed to apply voucher" });
+  }
+});
 
 // ── GET /api/payments/verify/:registrationId ─────────────────────────────────
 // Polls Midtrans Status API and syncs DB — fixes sandbox where webhook can't reach localhost.
@@ -307,7 +526,8 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
 
     // Look up payment record
     const payRow = await pool.query(
-      `SELECT p.order_id, r.status as reg_status
+      `SELECT p.id AS payment_id, p.order_id, r.status as reg_status,
+              r.comp_id, r.voucher_code
        FROM payments p
        JOIN registrations r ON r.id = p.registration_id
        WHERE p.registration_id = $1
@@ -321,7 +541,7 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
       return;
     }
 
-    const { order_id, reg_status } = payRow.rows[0];
+    const { payment_id, order_id, reg_status, comp_id, voucher_code } = payRow.rows[0];
 
     // If already in post-payment state, nothing to do
     if (["pending_review", "approved", "paid"].includes(reg_status)) {
@@ -354,6 +574,10 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
         `UPDATE registrations SET status = 'pending_review', updated_at = now() WHERE id = $1`,
         [registrationId]
       );
+      // Redeem the registration-fee voucher (idempotent — see webhook).
+      if (voucher_code && comp_id) {
+        await redeemVoucher(comp_id, voucher_code, payment_id);
+      }
       console.log(`Verify endpoint: payment settled for registration ${registrationId} (order ${order_id}) → pending_review`);
       res.json({ status: "pending_review" });
       return;
