@@ -23,7 +23,7 @@ const NAV: NavSection[] = [
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutGrid, exact: true },
       { label: 'Registrations', href: '/registrations', icon: ClipboardList },
-      { label: 'Competitions', href: '/competitions', icon: Trophy },
+      { label: 'Competitions', href: '/admin/competitions', icon: Trophy },
       { label: 'Segments', href: '/segments', icon: Layers },
       { label: 'Send Notification', href: '/notifications', icon: Megaphone },
     ],
