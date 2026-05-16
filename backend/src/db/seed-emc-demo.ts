@@ -321,6 +321,36 @@ async function announcement(
   );
 }
 
+// A demo study material with a downloadable file (the demo JPEG stands in).
+async function material(
+  ownerId: string,
+  title: string,
+  body: string,
+  category: string,
+  grades: string[],
+  compScoped: boolean
+): Promise<void> {
+  const compId = compScoped ? COMP : null;
+  const found = await pool.query(
+    `SELECT id FROM materials
+      WHERE title = $1 AND comp_id IS NOT DISTINCT FROM $2 AND deleted_at IS NULL`,
+    [title, compId]
+  );
+  if (found.rows[0]) return;
+  const filePath = await storeFile(
+    ownerId,
+    Buffer.from(DEMO_JPEG_B64, "base64"),
+    `demo-material-${title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.jpg`,
+    "image/jpeg"
+  );
+  await pool.query(
+    `INSERT INTO materials
+       (comp_id, title, body, type, category, grades, file, is_active, published_at)
+     VALUES ($1,$2,$3,'file',$4,$5::jsonb,$6,true, now())`,
+    [compId, title, body, category, JSON.stringify(grades), filePath]
+  );
+}
+
 async function main() {
   const admin = await userId("admin@eduversal.com");
   const student = await userId("student@test.local");
@@ -478,6 +508,9 @@ async function main() {
     false,
     false
   );
+  await material(admin, "EMC 2025 Past Paper", "Last year's Round 1 paper with the full answer key.", "Past Papers", ["SD", "SMP"], true);
+  await material(admin, "Algebra Quick Reference", "A one-page summary of the algebra topics covered in the competition.", "Study Guides", ["SMP", "SMA"], true);
+  await material(admin, "Competition Day Checklist", "What to bring and how to prepare for any Competzy exam.", "Study Guides", [], false);
 
   console.log("EMC demo data seeded:");
   console.log("  venues:    3 areas, 5 test centers");
@@ -489,6 +522,7 @@ async function main() {
   console.log(`  order:     ${orderNote}`);
   console.log("  marketing: 2 referrals (REF-D01/D02) with funnel + clicks");
   console.log("  announce:  2 announcements (1 competition, 1 platform-wide)");
+  console.log("  materials: 3 study materials (2 competition, 1 platform-wide)");
   await pool.end();
 }
 
