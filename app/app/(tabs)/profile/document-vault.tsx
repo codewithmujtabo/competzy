@@ -1,12 +1,21 @@
-import { Brand, Surface } from "@/constants/theme";
-import { ScreenHeader } from "@/components/ui";
-import { useUser } from "@/context/AuthContext";
-import { useRouter } from "expo-router";
+import { EmptyState, ScreenHeader } from "@/components/ui";
+import { API_BASE_URL } from "@/config/api";
+import {
+  Brand,
+  FontFamily,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
 import * as documentService from "@/services/document.service";
 import * as TokenService from "@/services/token.service";
-import { API_BASE_URL } from "@/config/api";
+import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,6 +29,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
+
 interface Document {
   id: string;
   doc_type: string;
@@ -28,12 +39,12 @@ interface Document {
   uploaded_at: string;
 }
 
-const DOC_TYPES = [
-  { id: "id_card",        label: "ID Card",               icon: "🪪" },
-  { id: "report_card",    label: "Report Card",           icon: "📄" },
-  { id: "recommendation", label: "Recommendation Letter", icon: "💌" },
-  { id: "certificate",   label: "Certificate",            icon: "🏆" },
-  { id: "other",          label: "Other Documents",       icon: "📎" },
+const DOC_TYPES: { id: string; label: string; emoji: string; icon: IoniconName }[] = [
+  { id: "id_card",        label: "ID Card",               emoji: "🪪", icon: "card-outline" },
+  { id: "report_card",    label: "Report Card",           emoji: "📄", icon: "document-text-outline" },
+  { id: "recommendation", label: "Recommendation Letter", emoji: "💌", icon: "mail-outline" },
+  { id: "certificate",    label: "Certificate",           emoji: "🏆", icon: "ribbon-outline" },
+  { id: "other",          label: "Other Documents",       emoji: "📎", icon: "attach-outline" },
 ];
 
 function formatFileSize(bytes: number) {
@@ -43,8 +54,9 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function getDocMeta(docType: string) {
-  return DOC_TYPES.find((t) => t.id === docType) ?? { label: docType, icon: "📎" };
+function getDocMeta(docType: string): { label: string; icon: IoniconName } {
+  const match = DOC_TYPES.find((t) => t.id === docType);
+  return match ? { label: match.label, icon: match.icon } : { label: docType, icon: "document-outline" };
 }
 
 // ── Real XHR upload with progress ─────────────────────────────────────────────
@@ -95,7 +107,6 @@ async function uploadFileXHR(
 // ── Screen ────────────────────────────────────────────────────────────────────
 export default function DocumentVaultScreen() {
   const insets = useSafeAreaInsets();
-  const { user } = useUser();
   const router = useRouter();
 
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -193,7 +204,7 @@ export default function DocumentVaultScreen() {
       "What type of document is this?",
       [
         ...DOC_TYPES.map((t) => ({
-          text: `${t.icon} ${t.label}`,
+          text: `${t.emoji} ${t.label}`,
           onPress: () => uploadDocument(file, t.id),
         })),
         { text: "Cancel", style: "cancel" as const },
@@ -210,7 +221,7 @@ export default function DocumentVaultScreen() {
     try {
       await uploadFileXHR(file.uri, file.name, file.mimeType, docType, setUploadProgress);
       await fetchDocuments();
-      Alert.alert("✅ Success", "Document uploaded successfully!");
+      Alert.alert("Success", "Document uploaded successfully!");
     } catch (err: any) {
       Alert.alert("Failed", err?.message || "Failed to upload document. Please try again.");
     } finally {
@@ -251,236 +262,226 @@ export default function DocumentVaultScreen() {
     );
   }
 
+  const uploadActions: { icon: IoniconName; label: string; onPress: () => void }[] = [
+    { icon: "document-outline", label: "File / PDF",    onPress: handlePickDocument },
+    { icon: "image-outline",    label: "From Gallery",  onPress: handlePickImage },
+    { icon: "camera-outline",   label: "Camera",        onPress: handleCamera },
+  ];
+
   return (
     <View style={{ flex: 1, backgroundColor: Surface.background, paddingTop: insets.top }}>
       <ScreenHeader title="Document Vault" onBack={() => router.back()} />
       <ScrollView
         contentContainerStyle={[
           styles.container,
-          { paddingBottom: insets.bottom + 32 },
+          { paddingBottom: insets.bottom + Spacing["3xl"] },
         ]}
         showsVerticalScrollIndicator={false}
       >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.subtitle}>
-          Store your important documents here to make competition registration easier.
-        </Text>
-      </View>
-
-      {/* Upload buttons */}
-      <Text style={styles.sectionLabel}>Add Document</Text>
-      <View style={styles.uploadRow}>
-        {[
-          { emoji: "📄", label: "File / PDF",     onPress: handlePickDocument },
-          { emoji: "🖼️",  label: "From Gallery",  onPress: handlePickImage },
-          { emoji: "📸",  label: "Camera",        onPress: handleCamera },
-        ].map((btn) => (
-          <TouchableOpacity
-            key={btn.label}
-            style={[styles.uploadBtn, uploading && { opacity: 0.5 }]}
-            onPress={btn.onPress}
-            disabled={uploading}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.uploadBtnEmoji}>{btn.emoji}</Text>
-            <Text style={styles.uploadBtnLabel}>{btn.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Upload progress */}
-      {uploading && (
-        <View style={styles.progressCard}>
-          <Text style={styles.progressLabel}>
-            Mengunggah... {uploadProgress}%
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.subtitle}>
+            Store your important documents here to make competition registration easier.
           </Text>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${uploadProgress}%` }]} />
+        </View>
+
+        {/* Upload buttons */}
+        <Text style={styles.sectionLabel}>Add Document</Text>
+        <View style={styles.uploadRow}>
+          {uploadActions.map((btn) => (
+            <TouchableOpacity
+              key={btn.label}
+              style={[styles.uploadBtn, uploading && { opacity: 0.5 }]}
+              onPress={btn.onPress}
+              disabled={uploading}
+              activeOpacity={0.8}
+            >
+              <Ionicons name={btn.icon} size={24} color={Brand.primary} />
+              <Text style={styles.uploadBtnLabel}>{btn.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Upload progress */}
+        {uploading && (
+          <View style={styles.progressCard}>
+            <Text style={styles.progressLabel}>Uploading… {uploadProgress}%</Text>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${uploadProgress}%` }]} />
+            </View>
           </View>
-        </View>
-      )}
+        )}
 
-      {/* Document list */}
-      <Text style={[styles.sectionLabel, { marginTop: 24 }]}>
-        My Documents ({documents.length})
-      </Text>
+        {/* Document list */}
+        <Text style={[styles.sectionLabel, { marginTop: Spacing["2xl"] }]}>
+          My Documents ({documents.length})
+        </Text>
 
-      {documents.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>📭</Text>
-          <Text style={styles.emptyTitle}>No documents yet</Text>
-          <Text style={styles.emptySubtext}>
-            Upload documents like report cards, ID, or certificates to speed up registration.
+        {documents.length === 0 ? (
+          <EmptyState
+            icon={<Ionicons name="folder-open-outline" size={44} color={Brand.primary} />}
+            title="No documents yet"
+            message="Upload documents like report cards, ID, or certificates to speed up registration."
+          />
+        ) : (
+          <FlatList
+            data={documents}
+            keyExtractor={(d) => d.id}
+            scrollEnabled={false}
+            ItemSeparatorComponent={() => <View style={{ height: Spacing.sm + 2 }} />}
+            renderItem={({ item }) => {
+              const meta = getDocMeta(item.doc_type);
+              return (
+                <View style={styles.docCard}>
+                  <View style={styles.docIcon}>
+                    <Ionicons name={meta.icon} size={22} color={Brand.primary} />
+                  </View>
+                  <View style={styles.docInfo}>
+                    <Text style={styles.docType}>{meta.label}</Text>
+                    <Text style={styles.docName} numberOfLines={1}>
+                      {item.file_name}
+                    </Text>
+                    <Text style={styles.docMeta}>
+                      {formatFileSize(item.file_size)} ·{" "}
+                      {new Date(item.uploaded_at).toLocaleDateString("en-US", {
+                        day: "numeric", month: "short", year: "numeric",
+                      })}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => handleDelete(item.id, item.file_name)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="close" size={16} color={Brand.error} />
+                  </TouchableOpacity>
+                </View>
+              );
+            }}
+          />
+        )}
+
+        {/* Info box */}
+        <View style={styles.infoBox}>
+          <Ionicons name="lock-closed" size={16} color={Brand.primary} />
+          <Text style={styles.infoText}>
+            Accepted formats: PDF, JPG, PNG (max. 10 MB). Your documents are secure and can only be viewed by you and the competition organizers you register with.
           </Text>
         </View>
-      ) : (
-        <FlatList
-          data={documents}
-          keyExtractor={(d) => d.id}
-          scrollEnabled={false}
-          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-          renderItem={({ item }) => {
-            const meta = getDocMeta(item.doc_type);
-            return (
-              <View style={styles.docCard}>
-                <View style={styles.docIcon}>
-                  <Text style={{ fontSize: 24 }}>{meta.icon}</Text>
-                </View>
-                <View style={styles.docInfo}>
-                  <Text style={styles.docType}>{meta.label}</Text>
-                  <Text style={styles.docName} numberOfLines={1}>
-                    {item.file_name}
-                  </Text>
-                  <Text style={styles.docMeta}>
-                    {formatFileSize(item.file_size)} ·{" "}
-                    {new Date(item.uploaded_at).toLocaleDateString("en-US", {
-                      day: "numeric", month: "short", year: "numeric",
-                    })}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() => handleDelete(item.id, item.file_name)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.deleteBtnText}>✕</Text>
-                </TouchableOpacity>
-              </View>
-            );
-          }}
-        />
-      )}
-
-      {/* Info box */}
-      <View style={styles.infoBox}>
-        <Text style={styles.infoEmoji}>🔒</Text>
-        <Text style={styles.infoText}>
-          Accepted formats: PDF, JPG, PNG (max. 10 MB). Your documents are secure and can only be viewed by you and the competition organizers you register with.
-        </Text>
-      </View>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#F8FAFC" },
-  container: { paddingHorizontal: 20, backgroundColor: "#F8FAFC" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: Surface.background },
+  container: { paddingHorizontal: Spacing.xl },
 
-  header: { marginBottom: 24 },
-  subtitle: { fontSize: 14, color: "#64748B", lineHeight: 20 },
+  header: { marginBottom: Spacing["2xl"] },
+  subtitle: { ...Type.bodySm, lineHeight: 20 },
 
   sectionLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#64748B",
+    ...Type.label,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
 
   // Upload buttons
-  uploadRow: { flexDirection: "row", gap: 10 },
+  uploadRow: { flexDirection: "row", gap: Spacing.sm + 2 },
   uploadBtn: {
     flex: 1,
-    paddingVertical: 18,
-    borderRadius: 14,
+    paddingVertical: Spacing.lg,
+    borderRadius: Radius.xl,
     borderWidth: 1.5,
     borderColor: Brand.primary,
     borderStyle: "dashed",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#EEF2FF",
+    gap: Spacing.xs + 2,
+    backgroundColor: Brand.primarySoft,
   },
-  uploadBtnEmoji: { fontSize: 26 },
-  uploadBtnLabel: { fontSize: 11, fontWeight: "700", color: Brand.primary, textAlign: "center" },
+  uploadBtnLabel: {
+    ...Type.caption,
+    color: Brand.primary,
+    fontFamily: FontFamily.bodyBold,
+    textAlign: "center",
+  },
 
   // Progress
   progressCard: {
-    marginTop: 14,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    marginTop: Spacing.md + 2,
+    backgroundColor: Surface.card,
+    borderRadius: Radius.lg,
+    padding: Spacing.md + 2,
+    ...Shadow.sm,
   },
-  progressLabel: { fontSize: 13, color: "#475569", fontWeight: "600", marginBottom: 8 },
+  progressLabel: {
+    ...Type.bodySm,
+    color: TextColor.secondary,
+    fontFamily: FontFamily.bodySemi,
+    marginBottom: Spacing.sm,
+  },
   progressTrack: {
     height: 8,
-    backgroundColor: "#E2E8F0",
-    borderRadius: 4,
+    backgroundColor: Surface.cardAlt,
+    borderRadius: Radius.sm,
     overflow: "hidden",
   },
   progressFill: {
     height: 8,
     backgroundColor: Brand.primary,
-    borderRadius: 4,
+    borderRadius: Radius.sm,
   },
-
-  // Empty state
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 40,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: "#E2E8F0",
-    borderStyle: "dashed",
-  },
-  emptyEmoji: { fontSize: 48, marginBottom: 12 },
-  emptyTitle: { fontSize: 16, fontWeight: "700", color: "#0F172A", marginBottom: 8 },
-  emptySubtext: { fontSize: 13, color: "#94A3B8", textAlign: "center", lineHeight: 20, paddingHorizontal: 24 },
 
   // Document card
   docCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    backgroundColor: Surface.card,
+    borderRadius: Radius.xl,
+    padding: Spacing.md + 2,
+    ...Shadow.sm,
   },
   docIcon: {
     width: 48,
     height: 48,
-    borderRadius: 12,
-    backgroundColor: "#EEF2FF",
+    borderRadius: Radius.lg,
+    backgroundColor: Brand.primarySoft,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    marginRight: Spacing.md,
   },
   docInfo: { flex: 1 },
-  docType: { fontSize: 12, fontWeight: "700", color: Brand.primary, marginBottom: 2 },
-  docName: { fontSize: 14, fontWeight: "600", color: "#0F172A", marginBottom: 2 },
-  docMeta: { fontSize: 11, color: "#94A3B8" },
+  docType: {
+    ...Type.caption,
+    color: Brand.primary,
+    fontFamily: FontFamily.bodyBold,
+    marginBottom: 2,
+  },
+  docName: {
+    ...Type.bodySm,
+    color: TextColor.primary,
+    fontFamily: FontFamily.bodySemi,
+    marginBottom: 2,
+  },
+  docMeta: { ...Type.caption },
   deleteBtn: {
     width: 32,
     height: 32,
-    borderRadius: 8,
-    backgroundColor: "#FEF2F2",
+    borderRadius: Radius.sm,
+    backgroundColor: Brand.errorSoft,
     justifyContent: "center",
     alignItems: "center",
   },
-  deleteBtnText: { fontSize: 14, color: "#EF4444", fontWeight: "700" },
 
   // Info box
   infoBox: {
-    marginTop: 20,
+    marginTop: Spacing.xl,
     flexDirection: "row",
-    gap: 10,
-    backgroundColor: "#EFF6FF",
-    borderRadius: 12,
-    padding: 14,
+    gap: Spacing.sm + 2,
+    backgroundColor: Brand.primarySoft,
+    borderRadius: Radius.lg,
+    padding: Spacing.md + 2,
     alignItems: "flex-start",
   },
-  infoEmoji: { fontSize: 16 },
-  infoText: { flex: 1, fontSize: 12, color: "#1D4ED8", lineHeight: 18 },
+  infoText: { flex: 1, ...Type.caption, color: Brand.primary, lineHeight: 18 },
 });
