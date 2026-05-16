@@ -93,6 +93,7 @@ function RootLayout() {
               options={{ gestureEnabled: false, headerBackVisible: false }}
             />
             <Stack.Screen name="(payment)" options={{ presentation: "modal" }} />
+            <Stack.Screen name="(competition)" />
           </Stack>
           <StatusBar style="dark" />
         </ThemeProvider>
