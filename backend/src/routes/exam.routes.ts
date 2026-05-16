@@ -6,6 +6,7 @@ import { audit } from "../middleware/audit";
 import { liveFilter, compFilter, softDelete } from "../db/query-helpers";
 import { hasCompAccess } from "../services/comp-access.service";
 import { recomputeSessionRollups, recomputePaperRollups } from "../services/exam-grading.service";
+import { getSignedUrl } from "../services/storage.service";
 
 // Exam blueprint + builder + grading API (EMC Wave 7). Operator-facing — admin
 // + organizer, native competitions only (the `hasCompAccess` gate). Mounted at
@@ -923,5 +924,94 @@ router.delete(
     }
   }
 );
+
+// ── Proctoring review (Wave 8 Phase 5) ────────────────────────────────────
+// Operators review the webcam snapshots captured during online exam attempts.
+// Comp-scoped — admin sees every competition, an organizer only their own
+// (the `hasCompAccess` gate).
+
+// GET /api/question-bank/proctoring/sessions?compId= — attempts + snapshot counts.
+router.get("/question-bank/proctoring/sessions", async (req: Request, res: Response) => {
+  try {
+    const compId = String(req.query.compId ?? "");
+    if (!compId || !(await hasCompAccess(req.userId!, req.userRole!, compId))) {
+      res.status(403).json({ message: "No access to this competition" });
+      return;
+    }
+    const r = await pool.query(
+      `SELECT s.id, s.started_at, s.finished_at, s.camera_available,
+              u.full_name AS student_name, e.name AS exam_name, e.code AS exam_code,
+              (SELECT COUNT(*)::int FROM webcams w
+                WHERE w.session_id = s.id AND w.deleted_at IS NULL) AS webcam_count
+         FROM sessions s
+         JOIN users u ON u.id = s.user_id
+         JOIN exams e ON e.id = s.exam_id
+        WHERE s.comp_id = $1 AND s.deleted_at IS NULL
+        ORDER BY s.started_at DESC NULLS LAST`,
+      [compId]
+    );
+    res.json(
+      r.rows.map((s) => ({
+        sessionId: s.id,
+        studentName: s.student_name,
+        examName: s.exam_name,
+        examCode: s.exam_code,
+        startedAt: s.started_at,
+        finishedAt: s.finished_at,
+        cameraAvailable: s.camera_available,
+        webcamCount: s.webcam_count,
+      }))
+    );
+  } catch (err) {
+    console.error("Proctoring sessions error:", err);
+    res.status(500).json({ message: "Failed to load proctoring sessions" });
+  }
+});
+
+// GET /api/question-bank/proctoring/sessions/:id — the session + signed snapshot URLs.
+router.get("/question-bank/proctoring/sessions/:id", async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    if (!(await sessionCompIfAccessible(req, id))) {
+      res.status(404).json({ message: "Session not found" });
+      return;
+    }
+    const s = await pool.query(
+      `SELECT s.id, s.started_at, s.finished_at, s.camera_available,
+              u.full_name AS student_name, e.name AS exam_name, e.code AS exam_code
+         FROM sessions s
+         JOIN users u ON u.id = s.user_id
+         JOIN exams e ON e.id = s.exam_id
+        WHERE s.id = $1`,
+      [id]
+    );
+    const sess = s.rows[0];
+    const webcams = await pool.query(
+      `SELECT id, image_path, created_at FROM webcams
+        WHERE session_id = $1 AND deleted_at IS NULL ORDER BY created_at ASC`,
+      [id]
+    );
+    const snapshots = await Promise.all(
+      webcams.rows.map(async (w) => ({
+        id: w.id,
+        url: await getSignedUrl(w.image_path),
+        capturedAt: w.created_at,
+      }))
+    );
+    res.json({
+      id: sess.id,
+      studentName: sess.student_name,
+      examName: sess.exam_name,
+      examCode: sess.exam_code,
+      startedAt: sess.started_at,
+      finishedAt: sess.finished_at,
+      cameraAvailable: sess.camera_available,
+      snapshots,
+    });
+  } catch (err) {
+    console.error("Get proctoring session error:", err);
+    res.status(500).json({ message: "Failed to load the session" });
+  }
+});
 
 export default router;
