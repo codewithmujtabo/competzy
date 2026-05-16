@@ -215,16 +215,16 @@ export default function CompetitionsPage() {
 
       <Card className="overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Organizer</TableHead>
-                <TableHead>Fee</TableHead>
-                <TableHead>Reg. closes</TableHead>
-                <TableHead>Event date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="w-[200px]">Category</TableHead>
+                <TableHead className="w-36">Organizer</TableHead>
+                <TableHead className="w-24">Fee</TableHead>
+                <TableHead className="w-28">Reg. closes</TableHead>
+                <TableHead className="w-28">Event date</TableHead>
+                <TableHead className="w-[200px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -245,22 +245,22 @@ export default function CompetitionsPage() {
               ) : (
                 comps.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell className="max-w-[260px]">
+                    <TableCell>
                       <div className="truncate font-medium text-foreground">{c.name}</div>
                       {c.grade_level && (
-                        <div className="text-xs text-muted-foreground">{c.grade_level}</div>
+                        <div className="truncate text-xs text-muted-foreground">{c.grade_level}</div>
                       )}
                     </TableCell>
                     <TableCell>
                       {c.category ? (
-                        <Badge variant="secondary" className="font-normal">
+                        <Badge variant="secondary" className="max-w-full truncate font-normal">
                           {c.category}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">{c.organizer_name}</TableCell>
+                    <TableCell className="truncate text-sm">{c.organizer_name}</TableCell>
                     <TableCell>
                       {c.fee === 0 ? (
                         <Badge

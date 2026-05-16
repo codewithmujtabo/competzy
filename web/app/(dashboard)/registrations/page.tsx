@@ -133,16 +133,16 @@ export default function RegistrationsPage() {
 
       <Card className="overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow>
                 <TableHead>Student</TableHead>
                 <TableHead>School / Grade</TableHead>
                 <TableHead>Competition</TableHead>
-                <TableHead>Fee</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="w-24">Fee</TableHead>
+                <TableHead className="w-32">Status</TableHead>
+                <TableHead className="w-28">Submitted</TableHead>
+                <TableHead className="w-40 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -164,20 +164,22 @@ export default function RegistrationsPage() {
                 items.map((r) => (
                   <TableRow key={r.registrationId}>
                     <TableCell>
-                      <div className="font-medium text-foreground">{r.student.name}</div>
-                      <div className="font-mono text-[11px] text-muted-foreground">{r.student.email}</div>
+                      <div className="truncate font-medium text-foreground">{r.student.name}</div>
+                      <div className="truncate font-mono text-[11px] text-muted-foreground">{r.student.email}</div>
                       {r.student.phone && (
-                        <div className="font-mono text-[11px] text-muted-foreground">{r.student.phone}</div>
+                        <div className="truncate font-mono text-[11px] text-muted-foreground">{r.student.phone}</div>
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{r.student.school || '—'}</div>
-                      <div className="text-xs text-muted-foreground">Grade {r.student.grade || '—'}</div>
+                      <div className="truncate text-sm">{r.student.school || '—'}</div>
+                      <div className="truncate text-xs text-muted-foreground">Grade {r.student.grade || '—'}</div>
                       {r.student.nisn && (
-                        <div className="font-mono text-[10px] text-muted-foreground">NISN {r.student.nisn}</div>
+                        <div className="truncate font-mono text-[10px] text-muted-foreground">NISN {r.student.nisn}</div>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium text-foreground">{r.competition.name}</TableCell>
+                    <TableCell className="font-medium text-foreground">
+                      <div className="truncate">{r.competition.name}</div>
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
