@@ -14,6 +14,7 @@ import {
   Library,
   Loader2,
   Megaphone,
+  MessageSquare,
   Package,
   PenLine,
   Share2,
@@ -82,6 +83,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
         { label: 'Referrals', href: '/question-bank/referrals', icon: Share2 },
         { label: 'Announcements', href: '/question-bank/announcements', icon: Megaphone },
         { label: 'Materials', href: '/question-bank/materials', icon: BookOpen },
+        { label: 'Suggestions', href: '/question-bank/suggestions', icon: MessageSquare },
       ],
     },
     {
