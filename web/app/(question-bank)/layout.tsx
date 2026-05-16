@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   Library,
   Loader2,
+  Megaphone,
   Package,
   PenLine,
   Share2,
@@ -78,6 +79,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
       label: 'Marketing',
       items: [
         { label: 'Referrals', href: '/question-bank/referrals', icon: Share2 },
+        { label: 'Announcements', href: '/question-bank/announcements', icon: Megaphone },
       ],
     },
     {

@@ -300,6 +300,27 @@ async function referral(
   }
 }
 
+// A demo announcement — comp-scoped or platform-wide (comp_id NULL).
+async function announcement(
+  title: string,
+  body: string,
+  compScoped: boolean,
+  featured: boolean
+): Promise<void> {
+  const compId = compScoped ? COMP : null;
+  const found = await pool.query(
+    `SELECT id FROM announcements
+      WHERE title = $1 AND comp_id IS NOT DISTINCT FROM $2 AND deleted_at IS NULL`,
+    [title, compId]
+  );
+  if (found.rows[0]) return;
+  await pool.query(
+    `INSERT INTO announcements (comp_id, title, body, type, is_active, is_featured, published_at)
+     VALUES ($1,$2,$3,'news',true,$4, now())`,
+    [compId, title, body, featured]
+  );
+}
+
 async function main() {
   const admin = await userId("admin@eduversal.com");
   const student = await userId("student@test.local");
@@ -445,6 +466,18 @@ async function main() {
   // 7 — Marketing: affiliate referrals with a populated funnel (Wave 10)
   await referral("REF-D01", "Demo Ambassador — Jakarta", "ambassador.jkt@example.com", 15000, 9, 7, 5, 24);
   await referral("REF-D02", "Demo Ambassador — Bandung", "ambassador.bdg@example.com", 10000, 4, 3, 2, 11);
+  await announcement(
+    "Round 1 schedule confirmed",
+    "The first round is on June 14, 2026. Make sure your profile and documents are complete before exam day.",
+    true,
+    true
+  );
+  await announcement(
+    "Welcome to the Competzy platform",
+    "Competzy now hosts all your academic competitions in one place — explore the catalog and join a competition today.",
+    false,
+    false
+  );
 
   console.log("EMC demo data seeded:");
   console.log("  venues:    3 areas, 5 test centers");
@@ -455,6 +488,7 @@ async function main() {
   console.log("  commerce:  4 products, 1 voucher batch (10 codes)");
   console.log(`  order:     ${orderNote}`);
   console.log("  marketing: 2 referrals (REF-D01/D02) with funnel + clicks");
+  console.log("  announce:  2 announcements (1 competition, 1 platform-wide)");
   await pool.end();
 }
 
