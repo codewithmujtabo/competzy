@@ -21,6 +21,7 @@ export default function EditCompetitionPage() {
       .then((d) =>
         setInitial({
           name: d.name || '',
+          kind: d.kind === 'affiliated' ? 'affiliated' : 'native',
           category: d.category || '',
           gradeLevel: d.gradeLevel || '',
           organizerName: d.organizerName || '',
