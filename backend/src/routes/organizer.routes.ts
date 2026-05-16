@@ -179,7 +179,11 @@ router.post("/competitions", audit({ action: "organizer.competition.create", res
       .replace(/[^a-z0-9\s-]/g, "")
       .replace(/\s+/g, "-")
       .substring(0, 40);
-    const compId = `comp-${Date.now()}-${slug}`;
+    const ts = Date.now();
+    const compId = `comp-${ts}-${slug}`;
+    // Public URL slug for the /competitions/[slug] portal — name-derived with a
+    // uniqueness suffix so same-named competitions don't collide.
+    const compSlug = `${slug || "competition"}-${ts.toString(36).slice(-5)}`;
 
     const compResult = await client.query(
       `INSERT INTO competitions (
@@ -187,8 +191,8 @@ router.post("/competitions", audit({ action: "organizer.competition.create", res
          registration_status, poster_url, is_international, detailed_description,
          description, fee, quota, reg_open_date, reg_close_date, competition_date,
          required_docs, image_url, round_count, participant_instructions, created_by,
-         post_payment_redirect_url, kind
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+         post_payment_redirect_url, kind, slug
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
        RETURNING *`,
       [
         compId, name, resolvedOrgName, category, gradeLevel ?? null,
@@ -198,7 +202,7 @@ router.post("/competitions", audit({ action: "organizer.competition.create", res
         fee ?? 0, quota ?? null, regOpenDate ?? null, regCloseDate ?? null,
         competitionDate ?? null, requiredDocs ?? [], imageUrl ?? null,
         rounds?.length ?? 0, participantInstructions ?? null, req.userId,
-        postPaymentRedirectUrl ?? null, kind,
+        postPaymentRedirectUrl ?? null, kind, compSlug,
       ]
     );
 
