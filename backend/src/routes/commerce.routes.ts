@@ -1,12 +1,14 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
 import { pool } from "../config/database";
+import { env } from "../config/env";
 import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/require-role";
 import { audit } from "../middleware/audit";
 import { liveFilter, compFilter, softDelete } from "../db/query-helpers";
 import { hasCompAccess } from "../services/comp-access.service";
 import { storeFile, getSignedUrl } from "../services/storage.service";
+import { createSnapToken, getTransactionStatus } from "../services/midtrans.service";
 
 // Commerce API (EMC Wave 9). The `/commerce/*` namespace is operator-facing —
 // admin + organizer, native competitions only (the `hasCompAccess` gate).
@@ -15,7 +17,12 @@ import { storeFile, getSignedUrl } from "../services/storage.service";
 
 const router = Router();
 router.use("/commerce", authMiddleware);
-router.use("/commerce", requireRole("admin", "organizer"));
+// Operator-only sub-trees (admin + organizer). Order routes under
+// /commerce/orders/* are guarded per-route — an order owner pays/verifies
+// their own order, while operators manage any (Phase 5).
+router.use("/commerce/competitions", requireRole("admin", "organizer"));
+router.use("/commerce/products", requireRole("admin", "organizer"));
+router.use("/commerce/voucher-groups", requireRole("admin", "organizer"));
 
 const imageUpload = multer({
   storage: multer.memoryStorage(),
@@ -535,5 +542,155 @@ router.delete(
     }
   }
 );
+
+// ──────────────────────────────────────────────────────────────────────────
+// Order payments (Wave 9 Phase 4). An order payment is a `payments` row with
+// kind='order' and no registration_id; the settlement webhook branches on
+// `kind` to flip orders.status='paid'. These routes are owner-scoped (the
+// student who placed the order) — operators manage orders separately (Phase 5).
+// ──────────────────────────────────────────────────────────────────────────
+
+// ── POST /api/commerce/orders/:id/pay ─────────────────────────────────────
+router.post(
+  "/commerce/orders/:id/pay",
+  audit({ action: "order.pay", resourceType: "order", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.id);
+      const o = await pool.query(
+        `SELECT o.id, o.code, o.user_id, o.total, o.status, o.payment_id,
+                u.full_name, u.email
+           FROM orders o
+           JOIN users u ON u.id = o.user_id
+          WHERE o.id = $1 AND o.deleted_at IS NULL`,
+        [id]
+      );
+      if (o.rows.length === 0 || o.rows[0].user_id !== req.userId) {
+        res.status(404).json({ message: "Order not found" });
+        return;
+      }
+      const order = o.rows[0];
+      if (order.status !== "ordered") {
+        res.status(400).json({ message: "This order is not awaiting payment." });
+        return;
+      }
+      const total = Number(order.total) || 0;
+
+      // A zero-total order — settle without Midtrans.
+      if (total <= 0) {
+        await pool.query(
+          `UPDATE orders SET status = 'paid', paid_at = now(), updated_at = now() WHERE id = $1`,
+          [id]
+        );
+        res.status(201).json({ covered: true, status: "paid" });
+        return;
+      }
+
+      // Re-use a still-pending Snap token whose amount matches.
+      if (order.payment_id) {
+        const ex = await pool.query(
+          `SELECT snap_token, order_id, amount FROM payments
+            WHERE id = $1 AND kind = 'order' AND payment_status = 'pending'
+              AND snap_token IS NOT NULL`,
+          [order.payment_id]
+        );
+        if (ex.rows.length > 0 && Number(ex.rows[0].amount) === total) {
+          const subdomain = env.MIDTRANS_IS_PRODUCTION ? "app" : "app.sandbox";
+          res.json({
+            snapToken: ex.rows[0].snap_token,
+            redirectUrl: `https://${subdomain}.midtrans.com/snap/v2/vtweb/${ex.rows[0].snap_token}`,
+            paymentId: order.payment_id,
+            orderId: ex.rows[0].order_id,
+          });
+          return;
+        }
+      }
+
+      const midOrderId = `ORDER-${id}-${Date.now()}`.slice(0, 50);
+      const { snapToken, redirectUrl } = await createSnapToken({
+        orderId: midOrderId,
+        amount: total,
+        customerName: order.full_name,
+        customerEmail: order.email,
+        competitionName: `Order ${order.code}`,
+      });
+      const pay = await pool.query(
+        `INSERT INTO payments
+           (user_id, amount, payment_status, snap_token, order_id, kind, payer_user_id, payer_kind)
+         VALUES ($1, $2, 'pending', $3, $4, 'order', $1, 'self')
+         RETURNING id`,
+        [req.userId, total, snapToken, midOrderId]
+      );
+      await pool.query(
+        `UPDATE orders SET payment_id = $1, updated_at = now() WHERE id = $2`,
+        [pay.rows[0].id, id]
+      );
+      res.status(201).json({
+        snapToken,
+        redirectUrl,
+        paymentId: pay.rows[0].id,
+        orderId: midOrderId,
+      });
+    } catch (err: any) {
+      console.error("Order pay error:", err);
+      res.status(500).json({ message: err.message || "Failed to start order payment" });
+    }
+  }
+);
+
+// ── GET /api/commerce/orders/:id/verify ───────────────────────────────────
+// Polls the Midtrans Status API and syncs orders.status — the storefront
+// checkout calls this after the payment tab closes (the webhook can't reach
+// localhost in sandbox).
+router.get("/commerce/orders/:id/verify", async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const o = await pool.query(
+      `SELECT o.id, o.user_id, o.status, p.order_id AS mid_order_id
+         FROM orders o
+         LEFT JOIN payments p ON p.id = o.payment_id
+        WHERE o.id = $1 AND o.deleted_at IS NULL`,
+      [id]
+    );
+    if (o.rows.length === 0 || o.rows[0].user_id !== req.userId) {
+      res.status(404).json({ message: "Order not found" });
+      return;
+    }
+    const order = o.rows[0];
+    if (["paid", "shipped", "delivered"].includes(order.status)) {
+      res.json({ status: order.status });
+      return;
+    }
+    if (!order.mid_order_id) {
+      res.json({ status: order.status });
+      return;
+    }
+    let txStatus: string;
+    try {
+      txStatus = await getTransactionStatus(order.mid_order_id);
+    } catch {
+      res.json({ status: order.status });
+      return;
+    }
+    if (txStatus === "settlement" || txStatus === "capture") {
+      await pool.query(
+        `UPDATE orders SET status = 'paid', paid_at = now(), updated_at = now()
+          WHERE id = $1 AND status = 'ordered'`,
+        [id]
+      );
+      await pool.query(
+        `UPDATE payments SET payment_status = 'settlement', updated_at = now()
+          WHERE order_id = $1`,
+        [order.mid_order_id]
+      );
+      res.json({ status: "paid" });
+      return;
+    }
+    res.json({ status: order.status });
+  } catch (err) {
+    console.error("Order verify error:", err);
+    res.status(500).json({ message: "Failed to verify order payment" });
+  }
+});
 
 export default router;
