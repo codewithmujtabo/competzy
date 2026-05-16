@@ -23,3 +23,23 @@ export async function getAnnouncements(compId: string): Promise<Announcement[]> 
     `/announcements?compId=${encodeURIComponent(compId)}`
   );
 }
+
+export interface Material {
+  id: string;
+  compId: string | null; // null = a platform-wide material
+  title: string;
+  body: string | null;
+  type: string | null;
+  category: string | null;
+  grades: string[];
+  image: string | null;
+  file: string | null;
+  isActive: boolean;
+  publishedAt: string | null;
+  createdAt: string;
+}
+
+/** Published study materials for a competition, plus every platform-wide one. */
+export async function getMaterials(compId: string): Promise<Material[]> {
+  return apiRequest<Material[]>(`/materials?compId=${encodeURIComponent(compId)}`);
+}
