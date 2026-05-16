@@ -89,6 +89,8 @@ const SOFT_DELETE_TABLES = new Set([
   "products",
   "voucher_groups",
   "vouchers",
+  "orders",
+  "order_items",
 ]);
 
 /**
