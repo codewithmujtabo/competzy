@@ -70,7 +70,7 @@ const SOFT_DELETE_TABLES = new Set([
   "questions",
   "answers",
   "proofreads",
-  // EMC-port step-flow (1748800000000_competition-flows.sql)
+  // EMC-port step-flow (1749000000000_competition-flows.sql)
   "competition_flows",
 ]);
 
