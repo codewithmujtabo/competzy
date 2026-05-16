@@ -16,6 +16,7 @@
     "db:create-organizer": "ts-node src/db/create-organizer.ts",
     "db:create-teacher": "ts-node src/db/create-teacher.ts",
     "db:create-test-accounts": "ts-node src/db/create-test-accounts.ts",
+    "db:seed:emc-demo": "ts-node src/db/seed-emc-demo.ts",
     "db:init": "psql $DATABASE_URL < src/db/schema.sql",
     "db:import-historical": "ts-node src/db/import-historical.ts"
   },
