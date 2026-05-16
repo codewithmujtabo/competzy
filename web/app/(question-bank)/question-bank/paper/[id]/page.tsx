@@ -41,6 +41,7 @@ interface PaperExam {
   examCode: string;
   studentName: string;
   grade: string | null;
+  testCenterName: string | null;
   totalPoint: number | null;
   corrects: { choice?: number; short?: number };
   wrongs: { choice?: number; short?: number };
@@ -171,7 +172,13 @@ export default function PaperExamSheetPage() {
         <PageHeader
           eyebrow={`Question Bank · ${paper.examCode}`}
           title={paper.studentName}
-          subtitle={paper.grade ? `Grade ${paper.grade} · ${paper.examName}` : paper.examName}
+          subtitle={[
+            paper.grade ? `Grade ${paper.grade}` : null,
+            paper.examName,
+            paper.testCenterName,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
           actions={
             <Button onClick={save} disabled={saving}>
               <Save className="size-4" />
