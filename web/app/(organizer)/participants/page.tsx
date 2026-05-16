@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Download } from 'lucide-react';
+import { Download, KeyRound } from 'lucide-react';
 import { organizerHttp } from '@/lib/auth/organizer-context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
@@ -33,11 +33,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { CredentialIssueDialog } from '@/components/credential-issue-dialog';
+import { BulkCredentialDialog } from '@/components/bulk-credential-dialog';
 
 interface Competition {
   id: string;
   name: string;
   registrationCount: number;
+  kind?: 'native' | 'affiliated';
 }
 
 interface Registration {
@@ -47,6 +50,12 @@ interface Registration {
   createdAt: string;
   student: { id: string; fullName: string; email: string; phone?: string; school?: string; grade?: string };
   payment: { status: string; amount: number } | null;
+}
+
+interface Credential {
+  registrationId: string;
+  username: string;
+  password: string;
 }
 
 const STATUS_STYLE: Record<string, string> = {
@@ -68,6 +77,13 @@ export default function ParticipantsPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
+  // Affiliated-competition credentials, keyed by registration id.
+  const [creds, setCreds] = useState<Record<string, Credential>>({});
+  const [issueReg, setIssueReg] = useState<Registration | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  const selectedCompObj = comps.find((c) => c.id === selectedComp);
+  const isAffiliated = selectedCompObj?.kind === 'affiliated';
 
   useEffect(() => {
     organizerHttp
@@ -75,6 +91,17 @@ export default function ParticipantsPage() {
       .then(setComps)
       .catch((e) => toast.error(e instanceof Error ? e.message : 'Failed to load competitions'));
   }, []);
+
+  const loadCreds = (compId: string) => {
+    organizerHttp
+      .get<Credential[]>(`/competitions/${compId}/credentials`)
+      .then((rows) => {
+        const map: Record<string, Credential> = {};
+        for (const r of rows) map[r.registrationId] = r;
+        setCreds(map);
+      })
+      .catch(() => setCreds({}));
+  };
 
   const refresh = async () => {
     if (!selectedComp) return;
@@ -86,11 +113,13 @@ export default function ParticipantsPage() {
   useEffect(() => {
     if (!selectedComp) return;
     setLoading(true);
+    setCreds({});
     organizerHttp
       .get<Registration[]>(`/organizers/competitions/${selectedComp}/registrations`)
       .then(setRegistrations)
       .catch((e) => toast.error(e instanceof Error ? e.message : 'Failed to load registrations'))
       .finally(() => setLoading(false));
+    loadCreds(selectedComp);
   }, [selectedComp]);
 
   const approve = async (id: string) => {
@@ -122,6 +151,8 @@ export default function ParticipantsPage() {
     }
   };
 
+  const colCount = isAffiliated ? 8 : 7;
+
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
@@ -130,13 +161,21 @@ export default function ParticipantsPage() {
         subtitle="Review and approve registrations for each of your competitions."
         actions={
           selectedComp ? (
-            <Button
-              variant="outline"
-              onClick={() => window.open(`/api/organizers/competitions/${selectedComp}/export`, '_blank')}
-            >
-              <Download className="size-4" />
-              Export CSV
-            </Button>
+            <div className="flex gap-2">
+              {isAffiliated && (
+                <Button variant="outline" onClick={() => setBulkOpen(true)}>
+                  <KeyRound className="size-4" />
+                  Bulk credentials
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => window.open(`/api/organizers/competitions/${selectedComp}/export`, '_blank')}
+              >
+                <Download className="size-4" />
+                Export CSV
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -172,6 +211,7 @@ export default function ParticipantsPage() {
                   <TableHead>Status</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Registered</TableHead>
+                  {isAffiliated && <TableHead>Credentials</TableHead>}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -179,14 +219,14 @@ export default function ParticipantsPage() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={7}>
+                      <TableCell colSpan={colCount}>
                         <Skeleton className="h-9 w-full" />
                       </TableCell>
                     </TableRow>
                   ))
                 ) : registrations.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={colCount} className="h-32 text-center text-sm text-muted-foreground">
                       No registrations yet.
                     </TableCell>
                   </TableRow>
@@ -239,6 +279,28 @@ export default function ParticipantsPage() {
                             year: 'numeric',
                           })}
                         </TableCell>
+                        {isAffiliated && (
+                          <TableCell>
+                            {creds[r.id] ? (
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className="border-transparent bg-emerald-100 font-mono text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                                >
+                                  Issued
+                                </Badge>
+                                <Button size="sm" variant="ghost" onClick={() => setIssueReg(r)}>
+                                  Edit
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button size="sm" variant="outline" onClick={() => setIssueReg(r)}>
+                                <KeyRound className="size-3.5" />
+                                Issue login
+                              </Button>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell className="text-right">
                           {ACTIONABLE.has(r.status) ? (
                             <div className="flex justify-end gap-2">
@@ -314,6 +376,24 @@ export default function ParticipantsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CredentialIssueDialog
+        registrationId={issueReg?.id ?? null}
+        studentName={issueReg?.student.fullName ?? ''}
+        existing={issueReg ? creds[issueReg.id] ?? null : null}
+        onClose={() => setIssueReg(null)}
+        onSaved={() => loadCreds(selectedComp)}
+      />
+
+      <BulkCredentialDialog
+        open={bulkOpen}
+        competitionId={selectedComp}
+        registrants={registrations
+          .filter((r) => r.registrationNumber)
+          .map((r) => ({ registrationNumber: r.registrationNumber as string, studentName: r.student.fullName }))}
+        onClose={() => setBulkOpen(false)}
+        onDone={() => loadCreds(selectedComp)}
+      />
     </div>
   );
 }
