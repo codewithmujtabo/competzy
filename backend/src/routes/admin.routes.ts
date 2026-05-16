@@ -5,6 +5,7 @@ import { authMiddleware } from "../middleware/auth";
 import { audit } from "../middleware/audit";
 import * as pushService from "../services/push.service";
 import { refundPayment } from "../services/midtrans.service";
+import { seedDefaultFlow } from "../services/competition-flow.service";
 
 const router = Router();
 
@@ -80,6 +81,8 @@ router.post("/competitions", audit({ action: "admin.competition.create", resourc
     const regOpenDate     = req.body.regOpenDate     ?? req.body.reg_open_date;
     const regCloseDate    = req.body.regCloseDate    ?? req.body.reg_close_date;
     const competitionDate = req.body.competitionDate ?? req.body.competition_date;
+    const postPaymentRedirectUrl = req.body.postPaymentRedirectUrl ?? req.body.post_payment_redirect_url;
+    const kind: "native" | "affiliated" = req.body.kind === "affiliated" ? "affiliated" : "native";
 
     // Generate competition ID
     const slug = name
@@ -99,8 +102,8 @@ router.post("/competitions", audit({ action: "admin.competition.create", resourc
         detailed_description, description, fee, quota,
         reg_open_date, reg_close_date, competition_date,
         required_docs, image_url, round_count,
-        participant_instructions, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+        participant_instructions, created_by, kind, post_payment_redirect_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
       RETURNING *`,
       [
         compId,
@@ -124,6 +127,8 @@ router.post("/competitions", audit({ action: "admin.competition.create", resourc
         rounds?.length || 0,
         participantInstructions || null,
         req.userId,
+        kind,
+        postPaymentRedirectUrl ?? null,
       ]
     );
 
@@ -152,6 +157,8 @@ router.post("/competitions", audit({ action: "admin.competition.create", resourc
         );
       }
     }
+
+    await seedDefaultFlow(client, compId, kind);
 
     await client.query("COMMIT");
 
@@ -200,6 +207,8 @@ router.put("/competitions/:id", audit({ action: "admin.competition.update", reso
     const regOpenDate     = req.body.regOpenDate     ?? req.body.reg_open_date;
     const regCloseDate    = req.body.regCloseDate    ?? req.body.reg_close_date;
     const competitionDate = req.body.competitionDate ?? req.body.competition_date;
+    const postPaymentRedirectUrl = req.body.postPaymentRedirectUrl ?? req.body.post_payment_redirect_url;
+    const kind: "native" | "affiliated" = req.body.kind === "affiliated" ? "affiliated" : "native";
 
     // Update competition
     const compResult = await client.query(
@@ -222,8 +231,10 @@ router.put("/competitions/:id", audit({ action: "admin.competition.update", reso
         required_docs = $16,
         image_url = $17,
         round_count = $18,
-        participant_instructions = $19
-      WHERE id = $20
+        participant_instructions = $19,
+        kind = $20,
+        post_payment_redirect_url = $21
+      WHERE id = $22
       RETURNING *`,
       [
         name,
@@ -245,6 +256,8 @@ router.put("/competitions/:id", audit({ action: "admin.competition.update", reso
         imageUrl,
         rounds?.length || 0,
         participantInstructions || null,
+        kind,
+        postPaymentRedirectUrl ?? null,
         id,
       ]
     );

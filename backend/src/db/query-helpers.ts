@@ -72,6 +72,8 @@ const SOFT_DELETE_TABLES = new Set([
   "proofreads",
   // EMC-port step-flow (1749000000000_competition-flows.sql)
   "competition_flows",
+  // Affiliated-competition credentials (1749100000000_affiliated-competitions.sql)
+  "affiliated_credentials",
 ]);
 
 /**
