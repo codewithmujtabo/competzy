@@ -44,6 +44,7 @@ export default function CompetitionRegisterPage() {
   const [emailTaken, setEmailTaken] = useState(false);
   const [warning, setWarning] = useState('');
   const [submitting, setSubmit] = useState(false);
+  const [refCode, setRefCode] = useState<string | null>(null);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const phoneValid = phone === '' || /^\+?\d{8,15}$/.test(phone.replace(/[\s-]/g, ''));
@@ -54,6 +55,22 @@ export default function CompetitionRegisterPage() {
       window.location.assign(user.role === 'admin' ? paths.admin : paths.dashboard);
     }
   }, [user, authLoading, paths.admin, paths.dashboard]);
+
+  // Capture an affiliate ?ref= code. Read from window.location (not
+  // useSearchParams) so the page needs no Suspense boundary.
+  useEffect(() => {
+    const r = new URLSearchParams(window.location.search).get('ref');
+    if (r && r.trim()) setRefCode(r.trim());
+  }, []);
+
+  // Log the referral click once per visit (best-effort).
+  useEffect(() => {
+    if (!refCode || !comp?.id) return;
+    const key = `competzy.refclick.${comp.id}.${refCode}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    emcHttp.post('/referrals/click', { compId: comp.id, code: refCode }).catch(() => {});
+  }, [refCode, comp?.id]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -76,8 +93,18 @@ export default function CompetitionRegisterPage() {
       });
 
       if (comp?.id) {
+        // Attribute the new account to its referral, if it arrived via ?ref=.
+        if (refCode) {
+          emcHttp
+            .post('/referrals/signup', { compId: comp.id, code: refCode })
+            .catch(() => {});
+        }
         try {
-          await emcHttp.post('/registrations', { id: crypto.randomUUID(), compId: comp.id });
+          await emcHttp.post('/registrations', {
+            id: crypto.randomUUID(),
+            compId: comp.id,
+            referralCode: refCode ?? undefined,
+          });
         } catch (regErr) {
           const msg = regErr instanceof Error ? regErr.message : '';
           if (!/already exists/i.test(msg)) {
