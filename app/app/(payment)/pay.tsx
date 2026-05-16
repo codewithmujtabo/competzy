@@ -20,6 +20,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -90,6 +91,11 @@ const STATE_CONTENT: Record<
   },
 };
 
+// Rupiah formatting — manual thousands separator (Hermes has limited Intl).
+function rupiah(n: number): string {
+  return "Rp " + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 export default function PayScreen() {
   const { registrationId } = useLocalSearchParams<{ registrationId: string }>();
   const router = useRouter();
@@ -101,7 +107,30 @@ export default function PayScreen() {
   const [errorDetail, setErrorDetail] = useState("");
   const [payerKind, setPayerKind] = useState<PayerKind>("self");
 
+  // Registration-fee voucher (Wave 11 Phase 3).
+  const [voucherInput, setVoucherInput] = useState("");
+  const [voucher, setVoucher] = useState<paymentsService.VoucherValidation | null>(null);
+  const [checkingVoucher, setCheckingVoucher] = useState(false);
+
   const started = useRef(false);
+
+  const applyVoucher = useCallback(async () => {
+    const code = voucherInput.trim();
+    if (!code || !registrationId) return;
+    setCheckingVoucher(true);
+    try {
+      setVoucher(await paymentsService.validateVoucher(registrationId, code));
+    } catch {
+      setVoucher({
+        valid: false,
+        message: "Could not check that voucher. Try again.",
+        originalFee: 0,
+        discountedFee: null,
+      });
+    } finally {
+      setCheckingVoucher(false);
+    }
+  }, [voucherInput, registrationId]);
 
   const POST_PAYMENT_STATUSES = ["pending_review", "approved", "paid"] as const;
   const pollVerify = useCallback(
@@ -127,11 +156,28 @@ export default function PayScreen() {
     try {
       setLoadingMessage("Preparing payment...");
       setPaymentState("loading");
-      const { redirectUrl } = await paymentsService.createSnapToken(registrationId, payerKind);
+      const appliedVoucher = voucher?.valid ? voucherInput.trim() : undefined;
+      const snap = await paymentsService.createSnapToken(
+        registrationId,
+        payerKind,
+        appliedVoucher
+      );
+
+      // A voucher that fully covers the fee settles server-side — no Midtrans.
+      if (snap.covered) {
+        await refreshRegistrations();
+        setPaymentState("success");
+        return;
+      }
+      if (!snap.redirectUrl) {
+        setErrorDetail("Could not start the payment. Please try again.");
+        setPaymentState("error");
+        return;
+      }
 
       setPaymentState("opening");
       WebBrowser.dismissAuthSession();
-      const result = await WebBrowser.openAuthSessionAsync(redirectUrl, "competzy://");
+      const result = await WebBrowser.openAuthSessionAsync(snap.redirectUrl, "competzy://");
 
       setLoadingMessage("Verifying payment status...");
       setPaymentState("loading");
@@ -166,7 +212,7 @@ export default function PayScreen() {
       setErrorDetail(err?.message || "");
       setPaymentState("error");
     }
-  }, [registrationId, refreshRegistrations, pollVerify, payerKind]);
+  }, [registrationId, refreshRegistrations, pollVerify, payerKind, voucher, voucherInput]);
 
   // ─── Selecting payer ───────────────────────────────────────────────────────
   if (paymentState === "selecting") {
@@ -220,6 +266,66 @@ export default function PayScreen() {
               );
             })}
           </View>
+
+          {/* Registration-fee voucher */}
+          <Card style={{ marginTop: Spacing.lg }}>
+            <Text style={[Type.label, { color: TextColor.secondary }]}>HAVE A VOUCHER?</Text>
+            {voucher?.valid ? (
+              <View style={{ marginTop: Spacing.md }}>
+                <View style={styles.voucherApplied}>
+                  <Ionicons name="checkmark-circle" size={18} color={Brand.success} />
+                  <Text style={[Type.bodySm, { flex: 1, color: Brand.success }]}>
+                    Voucher applied
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      setVoucher(null);
+                      setVoucherInput("");
+                    }}
+                  >
+                    <Text style={[Type.label, { color: TextColor.secondary }]}>REMOVE</Text>
+                  </Pressable>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: Spacing.md }}>
+                  <Text style={[Type.bodySm]}>Registration fee</Text>
+                  <Text style={[Type.bodySm, { textDecorationLine: "line-through" }]}>
+                    {rupiah(voucher.originalFee)}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: Spacing.xs }}>
+                  <Text style={[Type.title]}>You pay</Text>
+                  <Text style={[Type.title, { color: Brand.primary }]}>
+                    {rupiah(voucher.discountedFee ?? voucher.originalFee)}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <>
+                <View style={{ flexDirection: "row", gap: Spacing.sm, marginTop: Spacing.md }}>
+                  <TextInput
+                    value={voucherInput}
+                    onChangeText={(t) => setVoucherInput(t.toUpperCase())}
+                    placeholder="VG-XXX-XXXXXX"
+                    placeholderTextColor={TextColor.tertiary}
+                    autoCapitalize="characters"
+                    style={styles.voucherInput}
+                  />
+                  <Button
+                    label={checkingVoucher ? "..." : "Apply"}
+                    variant="secondary"
+                    loading={checkingVoucher}
+                    disabled={!voucherInput.trim()}
+                    onPress={applyVoucher}
+                  />
+                </View>
+                {voucher && !voucher.valid ? (
+                  <Text style={[Type.bodySm, { color: Brand.error, marginTop: Spacing.sm }]}>
+                    {voucher.message ?? "That voucher is not valid."}
+                  </Text>
+                ) : null}
+              </>
+            )}
+          </Card>
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.lg }]}>
@@ -373,5 +479,20 @@ const styles = StyleSheet.create({
   backLink: {
     alignItems: "center",
     paddingVertical: Spacing.md,
+  },
+  voucherApplied: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  voucherInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: Surface.border,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Surface.card,
+    ...Type.body,
   },
 });
