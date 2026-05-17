@@ -68,10 +68,8 @@ export default function LoginScreen() {
     return Object.keys(e).length === 0;
   }
 
-  async function onSuccess(user: any) {
-    // Await the profile refresh so the auth context holds the NEW role before
-    // we navigate — otherwise the tabs mount with the previous role's state.
-    await fetchUser(user?.id);
+  function onSuccess(user: any) {
+    fetchUser(user?.id);
     const userRole = user?.role;
     if (userRole === "admin") router.replace("/(tabs)/web-portal-redirect");
     else if (userRole === "teacher") router.replace("/(tabs)/teacher-dashboard");
@@ -85,7 +83,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const { user } = await authService.login(email.trim(), password.trim());
-      if (user) await onSuccess(user);
+      if (user) onSuccess(user);
     } catch (err: any) {
       const msg = err?.message?.toLowerCase() || "";
       Alert.alert(
@@ -132,7 +130,7 @@ export default function LoginScreen() {
         });
         return;
       }
-      if (result.user) await onSuccess(result.user);
+      if (result.user) onSuccess(result.user);
     } catch (err: any) {
       Alert.alert("Error", err?.message || "Invalid OTP. Try again.");
     } finally {
