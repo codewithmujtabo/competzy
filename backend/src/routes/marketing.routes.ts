@@ -1,10 +1,13 @@
 import { Router, Request, Response } from "express";
+import multer from "multer";
 import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
 import { requireRole } from "../middleware/require-role";
 import { audit } from "../middleware/audit";
 import { liveFilter, compFilter, softDelete } from "../db/query-helpers";
 import { hasCompAccess } from "../services/comp-access.service";
+import { storeFile, getSignedUrl } from "../services/storage.service";
+import { sendBatchNotifications } from "../services/push.service";
 
 // Marketing API (EMC Wave 10). `/marketing/*` is operator-facing — admin +
 // organizer, native competitions only (the `hasCompAccess` gate); mounted at
@@ -278,5 +281,271 @@ router.post("/referrals/signup", authMiddleware, async (req: Request, res: Respo
     res.json({ ok: true });
   }
 });
+
+// ──────────────────────────────────────────────────────────────────────────
+// Announcements (Wave 10 Phase 3). T2 — comp-scoped OR platform-wide
+// (comp_id NULL). The scope `compId` query/body value "platform" means
+// platform-wide, which only an admin may manage.
+// ──────────────────────────────────────────────────────────────────────────
+
+const assetUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+});
+
+const PLATFORM = "platform";
+
+// Resolve the requested scope to either platform-wide or a competition the
+// caller may manage. Returns { platform } | { compId } | null (forbidden).
+async function resolveScope(
+  req: Request,
+  raw: unknown
+): Promise<{ platform: boolean; compId: string | null } | null> {
+  const v = typeof raw === "string" ? raw.trim() : "";
+  if (!v || v === PLATFORM) {
+    return req.userRole === "admin" ? { platform: true, compId: null } : null;
+  }
+  return (await hasCompAccess(req.userId!, req.userRole!, v))
+    ? { platform: false, compId: v }
+    : null;
+}
+
+async function mapAnnouncement(r: any) {
+  return {
+    id: r.id,
+    compId: r.comp_id ?? null,
+    title: r.title,
+    body: r.body ?? null,
+    type: r.type ?? null,
+    image: r.image ? await getSignedUrl(r.image) : null,
+    file: r.file ? await getSignedUrl(r.file) : null,
+    isActive: r.is_active,
+    isFeatured: r.is_featured,
+    publishedAt: r.published_at ?? null,
+    createdAt: r.created_at,
+  };
+}
+
+// The recipients of an announcement's "also notify": a competition's
+// registrants, or — for a platform-wide post — every student/parent/teacher.
+async function announcementRecipients(compId: string | null): Promise<string[]> {
+  const r = compId
+    ? await pool.query(
+        `SELECT DISTINCT user_id AS id FROM registrations
+          WHERE comp_id = $1 AND deleted_at IS NULL`,
+        [compId]
+      )
+    : await pool.query(
+        `SELECT id FROM users
+          WHERE role IN ('student','parent','teacher') AND deleted_at IS NULL`
+      );
+  return r.rows.map((x) => x.id as string);
+}
+
+async function announcementScopeIfAccessible(
+  req: Request,
+  id: string
+): Promise<{ platform: boolean; compId: string | null } | null> {
+  const r = await pool.query(
+    "SELECT comp_id FROM announcements WHERE id = $1 AND deleted_at IS NULL",
+    [id]
+  );
+  if (r.rows.length === 0) return null;
+  return resolveScope(req, r.rows[0].comp_id ?? PLATFORM);
+}
+
+// ── GET /api/marketing/announcements?compId= ──────────────────────────────
+router.get("/marketing/announcements", async (req: Request, res: Response) => {
+  try {
+    const scope = await resolveScope(req, req.query.compId);
+    if (!scope) {
+      res.status(403).json({ message: "No access to this scope" });
+      return;
+    }
+    const r = await pool.query(
+      `SELECT * FROM announcements
+        WHERE ${scope.platform ? "comp_id IS NULL" : "comp_id = $1"}
+          AND deleted_at IS NULL
+        ORDER BY is_featured DESC, COALESCE(published_at, created_at) DESC`,
+      scope.platform ? [] : [scope.compId]
+    );
+    res.json(await Promise.all(r.rows.map(mapAnnouncement)));
+  } catch (err) {
+    console.error("List announcements error:", err);
+    res.status(500).json({ message: "Failed to load announcements" });
+  }
+});
+
+// ── GET /api/marketing/announcements/:id ──────────────────────────────────
+router.get("/marketing/announcements/:id", async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    if (!(await announcementScopeIfAccessible(req, id))) {
+      res.status(404).json({ message: "Announcement not found" });
+      return;
+    }
+    const r = await pool.query("SELECT * FROM announcements WHERE id = $1", [id]);
+    res.json(await mapAnnouncement(r.rows[0]));
+  } catch (err) {
+    console.error("Get announcement error:", err);
+    res.status(500).json({ message: "Failed to load the announcement" });
+  }
+});
+
+// Fire the optional "also notify" for a just-saved, published announcement.
+async function maybeNotify(
+  notify: boolean,
+  published: boolean,
+  compId: string | null,
+  title: string
+): Promise<void> {
+  if (!notify || !published) return;
+  const recipients = await announcementRecipients(compId);
+  if (recipients.length > 0) {
+    await sendBatchNotifications(recipients, "New announcement", title, {
+      type: "announcement",
+    });
+  }
+}
+
+// ── POST /api/marketing/announcements ─────────────────────────────────────
+router.post(
+  "/marketing/announcements",
+  audit({ action: "announcement.create", resourceType: "announcement" }),
+  async (req: Request, res: Response) => {
+    try {
+      const scope = await resolveScope(req, req.body?.compId);
+      if (!scope) {
+        res.status(403).json({ message: "No access to this scope" });
+        return;
+      }
+      const title = trim(req.body?.title);
+      if (!title) {
+        res.status(400).json({ message: "title is required" });
+        return;
+      }
+      const published = req.body?.published === true;
+      const inserted = await pool.query(
+        `INSERT INTO announcements
+           (comp_id, title, body, type, is_active, is_featured, published_at)
+         VALUES ($1,$2,$3,$4,$5,$6, ${published ? "now()" : "NULL"})
+         RETURNING *`,
+        [
+          scope.compId,
+          title,
+          trim(req.body?.body),
+          trim(req.body?.type),
+          req.body?.isActive !== false,
+          req.body?.isFeatured === true,
+        ]
+      );
+      await maybeNotify(req.body?.notify === true, published, scope.compId, title);
+      res.status(201).json(await mapAnnouncement(inserted.rows[0]));
+    } catch (err) {
+      console.error("Create announcement error:", err);
+      res.status(500).json({ message: "Failed to create announcement" });
+    }
+  }
+);
+
+// ── PUT /api/marketing/announcements/:id ──────────────────────────────────
+router.put(
+  "/marketing/announcements/:id",
+  audit({ action: "announcement.update", resourceType: "announcement", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.id);
+      const scope = await announcementScopeIfAccessible(req, id);
+      if (!scope) {
+        res.status(404).json({ message: "Announcement not found" });
+        return;
+      }
+      const title = trim(req.body?.title);
+      if (!title) {
+        res.status(400).json({ message: "title is required" });
+        return;
+      }
+      const published = req.body?.published === true;
+      // published_at: keep the original timestamp once set; clear it if unpublished.
+      const updated = await pool.query(
+        `UPDATE announcements
+            SET title=$1, body=$2, type=$3, is_active=$4, is_featured=$5,
+                published_at = ${published ? "COALESCE(published_at, now())" : "NULL"},
+                updated_at = now()
+          WHERE id=$6 AND deleted_at IS NULL
+        RETURNING *`,
+        [
+          title, trim(req.body?.body), trim(req.body?.type),
+          req.body?.isActive !== false, req.body?.isFeatured === true, id,
+        ]
+      );
+      await maybeNotify(req.body?.notify === true, published, scope.compId, title);
+      res.json(await mapAnnouncement(updated.rows[0]));
+    } catch (err) {
+      console.error("Update announcement error:", err);
+      res.status(500).json({ message: "Failed to update announcement" });
+    }
+  }
+);
+
+// ── DELETE /api/marketing/announcements/:id ───────────────────────────────
+router.delete(
+  "/marketing/announcements/:id",
+  audit({ action: "announcement.delete", resourceType: "announcement", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.id);
+      if (!(await announcementScopeIfAccessible(req, id))) {
+        res.status(404).json({ message: "Announcement not found" });
+        return;
+      }
+      await softDelete("announcements", id);
+      res.json({ message: "Announcement removed" });
+    } catch (err) {
+      console.error("Delete announcement error:", err);
+      res.status(500).json({ message: "Failed to delete announcement" });
+    }
+  }
+);
+
+// ── POST /api/marketing/announcements/:id/upload?kind=image|file ──────────
+router.post(
+  "/marketing/announcements/:id/upload",
+  assetUpload.single("file"),
+  audit({ action: "announcement.upload", resourceType: "announcement", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.id);
+      if (!(await announcementScopeIfAccessible(req, id))) {
+        res.status(404).json({ message: "Announcement not found" });
+        return;
+      }
+      if (!req.file) {
+        res.status(400).json({ message: "No file uploaded" });
+        return;
+      }
+      const kind = req.query.kind === "image" ? "image" : "file";
+      if (kind === "image" && !req.file.mimetype.startsWith("image/")) {
+        res.status(400).json({ message: "Image must be an image file" });
+        return;
+      }
+      const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-60);
+      const path = await storeFile(
+        req.userId!,
+        req.file.buffer,
+        `announcement-${id}-${Date.now()}-${safeName}`,
+        req.file.mimetype
+      );
+      await pool.query(
+        `UPDATE announcements SET ${kind} = $1, updated_at = now() WHERE id = $2`,
+        [path, id]
+      );
+      res.json({ [kind]: await getSignedUrl(path) });
+    } catch (err) {
+      console.error("Announcement upload error:", err);
+      res.status(500).json({ message: "Failed to upload the file" });
+    }
+  }
+);
 
 export default router;
