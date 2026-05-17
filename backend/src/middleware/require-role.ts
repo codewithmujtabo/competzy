@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from "express";
  * authenticated user's role is one of `roles`. Must run AFTER `authMiddleware`,
  * which populates `req.userRole`.
  *
- *   router.use(authMiddleware, requireRole("admin", "question_maker"));
+ *   router.use(authMiddleware, requireRole("admin", "organizer"));
  *
  * The existing per-role middleware (adminOnly, organizerOnly, schoolAdminOnly, …)
  * is intentionally left untouched — this helper is purely additive, for routes

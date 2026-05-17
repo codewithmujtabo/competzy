@@ -9,7 +9,7 @@ import * as bcrypt from "bcrypt";
  *   npm run db:create-test-accounts
  *
  * Operator roles have their own scripts: db:create-admin / db:create-organizer
- * / db:create-question-maker / db:create-supervisor.
+ * / db:create-supervisor.
  */
 const PASSWORD = "Test123!";
 

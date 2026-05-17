@@ -59,6 +59,8 @@ export const schoolHttp    = makeHttp();
 // Per-competition portals (e.g. /emc/login) — same cookie jar; the namespacing
 // keeps the new EMC code path decoupled if it ever needs different transport behaviour.
 export const emcHttp       = makeHttp();
+// Question-bank workspace (admin + organizer) — same cookie jar.
+export const questionBankHttp = makeHttp();
 
 // Used by callers that need the raw Response (e.g. CSV downloads).
 export async function schoolFetch(path: string, init: RequestInit = {}): Promise<Response> {
