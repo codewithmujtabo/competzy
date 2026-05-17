@@ -97,6 +97,8 @@ const SOFT_DELETE_TABLES = new Set([
   "announcements",
   "materials",
   "suggestions",
+  // EMC-port certificates (1749900000000_certificates.sql)
+  "certificates",
 ]);
 
 /**
