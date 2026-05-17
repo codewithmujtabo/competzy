@@ -272,23 +272,13 @@ We're porting the feature set of the legacy `eduversal-team/emc` Laravel app ont
 - **Wave 2–13 preview** (Wave 4 re-scoped 2026-05-16; affiliated-competitions wave inserted as Wave 5 — later waves shift +1): (2) professional web UI/UX unification ✅; (3) mobile app re-theme ✅; (4) `/competitions` catalog + admin move + per-competition step-flow engine; (5) **affiliated competitions** — register-on-Competzy-compete-elsewhere (competition `kind` flag, per-registration credentials + secure delivery, external-access step renderer, organizer/teacher credential-issuing UI); (6) question-bank authoring UI; (7) online + paper exam delivery; (8) test-center / area / webcam proctoring ✅; (9) vouchers + products + orders UI ✅; (10) referrals + announcements + materials ✅; (11) mobile rollout of student surfaces ✅; (12) certificate PDF + QR verify + barcode ✅; (13) mobile merchandise store (deferred from Wave 11); (14) data import from legacy `kompetisi.net` MySQL. Wave 12 plan: `/Users/mujtabo/.claude/plans/stateful-brewing-galaxy.md`.
 - **Locked design decisions** (per user May 13, 2026 evening replanning): **Multi-tenant schema from day one** — content tables carry `comp_id` (tiered: 24 strict NOT NULL, 2 nullable on `announcements`/`materials`, 5 global on `areas`/`test_centers`/`settings`/pivots). **One app + one website for ALL competitions** — routes are slug-keyed `/competitions/[slug]/…`. **Per-competition step-flow engine (Wave 4).** **Two competition kinds — native (full lifecycle inside Competzy) vs affiliated (students register + pay on Competzy, then receive credentials + a link and compete on an external site); affiliated tooling is Wave 5.** Both online AND paper exam from day one. No `PortalUser`/cross-site SSO. Legacy users keep their data (Wave 9 import — now simpler thanks to multi-tenancy: every legacy row gets `comp_id = 'comp_emc_2026_main'`). Mobile in lockstep but operator-only features stay web-only. UX matches `competzy.com` marketing site palette + typography. **Brand is Competzy-only — no user-visible "Eduversal" references anywhere.**
 
-### Manual rollout still required (Sprint 13/17 — needs your access)
+### Repository state (2026-05-17)
 
-8 commits ahead of `origin/main` and `eduversal/main` (Phase A of Wave 1 ships as commit #8; Phases B/C/D will push three more commits):
-```
-<phase-A-sha>  chore(brand): ship unified login + de-brand to Competzy-only
-6f83ec6 feat(deploy): production infra templates (nginx, pm2, eas, k6, runbook)
-c7e117f feat(school): achievement PDF + school-named bulk-payment receipts
-83c4bbd feat(school): self-signup + admin verification + portal gating
-1b9b4b1 feat(security): httpOnly cookie auth migration
-29ae506 feat(launch1): Sprint 15 polish for Phase 1 soft launch
-d0fc10c feat(security): Sprint 14 compliance & hardening
-165c5c0 feat(rebrand): Kompetix → Competzy across app, web, backend, docs
-```
+The Wave 3–12 stacked-PR backlog — 51 PRs — was merged bottom-up into `main` on 2026-05-17, followed by the mobile role-guard fix. **`origin/main` is now fully current** — 0 open PRs, every merged feature branch pruned, `origin` carries only `main`. (An earlier "8 commits ahead of `origin/main`" note here is obsolete — there is no longer an unpushed backlog.) The only remaining rollout work is the VPS / production checklist below.
 
 ### Manual rollout still required (Sprint 13/17 — needs your access)
 - **MinIO Docker on VPS** (T21): `docker run -d -p 9000:9000 -p 9001:9001 -e MINIO_ROOT_USER=... -e MINIO_ROOT_PASSWORD=... quay.io/minio/minio server /data --console-address :9001`, then set the 5 `MINIO_*` env vars in VPS `backend/.env`.
-- **Run all migrations on VPS:** `cd backend && npm run db:migrate` to apply `1746500000000` through `1748900000000` (covers Sprint 14–17 + the full Sprint 20 batch + `1748700000000_emc-roles` + `1748900000000_backfill-schools-from-students`).
+- **Run all migrations on VPS:** `cd backend && npm run db:migrate` to apply `1746500000000` through `1749900000000` (covers Sprint 14–17, the Sprint 20 EMC schema batch, and EMC Waves 4–12 — the competition-flows, affiliated-competitions, question-bank/exam/commerce/marketing, and certificates migrations).
 - **Rename DB on VPS:** `ALTER DATABASE kompetix RENAME TO competzy;` (or `beyond_classroom RENAME TO competzy;`). Update VPS `DATABASE_URL`.
 - **Production deploy:** copy `deploy/nginx.conf` to `/etc/nginx/sites-available/competzy.conf`; `pm2 start deploy/pm2.config.js --env production` after `npm run build` in `backend/` and `web/`. See `docs/RUNBOOK.md`.
 - **DNS + SSL:** A records for `competzy.com`, `api.competzy.com`, `admin.competzy.com`, `organizer.competzy.com`, `partner.competzy.com`, `compete.competzy.com`. Then `certbot --nginx -d ...`.
