@@ -23,6 +23,7 @@ const STATUSES = ['Coming Soon', 'On Going', 'Closed'];
 
 export interface CompetitionFormValues {
   name: string;
+  kind: 'native' | 'affiliated';
   category: string;
   gradeLevel: string;
   organizerName: string;
@@ -45,6 +46,7 @@ export interface CompetitionFormValues {
 
 const DEFAULTS: CompetitionFormValues = {
   name: '',
+  kind: 'native',
   category: '',
   gradeLevel: '',
   organizerName: '',
@@ -134,10 +136,15 @@ export function CompetitionForm({ initial, submitLabel, cancelHref, onSubmit }: 
       toast.error('Competition name and category are required');
       return;
     }
+    if (form.kind === 'affiliated' && !form.postPaymentRedirectUrl.trim()) {
+      toast.error('Affiliated competitions need an external competition URL');
+      return;
+    }
     setSubmitting(true);
     try {
       await onSubmit({
         name: form.name,
+        kind: form.kind,
         category: form.category,
         gradeLevel: form.gradeLevel || null,
         organizerName: form.organizerName || null,
@@ -211,6 +218,30 @@ export function CompetitionForm({ initial, submitLabel, cancelHref, onSubmit }: 
             </Select>
           </Field>
         </div>
+      </Section>
+
+      <Section title="Competition type">
+        <Field
+          label="Type"
+          hint={
+            form.kind === 'affiliated'
+              ? 'Students register & pay on Competzy, then compete on the organizer’s external site with credentials you issue them.'
+              : 'The full competition runs inside Competzy — registration, payment, exam and results.'
+          }
+        >
+          <Select
+            value={form.kind}
+            onValueChange={(v) => set({ kind: v as 'native' | 'affiliated' })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="native">Native — hosted on Competzy</SelectItem>
+              <SelectItem value="affiliated">Affiliated — external platform</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
       </Section>
 
       <Section title="Registration & pricing">
@@ -352,9 +383,14 @@ export function CompetitionForm({ initial, submitLabel, cancelHref, onSubmit }: 
             />
           </Field>
           <Field
-            label="Post-payment redirect URL"
+            label={form.kind === 'affiliated' ? 'Affiliated competition URL' : 'Post-payment redirect URL'}
+            required={form.kind === 'affiliated'}
             className="sm:col-span-2"
-            hint="After payment, students are redirected here with a JWT to take the exam on your existing platform. Leave empty for the native exam (Launch 2)."
+            hint={
+              form.kind === 'affiliated'
+                ? 'Students open this link and sign in with the credentials you issue them.'
+                : 'After payment, students are redirected here with a JWT to take the exam on your existing platform. Leave empty for the native exam.'
+            }
           >
             <Input
               type="url"
