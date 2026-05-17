@@ -115,6 +115,27 @@ export default function MyRegistrationDetailsScreen() {
           </View>
         </View>
 
+        {/* Competition Hub — per-competition student surfaces (Wave 11) */}
+        <Card variant="playful">
+          <Text style={Type.h3}>Competition Hub</Text>
+          <Text style={[Type.bodySm, { marginTop: Spacing.xs }]}>
+            Exams, news and more for this competition.
+          </Text>
+          <View style={{ marginTop: Spacing.lg, gap: Spacing.sm }}>
+            <Button
+              label="Take exam"
+              variant="secondary"
+              fullWidth
+              onPress={() =>
+                router.push({
+                  pathname: "/(competition)/exams",
+                  params: { compId: registration.compId, compName: competition.name },
+                })
+              }
+            />
+          </View>
+        </Card>
+
         <Card variant="playful">
           <Text style={Type.h3}>What You Need To Know</Text>
           <Text style={[Type.body, { marginTop: Spacing.md }]}>
