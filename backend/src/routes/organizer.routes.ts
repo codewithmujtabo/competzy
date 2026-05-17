@@ -6,6 +6,7 @@ import { organizerOnly } from "../middleware/organizer.middleware";
 import { audit } from "../middleware/audit";
 import * as pushService from "../services/push.service";
 import { storeFile } from "../services/storage.service";
+import { seedDefaultFlow } from "../services/competition-flow.service";
 
 const csvUpload = multer({
   storage: multer.memoryStorage(),
@@ -109,7 +110,7 @@ router.get("/competitions", async (req: Request, res: Response) => {
          c.id, c.name, c.organizer_name, c.category, c.grade_level,
          c.fee, c.quota, c.registration_status, c.is_international,
          c.reg_open_date, c.reg_close_date, c.competition_date,
-         c.image_url, c.created_at,
+         c.image_url, c.kind, c.created_at,
          COUNT(r.id)::int AS registration_count
        FROM competitions c
        LEFT JOIN registrations r ON r.comp_id = c.id
@@ -133,6 +134,7 @@ router.get("/competitions", async (req: Request, res: Response) => {
       regCloseDate: c.reg_close_date,
       competitionDate: c.competition_date,
       imageUrl: c.image_url,
+      kind: c.kind ?? "native",
       createdAt: c.created_at,
       registrationCount: c.registration_count,
     })));
@@ -155,6 +157,7 @@ router.post("/competitions", audit({ action: "organizer.competition.create", res
       requiredDocs, imageUrl, participantInstructions, rounds,
       postPaymentRedirectUrl,
     } = req.body;
+    const kind: "native" | "affiliated" = req.body.kind === "affiliated" ? "affiliated" : "native";
 
     if (!name || !category) {
       res.status(400).json({ message: "name and category are required" });
@@ -184,8 +187,8 @@ router.post("/competitions", audit({ action: "organizer.competition.create", res
          registration_status, poster_url, is_international, detailed_description,
          description, fee, quota, reg_open_date, reg_close_date, competition_date,
          required_docs, image_url, round_count, participant_instructions, created_by,
-         post_payment_redirect_url
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+         post_payment_redirect_url, kind
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
        RETURNING *`,
       [
         compId, name, resolvedOrgName, category, gradeLevel ?? null,
@@ -195,7 +198,7 @@ router.post("/competitions", audit({ action: "organizer.competition.create", res
         fee ?? 0, quota ?? null, regOpenDate ?? null, regCloseDate ?? null,
         competitionDate ?? null, requiredDocs ?? [], imageUrl ?? null,
         rounds?.length ?? 0, participantInstructions ?? null, req.userId,
-        postPaymentRedirectUrl ?? null,
+        postPaymentRedirectUrl ?? null, kind,
       ]
     );
 
@@ -217,6 +220,8 @@ router.post("/competitions", audit({ action: "organizer.competition.create", res
         );
       }
     }
+
+    await seedDefaultFlow(client, compId, kind);
 
     await client.query("COMMIT");
     res.status(201).json({ message: "Competition created", competition: compResult.rows[0] });
@@ -248,6 +253,7 @@ router.put("/competitions/:id", audit({ action: "organizer.competition.update", 
       requiredDocs, imageUrl, participantInstructions, rounds,
       postPaymentRedirectUrl,
     } = req.body;
+    const kind: "native" | "affiliated" = req.body.kind === "affiliated" ? "affiliated" : "native";
 
     const compResult = await client.query(
       `UPDATE competitions SET
@@ -257,15 +263,15 @@ router.put("/competitions/:id", audit({ action: "organizer.competition.update", 
          fee = $11, quota = $12, reg_open_date = $13, reg_close_date = $14,
          competition_date = $15, required_docs = $16, image_url = $17,
          round_count = $18, participant_instructions = $19,
-         post_payment_redirect_url = $20
-       WHERE id = $21
+         post_payment_redirect_url = $20, kind = $21
+       WHERE id = $22
        RETURNING *`,
       [
         name, organizerName, category, gradeLevel, websiteUrl,
         registrationStatus, posterUrl, isInternational, detailedDescription,
         description, fee, quota, regOpenDate, regCloseDate, competitionDate,
         requiredDocs ?? [], imageUrl, rounds?.length ?? 0,
-        participantInstructions ?? null, postPaymentRedirectUrl ?? null, id,
+        participantInstructions ?? null, postPaymentRedirectUrl ?? null, kind, id,
       ]
     );
 
@@ -360,6 +366,7 @@ router.get("/competitions/:id", async (req: Request, res: Response) => {
       registrationCount: c.registration_count,
       csvTemplateUrl: c.csv_template_url ?? null,
       postPaymentRedirectUrl: c.post_payment_redirect_url ?? null,
+      kind: c.kind ?? "native",
       createdAt: c.created_at,
     });
   } catch (err) {
