@@ -144,6 +144,17 @@ export default function MyRegistrationDetailsScreen() {
                 })
               }
             />
+            <Button
+              label="Study Materials"
+              variant="secondary"
+              fullWidth
+              onPress={() =>
+                router.push({
+                  pathname: "/(competition)/materials",
+                  params: { compId: registration.compId, compName: competition.name },
+                })
+              }
+            />
           </View>
         </Card>
 
