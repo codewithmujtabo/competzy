@@ -23,6 +23,7 @@ export interface Competition {
   participant_instructions?: string;
   created_by?: string;
   post_payment_redirect_url?: string;
+  kind?: 'native' | 'affiliated';
   created_at?: string;
   
   // Дополнительные поля для фронтенда (не из БД)

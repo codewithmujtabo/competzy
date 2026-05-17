@@ -48,11 +48,13 @@ const FORM_DEFAULTS = {
   organizer_name: '',
   category: '',
   grade_level: '',
+  kind: 'native' as 'native' | 'affiliated',
   fee: '0',
   description: '',
   reg_open_date: '',
   reg_close_date: '',
   competition_date: '',
+  post_payment_redirect_url: '',
 };
 
 function fmtForInput(d?: string) {
@@ -136,11 +138,13 @@ export default function CompetitionsPage() {
       organizer_name: c.organizer_name,
       category: c.category || '',
       grade_level: c.grade_level || '',
+      kind: c.kind === 'affiliated' ? 'affiliated' : 'native',
       fee: String(c.fee ?? 0),
       description: c.description || '',
       reg_open_date: fmtForInput(c.reg_open_date),
       reg_close_date: fmtForInput(c.reg_close_date),
       competition_date: fmtForInput(c.competition_date),
+      post_payment_redirect_url: c.post_payment_redirect_url || '',
     });
     setShowForm(true);
   };
@@ -386,6 +390,37 @@ export default function CompetitionsPage() {
                 type="date"
                 value={form.competition_date}
                 onChange={(e) => setForm((f) => ({ ...f, competition_date: e.target.value }))}
+              />
+            </Field>
+
+            <Field label="Competition type" className="sm:col-span-2">
+              <Select
+                value={form.kind}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, kind: v as 'native' | 'affiliated' }))
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="native">Native — on Competzy</SelectItem>
+                  <SelectItem value="affiliated">Affiliated — external</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field
+              label={form.kind === 'affiliated' ? 'Affiliated competition URL' : 'Post-payment redirect URL'}
+              required={form.kind === 'affiliated'}
+              className="sm:col-span-4"
+            >
+              <Input
+                type="url"
+                value={form.post_payment_redirect_url}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, post_payment_redirect_url: e.target.value }))
+                }
+                placeholder="https://…"
               />
             </Field>
 
