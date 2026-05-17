@@ -548,4 +548,28 @@ router.post(
   }
 );
 
+// ── GET /api/announcements?compId= ────────────────────────────────────────
+// Student-facing feed — published + active announcements for the competition
+// plus every platform-wide post. Auth'd (the competition portal is gated).
+router.get("/announcements", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const compId = trim(req.query.compId);
+    if (!compId) {
+      res.status(400).json({ message: "compId is required" });
+      return;
+    }
+    const r = await pool.query(
+      `SELECT * FROM announcements
+        WHERE (comp_id = $1 OR comp_id IS NULL)
+          AND is_active = true AND published_at IS NOT NULL AND deleted_at IS NULL
+        ORDER BY is_featured DESC, published_at DESC`,
+      [compId]
+    );
+    res.json(await Promise.all(r.rows.map(mapAnnouncement)));
+  } catch (err) {
+    console.error("Student announcements feed error:", err);
+    res.status(500).json({ message: "Failed to load announcements" });
+  }
+});
+
 export default router;
