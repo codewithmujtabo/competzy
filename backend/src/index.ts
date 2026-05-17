@@ -35,6 +35,7 @@ import examRoutes from "./routes/exam.routes";
 import examSessionRoutes from "./routes/exam-session.routes";
 import venuesRoutes from "./routes/venues.routes";
 import commerceRoutes from "./routes/commerce.routes";
+import marketingRoutes from "./routes/marketing.routes";
 import { initializeCronJobs } from "./services/cron.service";
 import { verifySignedUrlToken } from "./services/storage.service";
 import fs from "fs";
@@ -122,6 +123,12 @@ app.use("/api/organizers", organizerRoutes);
 app.use("/api/regions", regionsRoutes);
 app.use("/api/favorites", favoritesRoutes);
 app.use("/api/historical", historicalRoutes);
+// Marketing — owns /marketing/* + /referrals/{click,signup} (mounted at /api).
+// Mounted before the bare-/api routers that carry an unscoped authMiddleware
+// (competition-flows / affiliated-credentials / exam-session) so its PUBLIC
+// /referrals/click endpoint is reached before they 401 unauthenticated
+// fall-through traffic.
+app.use("/api", marketingRoutes);
 // Step-flow engine — owns /competitions/:id/flow, /registrations/:id/flow-progress,
 // and /admin/competitions/:id/flow* (mounted at /api with full sub-paths).
 app.use("/api", competitionFlowsRoutes);
