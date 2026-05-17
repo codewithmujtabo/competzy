@@ -10,6 +10,7 @@
 
 import { pool } from "../config/database";
 import { storeFile } from "../services/storage.service";
+import { issueCertificateIfEligible } from "../services/certificate.service";
 
 const COMP = "comp-1-eduversal-mathematics-competition";
 
@@ -369,6 +370,34 @@ async function suggestion(
   );
 }
 
+// ── Certificates (Wave 12) ──────────────────────────────────────────────
+// Ensure the test student holds a cleared registration, auto-issue their
+// certificate from the finished practice exam, then promote it to a demo
+// "Gold Medal" achievement so the operator UI + the achievement PDF have data.
+async function demoCertificate(student: string): Promise<string> {
+  const reg = await pool.query(
+    `SELECT id FROM registrations
+      WHERE user_id = $1 AND comp_id = $2 AND deleted_at IS NULL LIMIT 1`,
+    [student, COMP]
+  );
+  if (reg.rows.length === 0) {
+    await pool.query(
+      `INSERT INTO registrations (id, user_id, comp_id, status, registration_number)
+       VALUES ('CTZ-2026-DEMO01', $1, $2, 'paid', 'CTZ-2026-DEMO01')`,
+      [student, COMP]
+    );
+  }
+  await issueCertificateIfEligible(pool, { compId: COMP, userId: student });
+  const r = await pool.query(
+    `UPDATE certificates
+        SET award_label = 'Gold Medal', type = 'achievement', updated_at = now()
+      WHERE comp_id = $1 AND user_id = $2 AND deleted_at IS NULL
+      RETURNING certificate_number`,
+    [COMP, student]
+  );
+  return r.rows[0]?.certificate_number ?? "no eligible attempt";
+}
+
 async function main() {
   const admin = await userId("admin@eduversal.com");
   const student = await userId("student@test.local");
@@ -534,6 +563,12 @@ async function main() {
     await suggestion(student, "Please publish the materials a bit earlier next round. Thank you!", null);
   }
 
+  // 8 — Certificates: a demo "Gold Medal" achievement certificate (Wave 12)
+  let certNote = "skipped (no test student)";
+  if (student) {
+    certNote = await demoCertificate(student);
+  }
+
   console.log("EMC demo data seeded:");
   console.log("  venues:    3 areas, 5 test centers");
   console.log("  taxonomy:  3 subjects, 6 topics, 4 subtopics");
@@ -546,6 +581,7 @@ async function main() {
   console.log("  announce:  2 announcements (1 competition, 1 platform-wide)");
   console.log("  materials: 3 study materials (2 competition, 1 platform-wide)");
   console.log("  feedback:  2 student suggestions");
+  console.log(`  cert:      ${certNote} (Gold Medal achievement)`);
   await pool.end();
 }
 
