@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   Library,
   Loader2,
+  PenLine,
 } from 'lucide-react';
 import { QuestionBankAuthProvider, useQuestionBankAuth } from '@/lib/auth/question-bank-context';
 import { QuestionBankProvider } from '@/lib/question-bank/context';
@@ -54,6 +55,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
         { label: 'Questions', href: '/question-bank/questions', icon: FileText },
         { label: 'Review', href: '/question-bank/review', icon: ClipboardCheck },
         { label: 'Exams', href: '/question-bank/exams', icon: ClipboardList },
+        { label: 'Grading', href: '/question-bank/grading', icon: PenLine },
       ],
     },
     {
