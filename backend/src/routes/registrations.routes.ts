@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
 import * as pushService from "../services/push.service";
+import { computeCompleteness } from "../services/readiness.service";
 
 const router = Router();
 router.use(authMiddleware);
@@ -172,102 +173,29 @@ router.get("/:id", async (req: Request, res: Response) => {
 
 // ── GET /api/registrations/:id/completeness ───────────────────────────────
 // Spec F-ID-07: per-requirement readiness check.
-// Used by mobile app for pre-payment gating; will power pre-exam gating in Launch 2.
+// Used by mobile app for pre-payment gating; also powers the web step-flow.
 // Returns shape: { registrationId, isReady, checks: { name: { ok, missing? } } }
+// The computation lives in services/readiness.service.ts (shared with the
+// step-flow GET /registrations/:id/flow-progress endpoint).
 router.get("/:id/completeness", async (req: Request, res: Response) => {
   try {
-    // Authorize: registration must belong to req.userId, OR userRole is admin/organizer.
-    const reg = await pool.query(
-      `SELECT r.id, r.user_id, r.comp_id, r.status,
-              c.fee, c.required_docs,
-              u.full_name, u.phone, u.city,
-              s.grade, s.school_name, s.npsn, s.school_id
-         FROM registrations r
-         JOIN competitions  c ON c.id = r.comp_id
-         JOIN users         u ON u.id = r.user_id
-    LEFT JOIN students      s ON s.id = r.user_id
-        WHERE r.id = $1 AND r.deleted_at IS NULL`,
-      [req.params.id]
-    );
-
-    if (reg.rows.length === 0) {
+    const result = await computeCompleteness(String(req.params.id));
+    if (!result) {
       res.status(404).json({ message: "Registration not found" });
       return;
     }
 
-    const row = reg.rows[0];
-
-    // Ownership check (mobile/web both): the requester must own this registration,
-    // unless they're admin or organizer (organizer ownership is checked elsewhere).
-    if (row.user_id !== req.userId && req.userRole !== "admin" && req.userRole !== "organizer") {
+    // Ownership check: the requester must own this registration, unless they're
+    // admin or organizer (organizer ownership is checked elsewhere).
+    if (result.userId !== req.userId && req.userRole !== "admin" && req.userRole !== "organizer") {
       res.status(403).json({ message: "Not authorized for this registration" });
       return;
     }
 
-    // 1. Profile completeness — required for all roles.
-    const profileMissing: string[] = [];
-    if (!row.full_name?.trim()) profileMissing.push("full_name");
-    if (!row.phone?.trim())     profileMissing.push("phone");
-    if (!row.city?.trim())      profileMissing.push("city");
-    // Student-specific
-    if (row.grade !== undefined) {
-      // students row exists → enforce student fields
-      if (!row.grade) profileMissing.push("grade");
-      if (!row.school_name?.trim() && !row.school_id) profileMissing.push("school");
-    }
-    const profileComplete = { ok: profileMissing.length === 0, missing: profileMissing };
-
-    // 2. Required documents uploaded (per competition.required_docs[]).
-    const requiredDocs: string[] = Array.isArray(row.required_docs) ? row.required_docs : [];
-    let docsCheck: { ok: boolean; required: string[]; missing: string[] };
-    if (requiredDocs.length === 0) {
-      docsCheck = { ok: true, required: [], missing: [] };
-    } else {
-      const docs = await pool.query(
-        `SELECT DISTINCT doc_type FROM documents
-          WHERE user_id = $1 AND deleted_at IS NULL AND doc_type = ANY($2)`,
-        [row.user_id, requiredDocs]
-      );
-      const uploaded = new Set(docs.rows.map((d) => d.doc_type));
-      const missing = requiredDocs.filter((d) => !uploaded.has(d));
-      docsCheck = { ok: missing.length === 0, required: requiredDocs, missing };
-    }
-
-    // 3. Payment status — either paid, or competition is free.
-    const isFree = !row.fee || Number(row.fee) === 0;
-    const paymentOk =
-      isFree ||
-      ["paid", "approved", "registered"].includes(row.status);
-    const paymentPaid = { ok: paymentOk, status: row.status, fee: Number(row.fee ?? 0) };
-
-    // 4. School NPSN set (only meaningful for student role).
-    const schoolNpsnSet =
-      row.grade === undefined
-        ? { ok: true, required: false } // not a student
-        : { ok: !!row.npsn, required: false }; // recommended but not blocking
-
-    // 5. Parent linked (advisory; not blocking unless competition declares it).
-    const parentLink = await pool.query(
-      `SELECT 1 FROM parent_student_links
-        WHERE student_id = $1 AND status = 'active'
-        LIMIT 1`,
-      [row.user_id]
-    );
-    const parentLinked = { ok: parentLink.rows.length > 0, required: false };
-
-    const isReady =
-      profileComplete.ok && docsCheck.ok && paymentPaid.ok;
-
     res.json({
-      registrationId: row.id,
-      isReady,
-      checks: {
-        profileComplete,
-        documentsUploaded: docsCheck,
-        paymentPaid,
-        schoolNpsnSet,
-        parentLinked,
-      },
+      registrationId: result.registrationId,
+      isReady: result.isReady,
+      checks: result.checks,
     });
   } catch (err: any) {
     console.error("Completeness check error:", err);

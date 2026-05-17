@@ -28,6 +28,7 @@ import organizerRoutes from "./routes/organizer.routes";
 import regionsRoutes from "./routes/regions.routes";
 import favoritesRoutes from "./routes/favorites.routes";
 import historicalRoutes from "./routes/historical.routes";
+import competitionFlowsRoutes from "./routes/competition-flows.routes";
 import { initializeCronJobs } from "./services/cron.service";
 import { verifySignedUrlToken } from "./services/storage.service";
 import fs from "fs";
@@ -115,6 +116,9 @@ app.use("/api/organizers", organizerRoutes);
 app.use("/api/regions", regionsRoutes);
 app.use("/api/favorites", favoritesRoutes);
 app.use("/api/historical", historicalRoutes);
+// Step-flow engine — owns /competitions/:id/flow, /registrations/:id/flow-progress,
+// and /admin/competitions/:id/flow* (mounted at /api with full sub-paths).
+app.use("/api", competitionFlowsRoutes);
 
 // Sentry error handler must come before our own error handler
 Sentry.setupExpressErrorHandler(app);
