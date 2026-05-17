@@ -880,6 +880,30 @@ router.get("/commerce/orders", async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /api/commerce/storefront/products?compId= ─────────────────────────
+// The student-facing catalog — every active product of a competition. No
+// operator gate (any authenticated student may browse a competition's store).
+router.get("/commerce/storefront/products", async (req: Request, res: Response) => {
+  try {
+    const compId = String(req.query.compId ?? "");
+    if (!compId) {
+      res.status(400).json({ message: "compId is required" });
+      return;
+    }
+    const r = await pool.query(
+      `SELECT id, comp_id, code, name, slug, price, description, image, active, created_at
+         FROM products
+        WHERE comp_id = $1 AND active = true AND deleted_at IS NULL
+        ORDER BY created_at DESC`,
+      [compId]
+    );
+    res.json(await Promise.all(r.rows.map(mapProduct)));
+  } catch (err) {
+    console.error("List storefront products error:", err);
+    res.status(500).json({ message: "Failed to load the store" });
+  }
+});
+
 // ── GET /api/commerce/storefront/orders ───────────────────────────────────
 // The caller's own orders, across competitions.
 router.get("/commerce/storefront/orders", async (req: Request, res: Response) => {
