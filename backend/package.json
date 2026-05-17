@@ -18,6 +18,7 @@
     "db:create-test-accounts": "ts-node src/db/create-test-accounts.ts",
     "db:seed:emc-demo": "ts-node src/db/seed-emc-demo.ts",
     "db:seed:test-competitions": "ts-node src/db/seed-test-competitions.ts",
+    "db:regrade": "ts-node src/db/regrade-sessions.ts",
     "db:init": "psql $DATABASE_URL < src/db/schema.sql",
     "db:import-historical": "ts-node src/db/import-historical.ts"
   },
