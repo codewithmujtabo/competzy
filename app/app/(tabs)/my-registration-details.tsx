@@ -155,6 +155,17 @@ export default function MyRegistrationDetailsScreen() {
                 })
               }
             />
+            <Button
+              label="Send Feedback"
+              variant="secondary"
+              fullWidth
+              onPress={() =>
+                router.push({
+                  pathname: "/(competition)/feedback",
+                  params: { compId: registration.compId, compName: competition.name },
+                })
+              }
+            />
           </View>
         </Card>
 

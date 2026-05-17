@@ -43,3 +43,14 @@ export interface Material {
 export async function getMaterials(compId: string): Promise<Material[]> {
   return apiRequest<Material[]>(`/materials?compId=${encodeURIComponent(compId)}`);
 }
+
+/** Submit a piece of feedback for a competition to the organizer's inbox. */
+export async function sendSuggestion(
+  compId: string,
+  content: string
+): Promise<{ ok: boolean }> {
+  return apiRequest<{ ok: boolean }>("/suggestions", {
+    method: "POST",
+    body: { compId, content },
+  });
+}
