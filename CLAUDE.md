@@ -233,6 +233,7 @@ EXPO_PUBLIC_API_URL=http://<MAC_LAN_IP>:3000/api
 - Organizer: `organizer@eduversal.com` / `organizer123` (`npm run db:create-organizer`)
 - Student / Parent / Teacher / School-admin: `{student,parent,teacher,schooladmin}@test.local` / `Test123!` — all four seeded by `npm run db:create-test-accounts` (idempotent; teacher + school-admin link to the first verified school; the parent + teacher are also linked to a 6-student roster — the test student + 5 random real students — so the My Children / My Students screens have data).
 - The question bank, exams, venues + proctoring have no dedicated role — they are managed by the admin + organizer accounts above.
+- **EMC demo data:** `npm run db:seed:emc-demo` (`backend/src/db/seed-emc-demo.ts`) populates the EMC competition with venues (3 areas, 5 test centers), the question-bank taxonomy (3 subjects / 6 topics / 4 subtopics) + 12 questions (8 approved, 2 submitted, 2 draft), 2 exams (`EMC-R1`, `EMC-PRAC`), and one finished exam attempt awaiting grading. Idempotent — keyed by code/name, safe to re-run. **Every EMC feature ships with example data via this seeder** (see memory `feedback-seed-demo-data`) — extend it when adding a feature so the review screens are never empty.
 
 ### Historical Data (IMPORTED ✅)
 - 63,365 real participant records imported into `historical_participants` table.
