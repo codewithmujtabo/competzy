@@ -3,14 +3,23 @@
 // `recomputeSessionRollups` aggregates a session's periods into its rollup —
 // safe to call repeatedly (after submit, and after each manual grade).
 
+import { gradeTokens } from "./grade.service";
+
 // Both `pool` and a transaction client satisfy this — avoids importing pg types.
 type DB = { query: (text: string, params?: unknown[]) => Promise<{ rows: any[] }> };
 
 // Pull a per-grade score out of an exams.correct_score / wrong_score JSONB map.
+// The map may be keyed numerically ("9") or by school level ("SMP"); try every
+// token the student's grade reconciles to so a level-keyed map still scores a
+// numeric-grade student (the alternative is a correct answer worth 0 points).
 function scoreFor(matrix: unknown, grade: string | null): number {
   if (!matrix || typeof matrix !== "object" || !grade) return 0;
-  const v = Number((matrix as Record<string, unknown>)[grade]);
-  return Number.isFinite(v) ? v : 0;
+  const m = matrix as Record<string, unknown>;
+  for (const key of gradeTokens(grade)) {
+    const v = Number(m[key]);
+    if (Number.isFinite(v)) return v;
+  }
+  return 0;
 }
 
 /**
