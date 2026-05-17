@@ -14,6 +14,7 @@ import {
   Loader2,
   Package,
   PenLine,
+  ShoppingBag,
   Ticket,
   Video,
 } from 'lucide-react';
@@ -69,6 +70,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
       items: [
         { label: 'Products', href: '/question-bank/products', icon: Package },
         { label: 'Vouchers', href: '/question-bank/vouchers', icon: Ticket },
+        { label: 'Orders', href: '/question-bank/orders', icon: ShoppingBag },
       ],
     },
     {
