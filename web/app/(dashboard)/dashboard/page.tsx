@@ -49,7 +49,7 @@ interface Kpi {
 
 const QUICK_LINKS: { href: string; icon: LucideIcon; label: string; desc: string }[] = [
   { href: '/registrations', icon: ClipboardList, label: 'Registrations', desc: 'Approve or reject pending applications' },
-  { href: '/competitions', icon: Trophy, label: 'Competitions', desc: 'Create and manage competitions' },
+  { href: '/admin/competitions', icon: Trophy, label: 'Competitions', desc: 'Create and manage competitions' },
   { href: '/segments', icon: Layers, label: 'Segments', desc: 'Build cross-sell audiences' },
   { href: '/notifications', icon: Megaphone, label: 'Send Notification', desc: 'Announce competitions to schools' },
   { href: '/schools', icon: School, label: 'Schools', desc: 'View and add schools' },

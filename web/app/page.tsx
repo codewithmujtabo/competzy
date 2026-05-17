@@ -45,7 +45,7 @@ function destinationFor(role: string): string {
       return '/school-dashboard';
     case 'student':
     case 'parent':
-      return defaultCompetition.dashboard;
+      return '/competitions';
     default:
       return '/dashboard';
   }
