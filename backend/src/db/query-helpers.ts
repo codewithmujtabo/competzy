@@ -80,6 +80,9 @@ const SOFT_DELETE_TABLES = new Set([
   "periods",
   "paper_exams",
   "paper_answers",
+  // EMC-port venues (1748200000000_emc-venues.sql)
+  "areas",
+  "test_centers",
 ]);
 
 /**
