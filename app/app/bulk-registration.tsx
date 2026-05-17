@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import {
   Brand,
+  FontFamily,
   Radius,
   Shadow,
   Spacing,
@@ -162,13 +163,13 @@ export default function BulkRegistrationScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
-        return "#10B981";
+        return Brand.success;
       case "failed":
-        return "#EF4444";
+        return Brand.error;
       case "processing":
-        return "#F59E0B";
+        return Brand.primary;
       default:
-        return "#94A3B8";
+        return TextColor.tertiary;
     }
   };
 
@@ -257,13 +258,13 @@ export default function BulkRegistrationScreen() {
                 <Text style={styles.statLabel}>Total</Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={[styles.statValue, { color: "#10B981" }]}>
+                <Text style={[styles.statValue, { color: Brand.success }]}>
                   {currentJob.successfulRows}
                 </Text>
                 <Text style={styles.statLabel}>Success</Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={[styles.statValue, { color: "#EF4444" }]}>
+                <Text style={[styles.statValue, { color: Brand.error }]}>
                   {currentJob.failedRows}
                 </Text>
                 <Text style={styles.statLabel}>Failed</Text>
@@ -365,7 +366,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     marginBottom: Spacing.md,
   },
-  fileName: { flex: 1, marginLeft: Spacing.md, ...Type.body, fontWeight: "600" },
+  fileName: { flex: 1, marginLeft: Spacing.md, ...Type.body, fontFamily: FontFamily.bodySemi },
   removeButton: { padding: 4 },
   pickButton: {
     flexDirection: "row",
@@ -388,84 +389,78 @@ const styles = StyleSheet.create({
     ...Shadow.md,
   },
   uploadButtonDisabled: { opacity: 0.5 },
-  uploadButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  uploadButtonText: { ...Type.button },
   jobHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   jobFileName: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1E293B",
+    ...Type.bodySm,
+    fontFamily: FontFamily.bodySemi,
+    color: TextColor.primary,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.sm,
   },
   statusText: {
     fontSize: 11,
-    fontWeight: "600",
-    color: "#fff",
+    fontFamily: FontFamily.bodyBold,
+    color: "#FFFFFF",
     textTransform: "uppercase",
   },
   progressContainer: {
     height: 8,
-    backgroundColor: "#E2E8F0",
-    borderRadius: 4,
+    backgroundColor: Surface.cardAlt,
+    borderRadius: Radius.sm,
     overflow: "hidden",
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   progressBar: {
     height: "100%",
     backgroundColor: Brand.primary,
   },
   progressText: {
-    fontSize: 12,
-    color: "#64748B",
+    ...Type.caption,
     textAlign: "center",
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   statsGrid: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   statBox: {
     alignItems: "center",
   },
   statValue: {
     fontSize: 24,
-    fontWeight: "700",
-    color: "#1E293B",
+    fontFamily: FontFamily.displayBold,
+    color: TextColor.primary,
   },
-  statLabel: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 4,
-  },
+  statLabel: { ...Type.caption, marginTop: 4 },
   errorsSection: {
     borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
-    paddingTop: 12,
+    borderTopColor: Surface.divider,
+    paddingTop: Spacing.md,
   },
   errorsTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#EF4444",
-    marginBottom: 8,
+    ...Type.bodySm,
+    fontFamily: FontFamily.bodyBold,
+    color: Brand.error,
+    marginBottom: Spacing.sm,
   },
   errorText: {
-    fontSize: 12,
-    color: "#64748B",
+    ...Type.caption,
+    color: TextColor.secondary,
     marginBottom: 4,
   },
   moreErrors: {
-    fontSize: 12,
-    color: "#94A3B8",
+    ...Type.caption,
     fontStyle: "italic",
     marginTop: 4,
   },
@@ -473,33 +468,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 12,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 8,
-    marginTop: 8,
+    padding: Spacing.md,
+    backgroundColor: Surface.background,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Surface.border,
+    marginTop: Spacing.sm,
   },
   jobInfo: {
     flex: 1,
   },
   jobName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1E293B",
+    ...Type.bodySm,
+    fontFamily: FontFamily.bodySemi,
+    color: TextColor.primary,
     marginBottom: 4,
   },
-  jobDate: {
-    fontSize: 12,
-    color: "#94A3B8",
-    marginBottom: 2,
-  },
-  jobStats: {
-    fontSize: 12,
-    color: "#64748B",
-  },
+  jobDate: { ...Type.caption, marginBottom: 2 },
+  jobStats: { ...Type.caption },
   emptyText: {
-    fontSize: 14,
-    color: "#94A3B8",
+    ...Type.bodySm,
+    color: TextColor.tertiary,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: Spacing.sm,
   },
 });

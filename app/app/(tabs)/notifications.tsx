@@ -2,10 +2,8 @@ import { Card, EmptyState } from "@/components/ui";
 import {
   Brand,
   Radius,
-  Shadow,
   Spacing,
   Surface,
-  Text as TextColor,
   Type,
 } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";

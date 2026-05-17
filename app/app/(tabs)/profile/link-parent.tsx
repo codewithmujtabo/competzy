@@ -1,26 +1,35 @@
+import { ScreenHeader } from "@/components/ui";
+import {
+  Brand,
+  FontFamily,
+  Radius,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
+import { useUser } from "@/context/AuthContext";
+import {
+  approveLink,
+  getDebugInvitations,
+  getPendingInvitations,
+  inviteParent,
+} from "@/services/parents.service";
+import { Ionicons } from "@expo/vector-icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { router, useFocusEffect } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  ActivityIndicator,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useFocusEffect } from "expo-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Brand } from "@/constants/theme";
-import { useUser } from "@/context/AuthContext";
-import {
-  inviteParent,
-  getPendingInvitations,
-  approveLink,
-  getDebugInvitations,
-} from "@/services/parents.service";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 
 export default function LinkParentScreen() {
   const { user } = useUser();
@@ -149,17 +158,9 @@ export default function LinkParentScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
+      <ScreenHeader title="Link Parent Account" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <IconSymbol name="chevron.left" size={24} color={Brand.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Link Parent Account</Text>
-          <View style={styles.placeholder} />
-        </View>
-
         {/* Invitation Form */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Invite Parent</Text>
@@ -170,7 +171,7 @@ export default function LinkParentScreen() {
           <TextInput
             style={styles.input}
             placeholder="parent@example.com"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={TextColor.tertiary}
             value={parentEmail}
             onChangeText={setParentEmail}
             keyboardType="email-address"
@@ -188,7 +189,7 @@ export default function LinkParentScreen() {
             disabled={sendInvitationMutation.isPending}
           >
             {sendInvitationMutation.isPending ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.sendButtonText}>Send Invitation</Text>
             )}
@@ -196,7 +197,7 @@ export default function LinkParentScreen() {
 
           {/* Instructions */}
           <View style={styles.infoBox}>
-            <IconSymbol name="info.circle" size={20} color={Brand.primary} />
+            <Ionicons name="information-circle" size={20} color={Brand.primary} />
             <Text style={styles.infoText}>
               After sending, your parent should:{"\n"}
               1. Check their email for the PIN{"\n"}
@@ -268,31 +269,31 @@ export default function LinkParentScreen() {
                 <View style={styles.inviteActions}>
                   <TouchableOpacity
                     style={[
-                      styles.approveButton,
+                      styles.iconButton,
                       approveLinkMutation.isPending && styles.buttonDisabled,
                     ]}
                     onPress={() => handleApprove(invite.linkId)}
                     disabled={approveLinkMutation.isPending}
                   >
                     {approveLinkMutation.isPending ? (
-                      <ActivityIndicator size="small" color="#10B981" />
+                      <ActivityIndicator size="small" color={Brand.success} />
                     ) : (
-                      <IconSymbol name="checkmark.circle.fill" size={24} color="#10B981" />
+                      <Ionicons name="checkmark-circle" size={28} color={Brand.success} />
                     )}
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={[
-                      styles.rejectButton,
+                      styles.iconButton,
                       approveLinkMutation.isPending && styles.buttonDisabled,
                     ]}
                     onPress={() => handleReject(invite.linkId)}
                     disabled={approveLinkMutation.isPending}
                   >
                     {approveLinkMutation.isPending ? (
-                      <ActivityIndicator size="small" color="#EF4444" />
+                      <ActivityIndicator size="small" color={Brand.error} />
                     ) : (
-                      <IconSymbol name="xmark.circle.fill" size={24} color="#EF4444" />
+                      <Ionicons name="close-circle" size={28} color={Brand.error} />
                     )}
                   </TouchableOpacity>
                 </View>
@@ -310,205 +311,170 @@ export default function LinkParentScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: Surface.background,
   },
   scrollContent: {
-    padding: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1E293B",
-  },
-  placeholder: {
-    width: 40,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing["3xl"],
   },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: Surface.card,
+    borderRadius: Radius["2xl"],
+    borderWidth: 1,
+    borderColor: Surface.border,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1E293B",
-    marginBottom: 4,
+    ...Type.h3,
+    marginBottom: Spacing.xs,
   },
   cardSubtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    marginBottom: 16,
+    ...Type.bodySm,
+    marginBottom: Spacing.lg,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: "#1E293B",
-    marginBottom: 12,
+    borderColor: Surface.border,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md + 2,
+    fontSize: 15,
+    fontFamily: FontFamily.bodyRegular,
+    color: TextColor.primary,
+    backgroundColor: Surface.background,
+    marginBottom: Spacing.md,
   },
   sendButton: {
     backgroundColor: Brand.primary,
-    borderRadius: 8,
-    padding: 14,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.md + 2,
     alignItems: "center",
   },
   sendButtonDisabled: {
     opacity: 0.6,
   },
   sendButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
+    ...Type.button,
   },
   infoBox: {
     flexDirection: "row",
-    gap: 12,
-    backgroundColor: "#F0F5FF",
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 12,
+    gap: Spacing.md,
+    backgroundColor: Brand.primarySoft,
+    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    marginTop: Spacing.md,
     borderLeftWidth: 3,
     borderLeftColor: Brand.primary,
   },
   infoText: {
     flex: 1,
-    fontSize: 13,
-    color: "#475569",
+    ...Type.bodySm,
     lineHeight: 20,
   },
   debugBox: {
-    marginTop: 14,
-    padding: 14,
-    borderRadius: 10,
-    backgroundColor: "#FEF3C7",
+    marginTop: Spacing.md + 2,
+    padding: Spacing.md + 2,
+    borderRadius: Radius.lg,
+    backgroundColor: Brand.sunshineSoft,
     borderWidth: 1,
-    borderColor: "#FCD34D",
+    borderColor: Brand.sunshine,
   },
   debugTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#92400E",
-    marginBottom: 6,
+    ...Type.title,
+    marginBottom: Spacing.xs + 2,
   },
   debugText: {
-    fontSize: 13,
-    color: "#92400E",
+    ...Type.bodySm,
+    color: TextColor.primary,
     lineHeight: 18,
   },
   debugPinCard: {
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: "#FFFFFF",
+    marginTop: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: Surface.card,
   },
   debugPinLabel: {
-    fontSize: 12,
-    color: "#64748B",
-    marginBottom: 4,
+    ...Type.caption,
+    marginBottom: Spacing.xs,
   },
   debugPinValue: {
     fontSize: 28,
-    fontWeight: "800",
+    fontFamily: FontFamily.displayExtra,
     color: Brand.primary,
     letterSpacing: 4,
   },
   debugPinEmail: {
-    marginTop: 4,
-    fontSize: 12,
-    color: "#64748B",
+    ...Type.caption,
+    marginTop: Spacing.xs,
   },
   debugList: {
-    marginTop: 12,
+    marginTop: Spacing.md,
   },
   debugListTitle: {
     fontSize: 13,
-    fontWeight: "700",
-    color: "#92400E",
-    marginBottom: 8,
+    fontFamily: FontFamily.bodyBold,
+    color: TextColor.primary,
+    marginBottom: Spacing.sm,
   },
   debugListItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 8,
-    gap: 10,
+    backgroundColor: Surface.card,
+    padding: Spacing.sm + 2,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.sm,
+    gap: Spacing.sm + 2,
   },
   debugListEmail: {
     fontSize: 13,
-    fontWeight: "600",
-    color: "#1E293B",
+    fontFamily: FontFamily.bodySemi,
+    color: TextColor.primary,
   },
   debugListMeta: {
-    fontSize: 11,
-    color: "#64748B",
+    ...Type.caption,
     marginTop: 2,
   },
   debugListPin: {
     fontSize: 18,
-    fontWeight: "800",
+    fontFamily: FontFamily.displayBold,
     color: Brand.primary,
     letterSpacing: 2,
   },
   loader: {
-    marginVertical: 20,
+    marginVertical: Spacing.xl,
   },
   inviteCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: 12,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 8,
-    marginTop: 12,
+    padding: Spacing.md,
+    backgroundColor: Surface.background,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Surface.border,
+    marginTop: Spacing.md,
   },
   inviteInfo: {
     flex: 1,
   },
   inviteName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1E293B",
+    ...Type.title,
     marginBottom: 2,
   },
   inviteEmail: {
-    fontSize: 14,
-    color: "#64748B",
-    marginBottom: 4,
+    ...Type.bodySm,
+    marginBottom: Spacing.xs,
   },
   inviteDate: {
-    fontSize: 12,
-    color: "#94A3B8",
+    ...Type.caption,
   },
   inviteActions: {
     flexDirection: "row",
-    gap: 8,
+    gap: Spacing.sm,
   },
-  approveButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rejectButton: {
+  iconButton: {
     width: 40,
     height: 40,
     alignItems: "center",
@@ -518,15 +484,15 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   emptyText: {
-    fontSize: 14,
-    color: "#94A3B8",
+    ...Type.bodySm,
+    color: TextColor.tertiary,
     textAlign: "center",
-    marginTop: 12,
+    marginTop: Spacing.md,
   },
   errorText: {
-    fontSize: 14,
-    color: "#EF4444",
+    ...Type.bodySm,
+    color: Brand.error,
     textAlign: "center",
-    marginTop: 12,
+    marginTop: Spacing.md,
   },
 });

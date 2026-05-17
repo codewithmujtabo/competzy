@@ -1,6 +1,7 @@
 import { Card, GeometricHeader, StatTile } from "@/components/ui";
 import {
   Brand,
+  FontFamily,
   Radius,
   Shadow,
   Spacing,
@@ -171,7 +172,7 @@ export default function ProfileScreen() {
               <View style={[styles.menuIcon, { backgroundColor: item.tint }]}>
                 <Ionicons name={item.icon} size={20} color={Brand.navy} />
               </View>
-              <Text style={[Type.body, { flex: 1, fontWeight: "700", color: TextColor.primary }]}>
+              <Text style={[Type.body, { flex: 1, fontFamily: FontFamily.bodyBold, color: TextColor.primary }]}>
                 {item.label}
               </Text>
               <Ionicons name="chevron-forward" size={18} color={TextColor.tertiary} />
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInitial: { fontSize: 40, fontWeight: "900", color: Brand.primary },
+  avatarInitial: { fontSize: 40, fontFamily: FontFamily.displayExtra, color: Brand.primary },
   avatarImage:   { width: 96, height: 96, borderRadius: 48 },
   roleBadge: {
     flexDirection: "row",

@@ -1,19 +1,26 @@
 import { AppInput } from "@/components/common/AppInput";
-import * as userService from "@/services/user.service";
-import { Brand } from "@/constants/theme";
-import React, {
-    useEffect,
-    useState,
-} from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Brand,
+  FontFamily,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
+import * as userService from "@/services/user.service";
+import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -31,19 +38,14 @@ interface UserProfile {
 
 export default function ProfileCompletionScreen() {
   const insets = useSafeAreaInsets();
-  const [profile, setProfile] =
-    useState<UserProfile | null>(null);
-  const [loading, setLoading] =
-    useState(true);
-  const [saving, setSaving] =
-    useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   // Form state
   const [nisn, setNisn] = useState("");
   const [city, setCity] = useState("");
-  const [errors, setErrors] = useState<
-    Record<string, string>
-  >({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchProfile();
@@ -69,22 +71,15 @@ export default function ProfileCompletionScreen() {
       setNisn(data.nisn || "");
       setCity(data.city || "");
     } catch (err) {
-      console.error(
-        "Error fetching profile:",
-        err,
-      );
-      Alert.alert(
-        "Error",
-        "Failed to load profile",
-      );
+      console.error("Error fetching profile:", err);
+      Alert.alert("Error", "Failed to load profile");
     } finally {
       setLoading(false);
     }
   };
 
   const validateForm = () => {
-    const e: Record<string, string> =
-      {};
+    const e: Record<string, string> = {};
     if (nisn && nisn.length < 16) {
       e.nisn = "NISN must be 16 digits";
     }
@@ -95,186 +90,97 @@ export default function ProfileCompletionScreen() {
     return Object.keys(e).length === 0;
   };
 
-  const handleSaveProfile =
-    async () => {
-      if (!validateForm() || !profile)
-        return;
+  const handleSaveProfile = async () => {
+    if (!validateForm() || !profile) return;
 
-      setSaving(true);
-      try {
-        await userService.updateProfile({
-          nisn: nisn || null,
-          city: city.trim(),
-        });
+    setSaving(true);
+    try {
+      await userService.updateProfile({
+        nisn: nisn || null,
+        city: city.trim(),
+      });
 
-        Alert.alert(
-          "Success",
-          "Profile updated!",
-        );
-        setProfile({
-          ...profile,
-          nisn,
-          city,
-        });
-      } catch (err) {
-        Alert.alert(
-          "Error",
-          "Failed to update profile",
-        );
-        console.error(err);
-      } finally {
-        setSaving(false);
-      }
-    };
+      Alert.alert("Success", "Profile updated!");
+      setProfile({ ...profile, nisn, city });
+    } catch (err) {
+      Alert.alert("Error", "Failed to update profile");
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
-      <View
-        style={[
-          styles.container,
-          { justifyContent: "center" },
-        ]}
-      >
-        <ActivityIndicator
-          size="large"
-          color={Brand.primary}
-        />
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={Brand.primary} />
       </View>
     );
   }
 
   if (!profile) {
     return (
-      <View
-        style={[
-          styles.container,
-          { justifyContent: "center" },
-        ]}
-      >
-        <Text style={styles.errorText}>
-          Failed to load profile
-        </Text>
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.errorText}>Failed to load profile</Text>
       </View>
     );
   }
 
   return (
     <ScrollView
+      style={styles.screen}
       contentContainerStyle={[
         styles.container,
-        {
-          paddingTop: insets.top + 20,
-          paddingBottom:
-            insets.bottom + 24,
-        },
+        { paddingTop: insets.top + Spacing.xl, paddingBottom: insets.bottom + Spacing["2xl"] },
       ]}
     >
       {/* Header */}
       <View style={styles.header}>
-        <View
-          style={styles.profilePhotoBox}
-        >
+        <View style={styles.profilePhotoBox}>
           {profile.photo_url ? (
-            <Image
-              source={{
-                uri: profile.photo_url,
-              }}
-              style={
-                styles.profilePhoto
-              }
-            />
+            <Image source={{ uri: profile.photo_url }} style={styles.profilePhoto} />
           ) : (
-            <Text
-              style={
-                styles.profilePhotoPlaceholder
-              }
-            >
-              {profile.full_name
-                ?.charAt(0)
-                .toUpperCase()}
+            <Text style={styles.profilePhotoPlaceholder}>
+              {profile.full_name?.charAt(0).toUpperCase()}
             </Text>
           )}
         </View>
-        <Text style={styles.title}>
-          Complete Your Profile
-        </Text>
+        <Text style={styles.title}>Complete Your Profile</Text>
         <Text style={styles.subtitle}>
-          Add more information so
-          organizers can verify your
-          identity.
+          Add more information so organizers can verify your identity.
         </Text>
       </View>
 
       {/* Current Info (Read-only) */}
       <View style={styles.section}>
-        <Text
-          style={styles.sectionTitle}
-        >
-          Current Information
-        </Text>
+        <Text style={styles.sectionTitle}>Current Information</Text>
 
         <View style={styles.infoBox}>
-          <Text
-            style={styles.infoLabel}
-          >
-            Name
-          </Text>
-          <Text
-            style={styles.infoValue}
-          >
-            {profile.full_name}
-          </Text>
+          <Text style={styles.infoLabel}>Name</Text>
+          <Text style={styles.infoValue}>{profile.full_name}</Text>
         </View>
 
         <View style={styles.infoBox}>
-          <Text
-            style={styles.infoLabel}
-          >
-            Phone
-          </Text>
-          <Text
-            style={styles.infoValue}
-          >
-            {profile.phone}
-          </Text>
+          <Text style={styles.infoLabel}>Phone</Text>
+          <Text style={styles.infoValue}>{profile.phone}</Text>
         </View>
 
         <View style={styles.infoBox}>
-          <Text
-            style={styles.infoLabel}
-          >
-            School
-          </Text>
-          <Text
-            style={styles.infoValue}
-          >
-            {profile.school}
-          </Text>
+          <Text style={styles.infoLabel}>School</Text>
+          <Text style={styles.infoValue}>{profile.school}</Text>
         </View>
 
         {profile.grade && (
           <View style={styles.infoBox}>
-            <Text
-              style={styles.infoLabel}
-            >
-              Grade
-            </Text>
-            <Text
-              style={styles.infoValue}
-            >
-              {profile.grade}
-            </Text>
+            <Text style={styles.infoLabel}>Grade</Text>
+            <Text style={styles.infoValue}>{profile.grade}</Text>
           </View>
         )}
       </View>
 
       {/* Editable Fields */}
       <View style={styles.section}>
-        <Text
-          style={styles.sectionTitle}
-        >
-          Additional Information
-        </Text>
+        <Text style={styles.sectionTitle}>Additional Information</Text>
 
         <AppInput
           label="NISN (National Student ID)"
@@ -298,38 +204,22 @@ export default function ProfileCompletionScreen() {
 
       {/* Note */}
       <View style={styles.noteBox}>
-        <Text style={styles.noteEmoji}>
-          ℹ️
-        </Text>
+        <Ionicons name="information-circle" size={18} color={Brand.primary} />
         <Text style={styles.noteText}>
-          This information helps
-          organizers verify your
-          eligibility for competitions.
-          You can update it anytime from
-          your profile.
+          This information helps organizers verify your eligibility for competitions. You can update it anytime from your profile.
         </Text>
       </View>
 
       {/* Save Button */}
       <TouchableOpacity
-        style={[
-          styles.primaryButton,
-          saving &&
-            styles.primaryButtonDisabled,
-        ]}
+        style={[styles.primaryButton, saving && styles.primaryButtonDisabled]}
         onPress={handleSaveProfile}
         disabled={saving}
       >
         {saving ? (
-          <ActivityIndicator color="white" />
+          <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text
-            style={
-              styles.primaryButtonText
-            }
-          >
-            Save Changes
-          </Text>
+          <Text style={styles.primaryButtonText}>Save Changes</Text>
         )}
       </TouchableOpacity>
     </ScrollView>
@@ -337,23 +227,24 @@ export default function ProfileCompletionScreen() {
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: Surface.background },
   container: {
     flexGrow: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: Spacing.xl,
   },
+  centered: { justifyContent: "center", alignItems: "center" },
   header: {
     alignItems: "center",
-    marginBottom: 32,
+    marginBottom: Spacing["3xl"],
   },
   profilePhotoBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor:
-      Brand.primary + "20",
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: Brand.primarySoft,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
     overflow: "hidden",
   },
   profilePhoto: {
@@ -362,85 +253,76 @@ const styles = StyleSheet.create({
   },
   profilePhotoPlaceholder: {
     fontSize: 32,
-    fontWeight: "700",
+    fontFamily: FontFamily.displayExtra,
     color: Brand.primary,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1a1a1a",
-    marginBottom: 8,
+    ...Type.displayMd,
+    marginBottom: Spacing.xs,
+    textAlign: "center",
   },
   subtitle: {
-    fontSize: 14,
-    color: "#666",
+    ...Type.body,
+    color: TextColor.secondary,
     textAlign: "center",
-    lineHeight: 20,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: Spacing["2xl"],
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1a1a1a",
-    marginBottom: 12,
+    ...Type.label,
+    textTransform: "uppercase",
+    marginBottom: Spacing.md,
   },
   infoBox: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    marginBottom: 12,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Surface.card,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Surface.border,
+    marginBottom: Spacing.md,
   },
   infoLabel: {
-    fontSize: 12,
-    color: "#999",
-    fontWeight: "500",
-    marginBottom: 4,
+    ...Type.caption,
+    marginBottom: Spacing.xs,
   },
   infoValue: {
-    fontSize: 16,
-    color: "#1a1a1a",
-    fontWeight: "600",
+    ...Type.title,
   },
   noteBox: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: "#e3f2fd",
-    borderRadius: 8,
-    marginBottom: 24,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Brand.primarySoft,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing["2xl"],
     flexDirection: "row",
-    gap: 12,
+    gap: Spacing.md,
     alignItems: "flex-start",
   },
-  noteEmoji: {
-    fontSize: 16,
-  },
   noteText: {
-    fontSize: 12,
-    color: "#1976d2",
-    lineHeight: 16,
+    ...Type.caption,
+    color: Brand.primary,
+    lineHeight: 17,
     flex: 1,
   },
   primaryButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: Radius.pill,
     backgroundColor: Brand.primary,
     alignItems: "center",
+    ...Shadow.playful,
   },
   primaryButtonDisabled: {
     opacity: 0.6,
   },
   primaryButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "white",
+    ...Type.button,
   },
   errorText: {
-    fontSize: 16,
-    color: "#d32f2f",
+    ...Type.body,
+    color: Brand.error,
     textAlign: "center",
   },
 });

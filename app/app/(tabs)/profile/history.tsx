@@ -1,6 +1,7 @@
 import { Button, Card, EmptyState, Pill, ScreenHeader } from "@/components/ui";
 import {
   Brand,
+  FontFamily,
   Radius,
   Shadow,
   Spacing,
@@ -8,6 +9,7 @@ import {
   Text as TextColor,
   Type,
 } from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
 import * as historicalService from "@/services/historical.service";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -179,7 +181,7 @@ export default function HistoryScreen() {
           <ActivityIndicator style={{ marginTop: Spacing["3xl"] }} color={Brand.primary} />
         ) : claimed.length === 0 ? (
           <EmptyState
-            emoji="🏆"
+            icon={<Ionicons name="trophy-outline" size={44} color={Brand.primary} />}
             title="No history yet"
             message="Your past competition records will appear here after auto-linking, or search in the Find & Claim tab."
           />
@@ -235,7 +237,11 @@ export default function HistoryScreen() {
 
           {hasSearched && !isSearching && searchResults.length === 0 ? (
             <View style={{ marginTop: Spacing["2xl"] }}>
-              <EmptyState emoji="🔍" title="Not found" message="Try a different name spelling or leave school/competition blank." />
+              <EmptyState
+                icon={<Ionicons name="search-outline" size={44} color={Brand.primary} />}
+                title="Not found"
+                message="Try a different name spelling or leave school/competition blank."
+              />
             </View>
           ) : null}
 
@@ -282,6 +288,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md + 2,
     fontSize: 15,
+    fontFamily: FontFamily.bodyRegular,
     color: TextColor.primary,
     ...Shadow.sm,
   },

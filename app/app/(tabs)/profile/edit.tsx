@@ -2,6 +2,7 @@ import { AppInput } from "@/components/common/AppInput";
 import { ScreenHeader } from "@/components/ui";
 import {
   Brand,
+  FontFamily,
   Radius,
   Shadow,
   Spacing,
@@ -9,6 +10,7 @@ import {
   Text as TextColor,
   Type,
 } from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
 import { INTEREST_CATEGORIES } from "@/constants/interests";
 import { useUser } from "@/context/AuthContext";
 import * as usersService from "@/services/users.service";
@@ -268,7 +270,7 @@ export default function ProfileEditScreen() {
               </View>
             )}
             <View style={styles.photoBadge}>
-              <Text style={styles.photoBadgeText}>📷</Text>
+              <Ionicons name="camera" size={16} color="#FFFFFF" />
             </View>
           </TouchableOpacity>
           <Text style={styles.photoHint}>Tap to change photo</Text>
@@ -434,7 +436,7 @@ const styles = StyleSheet.create({
     borderColor: Surface.card,
     ...Shadow.md,
   },
-  photoInitial: { fontSize: 44, fontWeight: "800", color: Brand.primary },
+  photoInitial: { fontSize: 44, fontFamily: FontFamily.displayExtra, color: Brand.primary },
   photoLoading: {
     position: "absolute",
     top: 0, left: 0, right: 0, bottom: 0,
@@ -455,7 +457,6 @@ const styles = StyleSheet.create({
     borderColor: Surface.background,
     ...Shadow.sm,
   },
-  photoBadgeText: { fontSize: 16 },
   photoHint: { ...Type.caption, marginTop: Spacing.md },
 
   section: {
