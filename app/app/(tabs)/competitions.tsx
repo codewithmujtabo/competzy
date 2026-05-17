@@ -2,6 +2,7 @@ import {
   Brand,
   CategoryAccent,
   CategoryBg,
+  FontFamily,
   GradeBg,
   GradeText,
   Radius,
@@ -638,7 +639,7 @@ export default function DiscoverScreen() {
                         justifyContent: "center",
                       }}
                     >
-                      <Text style={{ ...Type.label, color: isActive ? "#FFFFFF" : "#FFFFFF", fontSize: 12 }}>
+                      <Text style={{ ...Type.label, color: "#FFFFFF", fontSize: 12 }}>
                         {cat.charAt(0).toUpperCase()}
                       </Text>
                     </View>
@@ -799,7 +800,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: TextColor.primary,
-    fontWeight: "500",
+    fontFamily: FontFamily.bodyMedium,
   },
   searchClear: {
     width: 28,

@@ -203,8 +203,6 @@ export default function CompetitionDetailPage() {
       <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={[styles.hero, { backgroundColor: accentBg }]}>
-          <View style={styles.heroBlobA} />
-          <View style={styles.heroBlobB} />
           <SubjectCircle label={comp.name} size={96} />
           <Text style={[Type.h1, { textAlign: "center", marginTop: Spacing.lg }]} numberOfLines={3}>
             {comp.name}
@@ -438,28 +436,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomLeftRadius: Radius["4xl"],
     borderBottomRightRadius: Radius["4xl"],
-    overflow: "hidden",
-    position: "relative",
-  },
-  heroBlobA: {
-    position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "#FFFFFF",
-    opacity: 0.45,
-    top: -90,
-    right: -60,
-  },
-  heroBlobB: {
-    position: "absolute",
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: Brand.sunshine,
-    opacity: 0.18,
-    bottom: -60,
-    left: -30,
   },
   heroPills: {
     flexDirection: "row",
