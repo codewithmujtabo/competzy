@@ -102,3 +102,18 @@ export async function getDetail(id: string): Promise<RegistrationDetail> {
   const data = await apiRequest<{ registration: RegistrationDetail }>(`/registrations/${id}`);
   return data.registration;
 }
+
+// Affiliated-competition access — the issued login + external site URL.
+export interface AffiliatedAccess {
+  externalUrl: string | null;
+  credential: {
+    registrationId: string;
+    username: string;
+    password: string;
+    issuedAt: string;
+  } | null;
+}
+
+export async function getCredentials(id: string): Promise<AffiliatedAccess> {
+  return apiRequest<AffiliatedAccess>(`/registrations/${id}/credentials`);
+}
