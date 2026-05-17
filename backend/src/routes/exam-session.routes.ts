@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
+import multer from "multer";
 import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
+import { storeFile } from "../services/storage.service";
 import {
   autoGradeMcPeriods,
   recomputeSessionRollups,
@@ -18,6 +20,15 @@ import {
 
 const router = Router();
 router.use(authMiddleware);
+
+// Webcam snapshots — small JPEGs captured from the browser canvas.
+const webcamUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
+  fileFilter: (_req, file, cb) => {
+    cb(null, file.mimetype === "image/jpeg" || file.mimetype === "image/jpg");
+  },
+});
 
 // Registration statuses that clear a student to sit a competition's exam.
 const CLEARED = ["registered", "approved", "paid", "completed"];
@@ -407,5 +418,70 @@ router.post("/sessions/:id/submit", async (req: Request, res: Response) => {
     res.status(500).json({ message: "Failed to submit the exam" });
   }
 });
+
+// ── Webcam proctoring (Wave 8 Phase 4) ────────────────────────────────────
+// Best-effort: the player reports camera availability once, and uploads a
+// snapshot every so often while the camera is granted.
+
+// PUT /api/sessions/:id/camera-status — record whether the camera was granted.
+router.put("/sessions/:id/camera-status", async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const available = !!req.body?.available;
+    const r = await pool.query(
+      `UPDATE sessions SET camera_available = $1, updated_at = now()
+        WHERE id = $2 AND user_id = $3 AND deleted_at IS NULL
+      RETURNING id`,
+      [available, id, req.userId]
+    );
+    if (r.rows.length === 0) {
+      res.status(404).json({ message: "Session not found" });
+      return;
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Set camera status error:", err);
+    res.status(500).json({ message: "Failed to record camera status" });
+  }
+});
+
+// POST /api/sessions/:id/webcams — store one webcam snapshot for the attempt.
+router.post(
+  "/sessions/:id/webcams",
+  webcamUpload.single("image"),
+  async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.id);
+      const s = await pool.query(
+        `SELECT comp_id, finished_at FROM sessions
+          WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+        [id, req.userId]
+      );
+      if (s.rows.length === 0) {
+        res.status(404).json({ message: "Session not found" });
+        return;
+      }
+      if (s.rows[0].finished_at) {
+        res.status(409).json({ message: "The exam has already been submitted" });
+        return;
+      }
+      if (!req.file) {
+        res.status(400).json({ message: "No snapshot uploaded" });
+        return;
+      }
+      const filename = `webcam-${id}-${Date.now()}.jpg`;
+      const imagePath = await storeFile(req.userId!, req.file.buffer, filename, "image/jpeg");
+      const inserted = await pool.query(
+        `INSERT INTO webcams (comp_id, session_id, image_path)
+         VALUES ($1,$2,$3) RETURNING id`,
+        [s.rows[0].comp_id, id, imagePath]
+      );
+      res.status(201).json({ id: inserted.rows[0].id });
+    } catch (err) {
+      console.error("Upload webcam snapshot error:", err);
+      res.status(500).json({ message: "Failed to store the snapshot" });
+    }
+  }
+);
 
 export default router;
