@@ -12,8 +12,10 @@ import { hasCompAccess } from "../services/comp-access.service";
 // alongside the question bank.
 
 const router = Router();
-router.use(authMiddleware);
-router.use(requireRole("admin", "organizer"));
+// Path-scoped (this router is mounted at bare `/api`) so the operator gate does
+// not 403 unrelated fall-through traffic — only `/question-bank/exams/*`.
+router.use("/question-bank/exams", authMiddleware);
+router.use("/question-bank/exams", requireRole("admin", "organizer"));
 
 const EXAM_COLS = `id, comp_id, name, code, year, date, grades, choice, short,
   choice_count, short_count, start_time, end_time, minutes, correct_score,

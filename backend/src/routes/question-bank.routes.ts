@@ -16,8 +16,11 @@ import { hasCompAccess } from "../services/comp-access.service";
 //   submit / approve / send-back transitions + proofreads
 
 const router = Router();
-router.use(authMiddleware);
-router.use(requireRole("admin", "organizer"));
+// Path-scoped so this router, mounted at bare `/api`, does not 403 unrelated
+// fall-through traffic (e.g. the student exam routes) — only `/question-bank/*`
+// requests are gated here.
+router.use("/question-bank", authMiddleware);
+router.use("/question-bank", requireRole("admin", "organizer"));
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 // `hasCompAccess` (native-competition + ownership gate) lives in
