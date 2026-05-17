@@ -305,6 +305,7 @@ export default function MyCompetitionsScreen() {
                   color={active ? Brand.primary : TextColor.secondary}
                 />
                 <Text
+                  numberOfLines={1}
                   style={{
                     ...Type.label,
                     color: active ? Brand.primary : TextColor.secondary,
@@ -424,9 +425,14 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   tabBtn: {
-    flex: 1,
+    // Size to content (a third each can't fit "Applications" + its badge);
+    // flexGrow shares the leftover width so the row still fills the bar.
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: "auto",
     minHeight: 44,
     borderRadius: Radius.md,
+    paddingHorizontal: Spacing.sm,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
