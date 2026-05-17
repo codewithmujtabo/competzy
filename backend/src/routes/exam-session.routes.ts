@@ -8,6 +8,7 @@ import {
   recomputeSessionRollups,
   sessionHasPendingGrading,
 } from "../services/exam-grading.service";
+import { issueCertificateIfEligible } from "../services/certificate.service";
 
 // Online exam attempt API (EMC Wave 7 Phase 3). Student-facing — any
 // authenticated user; every session is owned by `req.userId` and each route
@@ -411,6 +412,21 @@ router.post("/sessions/:id/submit", async (req: Request, res: Response) => {
       throw txErr;
     } finally {
       client.release();
+    }
+    // Auto-issue a participation certificate (best-effort — never blocks submit).
+    try {
+      const meta = await pool.query(
+        `SELECT comp_id, user_id FROM sessions WHERE id = $1`,
+        [id]
+      );
+      if (meta.rows[0]) {
+        await issueCertificateIfEligible(pool, {
+          compId: meta.rows[0].comp_id,
+          userId: meta.rows[0].user_id,
+        });
+      }
+    } catch (certErr) {
+      console.error("Certificate auto-issue (session submit) failed:", certErr);
     }
     res.json({ finished: true, awaitingGrading: await sessionHasPendingGrading(pool, id) });
   } catch (err) {

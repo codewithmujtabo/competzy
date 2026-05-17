@@ -6,6 +6,7 @@ import { audit } from "../middleware/audit";
 import { liveFilter, compFilter, softDelete } from "../db/query-helpers";
 import { hasCompAccess } from "../services/comp-access.service";
 import { recomputeSessionRollups, recomputePaperRollups } from "../services/exam-grading.service";
+import { issueCertificateIfEligible } from "../services/certificate.service";
 import { getSignedUrl } from "../services/storage.service";
 
 // Exam blueprint + builder + grading API (EMC Wave 7). Operator-facing — admin
@@ -834,7 +835,7 @@ router.put(
         return;
       }
       const pe = await pool.query(
-        "SELECT exam_id, grade FROM paper_exams WHERE id = $1",
+        "SELECT exam_id, grade, user_id, comp_id FROM paper_exams WHERE id = $1",
         [id]
       );
       const examId = pe.rows[0].exam_id as string;
@@ -894,6 +895,15 @@ router.put(
       }
       await recomputePaperRollups(client, id);
       await client.query("COMMIT");
+      // Auto-issue a participation certificate (best-effort — never blocks the save).
+      try {
+        await issueCertificateIfEligible(pool, {
+          compId: pe.rows[0].comp_id,
+          userId: pe.rows[0].user_id,
+        });
+      } catch (certErr) {
+        console.error("Certificate auto-issue (paper exam) failed:", certErr);
+      }
       res.json(await loadPaperExamDetail(id));
     } catch (err) {
       await client.query("ROLLBACK");
