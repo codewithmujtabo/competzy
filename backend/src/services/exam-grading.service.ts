@@ -12,7 +12,7 @@ type DB = { query: (text: string, params?: unknown[]) => Promise<{ rows: any[] }
 // The map may be keyed numerically ("9") or by school level ("SMP"); try every
 // token the student's grade reconciles to so a level-keyed map still scores a
 // numeric-grade student (the alternative is a correct answer worth 0 points).
-function scoreFor(matrix: unknown, grade: string | null): number {
+export function scoreFor(matrix: unknown, grade: string | null): number {
   if (!matrix || typeof matrix !== "object" || !grade) return 0;
   const m = matrix as Record<string, unknown>;
   for (const key of gradeTokens(grade)) {
