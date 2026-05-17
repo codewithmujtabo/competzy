@@ -13,6 +13,7 @@ import {
   Library,
   Loader2,
   PenLine,
+  Video,
 } from 'lucide-react';
 import { QuestionBankAuthProvider, useQuestionBankAuth } from '@/lib/auth/question-bank-context';
 import { QuestionBankProvider } from '@/lib/question-bank/context';
@@ -58,6 +59,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
         { label: 'Exams', href: '/question-bank/exams', icon: ClipboardList },
         { label: 'Grading', href: '/question-bank/grading', icon: PenLine },
         { label: 'Paper Exams', href: '/question-bank/paper', icon: FileSpreadsheet },
+        { label: 'Proctoring', href: '/question-bank/proctoring', icon: Video },
       ],
     },
     {
