@@ -3,6 +3,26 @@
 **Instructions for Google Docs:** Copy each section below into a separate Tab in your Google Doc (General / Your Tasks / Teammate Tasks). In the task tables, edit the Status column as you work — change "☐ To Do" → "⏳ In Progress" → "✅ Done".
 
 ---
+
+> ⚠ **This document is out of date for Sprints 14–18.**
+> The canonical engineering source of truth is `CLAUDE.md` at the repo root.
+> The CRITICAL / HIGH / MEDIUM / LOW task lists below reflect the May 2 plan; the
+> current state (as of May 12, 2026) is:
+>
+> - Sprints 0 through 18 are complete locally; backend, mobile, and web for the
+>   July 1 soft launch are shipped.
+> - Manual rollout still pending: MinIO Docker on VPS, run migrations on VPS,
+>   rename DB on VPS, DNS + SSL, Midtrans production keys, EAS init, App Store /
+>   Play Store submission, api.co.id production key, legal review of
+>   `/privacy` and `/terms`.
+> - For full sprint-by-sprint detail (including Sprints 14 Audit & Compliance,
+>   15 Launch 1 Polish, 16 School Portal Self-Signup, and 18 English UI Pass),
+>   see the "Sprint Plan (Full Roadmap)" section in `CLAUDE.md`.
+>
+> Keep this file for stakeholder context; treat the lists below as the original
+> plan, not as the live task board.
+
+---
 ---
 
 # TAB 1 — GENERAL: Project Overview

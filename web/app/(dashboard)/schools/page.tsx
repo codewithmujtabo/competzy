@@ -1,123 +1,250 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import { Plus, Search, X } from 'lucide-react';
 import { schoolsApi } from '@/lib/api';
 import type { School } from '@/types';
-import { PageHeader, Spinner, Toast, Pager } from '@/components/ui';
+import { PageHeader } from '@/components/shell/page-header';
+import { Pager } from '@/components/shell/pager';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
-export default function Schools() {
-  const [schools, setSchools]     = useState<School[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [total, setTotal]         = useState(0);
-  const [page, setPage]           = useState(1);
-  const [search, setSearch]       = useState('');
+const LIMIT = 20;
+const FORM_DEFAULTS = { npsn: '', name: '', city: '', province: '', address: '' };
+
+export default function SchoolsPage() {
+  const [schools, setSchools] = useState<School[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
   const [searchVal, setSearchVal] = useState('');
-  const [showAdd, setShowAdd]     = useState(false);
-  const [msg, setMsg]             = useState<{ ok: boolean; text: string } | null>(null);
-  const [saving, setSaving]       = useState(false);
-  const [form, setForm]           = useState({ npsn: '', name: '', city: '', province: '', address: '' });
-  const LIMIT = 20;
+  const [showAdd, setShowAdd] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(FORM_DEFAULTS);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const r = await schoolsApi.list({ page, limit: LIMIT, search: search || undefined });
-      setSchools(r?.schools ?? []); setTotal(r?.pagination?.total ?? 0);
-    } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
-    finally { setLoading(false); }
-  };
+      setSchools(r?.schools ?? []);
+      setTotal(r?.pagination?.total ?? 0);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to load schools');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, search]);
 
-  useEffect(() => { load(); }, [page, search]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const save = async () => {
     if (!form.npsn || !form.name) return;
     setSaving(true);
     try {
       await schoolsApi.create(form);
-      setMsg({ ok: true, text: 'School added!' });
+      toast.success('School added.');
       setShowAdd(false);
-      setForm({ npsn: '', name: '', city: '', province: '', address: '' });
+      setForm(FORM_DEFAULTS);
       load();
-    } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
-    finally { setSaving(false); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to add school');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 1060 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24 }}>
-        <PageHeader sub="Management" title="Schools" count={total} />
-        <button className="btn btn-primary" onClick={() => setShowAdd(v => !v)} style={{ marginBottom: 28 }}>
-          {showAdd ? '✕ Cancel' : '+ Add School'}
-        </button>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        eyebrow="Management"
+        title="Schools"
+        subtitle="The directory of schools registered on Competzy."
+        actions={
+          <Button
+            onClick={() => {
+              setForm(FORM_DEFAULTS);
+              setShowAdd(true);
+            }}
+          >
+            <Plus className="size-4" />
+            Add school
+          </Button>
+        }
+      />
 
-      {msg && <Toast ok={msg.ok} msg={msg.text} />}
-
-      {showAdd && (
-        <div className="card fu" style={{ marginBottom: 20 }}>
-          <p className="label" style={{ marginBottom: 18 }}>New School</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14, marginBottom: 14 }}>
-            <div>
-              <label className="label">NPSN *</label>
-              <input className="input" value={form.npsn} onChange={e => setForm(f => ({ ...f, npsn: e.target.value }))} placeholder="12345678" />
-            </div>
-            <div>
-              <label className="label">Name *</label>
-              <input className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="SDN 001 Jakarta" />
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-            <div>
-              <label className="label">City</label>
-              <input className="input" value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Jakarta" />
-            </div>
-            <div>
-              <label className="label">Province</label>
-              <input className="input" value={form.province} onChange={e => setForm(f => ({ ...f, province: e.target.value }))} placeholder="DKI Jakarta" />
-            </div>
-          </div>
-          <div style={{ marginBottom: 18 }}>
-            <label className="label">Address</label>
-            <input className="input" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Jl. Sudirman No. 1" />
-          </div>
-          <button className="btn btn-primary" onClick={save} disabled={saving || !form.npsn || !form.name}>
-            {saving ? <Spinner /> : '+'} Save
-          </button>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setSearch(searchVal.trim());
+          setPage(1);
+        }}
+        className="flex gap-2"
+      >
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="w-72 pl-9"
+            placeholder="Search name, city, NPSN…"
+            value={searchVal}
+            onChange={(e) => setSearchVal(e.target.value)}
+          />
         </div>
-      )}
-
-      <form onSubmit={e => { e.preventDefault(); setSearch(searchVal); setPage(1); }} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <input className="input" style={{ maxWidth: 320 }} placeholder="Search name, city, NPSN…" value={searchVal} onChange={e => setSearchVal(e.target.value)} />
-        <button className="btn btn-ghost" type="submit">Search</button>
-        {search && <button className="btn btn-ghost" type="button" onClick={() => { setSearch(''); setSearchVal(''); setPage(1); }}>Clear</button>}
+        <Button type="submit" variant="outline">
+          Search
+        </Button>
+        {search && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setSearch('');
+              setSearchVal('');
+              setPage(1);
+            }}
+          >
+            <X className="size-4" />
+            Clear
+          </Button>
+        )}
       </form>
 
-      <div className="card fu" style={{ padding: 0, overflow: 'hidden', animationDelay: '.05s' }}>
-        <div style={{ overflowX: 'auto' }}>
-          {loading
-            ? <div style={{ padding: 48, textAlign: 'center' }}><Spinner /></div>
-            : schools.length === 0
-              ? <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-3)', fontFamily: 'var(--ff-mono)', fontSize: 12 }}>No schools found</div>
-              : <table>
-                  <thead>
-                    <tr><th>NPSN</th><th>Name</th><th>City</th><th>Province</th><th>Added</th></tr>
-                  </thead>
-                  <tbody>
-                    {schools.map(s => (
-                      <tr key={s.id}>
-                        <td><span style={{ fontFamily: 'var(--ff-mono)', fontSize: 12 }}>{s.npsn}</span></td>
-                        <td style={{ color: 'var(--text-1)', fontWeight: 500 }}>{s.name}</td>
-                        <td>{s.city || '—'}</td>
-                        <td>{s.province || '—'}</td>
-                        <td style={{ fontFamily: 'var(--ff-mono)', fontSize: 11 }}>{s.created_at ? new Date(s.created_at).toLocaleDateString() : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-          }
+      <Card className="overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>NPSN</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>City</TableHead>
+                <TableHead>Province</TableHead>
+                <TableHead>Added</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={5}>
+                      <Skeleton className="h-8 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : schools.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-32 text-center text-sm text-muted-foreground">
+                    No schools found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                schools.map((s) => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-mono text-[12px] text-muted-foreground">{s.npsn}</TableCell>
+                    <TableCell className="font-medium text-foreground">{s.name}</TableCell>
+                    <TableCell>{s.city || '—'}</TableCell>
+                    <TableCell>{s.province || '—'}</TableCell>
+                    <TableCell className="font-mono text-[11px] text-muted-foreground">
+                      {s.created_at
+                        ? new Date(s.created_at).toLocaleDateString('en-US', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                        : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
         <Pager page={page} total={total} limit={LIMIT} onChange={setPage} />
-      </div>
+      </Card>
+
+      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add school</DialogTitle>
+            <DialogDescription>Manually add a school to the Competzy directory.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label className="mb-1.5 text-xs text-muted-foreground">
+                NPSN <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={form.npsn}
+                onChange={(e) => setForm((f) => ({ ...f, npsn: e.target.value }))}
+                placeholder="12345678"
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 text-xs text-muted-foreground">
+                Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="SDN 001 Jakarta"
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 text-xs text-muted-foreground">City</Label>
+              <Input
+                value={form.city}
+                onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                placeholder="Jakarta"
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 text-xs text-muted-foreground">Province</Label>
+              <Input
+                value={form.province}
+                onChange={(e) => setForm((f) => ({ ...f, province: e.target.value }))}
+                placeholder="DKI Jakarta"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="mb-1.5 text-xs text-muted-foreground">Address</Label>
+              <Input
+                value={form.address}
+                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                placeholder="Jl. Sudirman No. 1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAdd(false)}>
+              Cancel
+            </Button>
+            <Button onClick={save} disabled={saving || !form.npsn || !form.name}>
+              {saving ? 'Saving…' : 'Add school'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

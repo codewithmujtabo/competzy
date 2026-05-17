@@ -50,9 +50,16 @@ backend/uploads/**
 **/*.pdf
 app/PRD/
 
-# Legacy folders (kept for reference, not tracked)
-web/_src-vite-legacy/
-web/_server-legacy/
-web/_index-vite-legacy.html
-web/_vite.config-legacy.ts
 *.tsbuildinfo
+
+# graphify knowledge graph: keep public artifacts, ignore PII conversions + regenerable cache
+graphify-out/converted/
+graphify-out/cache/
+
+# Claude Code session state
+.claude/
+
+# graphify local-machine state (interpreter path, scan root)
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+graphify-out/.rebuild.lock

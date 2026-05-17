@@ -37,4 +37,7 @@ export const env = {
   MINIO_SECRET_KEY: process.env.MINIO_SECRET_KEY || "",
   MINIO_BUCKET: process.env.MINIO_BUCKET || "competzy",
   MINIO_PUBLIC_URL: process.env.MINIO_PUBLIC_URL || "",   // public base URL for object URLs
+  // Base URL of the Next.js web app (for password-reset email links and similar).
+  // Falls back to the request Origin header at runtime when this is unset.
+  APP_URL: process.env.APP_URL || "http://localhost:3001",
 };

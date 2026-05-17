@@ -51,7 +51,7 @@ const competitions = [
   {
     id: "comp-003",
     name: "Kompetisi Debat Nasional SMA",
-    organizer_name: "Eduversal Foundation",
+    organizer_name: "Competzy Foundation",
     category: "Debate",
     grade_level: "SMA",
     fee: 150000,
@@ -99,7 +99,7 @@ const competitions = [
   {
     id: "comp-006",
     name: "Story Telling & Public Speaking SD",
-    organizer_name: "Eduversal Foundation",
+    organizer_name: "Competzy Foundation",
     category: "Language",
     grade_level: "SD",
     fee: 0,
@@ -163,7 +163,7 @@ const competitions = [
   {
     id: "comp-010",
     name: "National English Olympiad (NEO)",
-    organizer_name: "Eduversal Foundation",
+    organizer_name: "Competzy Foundation",
     category: "Language",
     grade_level: "SMA",
     fee: 125000,

@@ -1,5 +1,13 @@
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Brand } from "@/constants/theme";
+import { Button, Card, Pill, ScreenHeader } from "@/components/ui";
+import {
+  Brand,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
 import * as registrationsService from "@/services/registrations.service";
 import * as paymentsService from "@/services/payments.service";
 import { useQuery } from "@tanstack/react-query";
@@ -9,7 +17,6 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,7 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function formatDate(date?: string | null) {
   if (!date) return "-";
-  return new Date(date).toLocaleString("id-ID", {
+  return new Date(date).toLocaleString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -50,7 +57,7 @@ export default function MyRegistrationDetailsScreen() {
       const { redirectUrl } = await paymentsService.getPostPaymentRedirectUrl(id);
       await Linking.openURL(redirectUrl);
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to get redirect link.");
+      Alert.alert("Error", err.message || "Failed to get the link.");
     } finally {
       setRedirectLoading(false);
     }
@@ -67,275 +74,187 @@ export default function MyRegistrationDetailsScreen() {
   if (isError || !registration || !competition) {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
-        <Text style={styles.errorTitle}>Failed to load details</Text>
-        <Pressable style={styles.primaryButton} onPress={() => refetch()}>
-          <Text style={styles.primaryButtonText}>Retry</Text>
-        </Pressable>
+        <Text style={[Type.h2, { marginBottom: Spacing.lg }]}>Failed to load details</Text>
+        <Button label="Try again" onPress={() => refetch()} />
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.replace("/(tabs)/my-competitions")}>
-          <IconSymbol name="chevron.left" size={24} color="#0F172A" />
-        </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          Details
-        </Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <ScreenHeader
+        title="Registration Details"
+        onBack={() => router.replace("/(tabs)/my-competitions")}
+      />
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.heroCard}>
-          <Text style={styles.heroTitle}>{competition.name}</Text>
-          <Text style={styles.heroMeta}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Hero */}
+        <View style={styles.hero}>
+          <View style={styles.heroBlobYellow} />
+          <View style={styles.heroBlobCoral} />
+          <Text style={[Type.label, { color: "rgba(255,255,255,0.85)", letterSpacing: 0.5 }]}>
             {competition.organizerName} • {competition.category}
           </Text>
-          <View style={styles.approvedBadge}>
-            <Text style={styles.approvedBadgeText}>
-              {registration.status === "completed" ? "Completed" : "Approved / Joined"}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What You Need To Know</Text>
-          <Text style={styles.sectionBody}>
-            {competition.participantInstructions?.trim() ||
-              "Admin has not published detailed participant instructions yet. Check back later or watch notifications."}
+          <Text style={[Type.h1, { color: "#FFFFFF", marginTop: Spacing.sm }]}>
+            {competition.name}
           </Text>
+          <View style={{ marginTop: Spacing.lg, flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm }}>
+            <Pill
+              label={registration.status === "completed" ? "✓ Completed" : "✓ Approved / Joined"}
+              tone="success"
+            />
+            {registration.registrationNumber ? (
+              <Pill label={registration.registrationNumber} tone="brand" />
+            ) : null}
+          </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Important Details</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Competition Date</Text>
-            <Text style={styles.infoValue}>{formatDate(competition.competitionDate)}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Registration Closed</Text>
-            <Text style={styles.infoValue}>{formatDate(competition.regCloseDate)}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Website</Text>
-            <Text style={styles.infoValue}>
-              {competition.websiteUrl?.trim() ? competition.websiteUrl : "-"}
-            </Text>
+        <Card variant="playful">
+          <Text style={Type.h3}>What You Need To Know</Text>
+          <Text style={[Type.body, { marginTop: Spacing.md }]}>
+            {competition.participantInstructions?.trim() ||
+              "Admin has not published participant instructions yet. Check back later or watch notifications."}
+          </Text>
+        </Card>
+
+        <Card variant="playful">
+          <Text style={Type.h3}>Important Details</Text>
+          <View style={{ marginTop: Spacing.md, gap: Spacing.md }}>
+            <Row label="Competition Date" value={formatDate(competition.competitionDate)} />
+            <Row label="Registration Closed" value={formatDate(competition.regCloseDate)} />
+            <Row label="Website" value={competition.websiteUrl?.trim() || "-"} />
           </View>
           {competition.websiteUrl?.trim() ? (
-            <Pressable
-              style={styles.secondaryButton}
-              onPress={() => Linking.openURL(competition.websiteUrl!)}
-            >
-              <Text style={styles.secondaryButtonText}>Open Website</Text>
-            </Pressable>
+            <View style={{ marginTop: Spacing.lg, alignSelf: "flex-start" }}>
+              <Button label="Open Website" variant="secondary" onPress={() => Linking.openURL(competition.websiteUrl!)} />
+            </View>
           ) : null}
-        </View>
+        </Card>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Rounds & Schedule</Text>
+        <Card variant="playful">
+          <Text style={Type.h3}>Round & Schedule</Text>
           {competition.rounds.length > 0 ? (
-            competition.rounds.map((round) => (
-              <View key={round.id} style={styles.roundCard}>
-                <Text style={styles.roundTitle}>
-                  {round.roundOrder ? `Round ${round.roundOrder}` : round.roundName}
-                </Text>
-                <Text style={styles.roundMeta}>
-                  {round.roundName} • {round.roundType}
-                </Text>
-                <Text style={styles.roundDetail}>Starts: {formatDate(round.startDate)}</Text>
-                <Text style={styles.roundDetail}>Exam: {formatDate(round.examDate)}</Text>
-                <Text style={styles.roundDetail}>
-                  Location / Platform: {round.location?.trim() || "-"}
-                </Text>
-              </View>
-            ))
+            <View style={{ marginTop: Spacing.md, gap: Spacing.md }}>
+              {competition.rounds.map((round) => (
+                <View key={round.id} style={styles.roundCard}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <Text style={Type.title}>
+                      {round.roundOrder ? `Round ${round.roundOrder}` : round.roundName}
+                    </Text>
+                    <Pill label={round.roundType} tone="brand" size="sm" />
+                  </View>
+                  <Text style={[Type.bodySm, { marginTop: Spacing.sm }]}>{round.roundName}</Text>
+                  <View style={{ marginTop: Spacing.md, gap: Spacing.sm }}>
+                    <Row label="Starts" value={formatDate(round.startDate)} />
+                    <Row label="Exam" value={formatDate(round.examDate)} />
+                    <Row label="Location/Platform" value={round.location?.trim() || "-"} />
+                  </View>
+                </View>
+              ))}
+            </View>
           ) : (
-            <Text style={styles.sectionBody}>
+            <Text style={[Type.body, { marginTop: Spacing.md, color: TextColor.secondary }]}>
               Round-by-round schedule has not been published yet.
             </Text>
           )}
-        </View>
+        </Card>
 
-        {registration.profileSnapshot && Object.keys(registration.profileSnapshot).length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Profile at Registration</Text>
-            <Text style={styles.sectionBody}>
-              Your profile snapshot captured at the time of registration.
+        {registration.profileSnapshot && Object.keys(registration.profileSnapshot).length > 0 ? (
+          <Card variant="playful">
+            <Text style={Type.h3}>Profile at Registration</Text>
+            <Text style={[Type.bodySm, { marginTop: Spacing.sm }]}>
+              Your profile snapshot captured at registration.
             </Text>
-            {Object.entries(registration.profileSnapshot).map(([key, value]) =>
-              value ? (
-                <View key={key} style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>
-                    {key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase())}
-                  </Text>
-                  <Text style={styles.infoValue}>{String(value)}</Text>
-                </View>
-              ) : null
-            )}
-          </View>
-        )}
+            <View style={{ marginTop: Spacing.md, gap: Spacing.md }}>
+              {Object.entries(registration.profileSnapshot).map(([key, value]) =>
+                value ? (
+                  <Row
+                    key={key}
+                    label={key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase())}
+                    value={String(value)}
+                  />
+                ) : null
+              )}
+            </View>
+          </Card>
+        ) : null}
 
-        {competition.post_payment_redirect_url && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Competition Platform</Text>
-            <Text style={styles.sectionBody}>
-              Access the organizer's competition platform with your registration token.
+        {competition.post_payment_redirect_url ? (
+          <Card variant="tinted" tint={Brand.primarySoft}>
+            <Text style={Type.h3}>Competition Platform</Text>
+            <Text style={[Type.body, { marginTop: Spacing.sm }]}>
+              Access the organizer competition platform with your registration token.
             </Text>
-            <Pressable
-              style={[styles.primaryButton, redirectLoading && { opacity: 0.6 }]}
-              onPress={handleOpenRedirect}
-              disabled={redirectLoading}
-            >
-              <Text style={styles.primaryButtonText}>
-                {redirectLoading ? "Opening..." : "Open Competition Platform"}
-              </Text>
-            </Pressable>
-          </View>
-        )}
+            <View style={{ marginTop: Spacing.lg }}>
+              <Button
+                label={redirectLoading ? "Opening..." : "Open Competition Platform"}
+                loading={redirectLoading}
+                onPress={handleOpenRedirect}
+              />
+            </View>
+          </Card>
+        ) : null}
       </ScrollView>
     </View>
   );
 }
 
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: Spacing.md }}>
+      <Text style={[Type.bodySm, { color: TextColor.secondary, flex: 1 }]}>{label}</Text>
+      <Text style={[Type.title, { textAlign: "right", flex: 1.4 }]} numberOfLines={2}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: Surface.background },
   center: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: Surface.background,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#0F172A",
+    paddingHorizontal: Spacing["2xl"],
   },
   content: {
-    padding: 16,
-    paddingBottom: 28,
-    gap: 16,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing["3xl"],
+    gap: Spacing.lg,
   },
-  heroCard: {
-    backgroundColor: "#111827",
-    borderRadius: 24,
-    padding: 20,
+  hero: {
+    backgroundColor: Brand.primary,
+    borderRadius: Radius["3xl"],
+    padding: Spacing["2xl"],
+    overflow: "hidden",
+    position: "relative",
+    ...Shadow.playful,
   },
-  heroTitle: {
-    color: "#FFFFFF",
-    fontSize: 22,
-    fontWeight: "800",
-    lineHeight: 28,
+  heroBlobYellow: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: Brand.sunshine,
+    opacity: 0.22,
+    top: -50,
+    right: -40,
   },
-  heroMeta: {
-    marginTop: 8,
-    color: "#CBD5E1",
-  },
-  approvedBadge: {
-    marginTop: 16,
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    backgroundColor: "#D1FAE5",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  approvedBadgeText: {
-    color: "#065F46",
-    fontWeight: "800",
-    fontSize: 12,
-  },
-  section: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginBottom: 12,
-  },
-  sectionBody: {
-    color: "#475569",
-    lineHeight: 22,
-  },
-  infoRow: {
-    marginBottom: 10,
-  },
-  infoLabel: {
-    color: "#64748B",
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  infoValue: {
-    color: "#0F172A",
-    fontWeight: "600",
-    lineHeight: 20,
+  heroBlobCoral: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: Brand.coral,
+    opacity: 0.18,
+    bottom: -50,
+    left: -30,
   },
   roundCard: {
-    borderRadius: 16,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 14,
-    marginTop: 10,
-  },
-  roundTitle: {
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  roundMeta: {
-    marginTop: 4,
-    color: Brand.primary,
-    fontWeight: "700",
-  },
-  roundDetail: {
-    marginTop: 6,
-    color: "#475569",
-  },
-  primaryButton: {
-    marginTop: 16,
-    backgroundColor: Brand.primary,
-    borderRadius: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
-  },
-  secondaryButton: {
-    marginTop: 12,
-    alignSelf: "flex-start",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: "#EEF2FF",
-  },
-  secondaryButtonText: {
-    color: Brand.primary,
-    fontWeight: "800",
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#0F172A",
+    backgroundColor: Surface.cardAlt,
+    borderRadius: Radius["2xl"],
+    padding: Spacing.lg,
   },
 });

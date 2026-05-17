@@ -721,7 +721,7 @@ router.get("/export/registrations/pdf", authMiddleware, schoolAdminOnly, async (
 });
 
 // ── GET /api/schools/export/achievement.pdf ───────────────────────────────
-// Spec F-SP-03: per-student achievement export with school + Eduversal branding.
+// Spec F-SP-03: per-student achievement export with school + Competzy branding.
 // Aggregates results from historical_participants (past medals/finalist) and
 // recent registrations.status (current). Outputs an A4 PDF the school can
 // distribute or attach to formal letters.
@@ -780,7 +780,7 @@ router.get("/export/achievement.pdf", authMiddleware, schoolAdminOnly, async (re
 
     // ── Header: brand strip + school banner
     doc.fontSize(9).fillColor("#94A3B8")
-      .text("COMPETZY · An Eduversal platform", { align: "right" });
+      .text("COMPETZY", { align: "right" });
     doc.moveDown(0.6);
 
     doc.fontSize(22).fillColor("#0F172A").font("Helvetica-Bold")
@@ -836,7 +836,7 @@ router.get("/export/achievement.pdf", authMiddleware, schoolAdminOnly, async (re
     // ── Footer on every page handled by addPage hook (kept simple here)
     doc.moveDown(1.4);
     doc.fontSize(8).fillColor("#94A3B8")
-      .text("This report is generated from competition data registered on Competzy and historical Eduversal records.", { align: "center" });
+      .text("This report is generated from competition data registered on Competzy and historical competition records.", { align: "center" });
 
     doc.end();
   } catch (err) {

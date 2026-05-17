@@ -66,6 +66,24 @@ export const bulkUploadLimiter = rateLimit({
 });
 
 /**
+ * Password reset limiter: 5 requests per 15 minutes per IP + email.
+ * Protects against email-bombing the reset endpoint and against brute-forcing
+ * the reset token on the verify side.
+ */
+export const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { keyGeneratorIpFallback: false },
+  message: { message: "Too many password reset requests. Please wait 15 minutes and try again." },
+  keyGenerator: (req) => {
+    const identifier = req.body?.email || req.body?.token || "unknown";
+    return `${ipKeyGenerator(req.ip ?? "")}:${identifier}`;
+  },
+});
+
+/**
  * PIN verify limiter: 5 attempts per 15 minutes per IP + email.
  * Protects against brute-force PIN guessing for parent invitations.
  */

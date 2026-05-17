@@ -1,4 +1,5 @@
-import { Brand } from "@/constants/theme";
+import { Brand, Surface } from "@/constants/theme";
+import { ScreenHeader } from "@/components/ui";
 import { useUser } from "@/context/AuthContext";
 import { useRouter } from "expo-router";
 import * as documentService from "@/services/document.service";
@@ -251,25 +252,17 @@ export default function DocumentVaultScreen() {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={[
-        styles.container,
-        { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Back Button */}
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-        activeOpacity={0.7}
+    <View style={{ flex: 1, backgroundColor: Surface.background, paddingTop: insets.top }}>
+      <ScreenHeader title="Document Vault" onBack={() => router.back()} />
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          { paddingBottom: insets.bottom + 32 },
+        ]}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.backButtonText}>← Back</Text>
-      </TouchableOpacity>
-
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Document Vault 🗄️</Text>
         <Text style={styles.subtitle}>
           Store your important documents here to make competition registration easier.
         </Text>
@@ -341,7 +334,7 @@ export default function DocumentVaultScreen() {
                   </Text>
                   <Text style={styles.docMeta}>
                     {formatFileSize(item.file_size)} ·{" "}
-                    {new Date(item.uploaded_at).toLocaleDateString("id-ID", {
+                    {new Date(item.uploaded_at).toLocaleDateString("en-US", {
                       day: "numeric", month: "short", year: "numeric",
                     })}
                   </Text>
@@ -366,7 +359,8 @@ export default function DocumentVaultScreen() {
           Accepted formats: PDF, JPG, PNG (max. 10 MB). Your documents are secure and can only be viewed by you and the competition organizers you register with.
         </Text>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -374,20 +368,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#F8FAFC" },
   container: { paddingHorizontal: 20, backgroundColor: "#F8FAFC" },
 
-  backButton: {
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    marginBottom: 16,
-  },
-  backButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: Brand.primary,
-  },
-
   header: { marginBottom: 24 },
-  title: { fontSize: 24, fontWeight: "800", color: "#0F172A", marginBottom: 6 },
   subtitle: { fontSize: 14, color: "#64748B", lineHeight: 20 },
 
   sectionLabel: {

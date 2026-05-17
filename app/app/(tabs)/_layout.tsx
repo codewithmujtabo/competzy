@@ -1,7 +1,7 @@
 import { HapticTab } from "@/components/haptic-tab";
 import { NotificationTabIcon } from "@/components/NotificationTabIcon";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Brand } from "@/constants/theme";
+import { Brand, FontFamily, Surface, Text as TextColor } from "@/constants/theme";
 import { useUser } from "@/context/AuthContext";
 import { Tabs } from "expo-router";
 import React from "react";
@@ -29,11 +29,11 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: Brand.primary,
-        tabBarInactiveTintColor: "#94A3B8",
+        tabBarInactiveTintColor: TextColor.tertiary,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: "#fff",
-          borderTopColor: "#F1F5F9",
+          backgroundColor: Surface.card,
+          borderTopColor: Surface.border,
           borderTopWidth: 1,
           height: tabBarHeight,
           paddingBottom: tabBarPaddingBottom,
@@ -41,7 +41,7 @@ export default function TabLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: "600",
+          fontFamily: FontFamily.bodySemi,
         },
       }}
     >
@@ -120,13 +120,6 @@ export default function TabLayout() {
           ),
         }}
       />
-
-      {/* Hidden legacy admin screens — kept so Expo Router doesn't 404 */}
-      <Tabs.Screen name="admin-competitions" options={{ href: null }} />
-      <Tabs.Screen name="admin-students" options={{ href: null }} />
-      <Tabs.Screen name="admin-reviews" options={{ href: null }} />
-      <Tabs.Screen name="admin-competition-form" options={{ href: null }} />
-      <Tabs.Screen name="admin-competition-registrations" options={{ href: null }} />
 
       {/* ALL ROLES: Notifications tab */}
       <Tabs.Screen

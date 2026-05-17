@@ -12,7 +12,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
-import { Brand } from "@/constants/theme";
+import {
+  Brand,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { apiRequest } from "@/services/api";
 
@@ -343,88 +351,63 @@ export default function SchoolDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  scrollContent: {
-    padding: 16,
-  },
+  container: { flex: 1, backgroundColor: Surface.background },
+  scrollContent: { padding: Spacing.xl },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#fff",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Surface.card,
     alignItems: "center",
     justifyContent: "center",
+    ...Shadow.sm,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1E293B",
-  },
+  headerTitle: { ...Type.h2 },
   exportButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#fff",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Surface.card,
     alignItems: "center",
     justifyContent: "center",
+    ...Shadow.sm,
   },
-  loader: {
-    marginVertical: 20,
-  },
+  loader: { marginVertical: Spacing.xl },
   schoolCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: Brand.primary,
+    borderRadius: Radius["2xl"],
+    padding: Spacing.xl,
+    marginBottom: Spacing.lg,
+    ...Shadow.lg,
   },
-  schoolName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1E293B",
-    marginBottom: 4,
-  },
-  schoolNpsn: {
-    fontSize: 14,
-    color: "#64748B",
-    marginBottom: 2,
-  },
-  schoolLocation: {
-    fontSize: 14,
-    color: "#94A3B8",
-  },
+  schoolName: { ...Type.h1, color: "#FFFFFF", marginBottom: 4 },
+  schoolNpsn: { ...Type.body, color: "rgba(255,255,255,0.85)", marginBottom: 2 },
+  schoolLocation: { ...Type.bodySm, color: "rgba(255,255,255,0.75)" },
   tabs: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: Surface.cardAlt,
+    borderRadius: Radius.lg,
     padding: 4,
-    marginBottom: 16,
+    marginBottom: Spacing.lg,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: Spacing.md,
     alignItems: "center",
-    borderRadius: 8,
+    borderRadius: Radius.md,
   },
   tabActive: {
-    backgroundColor: Brand.primary,
+    backgroundColor: Surface.card,
+    ...Shadow.sm,
   },
-  tabText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  tabTextActive: {
-    color: "#fff",
-  },
+  tabText: { ...Type.label, color: TextColor.tertiary },
+  tabTextActive: { color: Brand.primary },
   tabContent: {
     marginBottom: 20,
   },

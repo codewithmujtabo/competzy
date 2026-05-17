@@ -1,7 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { CheckCircle2, ClipboardList, Wallet } from 'lucide-react';
 import { organizerHttp } from '@/lib/auth/organizer-context';
+import { PageHeader } from '@/components/shell/page-header';
+import { StatCard } from '@/components/shell/stat-card';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 interface RevenueData {
   totalRegistrations: number;
@@ -10,117 +25,134 @@ interface RevenueData {
   competitions: { id: string; name: string; registrations: number; revenue: number }[];
 }
 
-function Spinner() { return <span className="spin" />; }
-
-function StatCard({ label, value, icon, color }: { label: string; value: string | number; icon: string; color: string }) {
-  return (
-    <div className="card" style={{ padding: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <p style={{ fontFamily: 'var(--ff-mono)', fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>{label}</p>
-          <p style={{ fontSize: 28, fontFamily: 'var(--ff-display)', color: 'var(--text-1)' }}>{value}</p>
-        </div>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
+function fmtRp(n: number) {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
-
-export default function Revenue() {
-  const [data, setData]       = useState<RevenueData | null>(null);
+export default function RevenuePage() {
+  const [data, setData] = useState<RevenueData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [msg, setMsg]         = useState<string | null>(null);
 
   useEffect(() => {
-    organizerHttp.get<RevenueData>('/organizers/revenue')
+    organizerHttp
+      .get<RevenueData>('/organizers/revenue')
       .then(setData)
-      .catch(e => setMsg((e as Error).message))
+      .catch((e) => toast.error(e instanceof Error ? e.message : 'Failed to load revenue'))
       .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 1060 }}>
-      <div className="fu" style={{ marginBottom: 32 }}>
-        <p style={{ fontFamily: 'var(--ff-mono)', fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 6 }}>Overview</p>
-        <h1 style={{ fontFamily: 'var(--ff-display)', fontSize: 32, fontWeight: 400 }}>Revenue</h1>
+    <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        eyebrow="Overview"
+        title="Revenue"
+        subtitle="Total revenue and registrations across all your competitions."
+      />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        {loading || !data ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="gap-0 p-5">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="mt-4 h-8 w-28" />
+            </Card>
+          ))
+        ) : (
+          <>
+            <StatCard label="Total Revenue" value={fmtRp(data.totalRevenue)} icon={Wallet} accent="green" />
+            <StatCard
+              label="Paid Registrations"
+              value={data.paidRegistrations.toLocaleString('en-US')}
+              icon={CheckCircle2}
+              accent="teal"
+            />
+            <StatCard
+              label="Total Registrations"
+              value={data.totalRegistrations.toLocaleString('en-US')}
+              icon={ClipboardList}
+              accent="indigo"
+            />
+          </>
+        )}
       </div>
 
-      {msg && <div className="toast toast-err fi" style={{ marginBottom: 20 }}>⚠ {msg}</div>}
-
-      {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="card" style={{ padding: 20, height: 90, background: 'var(--bg-elevated)' }} />
-          ))}
+      <Card className="overflow-hidden p-0">
+        <div className="border-b px-5 py-4">
+          <h3 className="text-sm font-semibold text-foreground">Per competition</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">Revenue and its share of your total.</p>
         </div>
-      ) : data ? (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
-            <StatCard label="Total Revenue"      value={fmt(data.totalRevenue)}      icon="💰" color="#f59e0b" />
-            <StatCard label="Paid Registrations" value={data.paidRegistrations}      icon="✅" color="#22c55e" />
-            <StatCard label="Total Registrations" value={data.totalRegistrations}    icon="📝" color="#6366f1" />
-          </div>
-
-          <div>
-            <p style={{ fontFamily: 'var(--ff-mono)', fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 14 }}>
-              Per Competition
-            </p>
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              {data.competitions.length === 0 ? (
-                <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
-                  No competitions yet
-                </div>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Competition</TableHead>
+                <TableHead className="text-right">Registrations</TableHead>
+                <TableHead className="text-right">Revenue</TableHead>
+                <TableHead className="w-[200px] text-right">Share</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading || !data ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={4}>
+                      <Skeleton className="h-8 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : data.competitions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-32 text-center text-sm text-muted-foreground">
+                    No competitions yet.
+                  </TableCell>
+                </TableRow>
               ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>Competition</th>
-                      <th style={{ textAlign: 'right', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>Registrations</th>
-                      <th style={{ textAlign: 'right', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>Revenue</th>
-                      <th style={{ textAlign: 'right', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>Share</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.competitions.map(c => {
-                      const share = data.totalRevenue > 0
-                        ? Math.round((c.revenue / data.totalRevenue) * 100)
-                        : 0;
-                      return (
-                        <tr key={c.id}>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)', color: 'var(--text-1)', fontWeight: 500 }}>
-                            {c.name}
-                          </td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)', textAlign: 'right', fontFamily: 'var(--ff-mono)', fontSize: 13 }}>
-                            {c.registrations}
-                          </td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)', textAlign: 'right', fontFamily: 'var(--ff-mono)', fontSize: 13 }}>
-                            {c.revenue > 0 ? fmt(c.revenue) : <span className="badge badge-green">Free</span>}
-                          </td>
-                          <td style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-light)', textAlign: 'right' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
-                              <div style={{ width: 80, height: 6, borderRadius: 3, background: 'var(--bg-elevated)', overflow: 'hidden' }}>
-                                <div style={{ width: `${share}%`, height: '100%', background: '#f59e0b', borderRadius: 3 }} />
-                              </div>
-                              <span style={{ fontFamily: 'var(--ff-mono)', fontSize: 11, color: 'var(--text-3)', minWidth: 32 }}>
-                                {share}%
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                data.competitions.map((c) => {
+                  const share =
+                    data.totalRevenue > 0 ? Math.round((c.revenue / data.totalRevenue) * 100) : 0;
+                  return (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium text-foreground">{c.name}</TableCell>
+                      <TableCell className="text-right font-mono text-[13px] text-muted-foreground">
+                        {c.registrations}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-[13px]">
+                        {c.revenue > 0 ? (
+                          fmtRp(c.revenue)
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="border-transparent bg-emerald-100 font-mono text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+                          >
+                            Free
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-primary"
+                              style={{ width: `${share}%` }}
+                            />
+                          </div>
+                          <span className="w-9 text-right font-mono text-[11px] text-muted-foreground">
+                            {share}%
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
-            </div>
-          </div>
-        </>
-      ) : null}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
     </div>
   );
 }

@@ -1,122 +1,137 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import { Download } from 'lucide-react';
 import { schoolHttp, useSchool } from '@/lib/auth/school-context';
+import { PageHeader } from '@/components/shell/page-header';
+import { Pager } from '@/components/shell/pager';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 interface Registration {
   registrationId: string;
   status: string;
   registeredAt: string;
-  student: { id: string; name: string; email: string; grade?: string; };
-  competition: { id: string; name: string; category?: string; regCloseDate?: string; };
-  payment?: { status: string; amount: number; } | null;
+  student: { id: string; name: string; email: string; grade?: string };
+  competition: { id: string; name: string; category?: string };
+  payment?: { status: string; amount: number } | null;
+}
+interface Competition {
+  id: string;
+  name: string;
 }
 
-interface Competition { id: string; name: string; }
-
-const STATUS_CLS: Record<string, string> = {
-  approved: 'badge-green', submitted: 'badge-indigo',
-  pending:  'badge-yellow', rejected: 'badge-red',
-  paid:     'badge-green',
+const STATUS_STYLE: Record<string, string> = {
+  approved: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+  paid: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+  submitted: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200',
+  pending: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  rejected: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
 };
 
-function Spinner() { return <span className="spin" />; }
+const STATUS_TABS = [
+  { key: 'all', label: 'All' },
+  { key: 'submitted', label: 'Submitted' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'rejected', label: 'Rejected' },
+  { key: 'paid', label: 'Paid' },
+];
+const LIMIT = 25;
 
-export default function RegistrationsPage() {
+export default function SchoolRegistrationsPage() {
   const { user } = useSchool();
-  const [regs, setRegs]           = useState<Registration[]>([]);
-  const [comps, setComps]         = useState<Competition[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [total, setTotal]         = useState(0);
-  const [page, setPage]           = useState(1);
-  const [compFilter, setCompFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [msg, setMsg]             = useState('');
-  const LIMIT = 25;
-
   const isAdmin = user?.role === 'school_admin';
 
-  const load = async () => {
+  const [regs, setRegs] = useState<Registration[]>([]);
+  const [comps, setComps] = useState<Competition[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [compFilter, setCompFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  const load = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
     try {
       if (isAdmin) {
-        // Для администратора - используем /schools/registrations
         const q = new URLSearchParams({
-          page: String(page), limit: String(LIMIT),
-          ...(compFilter   && { compId: compFilter }),
+          page: String(page),
+          limit: String(LIMIT),
+          ...(compFilter && { compId: compFilter }),
           ...(statusFilter && { status: statusFilter }),
         });
-        const r = await schoolHttp.get<{ registrations: Registration[]; pagination: { total: number } }>(`/schools/registrations?${q}`);
+        const r = await schoolHttp.get<{
+          registrations: Registration[];
+          pagination: { total: number };
+        }>(`/schools/registrations?${q}`);
         setRegs(r.registrations);
         setTotal(r.pagination.total);
       } else {
-        // Для учителя - получаем данные через /teachers/my-competitions
-        const response = await schoolHttp.get<any>('/teachers/my-competitions');
-        
-        // API возвращает { competitions: [] } а не массив
-        const competitionsArray = response.competitions || [];
-        
-        if (!Array.isArray(competitionsArray)) {
-          console.error('Expected array, got:', competitionsArray);
-          setRegs([]);
-          setTotal(0);
-          setLoading(false);
-          return;
-        }
-        
-        // Преобразуем данные из формата учителя в формат регистраций
+        const response = await schoolHttp.get<{ competitions?: unknown[] }>('/teachers/my-competitions');
+        const competitionsArray = (response.competitions || []) as Array<{
+          id: string;
+          name: string;
+          category?: string;
+          students?: Array<{ id: string; fullName?: string; name?: string; email?: string; grade?: string; status?: string }>;
+        }>;
         const allRegs: Registration[] = [];
         for (const comp of competitionsArray) {
-          // Проверяем, что у competition есть students
-          if (comp.students && Array.isArray(comp.students)) {
-            for (const student of comp.students) {
-              allRegs.push({
-                registrationId: student.id || `reg-${comp.id}-${Date.now()}`,
-                status: student.status || 'registered',
-                registeredAt: new Date().toISOString(),
-                student: {
-                  id: student.id,
-                  name: student.fullName || student.name || '',
-                  email: student.email || '',
-                  grade: student.grade,
-                },
-                competition: {
-                  id: comp.id,
-                  name: comp.name,
-                  category: comp.category,
-                },
-              });
-            }
+          for (const s of comp.students ?? []) {
+            allRegs.push({
+              registrationId: s.id || `reg-${comp.id}`,
+              status: s.status || 'registered',
+              registeredAt: new Date().toISOString(),
+              student: { id: s.id, name: s.fullName || s.name || '', email: s.email || '', grade: s.grade },
+              competition: { id: comp.id, name: comp.name, category: comp.category },
+            });
           }
         }
-        
-        // Применяем фильтры
-        let filtered = allRegs;
-        if (compFilter) filtered = filtered.filter(r => r.competition.id === compFilter);
-        
-        // Пагинация
+        const filtered = compFilter ? allRegs.filter((r) => r.competition.id === compFilter) : allRegs;
         const start = (page - 1) * LIMIT;
-        const paginated = filtered.slice(start, start + LIMIT);
-        setRegs(paginated);
+        setRegs(filtered.slice(start, start + LIMIT));
         setTotal(filtered.length);
       }
-    } catch (e) { 
-      console.error('Load error:', e);
-      setMsg((e as Error).message); 
-    } finally { 
-      setLoading(false); 
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to load registrations');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [user, isAdmin, page, compFilter, statusFilter]);
 
-  // Загрузка списка конкурсов для фильтра
+  useEffect(() => {
+    load();
+  }, [load]);
+
   useEffect(() => {
     if (!user) return;
-    
     if (isAdmin) {
-      schoolHttp.get<Registration[]>('/schools/registrations?limit=500')
-        .then(r => {
+      schoolHttp
+        .get<{ registrations?: Registration[] }>('/schools/registrations?limit=500')
+        .then((r) => {
           const seen = new Map<string, Competition>();
-          (Array.isArray(r) ? r : (r as any).registrations ?? []).forEach((reg: Registration) => {
+          (r.registrations ?? []).forEach((reg) => {
             if (reg?.competition?.id && !seen.has(reg.competition.id)) {
               seen.set(reg.competition.id, { id: reg.competition.id, name: reg.competition.name });
             }
@@ -125,125 +140,158 @@ export default function RegistrationsPage() {
         })
         .catch(() => {});
     } else {
-      // Для учителя - загружаем конкурсы из his competitions
-      schoolHttp.get<any>('/teachers/my-competitions')
-        .then(data => {
-          const competitionsArray = data.competitions || [];
-          if (Array.isArray(competitionsArray)) {
-            const compsList = competitionsArray.map(c => ({ id: c.id, name: c.name }));
-            setComps(compsList);
-          }
-        })
+      schoolHttp
+        .get<{ competitions?: Competition[] }>('/teachers/my-competitions')
+        .then((d) => setComps((d.competitions ?? []).map((c) => ({ id: c.id, name: c.name }))))
         .catch(() => {});
     }
   }, [isAdmin, user]);
 
-  useEffect(() => { 
-    if (user) load(); 
-  }, [page, compFilter, statusFilter, user, isAdmin]);
-
   const exportCsv = () => {
     const headers = 'Student,Email,Grade,Competition,Status,Date\n';
-    const rows = regs.map(r =>
-      `"${r.student.name}","${r.student.email}","${r.student.grade ?? ''}","${r.competition.name}","${r.status}","${new Date(r.registeredAt).toLocaleDateString()}"`
-    ).join('\n');
+    const rows = regs
+      .map(
+        (r) =>
+          `"${r.student.name}","${r.student.email}","${r.student.grade ?? ''}","${r.competition.name}","${r.status}","${new Date(r.registeredAt).toLocaleDateString()}"`,
+      )
+      .join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = `registrations-${Date.now()}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `registrations-${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  const pages = Math.ceil(total / LIMIT);
-  const STATUSES = ['', 'submitted', 'pending', 'approved', 'rejected', 'paid'];
-
-  if (!user) return null;
-
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 1060 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 28 }}>
-        <div className="fu">
-          <p className="label" style={{ marginBottom: 6 }}>{isAdmin ? 'School Portal' : 'Teacher Portal'}</p>
-          <h1 style={{ fontFamily: 'var(--ff-display)', fontSize: 32, fontWeight: 400 }}>Registrations</h1>
-          <p style={{ color: 'var(--text-3)', fontSize: 13, marginTop: 4 }}>{total} registrations</p>
-        </div>
-        {regs.length > 0 && (
-          <button className="btn btn-ghost" onClick={exportCsv} style={{ marginBottom: 28 }}>↓ Export CSV</button>
-        )}
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        eyebrow="School"
+        title="Registrations"
+        subtitle={`${total} registration${total === 1 ? '' : 's'} across your competitions.`}
+        actions={
+          regs.length > 0 ? (
+            <Button variant="outline" onClick={exportCsv}>
+              <Download className="size-4" />
+              Export CSV
+            </Button>
+          ) : undefined
+        }
+      />
 
-      {msg && <div className="toast toast-err" style={{ marginBottom: 16 }}>⚠ {msg}</div>}
-
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="flex flex-wrap items-center gap-3">
         {comps.length > 0 && (
-          <select className="input" style={{ width: 260 }} value={compFilter} onChange={e => { setCompFilter(e.target.value); setPage(1); }}>
-            <option value="">All competitions</option>
-            {comps.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <Select
+            value={compFilter || 'all'}
+            onValueChange={(v) => {
+              setCompFilter(v === 'all' ? '' : v);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-64">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All competitions</SelectItem>
+              {comps.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
         {isAdmin && (
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            {STATUSES.map(s => (
-              <button key={s} className={`btn ${statusFilter === s ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => { setStatusFilter(s); setPage(1); }}
-                style={{ padding: '5px 12px', fontSize: 12 }}>
-                {s || 'All'}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            value={statusFilter || 'all'}
+            onValueChange={(v) => {
+              setStatusFilter(v === 'all' ? '' : v);
+              setPage(1);
+            }}
+          >
+            <TabsList>
+              {STATUS_TABS.map((s) => (
+                <TabsTrigger key={s.key} value={s.key}>
+                  {s.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         )}
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          {loading ? (
-            <div style={{ padding: 48, textAlign: 'center' }}><Spinner /></div>
-          ) : regs.length === 0 ? (
-            <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
-              {isAdmin ? 'No registrations found.' : 'Your students have not registered for any competitions yet.'}
-            </div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-2)' }}>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Student</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Competition</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Grade</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Status</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {regs.map((r, idx) => (
-                  <tr key={r.registrationId || idx} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px 16px' }}>
-                      <div style={{ fontWeight: 500 }}>{r.student.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.student.email}</div>
-                    </td>
-                    <td style={{ padding: '10px 16px' }}>
-                      <div>{r.competition.name}</div>
-                      {r.competition.category && <span className="badge badge-indigo" style={{ marginTop: 4, display: 'inline-block' }}>{r.competition.category}</span>}
-                    </td>
-                    <td style={{ padding: '10px 16px' }}>{r.student.grade ? <span className="badge badge-gray">Grade {r.student.grade}</span> : '—'}</td>
-                    <td style={{ padding: '10px 16px' }}><span className={`badge ${STATUS_CLS[r.status] ?? 'badge-gray'}`}>{r.status}</span></td>
-                    <td style={{ padding: '10px 16px', fontFamily: 'var(--ff-mono)', fontSize: 11 }}>
-                      {new Date(r.registeredAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+      <Card className="overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student</TableHead>
+                <TableHead>Competition</TableHead>
+                <TableHead>Grade</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Registered</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={5}>
+                      <Skeleton className="h-8 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : regs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-32 text-center text-sm text-muted-foreground">
+                    {isAdmin
+                      ? 'No registrations found.'
+                      : 'Your students have not registered for any competitions yet.'}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                regs.map((r, idx) => (
+                  <TableRow key={r.registrationId || idx}>
+                    <TableCell>
+                      <div className="font-medium text-foreground">{r.student.name}</div>
+                      <div className="font-mono text-[11px] text-muted-foreground">{r.student.email}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{r.competition.name}</div>
+                      {r.competition.category && (
+                        <Badge variant="secondary" className="mt-1 font-normal">
+                          {r.competition.category}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>{r.student.grade ? `Grade ${r.student.grade}` : '—'}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'border-transparent font-mono text-[10px] capitalize',
+                          STATUS_STYLE[r.status] ?? 'bg-muted text-muted-foreground',
+                        )}
+                      >
+                        {r.status.replace(/_/g, ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-[11px] text-muted-foreground">
+                      {new Date(r.registeredAt).toLocaleDateString('en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
-        {pages > 1 && (
-          <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
-            <button className="btn btn-ghost" onClick={() => setPage(p => p - 1)} disabled={page === 1} style={{ padding: '5px 11px' }}>←</button>
-            <span style={{ fontFamily: 'var(--ff-mono)', fontSize: 11, color: 'var(--text-3)' }}>{page} / {pages}</span>
-            <button className="btn btn-ghost" onClick={() => setPage(p => p + 1)} disabled={page >= pages} style={{ padding: '5px 11px' }}>→</button>
-          </div>
-        )}
-      </div>
+        <Pager page={page} total={total} limit={LIMIT} onChange={setPage} />
+      </Card>
     </div>
   );
 }

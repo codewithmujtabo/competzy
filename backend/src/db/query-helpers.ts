@@ -1,14 +1,20 @@
 import { pool } from "../config/database";
 
 /**
- * Soft-delete query helpers.
+ * Soft-delete + multi-tenancy query helpers.
  *
- * Tables in this app have a nullable `deleted_at TIMESTAMPTZ` column added by migration
- * 1747000000000_soft-delete.sql. Any query that returns "live" rows must filter on it.
+ * Soft-delete: tables in this app have a nullable `deleted_at TIMESTAMPTZ` column
+ * (Sprint 14 migration 1747000000000_soft-delete.sql; EMC-port tables since
+ * Wave 1). Any query that returns "live" rows must filter on it.
+ *
+ * Multi-tenancy: EMC-port content/state tables carry a `comp_id TEXT` column
+ * tying them to a competition (Wave 1 Phase D). Comp-scoped queries must filter
+ * on it — use `compFilter`.
  *
  * Usage in raw SQL:
- *   SELECT * FROM users WHERE id = $1 AND ${liveFilter("users")}
- * Or with the prebuilt helpers below.
+ *   SELECT * FROM questions q
+ *    WHERE ${compFilter("q")} AND ${liveFilter("q")}
+ *   -- bind: [compId]
  */
 
 /**
@@ -24,23 +30,56 @@ export function liveFilter(tableOrAlias?: string): string {
 }
 
 /**
+ * Returns a parameterised SQL fragment scoping a query to one competition.
+ * Mirrors `liveFilter`; because `comp_id` is a bound value (never inlined),
+ * the caller supplies it in the params array at `paramIndex` (1-based).
+ *
+ *   compFilter("q")     -> "q.comp_id = $1"     (default: comp_id is the first param)
+ *   compFilter("q", 2)  -> "q.comp_id = $2"     (comp_id is the second param)
+ *   compFilter()        -> "comp_id = $1"
+ *
+ *   pool.query(
+ *     `SELECT * FROM subjects s WHERE ${compFilter("s")} AND ${liveFilter("s")}`,
+ *     [compId],
+ *   );
+ */
+export function compFilter(tableOrAlias?: string, paramIndex: number = 1): string {
+  const col = tableOrAlias ? `${tableOrAlias}.comp_id` : "comp_id";
+  return `${col} = $${paramIndex}`;
+}
+
+/**
+ * Tables that carry a `deleted_at` column and may be soft-deleted / restored.
+ * A whitelist guard — never accept a table name from user input.
+ */
+const SOFT_DELETE_TABLES = new Set([
+  // Sprint 14 PII tables (1747000000000_soft-delete.sql)
+  "users",
+  "students",
+  "parents",
+  "teachers",
+  "registrations",
+  "payments",
+  "documents",
+  "historical_participants",
+  "notifications",
+  // EMC-port question-bank tables (1748100000000_emc-content.sql)
+  "subjects",
+  "topics",
+  "subtopics",
+  "questions",
+  "answers",
+  "proofreads",
+  // EMC-port step-flow (1748800000000_competition-flows.sql)
+  "competition_flows",
+]);
+
+/**
  * Soft-delete a row by id. Returns true if a row was updated, false otherwise.
  * Idempotent: re-soft-deleting a row keeps the original deleted_at timestamp.
  */
 export async function softDelete(table: string, id: string, idColumn: string = "id"): Promise<boolean> {
-  // Whitelist guard: never accept a table name from user input. Only the explicit list below.
-  const ALLOWED_TABLES = new Set([
-    "users",
-    "students",
-    "parents",
-    "teachers",
-    "registrations",
-    "payments",
-    "documents",
-    "historical_participants",
-    "notifications",
-  ]);
-  if (!ALLOWED_TABLES.has(table)) {
+  if (!SOFT_DELETE_TABLES.has(table)) {
     throw new Error(`softDelete: refusing to operate on non-allowlisted table '${table}'`);
   }
   if (!/^[a-z_][a-z0-9_]*$/i.test(idColumn)) {
@@ -58,18 +97,7 @@ export async function softDelete(table: string, id: string, idColumn: string = "
  * Restore a soft-deleted row. Useful for "oops" recovery flows.
  */
 export async function restore(table: string, id: string, idColumn: string = "id"): Promise<boolean> {
-  const ALLOWED_TABLES = new Set([
-    "users",
-    "students",
-    "parents",
-    "teachers",
-    "registrations",
-    "payments",
-    "documents",
-    "historical_participants",
-    "notifications",
-  ]);
-  if (!ALLOWED_TABLES.has(table)) {
+  if (!SOFT_DELETE_TABLES.has(table)) {
     throw new Error(`restore: refusing to operate on non-allowlisted table '${table}'`);
   }
   if (!/^[a-z_][a-z0-9_]*$/i.test(idColumn)) {

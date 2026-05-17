@@ -43,17 +43,24 @@ async function httpFormData<T>(path: string, formData: FormData): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export const adminHttp = {
-  get:    <T>(path: string) => httpReq<T>(path),
-  post:   <T>(path: string, body: unknown) => httpReq<T>(path, { method: 'POST', body: JSON.stringify(body) }),
-  put:    <T>(path: string, body: unknown) => httpReq<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
-  delete: <T>(path: string) => httpReq<T>(path, { method: 'DELETE' }),
-};
+function makeHttp() {
+  return {
+    get:          <T>(path: string)                     => httpReq<T>(path),
+    post:         <T>(path: string, body: unknown)      => httpReq<T>(path, { method: 'POST',   body: JSON.stringify(body) }),
+    put:          <T>(path: string, body: unknown)      => httpReq<T>(path, { method: 'PUT',    body: JSON.stringify(body) }),
+    delete:       <T>(path: string)                     => httpReq<T>(path, { method: 'DELETE' }),
+    postFormData: <T>(path: string, formData: FormData) => httpFormData<T>(path, formData),
+  };
+}
 
-export const organizerHttp = {
-  get:          <T>(path: string) => httpReq<T>(path),
-  post:         <T>(path: string, body: unknown) => httpReq<T>(path, { method: 'POST', body: JSON.stringify(body) }),
-  put:           <T>(path: string, body: unknown) => httpReq<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
-  delete:       <T>(path: string) => httpReq<T>(path, { method: 'DELETE' }),
-  postFormData: <T>(path: string, formData: FormData) => httpFormData<T>(path, formData),
-};
+export const adminHttp     = makeHttp();
+export const organizerHttp = makeHttp();
+export const schoolHttp    = makeHttp();
+// Per-competition portals (e.g. /emc/login) — same cookie jar; the namespacing
+// keeps the new EMC code path decoupled if it ever needs different transport behaviour.
+export const emcHttp       = makeHttp();
+
+// Used by callers that need the raw Response (e.g. CSV downloads).
+export async function schoolFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(`${BASE}${path}`, { ...init, credentials: 'include' });
+}
