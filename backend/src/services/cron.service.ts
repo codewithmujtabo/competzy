@@ -10,6 +10,7 @@ import { pool } from "../config/database";
 import * as pushService from "./push.service";
 import * as recommendationsService from "./recommendations.service";
 import { processPendingJobs } from "./bulk-processor.service";
+import { backfillCertificates } from "./certificate.service";
 
 /**
  * T4.5 — Send deadline reminders (3 days before registration close)
@@ -427,6 +428,29 @@ export function scheduleRetentionEnforcement() {
 }
 
 /**
+ * Certificate backfill (EMC Wave 12).
+ *
+ * Daily at 03:00 — issue a Certificate of Participation for every student who
+ * has finished a competition exam but has no certificate yet, and refresh the
+ * snapshot score on unlocked certificates. The inline hooks in the exam-finish
+ * handlers cover the common path; this catches anything they missed.
+ */
+export function scheduleCertificateBackfill() {
+  cron.schedule("0 3 * * *", async () => {
+    try {
+      const { issued, refreshed } = await backfillCertificates();
+      console.log(
+        `[Cron] Certificate backfill: ${issued} issued, ${refreshed} scores refreshed`
+      );
+    } catch (error: any) {
+      console.error("[Cron] Certificate backfill failed:", error.message);
+    }
+  });
+
+  console.log("[Cron] Certificate backfill scheduled (daily at 03:00)");
+}
+
+/**
  * Initialize all cron jobs
  */
 export function initializeCronJobs() {
@@ -436,5 +460,6 @@ export function initializeCronJobs() {
   scheduleDeadlineUrgencyReminders();
   scheduleBulkJobProcessor();
   scheduleRetentionEnforcement();
+  scheduleCertificateBackfill();
   console.log("[Cron] All cron jobs initialized");
 }
