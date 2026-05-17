@@ -2,6 +2,7 @@ import { Button, Card, EmptyState, Pill, SubjectCircle } from "@/components/ui";
 import {
   Brand,
   CategoryAccent,
+  FontFamily,
   Radius,
   Shadow,
   Spacing,
@@ -168,7 +169,7 @@ export default function MyCompetitionsScreen() {
         <View style={styles.actionRow}>
           <View style={{ flex: 1 }}>
             <Button
-              label={busyCompId === item.id ? "Menghapus..." : "Remove"}
+              label={busyCompId === item.id ? "Removing..." : "Remove"}
               variant="ghost"
               fullWidth
               onPress={() => handleRemoveFavorite(item)}
@@ -447,7 +448,7 @@ const styles = StyleSheet.create({
   countText: {
     color: Brand.primary,
     fontSize: 11,
-    fontWeight: "800",
+    fontFamily: FontFamily.bodyBold,
   },
   listContent: {
     paddingHorizontal: Spacing.xl,

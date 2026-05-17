@@ -90,8 +90,6 @@ export default function MyRegistrationDetailsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={styles.hero}>
-          <View style={styles.heroBlobYellow} />
-          <View style={styles.heroBlobCoral} />
           <Text style={[Type.label, { color: "rgba(255,255,255,0.85)", letterSpacing: 0.5 }]}>
             {competition.organizerName} • {competition.category}
           </Text>
@@ -228,29 +226,7 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.primary,
     borderRadius: Radius["3xl"],
     padding: Spacing["2xl"],
-    overflow: "hidden",
-    position: "relative",
     ...Shadow.playful,
-  },
-  heroBlobYellow: {
-    position: "absolute",
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: Brand.sunshine,
-    opacity: 0.22,
-    top: -50,
-    right: -40,
-  },
-  heroBlobCoral: {
-    position: "absolute",
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: Brand.coral,
-    opacity: 0.18,
-    bottom: -50,
-    left: -30,
   },
   roundCard: {
     backgroundColor: Surface.cardAlt,
