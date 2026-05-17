@@ -1,6 +1,19 @@
 import { API_BASE_URL } from "../config/api";
 import { getToken } from "./token.service";
 
+/**
+ * Absolutize a server file URL. Signed file URLs come back relative
+ * (`/uploads-signed/<token>`) and are served from the backend ORIGIN — not the
+ * `/api` base — so `WebBrowser.openBrowserAsync` / `<Image>` (which need an
+ * absolute `http(s)://` URL) reject them. Already-absolute URLs pass through.
+ */
+export function resolveFileUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  const origin = (API_BASE_URL ?? "").replace(/\/api\/?$/, "");
+  return `${origin}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
 interface RequestOptions {
   method?: string;
   body?: any;
