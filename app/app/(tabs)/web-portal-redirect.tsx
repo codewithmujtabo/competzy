@@ -8,12 +8,28 @@ import {
   Text as TextColor,
   Type,
 } from "@/constants/theme";
-import React from "react";
+import { useUser } from "@/context/AuthContext";
+import { useRouter } from "expo-router";
+import React, { useEffect } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function WebPortalRedirectScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useUser();
+  const router = useRouter();
+  const userRole = (user as any)?.role ?? "";
+
+  // Self-healing guard — this is the admin-only screen. If a non-admin lands
+  // here (e.g. a stale route after a role switch), bounce them to their home
+  // once their role resolves. Symmetric with the redirects in competitions.tsx.
+  useEffect(() => {
+    if (!userRole || userRole === "admin") return;
+    if (userRole === "teacher") router.replace("/(tabs)/teacher-dashboard");
+    else if (userRole === "parent") router.replace("/(tabs)/children");
+    else if (userRole === "school_admin") router.replace("/(tabs)/profile");
+    else router.replace("/(tabs)/competitions");
+  }, [userRole, router]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + Spacing["3xl"] }]}>
