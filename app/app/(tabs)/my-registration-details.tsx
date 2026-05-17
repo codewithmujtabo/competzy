@@ -166,6 +166,17 @@ export default function MyRegistrationDetailsScreen() {
                 })
               }
             />
+            <Button
+              label="My Certificate"
+              variant="secondary"
+              fullWidth
+              onPress={() =>
+                router.push({
+                  pathname: "/(competition)/certificates",
+                  params: { compId: registration.compId, compName: competition.name },
+                })
+              }
+            />
           </View>
         </Card>
 
