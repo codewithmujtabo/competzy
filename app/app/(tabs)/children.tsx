@@ -17,6 +17,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   Brand,
+  FontFamily,
   Radius,
   Shadow,
   Spacing,
@@ -152,7 +153,7 @@ export default function ChildrenScreen() {
             style={styles.addButton}
             onPress={() => setShowPinModal(true)}
           >
-            <IconSymbol name="plus" size={24} color="#fff" />
+            <IconSymbol name="plus" size={24} color={TextColor.inverse} />
           </TouchableOpacity>
         </View>
 
@@ -258,7 +259,7 @@ export default function ChildrenScreen() {
           })
         ) : (
           <View style={styles.emptyState}>
-            <IconSymbol name="person.2.fill" size={64} color="#CBD5E1" />
+            <IconSymbol name="person.2.fill" size={64} color={Surface.borderStrong} />
             <Text style={styles.emptyTitle}>No Linked Children</Text>
             <Text style={styles.emptySubtitle}>
               Ask your child to send you an invitation, then tap the + button to enter the PIN code.
@@ -283,7 +284,7 @@ export default function ChildrenScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Enter PIN Code</Text>
               <TouchableOpacity onPress={() => setShowPinModal(false)}>
-                <IconSymbol name="xmark.circle.fill" size={28} color="#94A3B8" />
+                <IconSymbol name="xmark.circle.fill" size={28} color={TextColor.tertiary} />
               </TouchableOpacity>
             </View>
 
@@ -294,7 +295,7 @@ export default function ChildrenScreen() {
             <TextInput
               style={styles.input}
               placeholder="Your email"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={TextColor.tertiary}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -305,7 +306,7 @@ export default function ChildrenScreen() {
             <TextInput
               style={styles.input}
               placeholder="6-digit PIN"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={TextColor.tertiary}
               value={pin}
               onChangeText={(text) => setPin(text.replace(/[^0-9]/g, "").slice(0, 6))}
               keyboardType="number-pad"
@@ -321,7 +322,7 @@ export default function ChildrenScreen() {
               disabled={acceptInvitationMutation.isPending}
             >
               {acceptInvitationMutation.isPending ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={TextColor.inverse} />
               ) : (
                 <Text style={styles.submitButtonText}>Submit</Text>
               )}
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: Spacing.md,
   },
-  childAvatarText: { fontSize: 24, fontWeight: "800", color: Brand.primary },
+  childAvatarText: { fontSize: 24, fontFamily: FontFamily.displayExtra, color: Brand.primary },
   childInfo: { flex: 1 },
   childName: { ...Type.title, fontSize: 17 },
   childDetails: { ...Type.bodySm, marginTop: 2 },
@@ -424,8 +425,8 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    fontFamily: FontFamily.bodyBold,
+    color: TextColor.inverse,
     textTransform: "uppercase",
   },
   emptyText: { ...Type.bodySm, textAlign: "center", marginVertical: Spacing.sm },
@@ -448,10 +449,10 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderRadius: Radius.lg,
   },
-  retryButtonText: { color: "#FFFFFF", fontWeight: "700" },
+  retryButtonText: { color: TextColor.inverse, fontFamily: FontFamily.bodyBold },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.55)",
+    backgroundColor: Surface.overlay,
     justifyContent: "flex-end",
   },
   modalContent: {
@@ -488,5 +489,5 @@ const styles = StyleSheet.create({
     ...Shadow.md,
   },
   submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  submitButtonText: { color: TextColor.inverse, fontSize: 16, fontFamily: FontFamily.bodyBold },
 });

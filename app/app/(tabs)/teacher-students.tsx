@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Brand,
+  FontFamily,
   Radius,
   Shadow,
   Spacing,
@@ -121,7 +122,7 @@ export default function TeacherStudentsScreen() {
         disabled={removingId === item.id}
       >
         {removingId === item.id
-          ? <ActivityIndicator size="small" color="#EF4444" />
+          ? <ActivityIndicator size="small" color={Brand.error} />
           : <Text style={styles.removeBtnText}>×</Text>
         }
       </TouchableOpacity>
@@ -152,7 +153,7 @@ export default function TeacherStudentsScreen() {
           <TextInput
             style={styles.addInput}
             placeholder="Student email address"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={TextColor.tertiary}
             value={addEmail}
             onChangeText={setAddEmail}
             keyboardType="email-address"
@@ -167,7 +168,7 @@ export default function TeacherStudentsScreen() {
             disabled={adding || !addEmail.trim()}
           >
             {adding
-              ? <ActivityIndicator size="small" color="#fff" />
+              ? <ActivityIndicator size="small" color={TextColor.inverse} />
               : <Text style={styles.addConfirmBtnText}>Add</Text>
             }
           </TouchableOpacity>
@@ -179,7 +180,7 @@ export default function TeacherStudentsScreen() {
         <TextInput
           style={styles.searchInput}
           placeholder="Search by name or email…"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={TextColor.tertiary}
           value={searchQuery}
           onChangeText={setSearchQuery}
           returnKeyType="search"
@@ -243,7 +244,7 @@ const styles = StyleSheet.create({
     ...Shadow.sm,
   },
   addButtonActive: { backgroundColor: TextColor.secondary },
-  addButtonText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
+  addButtonText: { color: TextColor.inverse, fontFamily: FontFamily.bodyBold, fontSize: 13 },
   addRow: {
     flexDirection: "row",
     gap: Spacing.sm,
@@ -268,7 +269,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   addConfirmBtnDisabled: { opacity: 0.5 },
-  addConfirmBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  addConfirmBtnText: { color: TextColor.inverse, fontFamily: FontFamily.bodyBold, fontSize: 14 },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -307,7 +308,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: Spacing.md,
   },
-  avatarText: { fontSize: 18, fontWeight: "800", color: Brand.primary },
+  avatarText: { fontSize: 18, fontFamily: FontFamily.displayExtra, color: Brand.primary },
   studentInfo: { flex: 1 },
   studentName: { ...Type.title, fontSize: 15 },
   studentEmail: { ...Type.caption, marginTop: 2 },
@@ -319,9 +320,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    fontWeight: "600",
+    fontFamily: FontFamily.bodySemi,
   },
   regCount: { marginTop: 6, ...Type.caption },
   removeBtn: { padding: Spacing.sm },
-  removeBtnText: { fontSize: 24, color: TextColor.tertiary, fontWeight: "300" },
+  removeBtnText: { fontSize: 24, color: TextColor.tertiary, fontFamily: FontFamily.bodyRegular },
 });
