@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
@@ -18,11 +18,31 @@ interface RegistrationRow {
   registrationNumber: string | null;
 }
 
-const STATUS_COPY: Record<string, { title: string; body: string; cta?: string }> = {
+type StepStatus = 'done' | 'current' | 'upcoming';
+type CheckType = 'profile' | 'documents' | 'payment' | 'approval' | 'none';
+
+interface FlowProgressStep {
+  id: string;
+  stepOrder: number;
+  stepKey: string;
+  title: string;
+  description: string | null;
+  checkType: CheckType;
+  status: StepStatus;
+}
+
+interface FlowProgress {
+  registrationId: string;
+  registrationStatus: string;
+  isReady: boolean;
+  steps: FlowProgressStep[];
+}
+
+// Fallback copy for competitions that have no configured step-flow.
+const STATUS_COPY: Record<string, { title: string; body: string }> = {
   pending_payment: {
     title: 'Your seat is held.',
     body: 'Complete your payment to lock in your spot.',
-    cta: 'Continue to payment',
   },
   pending_review: {
     title: 'Awaiting admin review.',
@@ -42,6 +62,87 @@ const STATUS_COPY: Record<string, { title: string; body: string; cta?: string }>
   },
 };
 
+// Guidance shown under the step the participant is currently on.
+function currentHint(checkType: CheckType): string {
+  switch (checkType) {
+    case 'profile':
+      return 'Complete your profile in the Competzy app to move forward.';
+    case 'documents':
+      return 'Upload the required documents in the Competzy app.';
+    case 'payment':
+      return 'Head to the Competzy app to pay your registration fee.';
+    case 'approval':
+      return 'An organizer is reviewing your registration — no action needed.';
+    case 'none':
+      return '';
+  }
+}
+
+function StepNode({ status, order }: { status: StepStatus; order: number }) {
+  if (status === 'done') {
+    return (
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <Check className="size-4" />
+      </span>
+    );
+  }
+  if (status === 'current') {
+    return (
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-background text-sm font-semibold text-primary">
+        {order}
+      </span>
+    );
+  }
+  return (
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-sm text-muted-foreground">
+      {order}
+    </span>
+  );
+}
+
+function Stepper({ steps }: { steps: FlowProgressStep[] }) {
+  return (
+    <ol className="mt-1">
+      {steps.map((s, i) => {
+        const last = i === steps.length - 1;
+        const hint = s.status === 'current' ? currentHint(s.checkType) : '';
+        return (
+          <li key={s.id} className="flex gap-4">
+            <div className="flex flex-col items-center">
+              <StepNode status={s.status} order={s.stepOrder} />
+              {!last && <span className="w-px flex-1 bg-border" />}
+            </div>
+            <div className={last ? 'flex-1' : 'flex-1 pb-6'}>
+              <p
+                className={
+                  'text-sm ' +
+                  (s.status === 'upcoming'
+                    ? 'text-muted-foreground'
+                    : s.status === 'current'
+                      ? 'font-semibold text-foreground'
+                      : 'font-medium text-foreground')
+                }
+              >
+                {s.title}
+              </p>
+              {s.status !== 'upcoming' && s.description && (
+                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                  {s.description}
+                </p>
+              )}
+              {hint && (
+                <p className="mt-2 rounded-md bg-primary/5 px-3 py-2 text-xs leading-relaxed text-primary">
+                  {hint}
+                </p>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 export default function CompetitionDashboardPage() {
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
@@ -53,6 +154,7 @@ export default function CompetitionDashboardPage() {
   const router = useRouter();
 
   const [regs, setRegs] = useState<RegistrationRow[] | null>(null);
+  const [progress, setProgress] = useState<FlowProgress | null>(null);
   const [enroll, setEnroll] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -72,6 +174,28 @@ export default function CompetitionDashboardPage() {
   useEffect(() => {
     if (comp?.id) void refresh(comp.id);
   }, [comp?.id]);
+
+  // Once we know the registration, pull its step-flow progress.
+  const reg = regs?.[0];
+  useEffect(() => {
+    if (!reg?.id) {
+      setProgress(null);
+      return;
+    }
+    let cancelled = false;
+    emcHttp
+      .get<FlowProgress>(`/registrations/${reg.id}/flow-progress`)
+      .then((p) => {
+        if (!cancelled) setProgress(p);
+      })
+      .catch(() => {
+        // No flow configured / fetch failed → the STATUS_COPY fallback renders.
+        if (!cancelled) setProgress(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reg?.id]);
 
   const enrollNow = async () => {
     if (!comp?.id) return;
@@ -96,8 +220,8 @@ export default function CompetitionDashboardPage() {
 
   if (!config) return null;
 
-  const reg = regs?.[0];
-  const copy = reg ? STATUS_COPY[reg.status] : null;
+  const hasFlow = !!progress && progress.steps.length > 0;
+  const fallbackCopy = reg ? STATUS_COPY[reg.status] : null;
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -111,9 +235,14 @@ export default function CompetitionDashboardPage() {
               Hi {user?.fullName || user?.full_name || 'there'} 👋
             </h1>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            Sign out
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/competitions">All competitions</Link>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={signOut}>
+              Sign out
+            </Button>
+          </div>
         </header>
 
         {err && (
@@ -129,24 +258,36 @@ export default function CompetitionDashboardPage() {
           </Card>
         ) : reg ? (
           <Card className="gap-0 p-7">
-            <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-primary">
-              Status · {reg.status.replace(/_/g, ' ')}
-            </p>
-            <h2 className="mt-2 font-serif text-xl font-medium text-foreground">
-              {copy?.title ?? 'Registration recorded.'}
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              {copy?.body ?? `Status: ${reg.status}`}
-            </p>
-            {reg.registrationNumber && (
-              <p className="mt-4 font-mono text-xs text-muted-foreground">
-                Registration #&nbsp;{reg.registrationNumber}
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-primary">
+                Status · {reg.status.replace(/_/g, ' ')}
               </p>
-            )}
-            {copy?.cta && (
-              <Button className="mt-5 w-fit" disabled>
-                {copy.cta} (wiring soon)
-              </Button>
+              {reg.registrationNumber && (
+                <p className="font-mono text-xs text-muted-foreground">
+                  #&nbsp;{reg.registrationNumber}
+                </p>
+              )}
+            </div>
+
+            {hasFlow ? (
+              <>
+                <h2 className="mt-2 font-serif text-xl font-medium text-foreground">
+                  Your registration progress
+                </h2>
+                <p className="mt-1 mb-5 text-sm text-muted-foreground">
+                  Follow the steps below to complete your entry to {config.wordmark}.
+                </p>
+                <Stepper steps={progress!.steps} />
+              </>
+            ) : (
+              <>
+                <h2 className="mt-2 font-serif text-xl font-medium text-foreground">
+                  {fallbackCopy?.title ?? 'Registration recorded.'}
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {fallbackCopy?.body ?? `Status: ${reg.status}`}
+                </p>
+              </>
             )}
           </Card>
         ) : (
@@ -167,13 +308,6 @@ export default function CompetitionDashboardPage() {
             )}
           </Card>
         )}
-
-        <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-          The full participant experience (materials, sessions, certificates) is coming next.{' '}
-          <Link href="/" className="font-medium text-primary hover:underline">
-            Visit the Competzy hub →
-          </Link>
-        </div>
       </div>
     </div>
   );

@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { ListChecks, Pencil, Plus, Trash2 } from 'lucide-react';
 import { competitionsApi } from '@/lib/api';
 import type { Competition } from '@/types';
+import { FlowEditorDialog } from '@/components/flow-editor-dialog';
 import { PageHeader } from '@/components/shell/page-header';
 import { Pager } from '@/components/shell/pager';
 import { Card } from '@/components/ui/card';
@@ -97,6 +98,7 @@ export default function CompetitionsPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(FORM_DEFAULTS);
+  const [flowComp, setFlowComp] = useState<{ id: string; name: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -275,6 +277,14 @@ export default function CompetitionsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setFlowComp({ id: c.id, name: c.name })}
+                        >
+                          <ListChecks className="size-3.5" />
+                          Flow
+                        </Button>
                         <Button size="sm" variant="outline" onClick={() => openEdit(c)}>
                           <Pencil className="size-3.5" />
                           Edit
@@ -400,6 +410,12 @@ export default function CompetitionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <FlowEditorDialog
+        competitionId={flowComp?.id ?? null}
+        competitionName={flowComp?.name ?? ''}
+        onClose={() => setFlowComp(null)}
+      />
     </div>
   );
 }
