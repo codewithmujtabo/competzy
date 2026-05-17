@@ -351,6 +351,24 @@ async function material(
   );
 }
 
+// A demo student suggestion, optionally tied to an exam.
+async function suggestion(
+  userId: string,
+  content: string,
+  examId: string | null
+): Promise<void> {
+  const found = await pool.query(
+    `SELECT id FROM suggestions
+      WHERE comp_id = $1 AND user_id = $2 AND content = $3 AND deleted_at IS NULL`,
+    [COMP, userId, content]
+  );
+  if (found.rows[0]) return;
+  await pool.query(
+    `INSERT INTO suggestions (comp_id, user_id, exam_id, content) VALUES ($1,$2,$3,$4)`,
+    [COMP, userId, examId, content]
+  );
+}
+
 async function main() {
   const admin = await userId("admin@eduversal.com");
   const student = await userId("student@test.local");
@@ -511,6 +529,10 @@ async function main() {
   await material(admin, "EMC 2025 Past Paper", "Last year's Round 1 paper with the full answer key.", "Past Papers", ["SD", "SMP"], true);
   await material(admin, "Algebra Quick Reference", "A one-page summary of the algebra topics covered in the competition.", "Study Guides", ["SMP", "SMA"], true);
   await material(admin, "Competition Day Checklist", "What to bring and how to prepare for any Competzy exam.", "Study Guides", [], false);
+  if (student) {
+    await suggestion(student, "The practice exam timer was great — could you add a 5-minute warning?", practice);
+    await suggestion(student, "Please publish the materials a bit earlier next round. Thank you!", null);
+  }
 
   console.log("EMC demo data seeded:");
   console.log("  venues:    3 areas, 5 test centers");
@@ -523,6 +545,7 @@ async function main() {
   console.log("  marketing: 2 referrals (REF-D01/D02) with funnel + clicks");
   console.log("  announce:  2 announcements (1 competition, 1 platform-wide)");
   console.log("  materials: 3 study materials (2 competition, 1 platform-wide)");
+  console.log("  feedback:  2 student suggestions");
   await pool.end();
 }
 

@@ -805,4 +805,96 @@ router.get("/announcements", authMiddleware, async (req: Request, res: Response)
   }
 });
 
+// ──────────────────────────────────────────────────────────────────────────
+// Suggestions (Wave 10 Phase 6) — student feedback. Students submit via the
+// public-namespace POST /api/suggestions; operators read the per-competition
+// inbox under /marketing/suggestions.
+// ──────────────────────────────────────────────────────────────────────────
+
+// ── POST /api/suggestions ─────────────────────────────────────────────────
+router.post("/suggestions", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const compId = trim(req.body?.compId);
+    const content = trim(req.body?.content);
+    const examId = trim(req.body?.examId);
+    if (!compId || !content) {
+      res.status(400).json({ message: "compId and content are required" });
+      return;
+    }
+    await pool.query(
+      `INSERT INTO suggestions (comp_id, user_id, exam_id, content)
+       VALUES ($1,$2,$3,$4)`,
+      [compId, req.userId, examId, content]
+    );
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    console.error("Create suggestion error:", err);
+    res.status(500).json({ message: "Failed to send your feedback" });
+  }
+});
+
+// ── GET /api/marketing/suggestions?compId= ────────────────────────────────
+router.get("/marketing/suggestions", async (req: Request, res: Response) => {
+  try {
+    const compId = String(req.query.compId ?? "");
+    if (!compId || !(await hasCompAccess(req.userId!, req.userRole!, compId))) {
+      res.status(403).json({ message: "No access to this competition" });
+      return;
+    }
+    const r = await pool.query(
+      `SELECT s.id, s.comp_id, s.content, s.exam_id, s.created_at,
+              u.full_name AS user_name, u.email AS user_email,
+              e.name AS exam_name
+         FROM suggestions s
+         JOIN users u ON u.id = s.user_id
+         LEFT JOIN exams e ON e.id = s.exam_id
+        WHERE s.comp_id = $1 AND s.deleted_at IS NULL
+        ORDER BY s.created_at DESC`,
+      [compId]
+    );
+    res.json(
+      r.rows.map((s) => ({
+        id: s.id,
+        compId: s.comp_id,
+        content: s.content,
+        examId: s.exam_id ?? null,
+        examName: s.exam_name ?? null,
+        userName: s.user_name,
+        userEmail: s.user_email,
+        createdAt: s.created_at,
+      }))
+    );
+  } catch (err) {
+    console.error("List suggestions error:", err);
+    res.status(500).json({ message: "Failed to load suggestions" });
+  }
+});
+
+// ── DELETE /api/marketing/suggestions/:id ─────────────────────────────────
+router.delete(
+  "/marketing/suggestions/:id",
+  audit({ action: "suggestion.delete", resourceType: "suggestion", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.id);
+      const r = await pool.query(
+        "SELECT comp_id FROM suggestions WHERE id = $1 AND deleted_at IS NULL",
+        [id]
+      );
+      if (
+        r.rows.length === 0 ||
+        !(await hasCompAccess(req.userId!, req.userRole!, r.rows[0].comp_id))
+      ) {
+        res.status(404).json({ message: "Suggestion not found" });
+        return;
+      }
+      await softDelete("suggestions", id);
+      res.json({ message: "Suggestion removed" });
+    } catch (err) {
+      console.error("Delete suggestion error:", err);
+      res.status(500).json({ message: "Failed to delete suggestion" });
+    }
+  }
+);
+
 export default router;
