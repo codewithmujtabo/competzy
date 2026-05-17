@@ -204,15 +204,17 @@ export function AuthProvider({
   }
 
   async function logout() {
+    // Always clear local auth state — even if the server call fails — so a
+    // signed-out session can never leak its user/role into the next login.
     try {
       setError(null);
       await authService.logout();
+    } catch (err: any) {
+      setError(err?.message || "Logout failed");
+    } finally {
       setUser(null);
       setRegistrations([]);
       setLastRegisteredId(null);
-    } catch (err: any) {
-      setError(err?.message || "Logout failed");
-      throw err;
     }
   }
 
