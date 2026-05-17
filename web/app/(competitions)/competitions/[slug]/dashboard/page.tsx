@@ -238,6 +238,78 @@ function ExamBlock({ compId, slug }: { compId: string | null; slug: string }) {
   );
 }
 
+// The student's certificate(s) for this competition — drives the "results" step.
+interface MyCertificate {
+  id: string;
+  certificateNumber: string;
+  verificationCode: string;
+  type: string;
+  awardLabel: string | null;
+  revokedAt: string | null;
+}
+
+function CertificateBlock({ compId }: { compId: string | null }) {
+  const [certs, setCerts] = useState<MyCertificate[] | null>(null);
+
+  useEffect(() => {
+    if (!compId) {
+      setCerts([]);
+      return;
+    }
+    emcHttp
+      .get<MyCertificate[]>(`/certificates/mine?compId=${encodeURIComponent(compId)}`)
+      .then(setCerts)
+      .catch(() => setCerts([]));
+  }, [compId]);
+
+  if (certs === null) {
+    return (
+      <div className="mt-2 rounded-md border bg-card p-3 text-xs text-muted-foreground">
+        Loading your certificate…
+      </div>
+    );
+  }
+  if (certs.length === 0) {
+    return (
+      <div className="mt-2 rounded-md border bg-card p-3 text-xs text-muted-foreground">
+        Your certificate will appear here once you’ve completed an exam.
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 space-y-2">
+      {certs.map((c) => (
+        <div key={c.id} className="rounded-md border bg-card p-3">
+          <p className="text-sm font-medium text-foreground">
+            {c.type === 'achievement'
+              ? 'Certificate of Achievement'
+              : 'Certificate of Participation'}
+            {c.awardLabel && <span className="text-primary"> · {c.awardLabel}</span>}
+          </p>
+          <p className="font-mono text-xs text-muted-foreground">
+            {c.certificateNumber}
+            {c.revokedAt && <span className="text-destructive"> · revoked</span>}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button asChild size="sm">
+              <a
+                href={`/api/certificates/verify/${c.verificationCode}/pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download certificate
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/verify/${c.verificationCode}`}>Verify</Link>
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Stepper({
   steps,
   externalUrl,
@@ -258,6 +330,7 @@ function Stepper({
         const hint = s.status === 'current' ? currentHint(s.checkType) : '';
         const showAccess = s.stepKey === 'external_access' && s.status !== 'upcoming';
         const showExam = s.stepKey === 'exam' && s.status !== 'upcoming';
+        const showCert = s.stepKey === 'results';
         const showPay = s.checkType === 'payment' && s.status === 'current';
         return (
           <li key={s.id} className="flex gap-4">
@@ -290,6 +363,7 @@ function Stepper({
               )}
               {showAccess && <AccessBlock externalUrl={externalUrl} credential={credential} />}
               {showExam && <ExamBlock compId={compId} slug={slug} />}
+              {showCert && <CertificateBlock compId={compId} />}
               {showPay && (
                 <Button asChild size="sm" className="mt-2">
                   <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
@@ -418,6 +492,9 @@ export default function CompetitionDashboardPage() {
             </Button>
             <Button variant="ghost" size="sm" asChild>
               <Link href={competitionPaths(slug).feedback}>Feedback</Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={competitionPaths(slug).certificate}>Certificate</Link>
             </Button>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/competitions">All competitions</Link>

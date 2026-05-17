@@ -86,5 +86,6 @@ export function competitionPaths(slug: string) {
     announcements: `/competitions/${slug}/announcements`,
     materials: `/competitions/${slug}/materials`,
     feedback:  `/competitions/${slug}/feedback`,
+    certificate: `/competitions/${slug}/certificates`,
   };
 }
