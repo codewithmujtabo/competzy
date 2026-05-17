@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   ClipboardCheck,
+  ClipboardList,
   FileText,
   FolderTree,
   LayoutGrid,
@@ -52,6 +53,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
         { label: 'Taxonomy', href: '/question-bank/taxonomy', icon: FolderTree },
         { label: 'Questions', href: '/question-bank/questions', icon: FileText },
         { label: 'Review', href: '/question-bank/review', icon: ClipboardCheck },
+        { label: 'Exams', href: '/question-bank/exams', icon: ClipboardList },
       ],
     },
     {
