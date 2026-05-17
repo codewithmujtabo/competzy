@@ -133,6 +133,17 @@ export default function MyRegistrationDetailsScreen() {
                 })
               }
             />
+            <Button
+              label="Announcements"
+              variant="secondary"
+              fullWidth
+              onPress={() =>
+                router.push({
+                  pathname: "/(competition)/announcements",
+                  params: { compId: registration.compId, compName: competition.name },
+                })
+              }
+            />
           </View>
         </Card>
 
