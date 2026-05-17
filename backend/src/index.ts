@@ -33,6 +33,7 @@ import affiliatedCredentialsRoutes from "./routes/affiliated-credentials.routes"
 import questionBankRoutes from "./routes/question-bank.routes";
 import examRoutes from "./routes/exam.routes";
 import examSessionRoutes from "./routes/exam-session.routes";
+import venuesRoutes from "./routes/venues.routes";
 import { initializeCronJobs } from "./services/cron.service";
 import { verifySignedUrlToken } from "./services/storage.service";
 import fs from "fs";
@@ -132,6 +133,8 @@ app.use("/api", questionBankRoutes);
 app.use("/api", examRoutes);
 // Online exam attempts — owns /exams/available, /exams/:id/sessions, /sessions/* (at /api).
 app.use("/api", examSessionRoutes);
+// Venue management — owns /venues/* + /admin/venues/* (mounted at /api).
+app.use("/api", venuesRoutes);
 
 // Sentry error handler must come before our own error handler
 Sentry.setupExpressErrorHandler(app);
