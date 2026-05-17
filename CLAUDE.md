@@ -199,6 +199,7 @@ EXPO_PUBLIC_API_URL=http://<MAC_LAN_IP>:3000/api
 - `web/app/reset-password/page.tsx` — **NEW Sprint 20 Phase B:** reads `?token=…`, password + confirm fields (min 8 chars, must match), posts to `/api/auth/reset-password`; success state redirects to `/` after 2.2s.
 - `web/app/privacy/page.tsx` — UU PDP-aware Privacy Policy placeholder (DRAFT, needs counsel review) — Sprint 14. De-branded to Competzy-only in Sprint 20.
 - `web/app/terms/page.tsx` — Terms of Service placeholder (DRAFT) — Sprint 14. De-branded in Sprint 20.
+- `web/app/design-system/page.tsx` — **NEW Session 12:** public `/design-system` showcase — the Competzy design language (brand color palette, typography, radius scale, the shadcn component set) rendered live from the `globals.css` token layer, with a page-scoped light/dark toggle (`.dark` on a wrapper — no global side effect). Standalone public route, like `/privacy` + `/terms`.
 - `web/app/(dashboard)/` — Admin portal (cookie-guarded by `(dashboard)/layout.tsx`)
 - `web/app/(dashboard)/dashboard/page.tsx` — **Rewritten in Sprint 15**: 4 KPI cards (Registrations, Paid Rate, Revenue, Avg Time to Pay) + 90-day registrations sparkline + Top-3 competitions panel + 6-link grid
 - `web/app/(dashboard)/registrations/page.tsx` — All registrations with status filter tabs (All/Pending/Registered/Paid/Rejected); approve/reject only for `pending_approval`
