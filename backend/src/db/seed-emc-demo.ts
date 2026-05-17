@@ -266,6 +266,40 @@ async function sampleOrder(
   }
 }
 
+// ── Marketing (Wave 10) ─────────────────────────────────────────────────
+// A demo affiliate referral with a populated funnel + matching click rows.
+async function referral(
+  code: string,
+  name: string,
+  email: string,
+  rate: number,
+  account: number,
+  registration: number,
+  paid: number,
+  clickCount: number
+): Promise<void> {
+  const found = await pool.query(
+    "SELECT id FROM referrals WHERE comp_id = $1 AND code = $2 AND deleted_at IS NULL",
+    [COMP, code]
+  );
+  if (found.rows[0]) return;
+  const commission = paid * rate;
+  const r = await pool.query(
+    `INSERT INTO referrals
+       (comp_id, name, email, code, year, commission_per_paid,
+        click, account, registration, paid, commission, total)
+     VALUES ($1,$2,$3,$4,2026,$5,$6,$7,$8,$9,$10,$10) RETURNING id`,
+    [COMP, name, email, code, rate, clickCount, account, registration, paid, commission]
+  );
+  for (let i = 0; i < clickCount; i++) {
+    await pool.query(
+      `INSERT INTO clicks (comp_id, referral_id, ip, user_agent)
+       VALUES ($1,$2,$3,'Mozilla/5.0 (demo seed)')`,
+      [COMP, r.rows[0].id, `203.0.113.${10 + i}`]
+    );
+  }
+}
+
 async function main() {
   const admin = await userId("admin@eduversal.com");
   const student = await userId("student@test.local");
@@ -408,6 +442,10 @@ async function main() {
     orderNote = "ORD-D01 (paid, 2 items)";
   }
 
+  // 7 — Marketing: affiliate referrals with a populated funnel (Wave 10)
+  await referral("REF-D01", "Demo Ambassador — Jakarta", "ambassador.jkt@example.com", 15000, 9, 7, 5, 24);
+  await referral("REF-D02", "Demo Ambassador — Bandung", "ambassador.bdg@example.com", 10000, 4, 3, 2, 11);
+
   console.log("EMC demo data seeded:");
   console.log("  venues:    3 areas, 5 test centers");
   console.log("  taxonomy:  3 subjects, 6 topics, 4 subtopics");
@@ -416,6 +454,7 @@ async function main() {
   console.log(`  attempt:   ${attemptNote} — proctored, awaiting grading, 3 webcam snapshots`);
   console.log("  commerce:  4 products, 1 voucher batch (10 codes)");
   console.log(`  order:     ${orderNote}`);
+  console.log("  marketing: 2 referrals (REF-D01/D02) with funnel + clicks");
   await pool.end();
 }
 

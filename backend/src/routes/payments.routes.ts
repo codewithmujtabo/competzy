@@ -109,6 +109,21 @@ async function redeemVoucher(compId: string, code: string, paymentDbId: string):
   );
 }
 
+// Wave 10: credit a referral for a paid registration. Called only on the
+// first pending_review transition (the caller's conditional UPDATE guards
+// idempotency) — bumps `paid` + accrues `commission_per_paid` into the total.
+async function creditReferralPaid(compId: string, rawCode: string): Promise<void> {
+  await pool.query(
+    `UPDATE referrals
+        SET paid = paid + 1,
+            commission = commission + commission_per_paid,
+            total = commission + commission_per_paid + bonus,
+            updated_at = now()
+      WHERE comp_id = $1 AND code = $2 AND deleted_at IS NULL`,
+    [compId, rawCode.toUpperCase().trim()]
+  );
+}
+
 // ── POST /api/payments/webhook ────────────────────────────────────────────────
 // Midtrans calls this directly — no auth middleware.
 // https://docs.midtrans.com/reference/handling-notifications
@@ -157,7 +172,7 @@ router.post("/webhook", async (req: Request, res: Response) => {
     // ── Look up the payment record ─────────────────────────────────────────
     const paymentResult = await pool.query(
       `SELECT p.id, p.kind, p.registration_id, r.comp_id, r.voucher_code,
-              o.id AS order_db_id
+              r.referral_code, o.id AS order_db_id
          FROM payments p
          LEFT JOIN registrations r ON r.id = p.registration_id
          LEFT JOIN orders o ON o.payment_id = p.id
@@ -178,6 +193,7 @@ router.post("/webhook", async (req: Request, res: Response) => {
       registration_id,
       comp_id,
       voucher_code,
+      referral_code,
       order_db_id,
     } = paymentResult.rows[0];
 
@@ -240,16 +256,24 @@ router.post("/webhook", async (req: Request, res: Response) => {
     }
 
     // ── Payment settled — move to pending_review (awaiting admin approval) ──
+    // The UPDATE is conditional + RETURNING so a webhook+verify double-settle
+    // credits the voucher / referral exactly once (the row only flips once).
     if (isSuccess) {
-      await pool.query(
-        `UPDATE registrations SET status = 'pending_review', updated_at = now() WHERE id = $1`,
+      const settled = await pool.query(
+        `UPDATE registrations SET status = 'pending_review', updated_at = now()
+          WHERE id = $1
+            AND status NOT IN ('pending_review','approved','paid','completed')
+        RETURNING id`,
         [registration_id]
       );
+      const firstSettle = (settled.rowCount ?? 0) > 0;
 
-      // Redeem the registration-fee voucher, if one was applied. Idempotent —
-      // a webhook + verify-endpoint double-settle won't double-count.
-      if (voucher_code && comp_id) {
+      // Redeem the registration-fee voucher + credit the referral, if any.
+      if (firstSettle && voucher_code && comp_id) {
         await redeemVoucher(comp_id, voucher_code, paymentDbId);
+      }
+      if (firstSettle && referral_code && comp_id) {
+        await creditReferralPaid(comp_id, referral_code);
       }
 
       const regResult = await pool.query(
@@ -551,7 +575,7 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
     // Look up payment record
     const payRow = await pool.query(
       `SELECT p.id AS payment_id, p.order_id, r.status as reg_status,
-              r.comp_id, r.voucher_code
+              r.comp_id, r.voucher_code, r.referral_code
        FROM payments p
        JOIN registrations r ON r.id = p.registration_id
        WHERE p.registration_id = $1
@@ -565,7 +589,8 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
       return;
     }
 
-    const { payment_id, order_id, reg_status, comp_id, voucher_code } = payRow.rows[0];
+    const { payment_id, order_id, reg_status, comp_id, voucher_code, referral_code } =
+      payRow.rows[0];
 
     // If already in post-payment state, nothing to do
     if (["pending_review", "approved", "paid"].includes(reg_status)) {
@@ -594,13 +619,21 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
          WHERE order_id = $1`,
         [order_id]
       );
-      await pool.query(
-        `UPDATE registrations SET status = 'pending_review', updated_at = now() WHERE id = $1`,
+      const settled = await pool.query(
+        `UPDATE registrations SET status = 'pending_review', updated_at = now()
+          WHERE id = $1
+            AND status NOT IN ('pending_review','approved','paid','completed')
+        RETURNING id`,
         [registrationId]
       );
-      // Redeem the registration-fee voucher (idempotent — see webhook).
-      if (voucher_code && comp_id) {
-        await redeemVoucher(comp_id, voucher_code, payment_id);
+      if ((settled.rowCount ?? 0) > 0) {
+        // First settle — redeem the voucher + credit the referral.
+        if (voucher_code && comp_id) {
+          await redeemVoucher(comp_id, voucher_code, payment_id);
+        }
+        if (referral_code && comp_id) {
+          await creditReferralPaid(comp_id, referral_code);
+        }
       }
       console.log(`Verify endpoint: payment settled for registration ${registrationId} (order ${order_id}) → pending_review`);
       res.json({ status: "pending_review" });

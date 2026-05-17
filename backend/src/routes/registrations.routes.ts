@@ -346,6 +346,16 @@ router.post("/", async (req: Request, res: Response) => {
     );
     const registrationNumber = insertResult.rows[0]?.registration_number ?? null;
 
+    // Wave 10: attribute the registration to its referral, if the code matches
+    // a live affiliate referral for this competition.
+    if (referralCode) {
+      await pool.query(
+        `UPDATE referrals SET registration = registration + 1, updated_at = now()
+          WHERE comp_id = $1 AND code = $2 AND deleted_at IS NULL`,
+        [compId, String(referralCode).toUpperCase().trim()]
+      );
+    }
+
     // Get competition + student details for notifications
     const detailsResult = await pool.query(
       `SELECT c.name as competition_name, u.full_name as student_name

@@ -91,6 +91,12 @@ const SOFT_DELETE_TABLES = new Set([
   "vouchers",
   "orders",
   "order_items",
+  // EMC-port marketing (1748500000000_emc-marketing.sql)
+  "referrals",
+  "clicks",
+  "announcements",
+  "materials",
+  "suggestions",
 ]);
 
 /**
