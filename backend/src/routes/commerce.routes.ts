@@ -285,4 +285,255 @@ router.post(
   }
 );
 
+// ──────────────────────────────────────────────────────────────────────────
+// Voucher groups — a batch is a `voucher_groups` row; creating one mints
+// `usable_count` individual `vouchers`. A voucher_groups.discounted value is
+// the *absolute* registration fee a voucher-holder pays (not a percentage);
+// it's applied in the Phase-3 registration-payment flow.
+// ──────────────────────────────────────────────────────────────────────────
+
+// No ambiguous chars (0/O, 1/I/L) — voucher codes get read off paper/screens.
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function randomCode(len = 6): string {
+  let s = "";
+  for (let i = 0; i < len; i++) s += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  return s;
+}
+
+function mapVoucherGroup(r: any) {
+  return {
+    id: r.id,
+    compId: r.comp_id,
+    name: r.name,
+    code: r.code,
+    usableCount: r.usable_count,
+    price: r.price != null ? Number(r.price) : 0,
+    discounted: r.discounted != null ? Number(r.discounted) : 0,
+    isActive: r.is_active,
+    voucherCount: r.voucher_count != null ? Number(r.voucher_count) : 0,
+    usedCount: r.used_count != null ? Number(r.used_count) : 0,
+    createdAt: r.created_at,
+  };
+}
+
+async function voucherGroupCompIfAccessible(req: Request, id: string): Promise<string | null> {
+  const r = await pool.query(
+    "SELECT comp_id FROM voucher_groups WHERE id = $1 AND deleted_at IS NULL",
+    [id]
+  );
+  if (r.rows.length === 0) return null;
+  const compId = r.rows[0].comp_id as string;
+  return (await hasCompAccess(req.userId!, req.userRole!, compId)) ? compId : null;
+}
+
+// ── GET /api/commerce/voucher-groups?compId= ──────────────────────────────
+router.get("/commerce/voucher-groups", async (req: Request, res: Response) => {
+  try {
+    const compId = String(req.query.compId ?? "");
+    if (!compId || !(await hasCompAccess(req.userId!, req.userRole!, compId))) {
+      res.status(403).json({ message: "No access to this competition" });
+      return;
+    }
+    const r = await pool.query(
+      `SELECT vg.id, vg.comp_id, vg.name, vg.code, vg.usable_count, vg.price,
+              vg.discounted, vg.is_active, vg.created_at,
+              COUNT(v.id)::int AS voucher_count,
+              COUNT(v.id) FILTER (WHERE v.used > 0)::int AS used_count
+         FROM voucher_groups vg
+         LEFT JOIN vouchers v ON v.group_id = vg.id AND v.deleted_at IS NULL
+        WHERE vg.comp_id = $1 AND vg.deleted_at IS NULL
+        GROUP BY vg.id
+        ORDER BY vg.created_at DESC`,
+      [compId]
+    );
+    res.json(r.rows.map(mapVoucherGroup));
+  } catch (err) {
+    console.error("List voucher groups error:", err);
+    res.status(500).json({ message: "Failed to load voucher groups" });
+  }
+});
+
+// ── GET /api/commerce/voucher-groups/:id/vouchers ─────────────────────────
+router.get("/commerce/voucher-groups/:id/vouchers", async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    if (!(await voucherGroupCompIfAccessible(req, id))) {
+      res.status(404).json({ message: "Voucher group not found" });
+      return;
+    }
+    const r = await pool.query(
+      `SELECT v.id, v.code, v.npsn, v.used, v.max, v.created_at, u.email AS claimer_email
+         FROM vouchers v
+         LEFT JOIN users u ON u.id = v.user_id
+        WHERE v.group_id = $1 AND v.deleted_at IS NULL
+        ORDER BY v.created_at ASC`,
+      [id]
+    );
+    res.json(
+      r.rows.map((v) => ({
+        id: v.id,
+        code: v.code,
+        npsn: v.npsn ?? null,
+        used: v.used,
+        max: v.max,
+        claimerEmail: v.claimer_email ?? null,
+        createdAt: v.created_at,
+      }))
+    );
+  } catch (err) {
+    console.error("List vouchers error:", err);
+    res.status(500).json({ message: "Failed to load vouchers" });
+  }
+});
+
+// ── POST /api/commerce/voucher-groups ─────────────────────────────────────
+// Creates the group + mints `usableCount` vouchers in one transaction.
+router.post(
+  "/commerce/voucher-groups",
+  audit({ action: "voucher_group.create", resourceType: "voucher_group" }),
+  async (req: Request, res: Response) => {
+    const client = await pool.connect();
+    try {
+      const compId = String(req.body?.compId ?? "");
+      if (!compId || !(await hasCompAccess(req.userId!, req.userRole!, compId))) {
+        res.status(403).json({ message: "No access to this competition" });
+        return;
+      }
+      const name = trim(req.body?.name);
+      if (!name) {
+        res.status(400).json({ message: "name is required" });
+        return;
+      }
+      const usableCount = Math.floor(Number(req.body?.usableCount));
+      if (!Number.isFinite(usableCount) || usableCount < 1 || usableCount > 1000) {
+        res.status(400).json({ message: "usableCount must be between 1 and 1000" });
+        return;
+      }
+      const discounted = Number(req.body?.discounted);
+      const price = Number(req.body?.price);
+      const npsn = trim(req.body?.npsn);
+
+      await client.query("BEGIN");
+      const count = await client.query(
+        "SELECT COUNT(*)::int n FROM voucher_groups WHERE comp_id = $1",
+        [compId]
+      );
+      const code = trim(req.body?.code) || `VG-${String(count.rows[0].n + 1).padStart(3, "0")}`;
+      const groupRow = await client.query(
+        `INSERT INTO voucher_groups (comp_id, name, code, usable_count, price, discounted, is_active)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)
+         RETURNING id, comp_id, name, code, usable_count, price, discounted, is_active, created_at`,
+        [
+          compId, name, code, usableCount,
+          Number.isFinite(price) && price >= 0 ? price : 0,
+          Number.isFinite(discounted) && discounted >= 0 ? discounted : 0,
+          req.body?.isActive !== false,
+        ]
+      );
+      const group = groupRow.rows[0];
+
+      // Mint the codes — `{GROUP}-{rand}`, unique within the batch.
+      const seen = new Set<string>();
+      const codes: string[] = [];
+      while (codes.length < usableCount) {
+        const c = `${code}-${randomCode(6)}`;
+        if (seen.has(c)) continue;
+        seen.add(c);
+        codes.push(c);
+      }
+      const values = codes.map((_, i) => `($1, $2, $${i + 4}, $3, 0, 1)`).join(",");
+      await client.query(
+        `INSERT INTO vouchers (comp_id, group_id, code, npsn, used, max) VALUES ${values}`,
+        [compId, group.id, npsn, ...codes]
+      );
+      await client.query("COMMIT");
+      res.status(201).json(
+        mapVoucherGroup({ ...group, voucher_count: codes.length, used_count: 0 })
+      );
+    } catch (err: any) {
+      await client.query("ROLLBACK").catch(() => {});
+      if (err?.code === "23505") {
+        res.status(409).json({ message: "A voucher group with this code already exists" });
+        return;
+      }
+      console.error("Create voucher group error:", err);
+      res.status(500).json({ message: "Failed to create voucher group" });
+    } finally {
+      client.release();
+    }
+  }
+);
+
+// ── PUT /api/commerce/voucher-groups/:id ──────────────────────────────────
+// Edits the campaign — name / discounted fee / active flag. The minted codes
+// and `usable_count` are immutable (re-minting would orphan printed codes).
+router.put(
+  "/commerce/voucher-groups/:id",
+  audit({ action: "voucher_group.update", resourceType: "voucher_group", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.id);
+      if (!(await voucherGroupCompIfAccessible(req, id))) {
+        res.status(404).json({ message: "Voucher group not found" });
+        return;
+      }
+      const name = trim(req.body?.name);
+      if (!name) {
+        res.status(400).json({ message: "name is required" });
+        return;
+      }
+      const discounted = Number(req.body?.discounted);
+      const price = Number(req.body?.price);
+      const updated = await pool.query(
+        `UPDATE voucher_groups
+            SET name=$1, discounted=$2, price=$3, is_active=$4, updated_at=now()
+          WHERE id=$5 AND deleted_at IS NULL
+        RETURNING id, comp_id, name, code, usable_count, price, discounted, is_active, created_at`,
+        [
+          name,
+          Number.isFinite(discounted) && discounted >= 0 ? discounted : 0,
+          Number.isFinite(price) && price >= 0 ? price : 0,
+          req.body?.isActive !== false,
+          id,
+        ]
+      );
+      const counts = await pool.query(
+        `SELECT COUNT(*)::int AS voucher_count,
+                COUNT(*) FILTER (WHERE used > 0)::int AS used_count
+           FROM vouchers WHERE group_id = $1 AND deleted_at IS NULL`,
+        [id]
+      );
+      res.json(mapVoucherGroup({ ...updated.rows[0], ...counts.rows[0] }));
+    } catch (err) {
+      console.error("Update voucher group error:", err);
+      res.status(500).json({ message: "Failed to update voucher group" });
+    }
+  }
+);
+
+// ── DELETE /api/commerce/voucher-groups/:id ───────────────────────────────
+// Soft-deletes the group and all its vouchers.
+router.delete(
+  "/commerce/voucher-groups/:id",
+  audit({ action: "voucher_group.delete", resourceType: "voucher_group", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.id);
+      if (!(await voucherGroupCompIfAccessible(req, id))) {
+        res.status(404).json({ message: "Voucher group not found" });
+        return;
+      }
+      await softDelete("voucher_groups", id);
+      await pool.query(
+        "UPDATE vouchers SET deleted_at = now() WHERE group_id = $1 AND deleted_at IS NULL",
+        [id]
+      );
+      res.json({ message: "Voucher group removed" });
+    } catch (err) {
+      console.error("Delete voucher group error:", err);
+      res.status(500).json({ message: "Failed to delete voucher group" });
+    }
+  }
+);
+
 export default router;

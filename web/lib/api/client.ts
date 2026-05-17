@@ -61,6 +61,9 @@ export const schoolHttp    = makeHttp();
 export const emcHttp       = makeHttp();
 // Question-bank workspace (admin + organizer) — same cookie jar.
 export const questionBankHttp = makeHttp();
+// Commerce — products / vouchers / orders, served inside the question-bank
+// workspace; admin + organizer; same cookie jar.
+export const commerceHttp = makeHttp();
 
 // Used by callers that need the raw Response (e.g. CSV downloads).
 export async function schoolFetch(path: string, init: RequestInit = {}): Promise<Response> {
