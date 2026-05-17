@@ -9,6 +9,7 @@ import {
   FileSpreadsheet,
   FileText,
   FolderTree,
+  BookOpen,
   LayoutGrid,
   Library,
   Loader2,
@@ -80,6 +81,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
       items: [
         { label: 'Referrals', href: '/question-bank/referrals', icon: Share2 },
         { label: 'Announcements', href: '/question-bank/announcements', icon: Megaphone },
+        { label: 'Materials', href: '/question-bank/materials', icon: BookOpen },
       ],
     },
     {

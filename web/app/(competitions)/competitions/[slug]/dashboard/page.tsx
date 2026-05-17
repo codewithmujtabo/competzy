@@ -411,6 +411,9 @@ export default function CompetitionDashboardPage() {
               <Link href={competitionPaths(slug).announcements}>News</Link>
             </Button>
             <Button variant="ghost" size="sm" asChild>
+              <Link href={competitionPaths(slug).materials}>Materials</Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
               <Link href={competitionPaths(slug).store}>Store</Link>
             </Button>
             <Button variant="ghost" size="sm" asChild>
