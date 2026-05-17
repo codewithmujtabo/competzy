@@ -103,6 +103,7 @@ router.get("/", async (req: Request, res: Response) => {
       isInternational: c.is_international,
       imageUrl: c.image_url,
       participantInstructions: c.participant_instructions,
+      kind: c.kind ?? "native",
       createdAt: c.created_at,
     }));
 
@@ -167,6 +168,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       requiredDocs: c.required_docs,
       description: c.description,
       detailedDescription: c.detailed_description,
+      kind: c.kind ?? "native",
       registrationStatus: c.registration_status,
       isInternational: c.is_international,
       imageUrl: c.image_url,

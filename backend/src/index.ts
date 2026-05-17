@@ -29,6 +29,7 @@ import regionsRoutes from "./routes/regions.routes";
 import favoritesRoutes from "./routes/favorites.routes";
 import historicalRoutes from "./routes/historical.routes";
 import competitionFlowsRoutes from "./routes/competition-flows.routes";
+import affiliatedCredentialsRoutes from "./routes/affiliated-credentials.routes";
 import { initializeCronJobs } from "./services/cron.service";
 import { verifySignedUrlToken } from "./services/storage.service";
 import fs from "fs";
@@ -119,6 +120,9 @@ app.use("/api/historical", historicalRoutes);
 // Step-flow engine — owns /competitions/:id/flow, /registrations/:id/flow-progress,
 // and /admin/competitions/:id/flow* (mounted at /api with full sub-paths).
 app.use("/api", competitionFlowsRoutes);
+// Affiliated-competition credentials — owns /registrations/:id/credentials and
+// /competitions/:id/credentials* (mounted at /api with full sub-paths).
+app.use("/api", affiliatedCredentialsRoutes);
 
 // Sentry error handler must come before our own error handler
 Sentry.setupExpressErrorHandler(app);
