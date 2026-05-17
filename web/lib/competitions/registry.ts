@@ -22,22 +22,40 @@ export interface CompetitionPortalConfig {
 }
 
 export const competitionRegistry: Record<string, CompetitionPortalConfig> = {
-  'emc-2026': {
-    slug: 'emc-2026',
+  emc: {
+    slug: 'emc',
     shortName: 'EMC',
     wordmark: 'Mathematics Competition',
-    tagline: 'Rejuvenate your Brain with Math',
+    tagline: 'Rejuvenate your brain with math',
     accent: '#5627FF',
     accentDark: '#3a1bb8',
     gradient: ['#5627FF', '#3a1bb8'] as const,
   },
+  ispo: {
+    slug: 'ispo',
+    shortName: 'ISPO',
+    wordmark: 'Science Project Olympiad',
+    tagline: 'Turn your idea into a science project',
+    accent: '#0E7C66',
+    accentDark: '#0a5a4a',
+    gradient: ['#0E7C66', '#0a5a4a'] as const,
+  },
+  osebi: {
+    slug: 'osebi',
+    shortName: 'OSEBI',
+    wordmark: 'Arts & Culture Competition',
+    tagline: 'Celebrate creativity and culture',
+    accent: '#D9277B',
+    accentDark: '#a81a5d',
+    gradient: ['#D9277B', '#a81a5d'] as const,
+  },
 };
 
 /**
- * Default landing slug for student/parent post-login routing.
- * Replaced with a true `/competitions` catalog page in Wave 2.
+ * Default landing slug for student/parent post-login routing — used by `/`'s
+ * "create a student account" link.
  */
-export const DEFAULT_COMPETITION_SLUG = 'emc-2026';
+export const DEFAULT_COMPETITION_SLUG = 'emc';
 
 /**
  * Derives a usable portal config for a competition with no hand-tuned registry
