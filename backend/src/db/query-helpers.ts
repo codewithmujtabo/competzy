@@ -87,6 +87,8 @@ const SOFT_DELETE_TABLES = new Set([
   "webcams",
   // EMC-port commerce (1748400000000_emc-commerce.sql)
   "products",
+  "voucher_groups",
+  "vouchers",
 ]);
 
 /**
