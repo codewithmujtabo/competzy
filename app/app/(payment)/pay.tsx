@@ -10,6 +10,7 @@ import {
 } from "@/constants/theme";
 import { useUser } from "@/context/AuthContext";
 import * as paymentsService from "@/services/payments.service";
+import { Ionicons } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
@@ -35,19 +36,21 @@ type PaymentState =
 
 type PayerKind = "self" | "parent" | "school" | "sponsor";
 
-const PAYER_OPTIONS: Array<{ value: PayerKind; emoji: string; label: string; subtitle: string }> = [
-  { value: "self",    emoji: "🙋", label: "Myself",    subtitle: "Payment in my name" },
-  { value: "parent",  emoji: "👨‍👩‍👧", label: "Parent / Guardian", subtitle: "Receipt issued in the parent name" },
-  { value: "school",  emoji: "🏫", label: "School",          subtitle: "School covers the fee" },
-  { value: "sponsor", emoji: "🤝", label: "Sponsor",          subtitle: "Third party (foundation, company)" },
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
+
+const PAYER_OPTIONS: Array<{ value: PayerKind; icon: IoniconName; label: string; subtitle: string }> = [
+  { value: "self",    icon: "person",    label: "Myself",            subtitle: "Payment in my name" },
+  { value: "parent",  icon: "people",    label: "Parent / Guardian", subtitle: "Receipt issued in the parent name" },
+  { value: "school",  icon: "business",  label: "School",            subtitle: "School covers the fee" },
+  { value: "sponsor", icon: "briefcase", label: "Sponsor",           subtitle: "Third party (foundation, company)" },
 ];
 
 const STATE_CONTENT: Record<
   Exclude<PaymentState, "selecting" | "loading" | "opening">,
-  { emoji: string; title: string; subtitle: string; accent: string; bg: string }
+  { icon: IoniconName; title: string; subtitle: string; accent: string; bg: string }
 > = {
   success: {
-    emoji: "🎉",
+    icon: "checkmark-circle",
     title: "Payment Completed!",
     subtitle:
       "Your payment has been confirmed. Your spot is secured! Head to My Competitions to track your registration.",
@@ -55,7 +58,7 @@ const STATE_CONTENT: Record<
     bg: Brand.successSoft,
   },
   pending: {
-    emoji: "⏳",
+    icon: "time",
     title: "Payment Pending",
     subtitle:
       "Your payment is being processed. We will notify you once confirmed. You can close this screen.",
@@ -63,7 +66,7 @@ const STATE_CONTENT: Record<
     bg: Brand.warningSoft,
   },
   failed: {
-    emoji: "❌",
+    icon: "close-circle",
     title: "Payment Failed",
     subtitle:
       "Transaction was unsuccessful. Try again or use a different payment method.",
@@ -71,7 +74,7 @@ const STATE_CONTENT: Record<
     bg: Brand.errorSoft,
   },
   cancelled: {
-    emoji: "↩️",
+    icon: "arrow-undo",
     title: "Page Closed",
     subtitle:
       "Payment page was closed. If you already paid, status will update automatically. If not, try again.",
@@ -79,7 +82,7 @@ const STATE_CONTENT: Record<
     bg: Surface.cardAlt,
   },
   error: {
-    emoji: "😕",
+    icon: "alert-circle",
     title: "An Error Occurred",
     subtitle: "Unable to load payment page. Try again in a moment.",
     accent: Brand.error,
@@ -173,8 +176,8 @@ export default function PayScreen() {
       >
         <ScrollView contentContainerStyle={{ paddingHorizontal: Spacing.xl }} showsVerticalScrollIndicator={false}>
           <View style={{ alignItems: "center", marginVertical: Spacing.xl }}>
-            <View style={styles.heroEmoji}>
-              <Text style={{ fontSize: 40 }}>💳</Text>
+            <View style={styles.heroIcon}>
+              <Ionicons name="card" size={40} color={Brand.primary} />
             </View>
             <Text style={[Type.displayMd, { marginTop: Spacing.lg, textAlign: "center" }]}>
               Paid By
@@ -200,8 +203,8 @@ export default function PayScreen() {
                   }
                 >
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <View style={[styles.payerEmojiTile, { backgroundColor: selected ? "#FFFFFF" : Brand.primarySoft }]}>
-                      <Text style={{ fontSize: 24 }}>{opt.emoji}</Text>
+                    <View style={[styles.payerIconTile, { backgroundColor: selected ? "#FFFFFF" : Brand.primarySoft }]}>
+                      <Ionicons name={opt.icon} size={24} color={Brand.primary} />
                     </View>
                     <View style={{ flex: 1, marginLeft: Spacing.md }}>
                       <Text style={[Type.title, { color: selected ? Brand.primary : TextColor.primary }]}>
@@ -242,8 +245,8 @@ export default function PayScreen() {
   if (paymentState === "loading" || paymentState === "opening") {
     return (
       <View style={[styles.center, { paddingTop: insets.top }]}>
-        <View style={styles.heroEmoji}>
-          <Text style={{ fontSize: 40 }}>⏳</Text>
+        <View style={styles.heroIcon}>
+          <Ionicons name="time" size={40} color={Brand.primary} />
         </View>
         <ActivityIndicator size="large" color={Brand.primary} style={{ marginTop: Spacing.lg }} />
         <Text style={[Type.body, { color: TextColor.secondary, textAlign: "center", marginTop: Spacing.lg }]}>
@@ -265,8 +268,8 @@ export default function PayScreen() {
     >
       <View style={{ paddingHorizontal: Spacing.xl }}>
         <Card padding="2xl" style={{ alignItems: "center" }}>
-          <View style={[styles.statusEmoji, { backgroundColor: content.bg }]}>
-            <Text style={{ fontSize: 56 }}>{content.emoji}</Text>
+          <View style={[styles.statusIcon, { backgroundColor: content.bg }]}>
+            <Ionicons name={content.icon} size={56} color={content.accent} />
           </View>
           <Text
             style={[
@@ -294,7 +297,7 @@ export default function PayScreen() {
         <View style={{ marginTop: Spacing.xl, gap: Spacing.md }}>
           {paymentState === "success" || paymentState === "pending" ? (
             <Button
-              label="View Competitionku"
+              label="View My Competitions"
               onPress={() => router.replace("/(tabs)/my-competitions")}
               fullWidth
               size="lg"
@@ -321,7 +324,7 @@ const styles = StyleSheet.create({
     backgroundColor: Surface.background,
     paddingHorizontal: Spacing.xl,
   },
-  heroEmoji: {
+  heroIcon: {
     width: 96,
     height: 96,
     borderRadius: Radius["2xl"],
@@ -330,14 +333,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     ...Shadow.md,
   },
-  statusEmoji: {
+  statusIcon: {
     width: 112,
     height: 112,
     borderRadius: Radius["3xl"],
     alignItems: "center",
     justifyContent: "center",
   },
-  payerEmojiTile: {
+  payerIconTile: {
     width: 56,
     height: 56,
     borderRadius: Radius.xl,

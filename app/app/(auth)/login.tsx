@@ -3,6 +3,7 @@ import { Button, Card } from "@/components/ui";
 import * as authService from "@/services/auth.service";
 import {
   Brand,
+  FontFamily,
   Radius,
   Shadow,
   Spacing,
@@ -149,7 +150,7 @@ export default function LoginScreen() {
         {/* Brand header */}
         <View style={styles.header}>
           <View style={styles.logoBox}>
-            <Text style={{ fontSize: 38 }}>🏆</Text>
+            <Ionicons name="trophy" size={36} color={Brand.primary} />
           </View>
           <Text style={Type.displayMd}>Welcome</Text>
           <Text
@@ -251,7 +252,7 @@ export default function LoginScreen() {
                       padding: Spacing.md,
                     }}
                   >
-                    <Text style={[Type.bodySm, { color: Brand.primary, fontWeight: "600" }]}>
+                    <Text style={[Type.bodySm, { color: Brand.primary, fontFamily: FontFamily.bodySemi }]}>
                       OTP code sent to {phone}
                     </Text>
                   </View>
@@ -293,7 +294,7 @@ export default function LoginScreen() {
         <View style={styles.footer}>
           <Text style={[Type.body, { color: TextColor.secondary }]}>Don't have an account? </Text>
           <Pressable onPress={() => router.push("/(auth)/register")} hitSlop={8}>
-            <Text style={[Type.body, { color: Brand.primary, fontWeight: "700" }]}>Sign Up</Text>
+            <Text style={[Type.body, { color: Brand.primary, fontFamily: FontFamily.bodyBold }]}>Sign Up</Text>
           </Pressable>
         </View>
       </ScrollView>
