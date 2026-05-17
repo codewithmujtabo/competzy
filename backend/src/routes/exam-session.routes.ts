@@ -221,7 +221,8 @@ router.get("/sessions/:id", async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
     const s = await pool.query(
-      `SELECT s.id, s.started_at, s.finished_at,
+      `SELECT s.id, s.started_at, s.finished_at, s.total_point,
+              s.corrects, s.wrongs, s.blanks,
               e.name AS exam_name, e.minutes, e.date::text AS date,
               e.end_time::text AS end_time
          FROM sessions s JOIN exams e ON e.id = s.exam_id
@@ -260,6 +261,16 @@ router.get("/sessions/:id", async (req: Request, res: Response) => {
     const deadline = sess.started_at
       ? attemptDeadline(new Date(sess.started_at), sess.minutes, sess.date, sess.end_time)
       : null;
+    // The score is only revealed once the attempt is finished.
+    const result = sess.finished_at
+      ? {
+          totalPoint: sess.total_point != null ? Number(sess.total_point) : 0,
+          corrects: sess.corrects ?? {},
+          wrongs: sess.wrongs ?? {},
+          blanks: sess.blanks ?? {},
+          awaitingGrading: await sessionHasPendingGrading(pool, id),
+        }
+      : null;
     res.json({
       id: sess.id,
       examName: sess.exam_name,
@@ -269,6 +280,7 @@ router.get("/sessions/:id", async (req: Request, res: Response) => {
       remainingSeconds: deadline
         ? Math.max(0, Math.floor((deadline.getTime() - Date.now()) / 1000))
         : null,
+      result,
       periods: periods.rows.map((p) => ({
         id: p.id,
         number: p.number,
