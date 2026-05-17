@@ -83,6 +83,8 @@ const SOFT_DELETE_TABLES = new Set([
   // EMC-port venues (1748200000000_emc-venues.sql)
   "areas",
   "test_centers",
+  // EMC-port webcam proctoring (1748300000000_emc-exam-delivery.sql)
+  "webcams",
 ]);
 
 /**

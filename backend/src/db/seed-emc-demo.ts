@@ -9,8 +9,15 @@
 // so they never collide with the app's auto-generated `Q-NNN` codes.
 
 import { pool } from "../config/database";
+import { storeFile } from "../services/storage.service";
 
 const COMP = "comp-1-eduversal-mathematics-competition";
+
+// A tiny valid JPEG — stands in for a webcam snapshot in the proctoring demo.
+const DEMO_JPEG_B64 =
+  "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB" +
+  "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAA" +
+  "AAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AVN//2Q==";
 
 async function userId(email: string): Promise<string | null> {
   const r = await pool.query("SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL", [email]);
@@ -120,6 +127,16 @@ async function question(writer: string, q: SeedQuestion): Promise<string> {
   return id;
 }
 
+// The current LOCAL date (YYYY-MM-DD). Not toISOString() — that is UTC, and
+// the exam window check parses date+time as local; a UTC date can land the
+// demo exam a day off and read as "closed".
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+}
+
 // ── Exams ───────────────────────────────────────────────────────────────
 async function exam(
   name: string,
@@ -128,6 +145,7 @@ async function exam(
   minutes: number,
   questionIds: string[]
 ): Promise<string> {
+  const today = localToday();
   const found = await pool.query(
     "SELECT id FROM exams WHERE comp_id = $1 AND code = $2 AND deleted_at IS NULL",
     [COMP, code]
@@ -135,8 +153,12 @@ async function exam(
   let id: string;
   if (found.rows[0]) {
     id = found.rows[0].id;
+    // Refresh the window so the demo exam is open on the day the seed runs.
+    await pool.query(
+      "UPDATE exams SET date = $1, start_time = '00:00', end_time = '23:59', updated_at = now() WHERE id = $2",
+      [today, id]
+    );
   } else {
-    const today = new Date().toISOString().slice(0, 10);
     const score = Object.fromEntries(grades.map((g) => [g, 4]));
     const wrong = Object.fromEntries(grades.map((g) => [g, -1]));
     const r = await pool.query(
@@ -232,25 +254,29 @@ async function main() {
   );
 
   // 5 — A sample finished attempt on the practice exam (so the grading queue
-  //     has data): one MC graded, one short answer awaiting a manual grade.
-  let sessionSeeded = false;
+  //     + proctoring review have data): one MC graded, one short answer
+  //     awaiting a manual grade, camera proctored with snapshots.
+  let attemptNote = "skipped (no test student)";
   if (student) {
     const exists = await pool.query(
       "SELECT id FROM sessions WHERE user_id = $1 AND exam_id = $2 AND deleted_at IS NULL",
       [student, practice]
     );
-    if (exists.rows.length === 0) {
+    let sid: string;
+    if (exists.rows.length > 0) {
+      sid = exists.rows[0].id;
+      attemptNote = "refreshed";
+    } else {
       const s = await pool.query(
         `INSERT INTO sessions (comp_id, user_id, exam_id, grade, started_at, finished_at,
-                               corrects, wrongs, blanks, points, total_point)
+                               camera_available, corrects, wrongs, blanks, points, total_point)
          VALUES ($1,$2,$3,'SMA', now() - interval '1 hour', now() - interval '30 minutes',
-                 '{"choice":1,"short":0}'::jsonb, '{"choice":0,"short":0}'::jsonb,
+                 true, '{"choice":1,"short":0}'::jsonb, '{"choice":0,"short":0}'::jsonb,
                  '{"choice":0,"short":0}'::jsonb, '{"choice":4,"short":0}'::jsonb, 4)
          RETURNING id`,
         [COMP, student, practice]
       );
-      const sid = s.rows[0].id as string;
-      // Q-D06 (MC) — answered correctly.
+      sid = s.rows[0].id;
       const correctOpt = await pool.query(
         "SELECT id FROM answers WHERE question_id = $1 AND is_correct = true LIMIT 1",
         [qid["Q-D06"]]
@@ -260,13 +286,25 @@ async function main() {
          VALUES ($1,$2,$3,$4,'choice',1,true,4)`,
         [COMP, sid, qid["Q-D06"], correctOpt.rows[0].id]
       );
-      // Q-D08 (short) — answered, awaiting a manual grade.
       await pool.query(
         `INSERT INTO periods (comp_id, session_id, question_id, type, short_answer, number)
          VALUES ($1,$2,$3,'short','seven',2)`,
         [COMP, sid, qid["Q-D08"]]
       );
-      sessionSeeded = true;
+      attemptNote = "created";
+    }
+    // Ensure the session is camera-proctored with a few snapshots (idempotent).
+    await pool.query("UPDATE sessions SET camera_available = true WHERE id = $1", [sid]);
+    const wc = await pool.query("SELECT count(*)::int n FROM webcams WHERE session_id = $1", [sid]);
+    if (wc.rows[0].n === 0) {
+      const buf = Buffer.from(DEMO_JPEG_B64, "base64");
+      for (let i = 0; i < 3; i++) {
+        const imagePath = await storeFile(student, buf, `demo-webcam-${sid}-${i}.jpg`, "image/jpeg");
+        await pool.query(
+          "INSERT INTO webcams (comp_id, session_id, image_path) VALUES ($1,$2,$3)",
+          [COMP, sid, imagePath]
+        );
+      }
     }
   }
 
@@ -274,8 +312,8 @@ async function main() {
   console.log("  venues:    3 areas, 5 test centers");
   console.log("  taxonomy:  3 subjects, 6 topics, 4 subtopics");
   console.log("  questions: 12 (8 approved, 2 submitted, 2 draft)");
-  console.log(`  exams:     EMC-R1 (8 questions), EMC-PRAC (2 questions)`);
-  console.log(`  attempt:   ${sessionSeeded ? "1 finished session awaiting grading" : "skipped (already present / no test student)"}`);
+  console.log("  exams:     EMC-R1 (8 questions), EMC-PRAC (2 questions)");
+  console.log(`  attempt:   ${attemptNote} — proctored, awaiting grading, 3 webcam snapshots`);
   await pool.end();
 }
 
