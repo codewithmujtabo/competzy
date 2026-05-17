@@ -50,6 +50,14 @@ export default function MyRegistrationDetailsScreen() {
   const registration = data;
   const competition = data?.competition;
 
+  // Affiliated-competition access credentials (Wave 5).
+  const { data: access } = useQuery({
+    queryKey: ["registrationCredentials", id],
+    queryFn: () => registrationsService.getCredentials(id!),
+    enabled: !!id,
+  });
+  const credential = access?.credential ?? null;
+
   const handleOpenRedirect = async () => {
     if (!id) return;
     try {
@@ -177,7 +185,26 @@ export default function MyRegistrationDetailsScreen() {
           </Card>
         ) : null}
 
-        {competition.post_payment_redirect_url ? (
+        {credential ? (
+          <Card variant="tinted" tint={Brand.primarySoft}>
+            <Text style={Type.h3}>Competition Access</Text>
+            <Text style={[Type.body, { marginTop: Spacing.sm }]}>
+              Sign in to the affiliated competition&apos;s site with the login below.
+            </Text>
+            <View style={{ marginTop: Spacing.md, gap: Spacing.md }}>
+              <Row label="Username" value={credential.username} />
+              <Row label="Password" value={credential.password} />
+            </View>
+            {access?.externalUrl ? (
+              <View style={{ marginTop: Spacing.lg }}>
+                <Button
+                  label="Open Competition Site"
+                  onPress={() => Linking.openURL(access.externalUrl!)}
+                />
+              </View>
+            ) : null}
+          </Card>
+        ) : competition.post_payment_redirect_url ? (
           <Card variant="tinted" tint={Brand.primarySoft}>
             <Text style={Type.h3}>Competition Platform</Text>
             <Text style={[Type.body, { marginTop: Spacing.sm }]}>

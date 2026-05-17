@@ -87,12 +87,15 @@ router.post("/competitions", audit({ action: "admin.competition.create", resourc
     // Generate competition ID
     const slug = name
       .toLowerCase()
-      .replace(/[^a-z0-9\\s-]/g, "")
-      .replace(/\\s+/g, "-")
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
       .substring(0, 40);
 
     const timestamp = Date.now();
     const compId = `comp-${timestamp}-${slug}`;
+    // Public URL slug for the /competitions/[slug] portal — uniqueness suffix
+    // appended so same-named competitions don't collide.
+    const compSlug = `${slug || "competition"}-${timestamp.toString(36).slice(-5)}`;
 
     // Insert competition
     const compResult = await client.query(
@@ -102,8 +105,8 @@ router.post("/competitions", audit({ action: "admin.competition.create", resourc
         detailed_description, description, fee, quota,
         reg_open_date, reg_close_date, competition_date,
         required_docs, image_url, round_count,
-        participant_instructions, created_by, kind, post_payment_redirect_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+        participant_instructions, created_by, kind, post_payment_redirect_url, slug
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
       RETURNING *`,
       [
         compId,
@@ -129,6 +132,7 @@ router.post("/competitions", audit({ action: "admin.competition.create", resourc
         req.userId,
         kind,
         postPaymentRedirectUrl ?? null,
+        compSlug,
       ]
     );
 

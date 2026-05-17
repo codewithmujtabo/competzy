@@ -38,6 +38,19 @@ interface FlowProgress {
   steps: FlowProgressStep[];
 }
 
+// Affiliated-competition access — the issued login + the external site URL.
+interface AffiliatedCredential {
+  registrationId: string;
+  username: string;
+  password: string;
+  issuedAt: string;
+}
+
+interface AccessInfo {
+  externalUrl: string | null;
+  credential: AffiliatedCredential | null;
+}
+
 // Fallback copy for competitions that have no configured step-flow.
 const STATUS_COPY: Record<string, { title: string; body: string }> = {
   pending_payment: {
@@ -100,12 +113,55 @@ function StepNode({ status, order }: { status: StepStatus; order: number }) {
   );
 }
 
-function Stepper({ steps }: { steps: FlowProgressStep[] }) {
+function AccessBlock({
+  externalUrl,
+  credential,
+}: {
+  externalUrl: string | null;
+  credential: AffiliatedCredential | null;
+}) {
+  return (
+    <div className="mt-2 rounded-md border bg-card p-3">
+      {credential ? (
+        <>
+          <dl className="grid grid-cols-[5rem_1fr] gap-y-1 text-xs">
+            <dt className="text-muted-foreground">Username</dt>
+            <dd className="break-all font-mono text-foreground">{credential.username}</dd>
+            <dt className="text-muted-foreground">Password</dt>
+            <dd className="break-all font-mono text-foreground">{credential.password}</dd>
+          </dl>
+          {externalUrl && (
+            <Button asChild size="sm" className="mt-3">
+              <a href={externalUrl} target="_blank" rel="noopener noreferrer">
+                Open the competition platform
+              </a>
+            </Button>
+          )}
+        </>
+      ) : (
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Your access details are being prepared — check back soon.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Stepper({
+  steps,
+  externalUrl,
+  credential,
+}: {
+  steps: FlowProgressStep[];
+  externalUrl: string | null;
+  credential: AffiliatedCredential | null;
+}) {
   return (
     <ol className="mt-1">
       {steps.map((s, i) => {
         const last = i === steps.length - 1;
         const hint = s.status === 'current' ? currentHint(s.checkType) : '';
+        const showAccess = s.stepKey === 'external_access' && s.status !== 'upcoming';
         return (
           <li key={s.id} className="flex gap-4">
             <div className="flex flex-col items-center">
@@ -135,6 +191,7 @@ function Stepper({ steps }: { steps: FlowProgressStep[] }) {
                   {hint}
                 </p>
               )}
+              {showAccess && <AccessBlock externalUrl={externalUrl} credential={credential} />}
             </div>
           </li>
         );
@@ -155,6 +212,7 @@ export default function CompetitionDashboardPage() {
 
   const [regs, setRegs] = useState<RegistrationRow[] | null>(null);
   const [progress, setProgress] = useState<FlowProgress | null>(null);
+  const [access, setAccess] = useState<AccessInfo | null>(null);
   const [enroll, setEnroll] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -175,11 +233,13 @@ export default function CompetitionDashboardPage() {
     if (comp?.id) void refresh(comp.id);
   }, [comp?.id]);
 
-  // Once we know the registration, pull its step-flow progress.
+  // Once we know the registration, pull its step-flow progress + (for
+  // affiliated competitions) the issued access credentials.
   const reg = regs?.[0];
   useEffect(() => {
     if (!reg?.id) {
       setProgress(null);
+      setAccess(null);
       return;
     }
     let cancelled = false;
@@ -191,6 +251,14 @@ export default function CompetitionDashboardPage() {
       .catch(() => {
         // No flow configured / fetch failed → the STATUS_COPY fallback renders.
         if (!cancelled) setProgress(null);
+      });
+    emcHttp
+      .get<AccessInfo>(`/registrations/${reg.id}/credentials`)
+      .then((a) => {
+        if (!cancelled) setAccess(a);
+      })
+      .catch(() => {
+        if (!cancelled) setAccess(null);
       });
     return () => {
       cancelled = true;
@@ -277,7 +345,11 @@ export default function CompetitionDashboardPage() {
                 <p className="mt-1 mb-5 text-sm text-muted-foreground">
                   Follow the steps below to complete your entry to {config.wordmark}.
                 </p>
-                <Stepper steps={progress!.steps} />
+                <Stepper
+                  steps={progress!.steps}
+                  externalUrl={access?.externalUrl ?? null}
+                  credential={access?.credential ?? null}
+                />
               </>
             ) : (
               <>

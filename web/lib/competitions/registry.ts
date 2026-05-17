@@ -39,8 +39,36 @@ export const competitionRegistry: Record<string, CompetitionPortalConfig> = {
  */
 export const DEFAULT_COMPETITION_SLUG = 'emc-2026';
 
-export function getCompetitionConfig(slug: string): CompetitionPortalConfig | null {
-  return competitionRegistry[slug] ?? null;
+/**
+ * Derives a usable portal config for a competition with no hand-tuned registry
+ * entry — e.g. an operator-created competition. The portal (catalog →
+ * dashboard) still works; only the bespoke branding is missing.
+ */
+function defaultPortalConfig(slug: string): CompetitionPortalConfig {
+  const words = slug
+    .replace(/-[a-z0-9]{1,6}$/i, '') // drop the uniqueness suffix appended on create
+    .split('-')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1));
+  const wordmark = words.join(' ') || 'Competition';
+  return {
+    slug,
+    shortName: (words[0] ?? 'Competition').slice(0, 14),
+    wordmark,
+    tagline: 'Compete. Learn. Grow.',
+    accent: '#5627FF',
+    accentDark: '#3a1bb8',
+    gradient: ['#5627FF', '#3a1bb8'] as const,
+  };
+}
+
+/**
+ * Returns the portal config for a slug — the hand-tuned registry entry if one
+ * exists, otherwise a derived default so every catalog competition has a
+ * working portal. Never null.
+ */
+export function getCompetitionConfig(slug: string): CompetitionPortalConfig {
+  return competitionRegistry[slug] ?? defaultPortalConfig(slug);
 }
 
 /**
