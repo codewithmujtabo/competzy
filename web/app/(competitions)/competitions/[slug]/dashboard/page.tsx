@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { Check, Loader2 } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
@@ -147,14 +148,108 @@ function AccessBlock({
   );
 }
 
+// A native-competition exam offered to the student — drives the "exam" step.
+interface AvailableExam {
+  examId: string;
+  name: string;
+  code: string;
+  windowStatus: 'unscheduled' | 'upcoming' | 'open' | 'closed';
+  session: { id: string; state: 'in_progress' | 'finished' } | null;
+}
+
+function ExamBlock({ compId, slug }: { compId: string | null; slug: string }) {
+  const router = useRouter();
+  const [exams, setExams] = useState<AvailableExam[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!compId) {
+      setExams([]);
+      return;
+    }
+    emcHttp
+      .get<AvailableExam[]>(`/exams/available?compId=${encodeURIComponent(compId)}`)
+      .then(setExams)
+      .catch(() => setExams([]));
+  }, [compId]);
+
+  const start = async (examId: string) => {
+    setBusy(examId);
+    try {
+      const r = await emcHttp.post<{ sessionId: string }>(`/exams/${examId}/sessions`, {});
+      router.push(`/competitions/${slug}/exam/${r.sessionId}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not start the exam');
+      setBusy(null);
+    }
+  };
+
+  if (exams === null) {
+    return (
+      <div className="mt-2 rounded-md border bg-card p-3 text-xs text-muted-foreground">
+        Loading exams…
+      </div>
+    );
+  }
+  if (exams.length === 0) {
+    return (
+      <div className="mt-2 rounded-md border bg-card p-3 text-xs text-muted-foreground">
+        No exam is available for you yet — check back closer to the exam date.
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 space-y-2">
+      {exams.map((ex) => {
+        const sess = ex.session;
+        return (
+          <div key={ex.examId} className="rounded-md border bg-card p-3">
+            <p className="text-sm font-medium text-foreground">{ex.name}</p>
+            {sess?.state === 'finished' ? (
+              <Button asChild size="sm" variant="outline" className="mt-2">
+                <Link href={`/competitions/${slug}/exam/${sess.id}/result`}>View your result</Link>
+              </Button>
+            ) : sess?.state === 'in_progress' ? (
+              <Button asChild size="sm" className="mt-2">
+                <Link href={`/competitions/${slug}/exam/${sess.id}`}>Resume exam</Link>
+              </Button>
+            ) : ex.windowStatus === 'open' ? (
+              <Button
+                size="sm"
+                className="mt-2"
+                disabled={busy === ex.examId}
+                onClick={() => start(ex.examId)}
+              >
+                {busy === ex.examId ? 'Starting…' : 'Start exam'}
+              </Button>
+            ) : (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {ex.windowStatus === 'upcoming'
+                  ? 'This exam has not opened yet.'
+                  : ex.windowStatus === 'closed'
+                    ? 'This exam has closed.'
+                    : 'This exam is not scheduled yet.'}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function Stepper({
   steps,
   externalUrl,
   credential,
+  compId,
+  slug,
 }: {
   steps: FlowProgressStep[];
   externalUrl: string | null;
   credential: AffiliatedCredential | null;
+  compId: string | null;
+  slug: string;
 }) {
   return (
     <ol className="mt-1">
@@ -162,6 +257,7 @@ function Stepper({
         const last = i === steps.length - 1;
         const hint = s.status === 'current' ? currentHint(s.checkType) : '';
         const showAccess = s.stepKey === 'external_access' && s.status !== 'upcoming';
+        const showExam = s.stepKey === 'exam' && s.status !== 'upcoming';
         return (
           <li key={s.id} className="flex gap-4">
             <div className="flex flex-col items-center">
@@ -192,6 +288,7 @@ function Stepper({
                 </p>
               )}
               {showAccess && <AccessBlock externalUrl={externalUrl} credential={credential} />}
+              {showExam && <ExamBlock compId={compId} slug={slug} />}
             </div>
           </li>
         );
@@ -349,6 +446,8 @@ export default function CompetitionDashboardPage() {
                   steps={progress!.steps}
                   externalUrl={access?.externalUrl ?? null}
                   credential={access?.credential ?? null}
+                  compId={comp?.id ?? null}
+                  slug={slug}
                 />
               </>
             ) : (
