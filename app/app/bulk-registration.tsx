@@ -200,7 +200,7 @@ export default function BulkRegistrationScreen() {
                 onPress={() => setSelectedFile(null)}
                 style={styles.removeButton}
               >
-                <IconSymbol name="xmark.circle.fill" size={20} color="#EF4444" />
+                <IconSymbol name="xmark.circle.fill" size={20} color={Brand.error} />
               </TouchableOpacity>
             </View>
           ) : (

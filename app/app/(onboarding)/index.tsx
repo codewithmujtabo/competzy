@@ -1,5 +1,6 @@
 import {
   Brand,
+  FontFamily,
   Radius,
   Shadow,
   Spacing,
@@ -57,9 +58,7 @@ type Slide = (typeof slides)[number];
 function OnboardingSlide({ item, width }: { item: Slide; width: number }) {
   return (
     <View style={[styles.slide, { width }]}>
-      <View style={[styles.blobLarge, { backgroundColor: item.accentSoft }]} />
-      <View style={[styles.blobSmall, { backgroundColor: item.accent, opacity: 0.18 }]} />
-      <View style={[styles.iconTile, { shadowColor: item.accent, backgroundColor: "#FFFFFF" }]}>
+      <View style={styles.iconTile}>
         <View style={[styles.iconInner, { backgroundColor: item.accentSoft }]}>
           <Ionicons name={item.icon} size={64} color={item.accent} />
         </View>
@@ -166,34 +165,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing["3xl"],
     paddingBottom: Spacing["2xl"],
   },
-  blobLarge: {
-    position: "absolute",
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    top: "12%",
-    opacity: 0.55,
-  },
-  blobSmall: {
-    position: "absolute",
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    top: "8%",
-    right: "8%",
-  },
   iconTile: {
     width: 168,
     height: 168,
     borderRadius: Radius["4xl"],
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing["3xl"],
     padding: 8,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.24,
-    shadowRadius: 28,
-    elevation: 12,
+    ...Shadow.lg,
   },
   iconInner: {
     flex: 1,
@@ -203,15 +184,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontSize: 30,
-    fontWeight: "800",
+    fontSize: 28,
+    fontFamily: FontFamily.displayBold,
     textAlign: "center",
-    lineHeight: 38,
+    lineHeight: 34,
     marginBottom: Spacing.lg,
     letterSpacing: -0.4,
   },
   description: {
     fontSize: 15,
+    fontFamily: FontFamily.bodyRegular,
     color: TextColor.secondary,
     textAlign: "center",
     lineHeight: 24,

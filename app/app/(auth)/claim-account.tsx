@@ -3,6 +3,7 @@ import { Button, Card, Pill } from "@/components/ui";
 import * as authService from "@/services/auth.service";
 import {
   Brand,
+  FontFamily,
   Radius,
   Shadow,
   Spacing,
@@ -11,6 +12,7 @@ import {
   Type,
 } from "@/constants/theme";
 import { useUser } from "@/context/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -89,7 +91,7 @@ export default function ClaimAccountScreen() {
       >
         <View style={{ alignItems: "center", marginBottom: Spacing["2xl"] }}>
           <View style={styles.badge}>
-            <Text style={{ fontSize: 36 }}>🏅</Text>
+            <Ionicons name="ribbon" size={36} color={Brand.primary} />
           </View>
           <Text style={[Type.displayMd, { textAlign: "center", marginTop: Spacing.lg }]}>
             We Found{"\n"}Your Records!
@@ -102,7 +104,7 @@ export default function ClaimAccountScreen() {
         </View>
 
         <View style={{ alignSelf: "center", marginBottom: Spacing.lg }}>
-          <Pill label={`✓ HP terverifikasi: ${params.phone}`} tone="success" />
+          <Pill label={`✓ Phone verified: ${params.phone}`} tone="success" />
         </View>
 
         <Card>
@@ -134,12 +136,15 @@ export default function ClaimAccountScreen() {
               secureTextEntry={!showPwd}
               error={errors.password}
               editable={!loading}
+              rightIcon={
+                <Ionicons
+                  name={showPwd ? "eye-off-outline" : "eye-outline"}
+                  size={22}
+                  color={TextColor.tertiary}
+                />
+              }
+              onRightIconPress={() => setShowPwd((v) => !v)}
             />
-            <Pressable onPress={() => setShowPwd((v) => !v)} hitSlop={8}>
-              <Text style={[Type.label, { color: Brand.primary }]}>
-                {showPwd ? "Hide" : "Show"} password
-              </Text>
-            </Pressable>
             <Button
               label="Create Account & View History"
               onPress={handleClaim}
@@ -153,7 +158,7 @@ export default function ClaimAccountScreen() {
         <View style={styles.footer}>
           <Text style={[Type.body, { color: TextColor.secondary }]}>Already have an account? </Text>
           <Pressable onPress={() => router.replace("/(auth)/login")} hitSlop={8}>
-            <Text style={[Type.body, { color: Brand.primary, fontWeight: "700" }]}>Sign In</Text>
+            <Text style={[Type.body, { color: Brand.primary, fontFamily: FontFamily.bodyBold }]}>Sign In</Text>
           </Pressable>
         </View>
       </ScrollView>
