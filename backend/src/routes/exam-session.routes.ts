@@ -9,6 +9,7 @@ import {
   sessionHasPendingGrading,
 } from "../services/exam-grading.service";
 import { issueCertificateIfEligible } from "../services/certificate.service";
+import { gradeTokens } from "../services/grade.service";
 
 // Online exam attempt API (EMC Wave 7 Phase 3). Student-facing — any
 // authenticated user; every session is owned by `req.userId` and each route
@@ -33,24 +34,6 @@ const webcamUpload = multer({
 
 // Registration statuses that clear a student to sit a competition's exam.
 const CLEARED = ["registered", "approved", "paid", "completed"];
-
-// A student's grade is stored numerically ("9"); an exam may be tagged either
-// numerically or by school level (SD = grades 1-6, SMP = 7-9, SMA = 10-12).
-// Return every token an exam could carry that should match this student, so the
-// two vocabularies reconcile instead of an exact-string compare silently
-// excluding the student from every exam.
-function gradeTokens(grade: string | null): string[] {
-  if (!grade) return [];
-  const tokens = new Set<string>([grade]);
-  const n = parseInt(grade, 10);
-  if (!Number.isNaN(n)) {
-    tokens.add(String(n)); // normalize "09" → "9"
-    if (n >= 1 && n <= 6) tokens.add("SD");
-    else if (n >= 7 && n <= 9) tokens.add("SMP");
-    else if (n >= 10 && n <= 12) tokens.add("SMA");
-  }
-  return [...tokens];
-}
 
 // The caller's grade for a competition (registration snapshot first, then the
 // students row) and whether they hold a cleared registration.
