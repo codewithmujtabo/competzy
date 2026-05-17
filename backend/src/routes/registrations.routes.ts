@@ -9,10 +9,15 @@ router.use(authMiddleware);
 // ── GET /api/registrations ────────────────────────────────────────────────
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const result = await pool.query(
-      "SELECT * FROM registrations WHERE user_id = $1 ORDER BY created_at DESC",
-      [req.userId]
-    );
+    const { compId } = req.query;
+    const values: unknown[] = [req.userId];
+    let query = "SELECT * FROM registrations WHERE user_id = $1";
+    if (compId) {
+      values.push(compId);
+      query += ` AND comp_id = $${values.length}`;
+    }
+    query += " ORDER BY created_at DESC";
+    const result = await pool.query(query, values);
 
     const registrations = result.rows.map((r) => ({
       id: r.id,

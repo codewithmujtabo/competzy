@@ -1,513 +1,317 @@
 import { AppInput } from "@/components/common/AppInput";
 import { AppAutocomplete } from "@/components/common/AppAutocomplete";
+import { Button, Card, Pill, ScreenHeader } from "@/components/ui";
 import * as authService from "@/services/auth.service";
 import * as regionsService from "@/services/regions.service";
 import * as schoolsService from "@/services/schools.service";
-import { Brand } from "@/constants/theme";
+import {
+  Brand,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
 import { useUser } from "@/context/AuthContext";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Linking,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const ROLES = [
-  {
-    id: "student",
-    label: "Student",
-    emoji: "🎒",
-  },
-  {
-    id: "parent",
-    label: "Parent",
-    emoji: "👨‍👧",
-  },
-  {
-    id: "teacher",
-    label: "Teacher",
-    emoji: "📖",
-  },
+  { id: "student", label: "Student", emoji: "🎒", desc: "Discover and register for competitions matching your grade." },
+  { id: "parent",  label: "Parent", emoji: "👨‍👧", desc: "Help your child find and join competitions." },
+  { id: "teacher", label: "Teacher", emoji: "📖", desc: "Encourage students to join academic competitions." },
 ] as const;
+type Role = (typeof ROLES)[number]["id"];
 
-type Role =
-  (typeof ROLES)[number]["id"];
+const SD = ["1","2","3","4","5","6"];
+const SMP = ["7","8","9"];
+const SMA = ["10","11","12"];
+const ALL_GRADES = [...SD, ...SMP, ...SMA] as const;
+type Grade = (typeof ALL_GRADES)[number];
 
-const GRADES = [
-  "1", "2", "3", "4", "5", "6",  // SD (Elementary)
-  "7", "8", "9",                   // SMP (Junior High)
-  "10", "11", "12"                 // SMA (Senior High)
-] as const;
-type Grade = (typeof GRADES)[number];
+function GradePicker({ value, onChange, error }: { value: Grade; onChange: (g: Grade) => void; error?: string }) {
+  const Group = ({ title, grades }: { title: string; grades: string[] }) => (
+    <View style={{ marginTop: Spacing.md }}>
+      <Text style={Type.label}>{title}</Text>
+      <View style={styles.gradeRow}>
+        {grades.map((g) => {
+          const active = value === g;
+          return (
+            <Pressable
+              key={g}
+              onPress={() => onChange(g as Grade)}
+              style={({ pressed }) => [
+                styles.gradeBtn,
+                active && { backgroundColor: Brand.primary, borderColor: Brand.primary },
+                pressed && { opacity: 0.85 },
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+            >
+              <Text
+                style={{
+                  ...Type.label,
+                  color: active ? "#FFFFFF" : TextColor.secondary,
+                  fontSize: 14,
+                }}
+              >
+                {g}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+  return (
+    <View style={{ marginTop: Spacing.md }}>
+      <Group title="SD (1–6)" grades={SD} />
+      <Group title="SMP (7–9)" grades={SMP} />
+      <Group title="SMA (10–12)" grades={SMA} />
+      {error ? (
+        <Text style={[Type.caption, { color: Brand.error, marginTop: Spacing.sm }]}>{error}</Text>
+      ) : null}
+    </View>
+  );
+}
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { fetchUser } = useUser();
 
-  // Step 1: Role selection, Step 2: Details, Step 3: Consent
-  const [step, setStep] = useState<
-    "role" | "details" | "consent"
-  >("role");
+  const [step, setStep] = useState<"role" | "details" | "consent">("role");
   const [consentChecked, setConsentChecked] = useState(false);
-  const [role, setRole] =
-    useState<Role>("student");
+  const [role, setRole] = useState<Role>("student");
 
-  // Common fields
-  const [email, setEmail] =
-    useState("");
-  const [password, setPassword] =
-    useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [phone, setPhone] =
-    useState("");
+  const [phone, setPhone] = useState("");
   const [province, setProvince] = useState("");
   const [provinceCode, setProvinceCode] = useState("");
   const [city, setCity] = useState("");
   const [regencyCode, setRegencyCode] = useState("");
 
-  // Student specific
-  const [school, setSchool] =
-    useState("");
+  const [school, setSchool] = useState("");
   const [schoolNpsn, setSchoolNpsn] = useState("");
   const [schoolAddress, setSchoolAddress] = useState("");
-  const [grade, setGrade] =
-    useState<Grade>("7");
+  const [grade, setGrade] = useState<Grade>("7");
+  const [childName, setChildName] = useState("");
+  const [childSchool, setChildSchool] = useState("");
+  const [childGrade, setChildGrade] = useState<Grade>("7");
+  const [teacherSchool, setTeacherSchool] = useState("");
+  const [subject, setSubject] = useState("");
 
-  // Parent specific
-  const [childName, setChildName] =
-    useState("");
-  const [childSchool, setChildSchool] =
-    useState("");
-  const [childGrade, setChildGrade] =
-    useState<Grade>("7");
-
-  // Teacher specific
-  const [
-    teacherSchool,
-    setTeacherSchool,
-  ] = useState("");
-  const [subject, setSubject] =
-    useState("");
-
-  const [errors, setErrors] = useState<
-    Record<string, string>
-  >({});
-  const [loading, setLoading] =
-    useState(false);
-
-  // Autocomplete data
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
   const [provincesList, setProvincesList] = useState<regionsService.Province[]>([]);
   const [citiesList, setCitiesList] = useState<regionsService.Regency[]>([]);
 
-  // Load provinces on mount
   useEffect(() => {
-    const loadProvinces = async () => {
-      try {
-        const provinces = await regionsService.getProvinces();
-        setProvincesList(provinces);
-      } catch (error) {
-        console.error("Failed to load provinces:", error);
-      }
-    };
-    loadProvinces();
+    regionsService.getProvinces().then(setProvincesList).catch(() => {});
   }, []);
 
-  // Load cities when province changes
   useEffect(() => {
-    if (!provinceCode) {
-      setCitiesList([]);
-      return;
-    }
-
-    const loadCities = async () => {
-      try {
-        const cities = await regionsService.getRegencies(provinceCode);
-        setCitiesList(cities);
-      } catch (error) {
-        console.error("Failed to load cities:", error);
-      }
-    };
-    loadCities();
+    if (!provinceCode) return setCitiesList([]);
+    regionsService.getRegencies(provinceCode).then(setCitiesList).catch(() => {});
   }, [provinceCode]);
 
-  // ─── Validation ────────────────────────────────────────────────────────────
-
   const validateDetails = () => {
-    const e: Record<string, string> =
-      {};
-
-    // Common validations
-    if (!name.trim())
-      e.name = "Full name is required";
-    else if (name.trim().length < 3)
-      e.name =
-        "Name must be at least 3 characters";
-
-    if (!email.trim())
-      e.email = "Email is required";
-    else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        email,
-      )
-    )
-      e.email = "Enter a valid email";
-
-    if (!password)
-      e.password =
-        "Password is required";
-    else if (password.length < 6)
-      e.password =
-        "Password must be at least 6 characters";
-
-    if (!phone.trim())
-      e.phone =
-        "Phone number is required";
-    else if (
-      phone.replace(/\D/g, "").length <
-      9
-    )
-      e.phone =
-        "Enter a valid phone number";
-
-    if (!province.trim())
-      e.province = "Province is required";
-
-    if (!city.trim())
-      e.city = "City is required";
-
-    // Role-specific validations
+    const e: Record<string, string> = {};
+    if (!name.trim()) e.name = "Name is required";
+    else if (name.trim().length < 3) e.name = "Name must be at least 3 characters";
+    if (!email.trim()) e.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Enter a valid email";
+    if (!password) e.password = "Password is required";
+    else if (password.length < 6) e.password = "Minimum 6 characters";
+    if (!phone.trim()) e.phone = "Phone number is required";
+    else if (phone.replace(/\D/g, "").length < 9) e.phone = "Enter a valid phone number";
+    if (!province.trim()) e.province = "Province is required";
+    if (!city.trim()) e.city = "City/Regency is required";
     if (role === "student") {
-      if (!school.trim())
-        e.school =
-          "Please enter your school name or NPSN";
-      if (!grade)
-        e.grade =
-          "Grade level is required";
+      if (!school.trim()) e.school = "School is required";
+      if (!grade) e.grade = "Pick a grade";
     } else if (role === "parent") {
-      if (!childName.trim())
-        e.childName =
-          "Child's name is required";
-      if (!childSchool.trim())
-        e.childSchool =
-          "Please enter child's school NPSN";
-      if (!childGrade)
-        e.childGrade =
-          "Child's grade is required";
+      if (!childName.trim()) e.childName = "Child name is required";
+      if (!childSchool.trim()) e.childSchool = "Child school is required";
+      if (!childGrade) e.childGrade = "Pick child grade";
     } else if (role === "teacher") {
-      if (!teacherSchool.trim())
-        e.teacherSchool =
-          "Please enter your school NPSN";
-      if (!subject.trim())
-        e.subject =
-          "Subject is required";
+      if (!teacherSchool.trim()) e.teacherSchool = "School is required";
+      if (!subject.trim()) e.subject = "Subject is required";
     }
-
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  // ─── Registration Handler ───────────────────────────────────────────────────
+  const handleCreateAccount = async () => {
+    if (!consentChecked) {
+      Alert.alert("Consent required", "You must agree to the privacy policy.");
+      return;
+    }
+    setLoading(true);
+    try {
+      let roleData: any = {};
+      if (role === "student") roleData = { school: school.trim(), grade, npsn: schoolNpsn || null, schoolAddress: schoolAddress || null };
+      else if (role === "parent") roleData = { childName: childName.trim(), childSchool: childSchool.trim(), childGrade };
+      else if (role === "teacher") roleData = { school: teacherSchool.trim(), subject: subject.trim() };
 
-  const handleCreateAccount =
-    async () => {
-      if (!consentChecked) {
-        Alert.alert("Consent Required", "You must agree to the privacy policy to continue.");
-        return;
-      }
+      const { user } = await authService.signup({
+        email: email.trim(),
+        password: password.trim(),
+        fullName: name.trim(),
+        phone: phone.trim(),
+        city: city.trim(),
+        province: province.trim(),
+        role,
+        roleData,
+        consentAccepted: true,
+      });
+      Alert.alert("Success", "Account created. Welcome to Competzy!");
+      if (user?.id) await fetchUser(user.id);
+      const r = user?.role || role;
+      if (r === "admin") router.replace("/(tabs)/web-portal-redirect");
+      else if (r === "teacher") router.replace("/(tabs)/teacher-dashboard");
+      else if (r === "parent") router.replace("/(tabs)/children");
+      else if (r === "school_admin") router.replace("/(tabs)/profile");
+      else router.replace("/(tabs)/competitions");
+    } catch (err: any) {
+      const msg = err?.message?.toLowerCase() || "";
+      if (msg.includes("already")) Alert.alert("Account exists", "This email is already registered. Please sign in.");
+      else if (msg.includes("rate limit")) Alert.alert("Too fast", "Wait 2 minutes and try again.");
+      else Alert.alert("Error", err?.message || "Failed to register");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      setLoading(true);
-      try {
-        // Build role-specific data
-        let roleData: any = {};
-        if (role === "student") {
-          roleData = {
-            school: school.trim(),
-            grade,
-            npsn: schoolNpsn || null,
-            schoolAddress: schoolAddress || null,
-          };
-        } else if (role === "parent") {
-          roleData = {
-            childName: childName.trim(),
-            childSchool: childSchool.trim(),
-            childGrade,
-          };
-        } else if (role === "teacher") {
-          roleData = {
-            school: teacherSchool.trim(),
-            subject: subject.trim(),
-          };
-        }
-
-        // Single API call handles everything
-        const { user } =
-          await authService.signup({
-            email: email.trim(),
-            password: password.trim(),
-            fullName: name.trim(),
-            phone: phone.trim(),
-            city: city.trim(),
-            province: province.trim(),
-            role,
-            roleData,
-            consentAccepted: true,
-          });
-
-        Alert.alert(
-          "Success",
-          "Account created! Welcome to Competzy",
-        );
-
-        if (user?.id) {
-          await fetchUser(user.id);
-        }
-
-        // Navigate to role-specific screen
-        const userRole = user?.role || role;
-        if (userRole === "admin") {
-          router.replace("/(tabs)/web-portal-redirect");
-        } else if (userRole === "teacher") {
-          router.replace("/(tabs)/teacher-dashboard");
-        } else if (userRole === "parent") {
-          router.replace("/(tabs)/children");
-        } else if (userRole === "school_admin") {
-          router.replace("/(tabs)/profile");
-        } else {
-          router.replace("/(tabs)/competitions");
-        }
-      } catch (err: any) {
-        console.error(
-          "Registration error:",
-          err,
-        );
-        const msg = err?.message?.toLowerCase() || "";
-        if (msg.includes("already registered") || msg.includes("already")) {
-          Alert.alert(
-            "Account Exists",
-            "This email is already registered. Please login instead.",
-          );
-        } else if (msg.includes("rate limit")) {
-          Alert.alert(
-            "Rate Limit",
-            "Too many signups. Wait 2 minutes and try again.",
-          );
-        } else {
-          Alert.alert(
-            "Error",
-            err?.message || "Registration failed",
-          );
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-  // ─── Step 1: Role Selection ─────────────────────────────────────────────────
-
+  // ─── Step 1: Role ────────────────────────────────────────────────────────
   if (step === "role") {
     return (
-      <View
-        style={[
-          styles.container,
-          {
-            paddingTop: insets.top + 20,
-          },
-        ]}
-      >
-        <ScrollView
-          contentContainerStyle={
-            styles.scrollContent
-          }
-          showsVerticalScrollIndicator={
-            false
-          }
-        >
-          {/* Back button */}
-          <TouchableOpacity
-            style={styles.roleBackBtn}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.roleBackText}>← Back to Login</Text>
-          </TouchableOpacity>
-
-          <View
-            style={styles.roleHeader}
-          >
-            <Text
-              style={styles.roleTitle}
-            >
-              Choose Your Role
-            </Text>
-            <Text
-              style={
-                styles.roleSubtitle
-              }
-            >
-              Select how you'll use
-              Competzy
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <ScreenHeader title="Create Account" onBack={() => router.back()} />
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={{ alignItems: "center", marginBottom: Spacing["2xl"] }}>
+            <View style={styles.logoTile}>
+              <Text style={{ fontSize: 32 }}>👋</Text>
+            </View>
+            <Text style={[Type.displayMd, { marginTop: Spacing.lg }]}>Hello! Who are you?</Text>
+            <Text style={[Type.body, { color: TextColor.secondary, textAlign: "center", marginTop: Spacing.sm }]}>
+              Choose your role so we can tailor your experience.
             </Text>
           </View>
 
-          <View
-            style={
-              styles.rolesContainer
-            }
-          >
-            {ROLES.map((r) => (
-              <TouchableOpacity
-                key={r.id}
-                style={[
-                  styles.roleCard,
-                  role === r.id &&
-                    styles.roleCardActive,
-                ]}
-                onPress={() =>
-                  setRole(r.id)
-                }
-                activeOpacity={0.7}
-              >
-                <Text
+          <View style={{ gap: Spacing.md }}>
+            {ROLES.map((r) => {
+              const active = role === r.id;
+              return (
+                <Card
+                  key={r.id}
+                  onPress={() => setRole(r.id)}
                   style={
-                    styles.roleEmoji
+                    active
+                      ? { borderWidth: 2, borderColor: Brand.primary, backgroundColor: Brand.primarySoft }
+                      : { borderWidth: 2, borderColor: "transparent" }
                   }
                 >
-                  {r.emoji}
-                </Text>
-                <Text
-                  style={[
-                    styles.roleLabel,
-                    role === r.id &&
-                      styles.roleLabelActive,
-                  ]}
-                >
-                  {r.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View
-            style={
-              styles.roleDescription
-            }
-          >
-            {role === "student" && (
-              <Text
-                style={
-                  styles.descriptionText
-                }
-              >
-                Discover and register
-                for competitions
-                tailored to your
-                academic level.
-              </Text>
-            )}
-            {role === "parent" && (
-              <Text
-                style={
-                  styles.descriptionText
-                }
-              >
-                Help your child find and
-                participate in
-                competitions.
-              </Text>
-            )}
-            {role === "teacher" && (
-              <Text
-                style={
-                  styles.descriptionText
-                }
-              >
-                Encourage your students
-                to participate in
-                academic competitions.
-              </Text>
-            )}
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <View style={[styles.roleEmojiTile, { backgroundColor: active ? "#FFFFFF" : Brand.primarySoft }]}>
+                      <Text style={{ fontSize: 28 }}>{r.emoji}</Text>
+                    </View>
+                    <View style={{ flex: 1, marginLeft: Spacing.md }}>
+                      <Text style={[Type.title, { color: active ? Brand.primary : TextColor.primary }]}>
+                        {r.label}
+                      </Text>
+                      <Text style={[Type.bodySm, { marginTop: 2 }]} numberOfLines={2}>
+                        {r.desc}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.radioOuter,
+                        active && { borderColor: Brand.primary },
+                      ]}
+                    >
+                      {active ? <View style={styles.radioInner} /> : null}
+                    </View>
+                  </View>
+                </Card>
+              );
+            })}
           </View>
         </ScrollView>
 
-        <TouchableOpacity
-          style={styles.continueBtn}
-          onPress={() =>
-            setStep("details")
-          }
-          activeOpacity={0.8}
-        >
-          <Text
-            style={
-              styles.continueBtnText
-            }
-          >
-            Continue
-          </Text>
-        </TouchableOpacity>
+        <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.lg }]}>
+          <Button label="Continue" onPress={() => setStep("details")} fullWidth size="lg" />
+        </View>
       </View>
     );
   }
 
-  // ─── Step 3: Consent ────────────────────────────────────────────────────────
-
+  // ─── Step 3: Consent ─────────────────────────────────────────────────────
   if (step === "consent") {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}>
-          <View style={{ alignItems: "center", marginBottom: 24 }}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>🔐</Text>
-            <Text style={[styles.stepTitle, { textAlign: "center" }]}>
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 140 }]}>
+          <View style={{ alignItems: "center", marginBottom: Spacing.xl }}>
+            <View style={styles.logoTile}>
+              <Text style={{ fontSize: 32 }}>🔐</Text>
+            </View>
+            <Text style={[Type.displayMd, { marginTop: Spacing.lg, textAlign: "center" }]}>
               Privacy Policy
             </Text>
-            <Text style={{ color: "#64748B", textAlign: "center", marginTop: 8, lineHeight: 20 }}>
-              Before creating an account, please read and agree to the following terms.
+            <Text style={[Type.body, { color: TextColor.secondary, marginTop: Spacing.sm, textAlign: "center" }]}>
+              Before creating an account, please read and agree to the terms below.
             </Text>
           </View>
 
-          <View style={styles.consentBox}>
-            <Text style={styles.consentTitle}>Data we collect</Text>
-            <Text style={styles.consentBody}>
-              • Profile & identity (name, email, phone number, city){"\n"}
-              • Education data (school, grade, scores — for parents/teachers){"\n"}
+          <Card>
+            <Text style={Type.label}>DATA WE COLLECT</Text>
+            <Text style={[Type.body, { marginTop: Spacing.sm }]}>
+              • Profile & identity (name, email, phone, city){"\n"}
+              • Education data (school, grade, scores){"\n"}
               • Documents you upload (report cards, certificates, photos){"\n"}
-              • App usage activity (competitions viewed & registered)
+              • App usage activity
             </Text>
 
-            <Text style={[styles.consentTitle, { marginTop: 16 }]}>How data is used</Text>
-            <Text style={styles.consentBody}>
-              • Display relevant competitions for you{"\n"}
-              • Process competition registrations & payments{"\n"}
-              • Send important notifications related to competitions{"\n"}
-              • Improve the quality of Competzy services
+            <Text style={[Type.label, { marginTop: Spacing.lg }]}>HOW DATA IS USED</Text>
+            <Text style={[Type.body, { marginTop: Spacing.sm }]}>
+              • Display relevant competitions{"\n"}
+              • Process registrations & payments{"\n"}
+              • Send important notifications{"\n"}
+              • Improve Competzy service quality
             </Text>
 
-            <Text style={[styles.consentTitle, { marginTop: 16 }]}>Data security</Text>
-            <Text style={styles.consentBody}>
-              Your data is stored securely and is not sold to third parties.
-              In accordance with the Personal Data Protection Law (Law No. 27 of 2022),
-              you can request data deletion by contacting our team.
+            <Text style={[Type.label, { marginTop: Spacing.lg }]}>DATA SECURITY</Text>
+            <Text style={[Type.body, { marginTop: Spacing.sm }]}>
+              Your data is stored securely and not sold to third parties. Per UU PDP No. 27/2022,
+              you may request data deletion by contacting our team.
             </Text>
-          </View>
+          </Card>
 
-          <TouchableOpacity
-            style={styles.checkRow}
+          <Pressable
+            style={({ pressed }) => [styles.checkRow, pressed && { opacity: 0.85 }]}
             onPress={() => setConsentChecked((v) => !v)}
-            activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: consentChecked }}
           >
-            <View style={[styles.checkbox, consentChecked && styles.checkboxChecked]}>
-              {consentChecked && <Text style={{ color: "#fff", fontWeight: "800" }}>✓</Text>}
+            <View style={[styles.checkbox, consentChecked && { backgroundColor: Brand.primary, borderColor: Brand.primary }]}>
+              {consentChecked ? <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>✓</Text> : null}
             </View>
-            <Text style={styles.checkLabel}>
+            <Text style={[Type.body, { flex: 1, color: TextColor.secondary }]}>
               I have read and agree to the{" "}
               <Text
                 style={{ color: Brand.primary, textDecorationLine: "underline" }}
@@ -515,890 +319,338 @@ export default function RegisterScreen() {
               >
                 Privacy Policy
               </Text>{" "}
-              of Competzy.
+              Competzy.
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         </ScrollView>
 
-        <View style={[styles.footerButtons, { paddingBottom: insets.bottom + 16 }]}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => setStep("details")}
-          >
-            <Text style={styles.backBtnText}>Back</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.registerBtn, (!consentChecked || loading) && styles.registerBtnDisabled]}
-            onPress={handleCreateAccount}
-            disabled={!consentChecked || loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.registerBtnText}>Create Account</Text>
-            )}
-          </TouchableOpacity>
+        <View style={[styles.footerRow, { paddingBottom: insets.bottom + Spacing.lg }]}>
+          <Button label="Back" variant="ghost" onPress={() => setStep("details")} />
+          <View style={{ flex: 1 }}>
+            <Button
+              label="Create Account"
+              onPress={handleCreateAccount}
+              loading={loading}
+              disabled={!consentChecked}
+              fullWidth
+              size="lg"
+            />
+          </View>
         </View>
       </View>
     );
   }
 
-  // ─── Step 2: Details Collection ─────────────────────────────────────────────
-
+  // ─── Step 2: Details ─────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
-      behavior={
-        Platform.OS === "ios"
-          ? "padding"
-          : "height"
-      }
-      style={[
-        styles.container,
-        { paddingTop: insets.top },
-      ]}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={[styles.container, { paddingTop: insets.top }]}
     >
+      <ScreenHeader title="Complete Your Profile" onBack={() => setStep("role")} />
       <ScrollView
-        contentContainerStyle={
-          styles.scrollContent
-        }
-        showsVerticalScrollIndicator={
-          false
-        }
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() =>
-              setStep("role")
-            }
-            style={styles.backBtn}
-          >
-            <Text
-              style={styles.backBtnText}
-            >
-              ← Back
-            </Text>
-          </TouchableOpacity>
-          <Text
-            style={styles.stepTitle}
-          >
-            Complete Your Profile
-          </Text>
-        </View>
 
-        {/* Common Fields */}
-        <View style={styles.section}>
-          <Text
-            style={styles.sectionLabel}
-          >
-            Basic Information
-          </Text>
-
-          <AppInput
-            label="Full Name"
-            placeholder="e.g. John Doe"
-            value={name}
-            onChangeText={setName}
-            error={errors.name}
-          />
-
-          <AppInput
-            label="Email"
-            placeholder="e.g. john@email.com"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            error={errors.email}
-          />
-
-          <AppInput
-            label="Password"
-            placeholder="At least 6 characters"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            error={errors.password}
-          />
-
-          <AppInput
-            label="Phone Number"
-            placeholder="e.g. 08123456789"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            error={errors.phone}
-          />
-
-          <AppAutocomplete
-            label="Province"
-            placeholder="Select your province"
-            value={province}
-            onChangeText={setProvince}
-            onSelect={(item) => {
-              setProvince(item.name);
-              setProvinceCode(item.id);
-              // Reset city when province changes
-              setCity("");
-              setRegencyCode("");
-            }}
-            fetchSuggestions={async (query) => {
-              if (!query || query.trim().length === 0) {
-                // Return all provinces for dropdown
-                return provincesList.slice(0, 20).map((prov) => ({
-                  id: prov.code,
-                  name: prov.name,
-                }));
-              }
-              const lowerQuery = query.toLowerCase();
-              return provincesList
-                .filter((prov) => prov.name.toLowerCase().includes(lowerQuery))
-                .slice(0, 10)
-                .map((prov) => ({
-                  id: prov.code,
-                  name: prov.name,
-                }));
-            }}
-            error={errors.province}
-            minSearchLength={0}
-            allowCustom={false}
-            autoCapitalize="characters"
-          />
-
-          <AppAutocomplete
-            label="City / Kabupaten"
-            placeholder={provinceCode ? "Select your city" : "Select province first"}
-            value={city}
-            onChangeText={setCity}
-            onSelect={(item) => {
-              setCity(item.name);
-              setRegencyCode(item.id);
-            }}
-            fetchSuggestions={async (query) => {
-              if (!provinceCode) {
-                return [];
-              }
-              if (!query || query.trim().length === 0) {
-                // Return all cities for this province
-                return citiesList.slice(0, 20).map((regency) => ({
-                  id: regency.code,
-                  name: regency.name,
-                }));
-              }
-              const lowerQuery = query.toLowerCase();
-              return citiesList
-                .filter((regency) => regency.name.toLowerCase().includes(lowerQuery))
-                .slice(0, 10)
-                .map((regency) => ({
-                  id: regency.code,
-                  name: regency.name,
-                }));
-            }}
-            error={errors.city}
-            minSearchLength={0}
-            allowCustom={false}
-            editable={!!provinceCode}
-            autoCapitalize="characters"
-          />
-        </View>
-
-        {/* Student-specific fields */}
-        {role === "student" && (
-          <View style={styles.section}>
-            <Text
-              style={
-                styles.sectionLabel
-              }
-            >
-              Student Information
-            </Text>
-
+        <Card>
+          <Text style={Type.label}>BASIC INFO</Text>
+          <View style={{ gap: Spacing.md, marginTop: Spacing.md }}>
+            <AppInput label="Full Name" placeholder="e.g. John Doe" value={name} onChangeText={setName} error={errors.name} />
+            <AppInput
+              label="Email"
+              placeholder="e.g. john@email.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              error={errors.email}
+            />
+            <AppInput
+              label="Password"
+              placeholder="Minimum 6 characters"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              error={errors.password}
+            />
+            <AppInput
+              label="Phone Number"
+              placeholder="e.g. 08123456789"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              error={errors.phone}
+            />
             <AppAutocomplete
-              label="NPSN (School ID)"
-              placeholder={regencyCode ? "Enter school NPSN" : "Select city first"}
-              value={school}
-              onChangeText={setSchool}
+              label="Province"
+              placeholder="Pick a province"
+              value={province}
+              onChangeText={setProvince}
               onSelect={(item) => {
-                setSchool(item.name);
-                setSchoolNpsn(item.metadata?.npsn || "");
-                setSchoolAddress(item.metadata?.address || "");
+                setProvince(item.name);
+                setProvinceCode(item.id);
+                setCity("");
+                setRegencyCode("");
               }}
-              fetchSuggestions={async (query) => {
-                if (!regencyCode) return [];
-                const q = query.trim();
-                if (!q) {
-                  const schools = await schoolsService.searchSchools({ regencyCode, grade, page: 1 });
-                  return schools.slice(0, 20).map((s) => ({
+              fetchSuggestions={async (q) => {
+                const list = !q?.trim()
+                  ? provincesList.slice(0, 20)
+                  : provincesList.filter((p) => p.name.toLowerCase().includes(q.toLowerCase())).slice(0, 10);
+                return list.map((p) => ({ id: p.code, name: p.name }));
+              }}
+              error={errors.province}
+              minSearchLength={0}
+              allowCustom={false}
+              autoCapitalize="characters"
+            />
+            <AppAutocomplete
+              label="City / Regency"
+              placeholder={provinceCode ? "Pick city/regency" : "Pick province first"}
+              value={city}
+              onChangeText={setCity}
+              onSelect={(item) => {
+                setCity(item.name);
+                setRegencyCode(item.id);
+              }}
+              fetchSuggestions={async (q) => {
+                if (!provinceCode) return [];
+                const list = !q?.trim()
+                  ? citiesList.slice(0, 20)
+                  : citiesList.filter((r) => r.name.toLowerCase().includes(q.toLowerCase())).slice(0, 10);
+                return list.map((r) => ({ id: r.code, name: r.name }));
+              }}
+              error={errors.city}
+              minSearchLength={0}
+              allowCustom={false}
+              editable={!!provinceCode}
+              autoCapitalize="characters"
+            />
+          </View>
+        </Card>
+
+        {role === "student" ? (
+          <Card style={{ marginTop: Spacing.lg }}>
+            <Text style={Type.label}>STUDENT INFO</Text>
+            <View style={{ gap: Spacing.md, marginTop: Spacing.md }}>
+              <AppAutocomplete
+                label="NPSN / School Name"
+                placeholder={regencyCode ? "Search school" : "Pick city first"}
+                value={school}
+                onChangeText={setSchool}
+                onSelect={(item) => {
+                  setSchool(item.name);
+                  setSchoolNpsn(item.metadata?.npsn || "");
+                  setSchoolAddress(item.metadata?.address || "");
+                }}
+                fetchSuggestions={async (q) => {
+                  if (!regencyCode) return [];
+                  const txt = q.trim();
+                  if (!txt) {
+                    const schools = await schoolsService.searchSchools({ regencyCode, grade, page: 1 });
+                    return schools.slice(0, 20).map((s) => ({
+                      id: s.npsn || s.id,
+                      name: `${s.npsn ? `${s.npsn} - ` : ""}${s.name}`,
+                      metadata: { npsn: s.npsn, address: s.address },
+                    }));
+                  }
+                  if (txt.length < 3) return [];
+                  const isNpsn = /^\d{5,}$/.test(txt);
+                  const schools = await schoolsService.searchSchools(
+                    isNpsn ? { npsn: txt } : { name: txt, regencyCode, grade }
+                  );
+                  return schools.map((s) => ({
                     id: s.npsn || s.id,
-                    name: `${s.npsn ? `${s.npsn} - ` : ''}${s.name}`,
+                    name: `${s.npsn ? `${s.npsn} - ` : ""}${s.name}`,
                     metadata: { npsn: s.npsn, address: s.address },
                   }));
-                }
-                if (q.length < 3) return [];
-                const isNpsn = /^\d{5,}$/.test(q);
-                const schools = await schoolsService.searchSchools(
-                  isNpsn ? { npsn: q } : { name: q, regencyCode, grade }
-                );
-                return schools.map((s) => ({
-                  id: s.npsn || s.id,
-                  name: `${s.npsn ? `${s.npsn} - ` : ''}${s.name}`,
-                  metadata: { npsn: s.npsn, address: s.address },
-                }));
-              }}
-              error={errors.school}
-              minSearchLength={3}
-              debounceMs={500}
-              allowCustom={true}
-              customLabel="My school is not listed — enter manually"
-              editable={!!regencyCode}
-              autoCapitalize="characters"
-            />
-
-            {schoolNpsn && (
-              <View style={styles.npsnBadge}>
-                <Text style={styles.npsnLabel}>✓ NPSN Verified:</Text>
-                <Text style={styles.npsnValue}>{schoolNpsn}</Text>
+                }}
+                error={errors.school}
+                minSearchLength={3}
+                debounceMs={500}
+                allowCustom
+                customLabel="My school is not listed — enter manually"
+                editable={!!regencyCode}
+                autoCapitalize="characters"
+              />
+              {schoolNpsn ? (
+                <View style={{ alignSelf: "flex-start" }}>
+                  <Pill label={`✓ NPSN ${schoolNpsn}`} tone="info" />
+                </View>
+              ) : null}
+              <View>
+                <Text style={Type.label}>GRADE KELAS</Text>
+                <GradePicker value={grade} onChange={setGrade} error={errors.grade} />
               </View>
-            )}
-
-            <View
-              style={styles.formGroup}
-            >
-              <Text
-                style={styles.label}
-              >
-                Grade Level
-              </Text>
-              <View
-                style={
-                  styles.gradeSections
-                }
-              >
-                {/* SD Grades 1-6 */}
-                <View>
-                  <Text style={styles.gradeGroupLabel}>SD (Elementary)</Text>
-                  <View style={styles.gradeButtons}>
-                    {["1", "2", "3", "4", "5", "6"].map((g) => (
-                      <TouchableOpacity
-                        key={g}
-                        style={[
-                          styles.gradeBtn,
-                          grade === g &&
-                            styles.gradeBtnActive,
-                        ]}
-                        onPress={() =>
-                          setGrade(g as Grade)
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.gradeBtnText,
-                            grade === g &&
-                              styles.gradeBtnTextActive,
-                          ]}
-                        >
-                          {g}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* SMP Grades 7-9 */}
-                <View>
-                  <Text style={styles.gradeGroupLabel}>SMP (Junior High)</Text>
-                  <View style={styles.gradeButtons}>
-                    {["7", "8", "9"].map((g) => (
-                      <TouchableOpacity
-                        key={g}
-                        style={[
-                          styles.gradeBtn,
-                          grade === g &&
-                            styles.gradeBtnActive,
-                        ]}
-                        onPress={() =>
-                          setGrade(g as Grade)
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.gradeBtnText,
-                            grade === g &&
-                              styles.gradeBtnTextActive,
-                          ]}
-                        >
-                          {g}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* SMA Grades 10-12 */}
-                <View>
-                  <Text style={styles.gradeGroupLabel}>SMA (Senior High)</Text>
-                  <View style={styles.gradeButtons}>
-                    {["10", "11", "12"].map((g) => (
-                      <TouchableOpacity
-                        key={g}
-                        style={[
-                          styles.gradeBtn,
-                          grade === g &&
-                            styles.gradeBtnActive,
-                        ]}
-                        onPress={() =>
-                          setGrade(g as Grade)
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.gradeBtnText,
-                            grade === g &&
-                              styles.gradeBtnTextActive,
-                          ]}
-                        >
-                          {g}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              </View>
-              {errors.grade && (
-                <Text
-                  style={
-                    styles.errorText
-                  }
-                >
-                  {errors.grade}
-                </Text>
-              )}
             </View>
-          </View>
-        )}
+          </Card>
+        ) : null}
 
-        {/* Parent-specific fields */}
-        {role === "parent" && (
-          <View style={styles.section}>
-            <Text
-              style={
-                styles.sectionLabel
-              }
-            >
-              Child Information
-            </Text>
-
-            <AppInput
-              label="Child's Full Name"
-              placeholder="e.g. Jane Doe"
-              value={childName}
-              onChangeText={
-                setChildName
-              }
-              error={errors.childName}
-            />
-
-            <AppAutocomplete
-              label="Child's NPSN (School ID)"
-              placeholder={regencyCode ? "Enter child's school NPSN" : "Select city first"}
-              value={childSchool}
-              onChangeText={setChildSchool}
-              onSelect={(item) => setChildSchool(item.name)}
-              fetchSuggestions={async (query) => {
-                if (!regencyCode) return [];
-                const q = query.trim();
-                if (q.length < 3) return [];
-                const isNpsn = /^\d{5,}$/.test(q);
-                const schools = await schoolsService.searchSchools(
-                  isNpsn ? { npsn: q } : { name: q, regencyCode }
-                );
-                return schools.map((s) => ({
-                  id: s.npsn || s.id,
-                  name: `${s.npsn ? `${s.npsn} - ` : ''}${s.name}`,
-                }));
-              }}
-              error={errors.childSchool}
-              minSearchLength={3}
-              debounceMs={500}
-              allowCustom={true}
-              customLabel="Not listed — enter manually"
-              editable={!!regencyCode}
-              autoCapitalize="characters"
-            />
-
-            <View
-              style={styles.formGroup}
-            >
-              <Text
-                style={styles.label}
-              >
-                Child's Grade
-              </Text>
-              <View
-                style={
-                  styles.gradeSections
-                }
-              >
-                {/* SD Grades 1-6 */}
-                <View>
-                  <Text style={styles.gradeGroupLabel}>SD (Elementary)</Text>
-                  <View style={styles.gradeButtons}>
-                    {["1", "2", "3", "4", "5", "6"].map((g) => (
-                      <TouchableOpacity
-                        key={g}
-                        style={[
-                          styles.gradeBtn,
-                          childGrade === g &&
-                            styles.gradeBtnActive,
-                        ]}
-                        onPress={() =>
-                          setChildGrade(g as Grade)
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.gradeBtnText,
-                            childGrade === g &&
-                              styles.gradeBtnTextActive,
-                          ]}
-                        >
-                          {g}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* SMP Grades 7-9 */}
-                <View>
-                  <Text style={styles.gradeGroupLabel}>SMP (Junior High)</Text>
-                  <View style={styles.gradeButtons}>
-                    {["7", "8", "9"].map((g) => (
-                      <TouchableOpacity
-                        key={g}
-                        style={[
-                          styles.gradeBtn,
-                          childGrade === g &&
-                            styles.gradeBtnActive,
-                        ]}
-                        onPress={() =>
-                          setChildGrade(g as Grade)
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.gradeBtnText,
-                            childGrade === g &&
-                              styles.gradeBtnTextActive,
-                          ]}
-                        >
-                          {g}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* SMA Grades 10-12 */}
-                <View>
-                  <Text style={styles.gradeGroupLabel}>SMA (Senior High)</Text>
-                  <View style={styles.gradeButtons}>
-                    {["10", "11", "12"].map((g) => (
-                      <TouchableOpacity
-                        key={g}
-                        style={[
-                          styles.gradeBtn,
-                          childGrade === g &&
-                            styles.gradeBtnActive,
-                        ]}
-                        onPress={() =>
-                          setChildGrade(g as Grade)
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.gradeBtnText,
-                            childGrade === g &&
-                              styles.gradeBtnTextActive,
-                          ]}
-                        >
-                          {g}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
+        {role === "parent" ? (
+          <Card style={{ marginTop: Spacing.lg }}>
+            <Text style={Type.label}>CHILD INFO</Text>
+            <View style={{ gap: Spacing.md, marginTop: Spacing.md }}>
+              <AppInput label="Child Name" placeholder="e.g. Jane Doe" value={childName} onChangeText={setChildName} error={errors.childName} />
+              <AppAutocomplete
+                label="Child School"
+                placeholder={regencyCode ? "Search child school" : "Pick city first"}
+                value={childSchool}
+                onChangeText={setChildSchool}
+                onSelect={(item) => setChildSchool(item.name)}
+                fetchSuggestions={async (q) => {
+                  if (!regencyCode) return [];
+                  const txt = q.trim();
+                  if (txt.length < 3) return [];
+                  const isNpsn = /^\d{5,}$/.test(txt);
+                  const schools = await schoolsService.searchSchools(isNpsn ? { npsn: txt } : { name: txt, regencyCode });
+                  return schools.map((s) => ({ id: s.npsn || s.id, name: `${s.npsn ? `${s.npsn} - ` : ""}${s.name}` }));
+                }}
+                error={errors.childSchool}
+                minSearchLength={3}
+                debounceMs={500}
+                allowCustom
+                customLabel="Not listed — enter manually"
+                editable={!!regencyCode}
+                autoCapitalize="characters"
+              />
+              <View>
+                <Text style={Type.label}>GRADE KELAS ANAK</Text>
+                <GradePicker value={childGrade} onChange={setChildGrade} error={errors.childGrade} />
               </View>
-              {errors.childGrade && (
-                <Text
-                  style={
-                    styles.errorText
-                  }
-                >
-                  {errors.childGrade}
-                </Text>
-              )}
             </View>
-          </View>
-        )}
+          </Card>
+        ) : null}
 
-        {/* Teacher-specific fields */}
-        {role === "teacher" && (
-          <View style={styles.section}>
-            <Text
-              style={
-                styles.sectionLabel
-              }
-            >
-              Teaching Information
-            </Text>
-
-            <AppAutocomplete
-              label="NPSN (School ID)"
-              placeholder={regencyCode ? "Enter school NPSN" : "Select city first"}
-              value={teacherSchool}
-              onChangeText={setTeacherSchool}
-              onSelect={(item) => setTeacherSchool(item.name)}
-              fetchSuggestions={async (query) => {
-                if (!regencyCode) return [];
-                const q = query.trim();
-                if (q.length < 3) return [];
-                const isNpsn = /^\d{5,}$/.test(q);
-                const schools = await schoolsService.searchSchools(
-                  isNpsn ? { npsn: q } : { name: q, regencyCode }
-                );
-                return schools.map((s) => ({
-                  id: s.npsn || s.id,
-                  name: `${s.npsn ? `${s.npsn} - ` : ''}${s.name}`,
-                }));
-              }}
-              error={errors.teacherSchool}
-              minSearchLength={3}
-              debounceMs={500}
-              allowCustom={true}
-              customLabel="Not listed — enter manually"
-              editable={!!regencyCode}
-              autoCapitalize="characters"
-            />
-
-            <AppInput
-              label="Subject"
-              placeholder="e.g. Mathematics"
-              value={subject}
-              onChangeText={setSubject}
-              error={errors.subject}
-            />
-          </View>
-        )}
+        {role === "teacher" ? (
+          <Card style={{ marginTop: Spacing.lg }}>
+            <Text style={Type.label}>TEACHING INFO</Text>
+            <View style={{ gap: Spacing.md, marginTop: Spacing.md }}>
+              <AppAutocomplete
+                label="School"
+                placeholder={regencyCode ? "Search school" : "Pick city first"}
+                value={teacherSchool}
+                onChangeText={setTeacherSchool}
+                onSelect={(item) => setTeacherSchool(item.name)}
+                fetchSuggestions={async (q) => {
+                  if (!regencyCode) return [];
+                  const txt = q.trim();
+                  if (txt.length < 3) return [];
+                  const isNpsn = /^\d{5,}$/.test(txt);
+                  const schools = await schoolsService.searchSchools(isNpsn ? { npsn: txt } : { name: txt, regencyCode });
+                  return schools.map((s) => ({ id: s.npsn || s.id, name: `${s.npsn ? `${s.npsn} - ` : ""}${s.name}` }));
+                }}
+                error={errors.teacherSchool}
+                minSearchLength={3}
+                debounceMs={500}
+                allowCustom
+                customLabel="Not listed — enter manually"
+                editable={!!regencyCode}
+                autoCapitalize="characters"
+              />
+              <AppInput label="Subject" placeholder="e.g. Matematika" value={subject} onChangeText={setSubject} error={errors.subject} />
+            </View>
+          </Card>
+        ) : null}
       </ScrollView>
 
-      <View
-        style={[
-          styles.footerButtons,
-          {
-            paddingBottom:
-              insets.bottom + 16,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() =>
-            setStep("role")
-          }
-          disabled={loading}
-        >
-          <Text
-            style={styles.backBtnText}
-          >
-            Back
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.registerBtn,
-            loading && styles.registerBtnDisabled,
-          ]}
-          onPress={() => {
-            if (validateDetails()) setStep("consent");
-          }}
-          disabled={loading}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.registerBtnText}>Continue</Text>
-        </TouchableOpacity>
+      <View style={[styles.footerRow, { paddingBottom: insets.bottom + Spacing.lg }]}>
+        <Button label="Back" variant="ghost" onPress={() => setStep("role")} disabled={loading} />
+        <View style={{ flex: 1 }}>
+          <Button
+            label="Continue"
+            onPress={() => {
+              if (validateDetails()) setStep("consent");
+            }}
+            loading={loading}
+            fullWidth
+            size="lg"
+          />
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-  },
-  // ─── Role Selection Screen ─────────────────────────────────────────────────
-  roleBackBtn: {
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    marginBottom: 16,
-  },
-  roleBackText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: Brand.primary,
-  },
-  roleHeader: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  roleTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginBottom: 8,
-  },
-  roleSubtitle: {
-    fontSize: 15,
-    color: "#64748B",
-    textAlign: "center",
-  },
-  rolesContainer: {
-    flexDirection: "column",
-    justifyContent: "center",
-    gap: 16,
-    marginBottom: 24,
-  },
-  roleCard: {
-    flex: 1,
+  container: { flex: 1, backgroundColor: Surface.background },
+  scroll: { paddingHorizontal: Spacing.xl, paddingBottom: Spacing["3xl"] },
+  logoTile: {
+    width: 80,
+    height: 80,
+    borderRadius: Radius["2xl"],
+    backgroundColor: Brand.primarySoft,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 24,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: "#fff",
+    ...Shadow.md,
+  },
+  roleEmojiTile: {
+    width: 56,
+    height: 56,
+    borderRadius: Radius.xl,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderColor: Surface.borderStrong,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  roleCardActive: {
-    borderColor: Brand.primary,
-    backgroundColor: "#EEF2FF",
-  },
-  roleEmoji: {
-    fontSize: 40,
-    marginBottom: 8,
-  },
-  roleLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#64748B",
-  },
-  roleLabelActive: {
-    color: Brand.primary,
-  },
-  roleDescription: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  descriptionText: {
-    fontSize: 14,
-    color: "#475569",
-    lineHeight: 20,
-  },
-  continueBtn: {
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: Brand.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    marginHorizontal: 20,
-    marginBottom: 24,
-    alignItems: "center",
   },
-  continueBtnText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  // ─── Details Screen ───────────────────────────────────────────────────────
-  header: {
+  gradeRow: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-    gap: 12,
-  },
-  backBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  backBtnText: {
-    color: Brand.primary,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  stepTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#64748B",
-    marginBottom: 12,
-    textTransform: "uppercase",
-  },
-  formGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#334155",
-    marginBottom: 10,
-  },
-  errorText: {
-    color: "#EF4444",
-    fontSize: 12,
-    marginTop: 6,
-  },
-  gradeSections: {
-    gap: 16,
-  },
-  gradeGroupLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#64748B",
-    marginBottom: 8,
-  },
-  gradeButtons: {
-    flexDirection: "row",
-    gap: 8,
     flexWrap: "wrap",
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
   },
   gradeBtn: {
     minWidth: 52,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: "#fff",
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    backgroundColor: Surface.card,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: Surface.border,
     alignItems: "center",
-  },
-  gradeBtnActive: {
-    backgroundColor: Brand.primary,
-    borderColor: Brand.primary,
-  },
-  gradeBtnText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  gradeBtnTextActive: {
-    color: "#fff",
-  },
-  npsnBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F0F9FF",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginTop: -8,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#BAE6FD",
-  },
-  npsnLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#0369A1",
-    marginRight: 6,
-  },
-  npsnValue: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0C4A6E",
-  },
-  footerButtons: {
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 20,
-  },
-  registerBtn: {
-    flex: 1,
-    backgroundColor: Brand.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  registerBtnText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  registerBtnDisabled: {
-    opacity: 0.6,
-  },
-  // ─── Consent Screen ───────────────────────────────────────────────────────
-  consentBox: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    marginBottom: 20,
-  },
-  consentTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  consentBody: {
-    fontSize: 13,
-    color: "#475569",
-    lineHeight: 21,
   },
   checkRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 8,
+    gap: Spacing.md,
+    marginTop: Spacing.lg,
   },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
+    width: 24,
+    height: 24,
+    borderRadius: Radius.sm,
     borderWidth: 2,
-    borderColor: "#CBD5E1",
+    borderColor: Surface.borderStrong,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 1,
-    flexShrink: 0,
   },
-  checkboxChecked: {
-    backgroundColor: Brand.primary,
-    borderColor: Brand.primary,
+  footer: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    backgroundColor: Surface.background,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Surface.divider,
   },
-  checkLabel: {
-    flex: 1,
-    fontSize: 13,
-    color: "#334155",
-    lineHeight: 20,
+  footerRow: {
+    flexDirection: "row",
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.lg,
+    backgroundColor: Surface.background,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Surface.divider,
   },
 });

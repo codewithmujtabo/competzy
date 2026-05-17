@@ -1,18 +1,25 @@
-import React, { useEffect } from "react";
+import { Card, Pill, SectionHeader } from "@/components/ui";
 import {
-  View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
-import { Brand } from "@/constants/theme";
+  Brand,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
 import { useUser } from "@/context/AuthContext";
 import { getDashboardSummary, getUpcomingDeadlines } from "@/services/teachers.service";
+import { useQuery } from "@tanstack/react-query";
+import { router } from "expo-router";
+import React, { useEffect } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TeacherDashboardScreen() {
   const { user } = useUser();
   const userRole = (user as any)?.role;
+  const firstName = (user as any)?.fullName?.split(" ")[0] ?? "Teacher";
 
   const { data: summary, isLoading: loadingSummary } = useQuery({
     queryKey: ["teacherSummary"],
@@ -38,70 +45,92 @@ export default function TeacherDashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Teacher Dashboard</Text>
-          <Text style={styles.subtitle}>Your students and their competition activity</Text>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <View style={styles.hero}>
+          <View style={styles.heroBlob} />
+          <Text style={[Type.bodySm, { color: "rgba(255,255,255,0.85)" }]}>Teacher Dashboard 👨‍🏫</Text>
+          <Text style={[Type.displayMd, { color: "#FFFFFF", marginTop: Spacing.xs }]}>
+            Hello, {firstName}!
+          </Text>
+          <Text style={[Type.body, { color: "rgba(255,255,255,0.9)", marginTop: Spacing.sm }]}>
+            Monitor your students and their competition activity.
+          </Text>
         </View>
 
-        {/* Summary cards */}
         {loadingSummary ? (
           <ActivityIndicator style={styles.loader} color={Brand.primary} />
         ) : (
-          <View style={styles.grid}>
-            <View style={styles.card}>
-              <Text style={styles.cardValue}>{summary?.totalStudents ?? 0}</Text>
-              <Text style={styles.cardLabel}>My Students</Text>
-            </View>
-            <View style={styles.card}>
-              <Text style={styles.cardValue}>{summary?.totalRegistrations ?? 0}</Text>
-              <Text style={styles.cardLabel}>Registrations</Text>
-            </View>
-            <View style={styles.card}>
-              <Text style={[styles.cardValue, { color: "#059669" }]}>{summary?.confirmedRegistrations ?? 0}</Text>
-              <Text style={styles.cardLabel}>Confirmed</Text>
-            </View>
+          <View style={styles.statRow}>
+            <Card variant="flat" style={styles.statCell}>
+              <Text style={{ fontSize: 28 }}>👥</Text>
+              <Text style={[Type.h1, { color: Brand.primary, marginTop: 4 }]}>
+                {summary?.totalStudents ?? 0}
+              </Text>
+              <Text style={Type.caption}>Students</Text>
+            </Card>
+            <Card variant="flat" style={styles.statCell}>
+              <Text style={{ fontSize: 28 }}>📋</Text>
+              <Text style={[Type.h1, { color: Brand.secondary, marginTop: 4 }]}>
+                {summary?.totalRegistrations ?? 0}
+              </Text>
+              <Text style={Type.caption}>Registrations</Text>
+            </Card>
+            <Card variant="flat" style={styles.statCell}>
+              <Text style={{ fontSize: 28 }}>✅</Text>
+              <Text style={[Type.h1, { color: Brand.success, marginTop: 4 }]}>
+                {summary?.confirmedRegistrations ?? 0}
+              </Text>
+              <Text style={Type.caption}>Approved</Text>
+            </Card>
           </View>
         )}
 
-        {/* Quick actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push("/(tabs)/teacher-students")}>
-              <Text style={styles.actionBtnEmoji}>👥</Text>
-              <Text style={styles.actionBtnText}>My Students</Text>
-              <Text style={styles.actionBtnSub}>View & manage</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push("/(tabs)/teacher-analytics")}>
-              <Text style={styles.actionBtnEmoji}>🏆</Text>
-              <Text style={styles.actionBtnText}>Competitions</Text>
-              <Text style={styles.actionBtnSub}>My students registered</Text>
-            </TouchableOpacity>
-          </View>
+        <SectionHeader title="Quick Actions" marginTop={Spacing["2xl"]} />
+        <View style={styles.actionRow}>
+          <Card onPress={() => router.push("/(tabs)/teacher-students")} style={styles.actionTile}>
+            <View style={styles.actionEmoji}>
+              <Text style={{ fontSize: 28 }}>👥</Text>
+            </View>
+            <Text style={[Type.title, { marginTop: Spacing.md }]}>My Students</Text>
+            <Text style={[Type.bodySm, { marginTop: 2 }]}>View & manage roster</Text>
+          </Card>
+          <Card onPress={() => router.push("/(tabs)/teacher-analytics")} style={styles.actionTile}>
+            <View style={[styles.actionEmoji, { backgroundColor: Brand.successSoft }]}>
+              <Text style={{ fontSize: 28 }}>🏆</Text>
+            </View>
+            <Text style={[Type.title, { marginTop: Spacing.md }]}>Competitions</Text>
+            <Text style={[Type.bodySm, { marginTop: 2 }]}>Joined by students</Text>
+          </Card>
         </View>
 
-        {/* Upcoming deadlines */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming Deadlines</Text>
+        <SectionHeader title="Upcoming Deadlines" subtitle="Next 30 days" />
+        <View style={{ paddingHorizontal: Spacing.xl, gap: Spacing.md }}>
           {loadingDeadlines ? (
             <ActivityIndicator color={Brand.primary} />
           ) : deadlines && deadlines.length > 0 ? (
             deadlines.slice(0, 4).map((item) => (
-              <View key={item.id} style={styles.deadlineRow}>
-                <View style={styles.deadlineLeft}>
-                  <Text style={styles.deadlineName} numberOfLines={1}>{item.competition}</Text>
-                  <Text style={styles.deadlineDate}>{item.deadline}</Text>
+              <Card key={item.id}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={Type.title} numberOfLines={1}>
+                      {item.competition}
+                    </Text>
+                    <Text style={[Type.bodySm, { marginTop: 2 }]}>{item.deadline}</Text>
+                  </View>
+                  <Pill
+                    label={`${item.daysLeft} days left`}
+                    tone={item.status === "urgent" ? "danger" : "info"}
+                    size="sm"
+                  />
                 </View>
-                <View style={[styles.deadlineBadge, { backgroundColor: item.status === "urgent" ? "#FEE2E2" : "#DBEAFE" }]}>
-                  <Text style={[styles.deadlineBadgeText, { color: item.status === "urgent" ? "#EF4444" : "#3B82F6" }]}>
-                    {item.daysLeft}d left
-                  </Text>
-                </View>
-              </View>
+              </Card>
             ))
           ) : (
-            <Text style={styles.empty}>No upcoming deadlines in the next 30 days</Text>
+            <Card variant="tinted" tint={Brand.successSoft}>
+              <Text style={[Type.body, { color: Brand.success }]}>
+                ✓ No deadlines in the next 30 days
+              </Text>
+            </Card>
           )}
         </View>
       </ScrollView>
@@ -110,40 +139,45 @@ export default function TeacherDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
-  scroll:    { padding: 20, paddingBottom: 40 },
-  header:    { marginBottom: 24 },
-  title:     { fontSize: 26, fontWeight: "800", color: "#0F172A" },
-  subtitle:  { marginTop: 4, fontSize: 14, color: "#64748B" },
-  loader:    { marginVertical: 32 },
-  grid:      { flexDirection: "row", gap: 12, marginBottom: 28 },
-  card: {
-    flex: 1, backgroundColor: "#fff", borderRadius: 16,
-    padding: 16, alignItems: "center",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+  container: { flex: 1, backgroundColor: Surface.background },
+  scroll: { paddingBottom: Spacing["3xl"] },
+  hero: {
+    backgroundColor: Brand.primary,
+    borderRadius: Radius["3xl"],
+    padding: Spacing["2xl"],
+    margin: Spacing.xl,
+    overflow: "hidden",
+    ...Shadow.lg,
   },
-  cardValue: { fontSize: 28, fontWeight: "800", color: Brand.primary },
-  cardLabel: { marginTop: 4, fontSize: 12, color: "#64748B", textAlign: "center" },
-  section:   { marginBottom: 28 },
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#0F172A", marginBottom: 12 },
-  actionRow: { flexDirection: "row", gap: 12 },
-  actionBtn: {
-    flex: 1, backgroundColor: "#fff", borderRadius: 16, padding: 20, alignItems: "center",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+  heroBlob: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: Brand.primaryLight,
+    opacity: 0.25,
+    top: -80,
+    right: -50,
   },
-  actionBtnEmoji: { fontSize: 28, marginBottom: 8 },
-  actionBtnText:  { fontSize: 14, fontWeight: "700", color: "#0F172A", textAlign: "center" },
-  actionBtnSub:   { marginTop: 4, fontSize: 11, color: "#64748B", textAlign: "center" },
-  deadlineRow: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 10,
+  loader: { marginVertical: Spacing["3xl"] },
+  statRow: {
+    flexDirection: "row",
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.xl,
   },
-  deadlineLeft: { flex: 1, marginRight: 12 },
-  deadlineName: { fontSize: 14, fontWeight: "600", color: "#0F172A" },
-  deadlineDate: { marginTop: 2, fontSize: 12, color: "#64748B" },
-  deadlineBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  deadlineBadgeText: { fontSize: 12, fontWeight: "700" },
-  empty: { fontSize: 14, color: "#94A3B8", textAlign: "center", paddingVertical: 20 },
+  statCell: { flex: 1, alignItems: "center", paddingVertical: Spacing.lg },
+  actionRow: {
+    flexDirection: "row",
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+  },
+  actionTile: { flex: 1, alignItems: "center", paddingVertical: Spacing.xl },
+  actionEmoji: {
+    width: 64,
+    height: 64,
+    borderRadius: Radius.xl,
+    backgroundColor: Brand.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

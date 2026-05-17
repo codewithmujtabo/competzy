@@ -1,14 +1,22 @@
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Brand } from "@/constants/theme";
+import { Button, Card, Pill, ScreenHeader, SubjectCircle } from "@/components/ui";
+import {
+  Brand,
+  CategoryAccent,
+  CategoryBg,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import * as competitionsService from "@/services/competitions.service";
 import * as favoritesService from "@/services/favorites.service";
 import { Analytics } from "@/services/analytics";
-import {
-  useLocalSearchParams,
-  useRouter,
-} from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -22,37 +30,27 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function formatPrice(fee: number) {
-  return fee === 0 ? "Free" : `Rp ${fee.toLocaleString("id-ID")}`;
+  return fee === 0 ? "FREE" : `Rp ${fee.toLocaleString("id-ID")}`;
 }
 
 function formatDate(d: string | null) {
   if (!d) return "-";
-  return new Date(d).toLocaleDateString("id-ID", {
+  return new Date(d).toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
 }
 
-const CATEGORY_EMOJIS: Record<string, string> = {
-  Math: "📐",
-  Science: "🔬",
-  Debate: "🎤",
-  Arts: "🎨",
-  Language: "📚",
-  Technology: "🤖",
-  Sports: "⚽",
-};
-
-const STATUS_PILL_CFG: Record<string, { label: string; style: object; textStyle: object }> = {
-  pending_payment: { label: "Pay Now",      style: { backgroundColor: "#DBEAFE" }, textStyle: { color: "#1D4ED8" } },
-  registered:      { label: "Pay Now",      style: { backgroundColor: "#DBEAFE" }, textStyle: { color: "#1D4ED8" } },
-  pending_review:  { label: "Under Review", style: { backgroundColor: "#FEF3C7" }, textStyle: { color: "#92400E" } },
-  pending_approval:{ label: "Under Review", style: { backgroundColor: "#FEF3C7" }, textStyle: { color: "#92400E" } },
-  approved:        { label: "Approved",     style: { backgroundColor: "#D1FAE5" }, textStyle: { color: "#065F46" } },
-  paid:            { label: "Approved",     style: { backgroundColor: "#D1FAE5" }, textStyle: { color: "#065F46" } },
-  rejected:        { label: "Rejected",     style: { backgroundColor: "#FEE2E2" }, textStyle: { color: "#B91C1C" } },
-  completed:       { label: "Completed",    style: { backgroundColor: "#E0E7FF" }, textStyle: { color: "#4338CA" } },
+const STATUS_PILL: Record<string, { label: string; tone: any }> = {
+  pending_payment: { label: "Pay Now", tone: "info" },
+  registered:      { label: "Pay Now", tone: "info" },
+  pending_review:  { label: "Under Review",       tone: "warning" },
+  pending_approval:{ label: "Under Review",       tone: "warning" },
+  approved:        { label: "Approved",      tone: "success" },
+  paid:            { label: "Paid",        tone: "success" },
+  rejected:        { label: "Rejected",        tone: "danger" },
+  completed:       { label: "Completed",        tone: "brand" },
 };
 
 export default function CompetitionDetailPage() {
@@ -83,41 +81,21 @@ export default function CompetitionDetailPage() {
     }
   }, [comp?.id]);
 
-  // Sprint 4, Track A (T3) - Track view duration
   useEffect(() => {
-    // Record start time when component mounts
     viewStartTime.current = Date.now();
-
-    // Track view duration on unmount
     return () => {
       if (viewStartTime.current && comp?.id) {
         const duration = Math.floor((Date.now() - viewStartTime.current) / 1000);
-
-        // Only track if user spent >= 10 seconds (filter accidental clicks)
-        if (duration >= 10) {
-          competitionsService.trackView(comp.id, duration);
-        }
+        if (duration >= 10) competitionsService.trackView(comp.id, duration);
       }
     };
   }, [comp?.id]);
 
-  // Reset tab when id changes
-  useEffect(() => {
-    setActiveTab("overview");
-  }, [id]);
+  useEffect(() => setActiveTab("overview"), [id]);
 
-  // Check if competition is favorited
   useEffect(() => {
-    const checkFavorite = async () => {
-      if (!id) return;
-      try {
-        const favorited = await favoritesService.checkFavorited(id);
-        setIsFavorited(favorited);
-      } catch (err) {
-        console.error("Check favorite error:", err);
-      }
-    };
-    checkFavorite();
+    if (!id) return;
+    favoritesService.checkFavorited(id).then(setIsFavorited).catch(() => {});
   }, [id]);
 
   const handleBack = () => {
@@ -127,35 +105,25 @@ export default function CompetitionDetailPage() {
 
   const handleToggleFavorite = async () => {
     if (!id || loadingFavorite) return;
-
     setLoadingFavorite(true);
     try {
       if (isFavorited) {
         await favoritesService.remove(id);
         setIsFavorited(false);
-        Alert.alert("Removed", "Competition removed from favorites");
       } else {
         await favoritesService.add(id);
         setIsFavorited(true);
-        Alert.alert("Added", "Competition added to favorites");
       }
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Failed to update favorite");
+      Alert.alert("Error", err.message || "Failed to update favorites");
     } finally {
       setLoadingFavorite(false);
     }
   };
 
-  // Check if already registered
-  const existingRegistration = comp
-    ? registrations.find((registration) => registration.compId === comp.id)
-    : null;
-  const already = !!existingRegistration;
-
-  // Check if registration is closed
-  const isClosed = comp?.regCloseDate
-    ? new Date(comp.regCloseDate) < new Date()
-    : false;
+  const existingReg = comp ? registrations.find((r) => r.compId === comp.id) : null;
+  const already = !!existingReg;
+  const isClosed = comp?.regCloseDate ? new Date(comp.regCloseDate) < new Date() : false;
 
   if (isLoading) {
     return (
@@ -168,215 +136,251 @@ export default function CompetitionDetailPage() {
   if (isError || !comp) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
-          <Pressable onPress={handleBack} style={styles.backBtn}>
-            <IconSymbol size={24} name="chevron.left" color="#0F172A" />
-          </Pressable>
-          <Text style={styles.headerTitle}>Competition not found</Text>
-          <View style={{ width: 24 }} />
-        </View>
-        <View style={styles.center}>
-          <Text style={styles.errorText}>Unable to load competition.</Text>
-          <Pressable style={styles.retryBtn} onPress={() => router.back()}>
-            <Text style={styles.retryText}>Back</Text>
-          </Pressable>
+        <ScreenHeader title="Not found" onBack={handleBack} />
+        <View style={[styles.center, { paddingHorizontal: Spacing.xl }]}>
+          <Text style={[Type.body, { color: TextColor.secondary, marginBottom: Spacing.lg }]}>
+            Unable to load competition.
+          </Text>
+          <Button label="Back" variant="secondary" onPress={() => router.back()} />
         </View>
       </View>
     );
   }
 
-  // Extract categories for display
-  const categories = comp.category
-    .split("\n")
-    .map((cat) => cat.trim())
-    .filter(Boolean);
-  const firstCategory = categories[0] || "General";
-  const categoryDisplay = categories.length > 1
-    ? `${firstCategory} +${categories.length - 1} more`
-    : firstCategory;
+  const cats = comp.category.split("\n").map((c) => c.trim()).filter(Boolean);
+  const firstCat = cats[0] || "General";
+  const accent = CategoryAccent[firstCat] ?? Brand.primary;
+  const accentBg = CategoryBg[firstCat] ?? Brand.primarySoft;
+
+  const ctaLabel = isClosed
+    ? "Registration Closed"
+    : already
+    ? existingReg && (existingReg.status === "pending_payment" || existingReg.status === "registered")
+      ? "Complete Payment"
+      : existingReg && ["approved", "paid", "completed"].includes(existingReg.status)
+      ? "Open Details"
+      : "View Registration"
+    : "Register Now";
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backBtn}>
-          <IconSymbol size={24} name="chevron.left" color="#0F172A" />
-        </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {comp.name}
-        </Text>
-        {isParent ? <View style={{ width: 40 }} /> : existingRegistration ? (
-          <View style={[styles.statusPill, STATUS_PILL_CFG[existingRegistration.status]?.style]}>
-            <Text style={[styles.statusPillText, STATUS_PILL_CFG[existingRegistration.status]?.textStyle]}>
-              {STATUS_PILL_CFG[existingRegistration.status]?.label ?? existingRegistration.status}
-            </Text>
-          </View>
-        ) : (
-          <Pressable
-            onPress={handleToggleFavorite}
-            style={styles.favoriteBtn}
-            disabled={loadingFavorite}
-          >
-            <Text style={styles.favoriteIcon}>
-              {loadingFavorite ? "⏳" : isFavorited ? "❤️" : "🤍"}
-            </Text>
-          </Pressable>
-        )}
-      </View>
-
-      {/* Info card */}
-      <View style={styles.infoCard}>
-        <Text style={styles.emoji}>
-          {CATEGORY_EMOJIS[firstCategory] ?? "🏆"}
-        </Text>
-        <Text style={styles.compTitle}>{comp.name}</Text>
-        <Text style={styles.compOrg}>{comp.organizerName}</Text>
-        <Text style={styles.compMeta}>
-          {categoryDisplay} · {comp.gradeLevel.replace(/,/g, ", ")} ·{" "}
-          Closes {formatDate(comp.regCloseDate)}
-        </Text>
-        <Text style={[styles.compPrice, { marginTop: 12 }]}>
-          {formatPrice(comp.fee)}
-        </Text>
-        {isClosed && (
-          <View style={styles.closedBadge}>
-            <Text style={styles.closedText}>Registration Closed</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Tab nav */}
-      <View style={styles.tabNav}>
-        {(["overview", "registration", "payment"] as const).map((tab) => (
-          <Pressable
-            key={tab}
-            style={[styles.tab, activeTab === tab && styles.tabActive]}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text
-              style={[styles.tabLabel, activeTab === tab && styles.tabLabelActive]}
+      <ScreenHeader
+        title="Competition Detail"
+        onBack={handleBack}
+        trailing={
+          isParent ? null : existingReg ? (
+            <Pill
+              label={STATUS_PILL[existingReg.status]?.label ?? existingReg.status}
+              tone={STATUS_PILL[existingReg.status]?.tone ?? "neutral"}
+              size="sm"
+            />
+          ) : (
+            <Pressable
+              onPress={handleToggleFavorite}
+              hitSlop={10}
+              disabled={loadingFavorite}
+              style={({ pressed }) => [
+                styles.favBtn,
+                pressed && { opacity: 0.6 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={isFavorited ? "Remove from favorites" : "Add to favorites"}
             >
-              {tab === "overview" ? "About" : tab === "registration" ? "Register" : "Payment"}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+              {loadingFavorite ? (
+                <ActivityIndicator size="small" color={Brand.primary} />
+              ) : (
+                <Ionicons
+                  name={isFavorited ? "heart" : "heart-outline"}
+                  size={20}
+                  color={isFavorited ? Brand.error : TextColor.tertiary}
+                />
+              )}
+            </Pressable>
+          )
+        }
+      />
 
-      {/* Tab content */}
-      <ScrollView contentContainerStyle={styles.tabContent}>
-        {activeTab === "overview" && (
-          <View>
-            <Text style={styles.sectionTitle}>About the Competition</Text>
-            <Text style={styles.sectionText}>{comp.description}</Text>
-
-            {categories.length > 1 && (
-              <>
-                <Text style={styles.sectionTitle}>Categories</Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                  {categories.map((cat, idx) => (
-                    <View
-                      key={idx}
-                      style={{
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        backgroundColor: "#F1F5F9",
-                        borderRadius: 8,
-                      }}
-                    >
-                      <Text style={{ fontSize: 14, color: "#475569" }}>
-                        {cat}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </>
-            )}
-
-            <Text style={styles.sectionTitle}>Important Dates</Text>
-            <View style={styles.infoBox}>
-              <Text style={styles.boxLabel}>Registration Opens</Text>
-              <Text style={styles.boxValue}>{formatDate(comp.regOpenDate)}</Text>
-            </View>
-            <View style={styles.infoBox}>
-              <Text style={styles.boxLabel}>Registration Closes</Text>
-              <Text style={styles.boxValue}>{formatDate(comp.regCloseDate)}</Text>
-            </View>
-            <View style={styles.infoBox}>
-              <Text style={styles.boxLabel}>Competition Date</Text>
-              <Text style={styles.boxValue}>{formatDate(comp.competitionDate)}</Text>
-            </View>
-
-            <Text style={styles.sectionTitle}>Education Level</Text>
-            <Text style={styles.sectionText}>
-              {comp.gradeLevel.replace(/,/g, ", ")}
-            </Text>
-
-            {comp.quota && (
-              <>
-                <Text style={styles.sectionTitle}>Participant Quota</Text>
-                <Text style={styles.sectionText}>{comp.quota} participants</Text>
-              </>
-            )}
+      <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+        {/* Hero */}
+        <View style={[styles.hero, { backgroundColor: accentBg }]}>
+          <View style={styles.heroBlobA} />
+          <View style={styles.heroBlobB} />
+          <SubjectCircle label={comp.name} size={96} />
+          <Text style={[Type.h1, { textAlign: "center", marginTop: Spacing.lg }]} numberOfLines={3}>
+            {comp.name}
+          </Text>
+          <Text style={[Type.body, { color: TextColor.secondary, marginTop: 4, textAlign: "center" }]}>
+            by {comp.organizerName}
+          </Text>
+          <View style={styles.heroPills}>
+            {cats.slice(0, 3).map((cat) => (
+              <Pill key={cat} label={cat} tone="brand" size="sm" />
+            ))}
+            <Pill label={comp.gradeLevel.replace(/,/g, ", ")} tone="neutral" size="sm" />
           </View>
-        )}
-
-        {activeTab === "registration" && (
-          <View>
-            <Text style={styles.sectionTitle}>Registration Status</Text>
-            <View style={styles.infoBox}>
-              <Text style={styles.boxLabel}>Your Status</Text>
-              <Text style={[styles.boxValue, { color: already ? "#059669" : "#94A3B8" }]}>
-                {already ? "✓ Already Registered" : "Not Registered"}
-              </Text>
+          {isClosed ? (
+            <View style={{ marginTop: Spacing.md }}>
+              <Pill label="Registration Closed" tone="danger" />
             </View>
+          ) : null}
+        </View>
 
-            <Text style={styles.sectionTitle}>Required Documents</Text>
-            {comp.requiredDocs.length > 0 ? (
-              comp.requiredDocs.map((doc, i) => (
-                <View key={i} style={styles.docItem}>
-                  <Text style={styles.docBullet}>•</Text>
-                  <Text style={styles.docText}>
-                    {doc.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+        {/* Quick stats */}
+        <View style={styles.statsRow}>
+          <Card variant="flat" style={styles.statCell}>
+            <Text style={[Type.caption, { color: TextColor.tertiary }]}>FEE</Text>
+            <Text
+              style={[
+                Type.h2,
+                { color: comp.fee === 0 ? Brand.success : TextColor.primary, marginTop: 4 },
+              ]}
+            >
+              {formatPrice(comp.fee)}
+            </Text>
+          </Card>
+          <Card variant="flat" style={styles.statCell}>
+            <Text style={[Type.caption, { color: TextColor.tertiary }]}>CLOSES</Text>
+            <Text style={[Type.title, { marginTop: 4 }]} numberOfLines={1}>
+              {formatDate(comp.regCloseDate)}
+            </Text>
+          </Card>
+          {comp.quota ? (
+            <Card variant="flat" style={styles.statCell}>
+              <Text style={[Type.caption, { color: TextColor.tertiary }]}>QUOTA</Text>
+              <Text style={[Type.h2, { marginTop: 4 }]}>{comp.quota}</Text>
+            </Card>
+          ) : null}
+        </View>
+
+        {/* Tabs */}
+        <View style={styles.tabBar}>
+          {([
+            { key: "overview", label: "About" },
+            { key: "registration", label: "Applications" },
+            { key: "payment", label: "Payment" },
+          ] as const).map((tab) => (
+            <Pressable
+              key={tab.key}
+              style={({ pressed }) => [
+                styles.tab,
+                activeTab === tab.key && styles.tabActive,
+                pressed && { opacity: 0.85 },
+              ]}
+              onPress={() => setActiveTab(tab.key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: activeTab === tab.key }}
+            >
+              <Text
+                style={{
+                  ...Type.label,
+                  color: activeTab === tab.key ? Brand.primary : TextColor.tertiary,
+                  fontSize: 13,
+                }}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Tab content */}
+        <View style={{ paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg }}>
+          {activeTab === "overview" ? (
+            <View style={{ gap: Spacing.lg }}>
+              <Card variant="playful">
+                <Text style={Type.h3}>About Competition</Text>
+                <Text style={[Type.body, { marginTop: Spacing.sm }]}>{comp.description}</Text>
+              </Card>
+
+              <Card variant="playful">
+                <Text style={Type.h3}>Important Dates</Text>
+                <View style={{ marginTop: Spacing.md, gap: Spacing.md }}>
+                  <Row label="Registration opens" value={formatDate(comp.regOpenDate)} />
+                  <Row label="Registration closes" value={formatDate(comp.regCloseDate)} accent={isClosed ? Brand.error : undefined} />
+                  <Row label="Competition date" value={formatDate(comp.competitionDate)} />
+                </View>
+              </Card>
+
+              {cats.length > 1 ? (
+                <Card variant="playful">
+                  <Text style={Type.h3}>Categories</Text>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm, marginTop: Spacing.md }}>
+                    {cats.map((cat) => (
+                      <Pill key={cat} label={cat} tone="brand" />
+                    ))}
+                  </View>
+                </Card>
+              ) : null}
+            </View>
+          ) : null}
+
+          {activeTab === "registration" ? (
+            <View style={{ gap: Spacing.lg }}>
+              <Card variant="playful">
+                <Text style={Type.h3}>Registration Status</Text>
+                <View style={{ marginTop: Spacing.md }}>
+                  <Pill
+                    label={already ? "✓ Already Registered" : "Not Registered"}
+                    tone={already ? "success" : "neutral"}
+                  />
+                </View>
+              </Card>
+              <Card variant="playful">
+                <Text style={Type.h3}>Required Documents</Text>
+                {comp.requiredDocs.length > 0 ? (
+                  <View style={{ marginTop: Spacing.md, gap: Spacing.sm }}>
+                    {comp.requiredDocs.map((doc, i) => (
+                      <View key={i} style={{ flexDirection: "row", gap: Spacing.sm }}>
+                        <Text style={{ color: accent, fontWeight: "800" }}>•</Text>
+                        <Text style={[Type.body, { flex: 1 }]}>
+                          {doc.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={[Type.body, { marginTop: Spacing.sm, color: TextColor.secondary }]}>
+                    No required documents.
                   </Text>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.sectionText}>No documents required.</Text>
-            )}
-          </View>
-        )}
-
-        {activeTab === "payment" && (
-          <View>
-            <Text style={styles.sectionTitle}>Registration Fee</Text>
-            <View style={styles.infoBox}>
-              <Text style={styles.boxLabel}>Total Fee</Text>
-              <Text style={[styles.boxValue, { fontSize: 20, fontWeight: "800" }]}>
-                {formatPrice(comp.fee)}
-              </Text>
+                )}
+              </Card>
             </View>
+          ) : null}
 
-            {comp.fee > 0 ? (
-              <Text style={[styles.sectionText, { marginTop: 12 }]}>
-                Payment methods (GoPay, OVO, Dana, Bank Transfer) will be available after you register.
-                Midtrans integration is under development.
-              </Text>
-            ) : (
-              <Text style={[styles.sectionText, { marginTop: 12, color: "#059669" }]}>
-                ✓ This competition is FREE! No registration fee.
-              </Text>
-            )}
-          </View>
-        )}
+          {activeTab === "payment" ? (
+            <View style={{ gap: Spacing.lg }}>
+              <Card variant={comp.fee === 0 ? "tinted" : "elevated"} tint={Brand.successSoft}>
+                <Text style={Type.h3}>Total Fee</Text>
+                <Text
+                  style={[
+                    Type.displayMd,
+                    {
+                      color: comp.fee === 0 ? Brand.success : TextColor.primary,
+                      marginTop: Spacing.sm,
+                    },
+                  ]}
+                >
+                  {formatPrice(comp.fee)}
+                </Text>
+                {comp.fee === 0 ? (
+                  <Text style={[Type.body, { marginTop: Spacing.sm, color: Brand.success }]}>
+                    ✓ This competition is free. No registration fee.
+                  </Text>
+                ) : (
+                  <Text style={[Type.body, { marginTop: Spacing.sm, color: TextColor.secondary }]}>
+                    Payment methods (GoPay, OVO, Dana, Bank Transfer) will be available after you register.
+                  </Text>
+                )}
+              </Card>
+            </View>
+          ) : null}
+        </View>
       </ScrollView>
 
-      {/* Register CTA */}
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        <Pressable
-          style={[
-            styles.registerBtn,
-            isClosed && !already && styles.registerBtnDisabled,
-          ]}
+      {/* Sticky CTA */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + Spacing.md }]}>
+        <Button
+          label={ctaLabel}
           onPress={async () => {
             if (!already && !isClosed) {
               Analytics.track("registration_started", {
@@ -384,7 +388,11 @@ export default function CompetitionDetailPage() {
                 name: comp.name,
                 fee: comp.fee,
               });
-              const reg = await registerCompetition(comp.id, { competitionName: comp.name, fee: comp.fee, category: comp.category });
+              const reg = await registerCompetition(comp.id, {
+                competitionName: comp.name,
+                fee: comp.fee,
+                category: comp.category,
+              });
               if (comp.fee > 0 && reg.status === "pending_payment") {
                 router.push({ pathname: "/(payment)/pay", params: { registrationId: reg.id } });
               } else {
@@ -392,167 +400,121 @@ export default function CompetitionDetailPage() {
               }
               return;
             }
-            if (existingRegistration && (existingRegistration.status === "pending_payment" || existingRegistration.status === "registered")) {
-              router.push({ pathname: "/(payment)/pay", params: { registrationId: existingRegistration.id } });
+            if (existingReg && (existingReg.status === "pending_payment" || existingReg.status === "registered")) {
+              router.push({ pathname: "/(payment)/pay", params: { registrationId: existingReg.id } });
               return;
             }
-            if (existingRegistration && ["approved", "paid", "completed"].includes(existingRegistration.status)) {
-              router.push({
-                pathname: "/(tabs)/my-registration-details",
-                params: { id: existingRegistration.id },
-              });
+            if (existingReg && ["approved", "paid", "completed"].includes(existingReg.status)) {
+              router.push({ pathname: "/(tabs)/my-registration-details", params: { id: existingReg.id } });
               return;
             }
             router.push("/(tabs)/my-competitions");
           }}
           disabled={isClosed && !already}
-        >
-          <Text style={styles.registerBtnText}>
-            {isClosed
-              ? "Registration Closed"
-              : already
-              ? existingRegistration && (existingRegistration.status === "pending_payment" || existingRegistration.status === "registered")
-                ? "Complete Payment"
-                : existingRegistration && ["approved", "paid", "completed"].includes(existingRegistration.status)
-                ? "Open Details"
-                : "View Application"
-              : "Register Now"}
-          </Text>
-        </Pressable>
+          fullWidth
+          size="lg"
+        />
       </View>
     </View>
   );
 }
 
+function Row({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      <Text style={[Type.bodySm, { color: TextColor.secondary }]}>{label}</Text>
+      <Text style={[Type.title, accent ? { color: accent } : null]}>{value}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: Surface.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: {
+  hero: {
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing["3xl"],
+    paddingBottom: Spacing["3xl"],
+    alignItems: "center",
+    borderBottomLeftRadius: Radius["4xl"],
+    borderBottomRightRadius: Radius["4xl"],
+    overflow: "hidden",
+    position: "relative",
+  },
+  heroBlobA: {
+    position: "absolute",
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "#FFFFFF",
+    opacity: 0.45,
+    top: -90,
+    right: -60,
+  },
+  heroBlobB: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: Brand.sunshine,
+    opacity: 0.18,
+    bottom: -60,
+    left: -30,
+  },
+  heroPills: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  backBtn: { padding: 8, marginLeft: -8 },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginHorizontal: 8,
-  },
-  favoriteBtn: {
-    padding: 8,
-    marginRight: -8,
-  },
-  favoriteIcon: {
-    fontSize: 24,
-  },
-  statusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: Spacing.lg,
     justifyContent: "center",
   },
-  statusPillText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  infoCard: {
-    backgroundColor: "#fff",
-    padding: 16,
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  emoji: { fontSize: 48 },
-  compTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginTop: 8,
-    textAlign: "center",
-  },
-  compOrg: { color: "#64748B", marginTop: 4, textAlign: "center" },
-  compMeta: { color: "#94A3B8", fontSize: 12, marginTop: 4, textAlign: "center" },
-  compPrice: { fontWeight: "800", color: "#0F172A", textAlign: "center", fontSize: 16 },
-  closedBadge: {
-    backgroundColor: "#FEE2E2",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-  closedText: { color: "#DC2626", fontWeight: "700", fontSize: 12 },
-  tabNav: {
+  statsRow: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.lg,
+  },
+  statCell: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: Spacing.md,
+  },
+  tabBar: {
+    flexDirection: "row",
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.xl,
+    backgroundColor: Surface.cardAlt,
+    borderRadius: Radius.lg,
+    padding: 4,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
     alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    borderRadius: Radius.md,
   },
-  tabActive: { borderBottomColor: Brand.primary },
-  tabLabel: { fontSize: 12, fontWeight: "700", color: "#94A3B8" },
-  tabLabelActive: { color: Brand.primary },
-  tabContent: { paddingHorizontal: 16, paddingVertical: 16, paddingBottom: 120 },
-  sectionTitle: {
-    fontWeight: "800",
-    fontSize: 16,
-    color: "#0F172A",
-    marginTop: 16,
-    marginBottom: 8,
+  tabActive: {
+    backgroundColor: Surface.card,
+    ...Shadow.sm,
   },
-  sectionText: { color: "#334155", lineHeight: 22, marginTop: 4 },
-  infoBox: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+  favBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Surface.card,
+    alignItems: "center",
+    justifyContent: "center",
+    ...Shadow.sm,
   },
-  boxLabel: { color: "#64748B", fontSize: 12, fontWeight: "600" },
-  boxValue: { color: "#0F172A", fontWeight: "700", marginTop: 6 },
-  docItem: { flexDirection: "row", marginBottom: 8 },
-  docBullet: { color: Brand.primary, fontWeight: "800", marginRight: 8, fontSize: 16 },
-  docText: { flex: 1, color: "#334155", lineHeight: 22 },
   footer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#fff",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
+    backgroundColor: Surface.background,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Surface.divider,
   },
-  registerBtn: {
-    backgroundColor: Brand.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  registerBtnDisabled: { backgroundColor: "#CBD5E1" },
-  registerBtnText: { color: "#fff", fontWeight: "800", fontSize: 16 },
-  errorText: { color: "#64748B", fontSize: 14, marginBottom: 16 },
-  retryBtn: {
-    backgroundColor: Brand.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  retryText: { color: "#fff", fontWeight: "700" },
 });

@@ -10,7 +10,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Brand } from "@/constants/theme";
+import {
+  Brand,
+  Radius,
+  Shadow,
+  Spacing,
+  Surface,
+  Text as TextColor,
+  Type,
+} from "@/constants/theme";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import * as DocumentPicker from "expo-document-picker";
 import { apiRequest } from "@/services/api";
@@ -321,101 +329,66 @@ export default function BulkRegistrationScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  scrollContent: {
-    padding: 16,
-  },
+  container: { flex: 1, backgroundColor: Surface.background },
+  scrollContent: { padding: Spacing.xl },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: Spacing.xl,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#fff",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Surface.card,
     alignItems: "center",
     justifyContent: "center",
+    ...Shadow.sm,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1E293B",
-  },
-  placeholder: {
-    width: 40,
-  },
+  headerTitle: { ...Type.h2 },
+  placeholder: { width: 44 },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: Surface.card,
+    borderRadius: Radius["2xl"],
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    ...Shadow.md,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1E293B",
-    marginBottom: 4,
-  },
-  cardSubtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    marginBottom: 16,
-  },
+  cardTitle: { ...Type.h3, marginBottom: 4 },
+  cardSubtitle: { ...Type.bodySm, marginBottom: Spacing.lg },
   filePreview: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    backgroundColor: "#F0F0FF",
-    borderRadius: 8,
-    marginBottom: 12,
+    padding: Spacing.md,
+    backgroundColor: Brand.primarySoft,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.md,
   },
-  fileName: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 14,
-    color: "#1E293B",
-    fontWeight: "500",
-  },
-  removeButton: {
-    padding: 4,
-  },
+  fileName: { flex: 1, marginLeft: Spacing.md, ...Type.body, fontWeight: "600" },
+  removeButton: { padding: 4 },
   pickButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
+    padding: Spacing.xl,
     borderWidth: 2,
     borderColor: Brand.primary,
     borderStyle: "dashed",
-    borderRadius: 8,
-    marginBottom: 12,
+    borderRadius: Radius.xl,
+    marginBottom: Spacing.md,
+    backgroundColor: Brand.primarySoft,
   },
-  pickButtonText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: Brand.primary,
-    fontWeight: "600",
-  },
+  pickButtonText: { marginLeft: Spacing.sm, ...Type.title, color: Brand.primary },
   uploadButton: {
     backgroundColor: Brand.primary,
-    borderRadius: 8,
-    padding: 14,
+    borderRadius: Radius.pill,
+    padding: Spacing.md + 2,
     alignItems: "center",
+    ...Shadow.md,
   },
-  uploadButtonDisabled: {
-    opacity: 0.5,
-  },
-  uploadButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  uploadButtonDisabled: { opacity: 0.5 },
+  uploadButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
   jobHeader: {
     flexDirection: "row",
     alignItems: "center",

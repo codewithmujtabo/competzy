@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import multer from "multer";
 import path from "path";
 import { pool } from "../config/database";
+import { upsertSchoolFromNpsn } from "../db/upsert-school";
 import { authMiddleware } from "../middleware/auth";
 import { storeFile } from "../services/storage.service";
 
@@ -176,6 +177,21 @@ router.put("/me", async (req: Request, res: Response) => {
           sFields.push(`updated_at = now()`);
           sValues.push(req.userId);
           await pool.query(`UPDATE students SET ${sFields.join(", ")} WHERE id = $${sIdx}`, sValues);
+        }
+
+        // Keep the admin Schools directory in sync when a student sets their school.
+        if (npsn !== undefined || schoolName !== undefined) {
+          const sr = await pool.query(
+            "SELECT npsn, school_name, school_address, school_id FROM students WHERE id = $1",
+            [req.userId]
+          );
+          const st = sr.rows[0];
+          if (st) {
+            const schoolId = await upsertSchoolFromNpsn(pool, st.npsn, st.school_name, st.school_address);
+            if (schoolId && !st.school_id) {
+              await pool.query("UPDATE students SET school_id = $1 WHERE id = $2", [schoolId, req.userId]);
+            }
+          }
         }
       } else if (role === "teacher") {
         const { subject, school: teacherSchool, department } = req.body;

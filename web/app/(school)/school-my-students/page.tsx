@@ -1,8 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSchool } from '@/lib/auth/school-context';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import { useSchool, schoolHttp } from '@/lib/auth/school-context';
+import { PageHeader } from '@/components/shell/page-header';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 interface Student {
   id: string;
@@ -13,89 +24,78 @@ interface Student {
   registrationCount: number;
 }
 
-export default function MyStudents() {
-  const { user, loading } = useSchool();
-  const router = useRouter();
+export default function MyStudentsPage() {
+  const { user } = useSchool();
   const [students, setStudents] = useState<Student[]>([]);
   const [stats, setStats] = useState({ totalStudents: 0, totalRegistrations: 0 });
-  const [loadingData, setLoadingData] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/school-login');
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    if (user && user.role === 'teacher') {
-      fetch('/api/teachers/my-students', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('school_token')}` }
+    if (!user || user.role !== 'teacher') return;
+    schoolHttp
+      .get<{ students: Student[]; stats?: { totalStudents: number; totalRegistrations: number } }>(
+        '/teachers/my-students',
+      )
+      .then((d) => {
+        setStudents(d.students || []);
+        setStats(d.stats || { totalStudents: 0, totalRegistrations: 0 });
       })
-        .then(res => res.json())
-        .then(data => {
-          setStudents(data.students || []);
-          setStats(data.stats || { totalStudents: 0, totalRegistrations: 0 });
-          setLoadingData(false);
-        })
-        .catch(err => {
-          console.error(err);
-          setLoadingData(false);
-        });
-    }
+      .catch((e) => toast.error(e instanceof Error ? e.message : 'Failed to load students'))
+      .finally(() => setLoading(false));
   }, [user]);
 
-  if (loading || loadingData) {
-    return (
-      <div style={{ padding: '36px 40px', textAlign: 'center' }}>
-        <span className="spin" />
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: '36px 40px', maxWidth: 1060 }}>
-      <div className="fu" style={{ marginBottom: 32 }}>
-        <h1 style={{ fontFamily: 'var(--ff-display)', fontSize: 32, fontWeight: 400 }}>My Students</h1>
-        <p style={{ color: 'var(--text-3)' }}>
-          {stats.totalStudents} students • {stats.totalRegistrations} total registrations
-        </p>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
+      <PageHeader
+        eyebrow="School"
+        title="My Students"
+        subtitle={`${stats.totalStudents} student${stats.totalStudents === 1 ? '' : 's'} · ${stats.totalRegistrations} total registration${stats.totalRegistrations === 1 ? '' : 's'}.`}
+      />
 
-      {students.length === 0 ? (
-        <div className="card" style={{ padding: 48, textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-3)' }}>No students added to your roster yet.</p>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
-            Ask your school administrator to add students to your classes.
-          </p>
+      <Card className="overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Grade</TableHead>
+                <TableHead>NISN</TableHead>
+                <TableHead className="text-right">Registrations</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={5}>
+                      <Skeleton className="h-8 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : students.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-32 text-center text-sm text-muted-foreground">
+                    No students linked to your classes yet. Ask your school administrator to add them.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                students.map((s) => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium text-foreground">{s.fullName}</TableCell>
+                    <TableCell className="font-mono text-[12px] text-muted-foreground">{s.email}</TableCell>
+                    <TableCell>{s.grade || '—'}</TableCell>
+                    <TableCell className="font-mono text-[12px] text-muted-foreground">{s.nisn || '—'}</TableCell>
+                    <TableCell className="text-right font-mono text-[13px] text-muted-foreground">
+                      {s.registrationCount || 0}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
-      ) : (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-2)' }}>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Name</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Email</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Grade</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>NISN</th>
-                  <th style={{ textAlign: 'left', padding: '12px 16px' }}>Registrations</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((student) => (
-                  <tr key={student.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px 16px', fontWeight: 500 }}>{student.fullName}</td>
-                    <td style={{ padding: '10px 16px' }}>{student.email}</td>
-                    <td style={{ padding: '10px 16px' }}>{student.grade || '—'}</td>
-                    <td style={{ padding: '10px 16px' }}>{student.nisn || '—'}</td>
-                    <td style={{ padding: '10px 16px' }}>{student.registrationCount}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      </Card>
     </div>
   );
 }
