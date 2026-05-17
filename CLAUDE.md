@@ -551,6 +551,7 @@ T21 (MinIO) ──────────────► T22 (storage migration
 
 ## Known Issues / Quirks
 
+- **Mobile role-routing guard (Session 11):** `(tabs)/_layout.tsx` has a central role guard — `TAB_ROLES` maps each role-gated tab to its allowed roles; if the focused tab isn't allowed for the signed-in user's role it `router.replace`s to `ROLE_HOME[role]`, and signed-out users are kicked to `/(auth)/login`. This fixed the bug where switching accounts left the navigator focused on the previous role's tab (e.g. logging in as a student showed the admin web-portal screen). Two contributing fixes: profile Sign Out now calls `logout()` (clears the SecureStore token + auth context — it was a bare `router.replace` that left the session alive), and `login.tsx` `onSuccess` awaits `fetchUser()` so the auth context holds the new role before navigating. The older per-screen redirect guards (`competitions.tsx`, `teacher-*.tsx`) are now redundant but harmless (they converge to the same destination).
 - ~~`next.config.ts` exists in `web/` alongside `next.config.mjs`.~~ Removed.
 - ~~`web/tsconfig.tsbuildinfo` is committed.~~ Untracked + `*.tsbuildinfo` gitignored.
 - ~~`app/constants/api.ts` and `app/config/api.ts` both exist.~~ Legacy `constants/api.ts` deleted; `admin.service.ts` now imports from `config/api.ts` directly.

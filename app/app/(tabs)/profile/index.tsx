@@ -45,7 +45,7 @@ type MenuItem = {
 };
 
 export default function ProfileScreen() {
-  const { user, registrations, refreshRegistrations } = useUser();
+  const { user, registrations, refreshRegistrations, logout } = useUser();
   const insets = useSafeAreaInsets();
 
   useFocusEffect(
@@ -182,7 +182,12 @@ export default function ProfileScreen() {
 
         {/* Sign out */}
         <Pressable
-          onPress={() => router.replace("/(auth)/login" as any)}
+          onPress={async () => {
+            // Clear the stored token + auth context, THEN navigate — otherwise
+            // the old session lingers and the next login lands on its screens.
+            try { await logout(); } catch {}
+            router.replace("/(auth)/login" as any);
+          }}
           style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] }]}
           accessibilityRole="button"
         >
