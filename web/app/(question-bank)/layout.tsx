@@ -14,6 +14,7 @@ import {
   Loader2,
   Package,
   PenLine,
+  Share2,
   ShoppingBag,
   Ticket,
   Video,
@@ -71,6 +72,12 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
         { label: 'Products', href: '/question-bank/products', icon: Package },
         { label: 'Vouchers', href: '/question-bank/vouchers', icon: Ticket },
         { label: 'Orders', href: '/question-bank/orders', icon: ShoppingBag },
+      ],
+    },
+    {
+      label: 'Marketing',
+      items: [
+        { label: 'Referrals', href: '/question-bank/referrals', icon: Share2 },
       ],
     },
     {
