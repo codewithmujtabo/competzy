@@ -34,6 +34,24 @@ const webcamUpload = multer({
 // Registration statuses that clear a student to sit a competition's exam.
 const CLEARED = ["registered", "approved", "paid", "completed"];
 
+// A student's grade is stored numerically ("9"); an exam may be tagged either
+// numerically or by school level (SD = grades 1-6, SMP = 7-9, SMA = 10-12).
+// Return every token an exam could carry that should match this student, so the
+// two vocabularies reconcile instead of an exact-string compare silently
+// excluding the student from every exam.
+function gradeTokens(grade: string | null): string[] {
+  if (!grade) return [];
+  const tokens = new Set<string>([grade]);
+  const n = parseInt(grade, 10);
+  if (!Number.isNaN(n)) {
+    tokens.add(String(n)); // normalize "09" → "9"
+    if (n >= 1 && n <= 6) tokens.add("SD");
+    else if (n >= 7 && n <= 9) tokens.add("SMP");
+    else if (n >= 10 && n <= 12) tokens.add("SMA");
+  }
+  return [...tokens];
+}
+
 // The caller's grade for a competition (registration snapshot first, then the
 // students row) and whether they hold a cleared registration.
 async function studentContext(userId: string, compId: string) {
@@ -107,9 +125,9 @@ router.get("/exams/available", async (req: Request, res: Response) => {
       `SELECT id, name, code, minutes, date::text AS date,
               start_time::text AS start_time, end_time::text AS end_time
          FROM exams
-        WHERE comp_id = $1 AND deleted_at IS NULL AND grades @> $2::jsonb
+        WHERE comp_id = $1 AND deleted_at IS NULL AND grades ?| $2::text[]
         ORDER BY date ASC NULLS LAST, name ASC`,
-      [compId, JSON.stringify([ctx.grade])]
+      [compId, gradeTokens(ctx.grade)]
     );
     const sessions = await pool.query(
       `SELECT id, exam_id, finished_at FROM sessions
@@ -161,7 +179,8 @@ router.post("/exams/:examId/sessions", async (req: Request, res: Response) => {
       return;
     }
     const grades = Array.isArray(exam.grades) ? exam.grades : [];
-    if (!ctx.grade || !grades.includes(ctx.grade)) {
+    const tokens = gradeTokens(ctx.grade);
+    if (tokens.length === 0 || !tokens.some((t) => grades.includes(t))) {
       res.status(403).json({ message: "This exam is not available for your grade" });
       return;
     }
