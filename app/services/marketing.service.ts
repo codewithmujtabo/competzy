@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequest, resolveFileUrl } from "./api";
 
 // Marketing surfaces (EMC Wave 10 backend) — the student-facing reads:
 // announcements, study materials, and submitting feedback.
@@ -19,9 +19,14 @@ export interface Announcement {
 
 /** Published announcements for a competition, plus every platform-wide post. */
 export async function getAnnouncements(compId: string): Promise<Announcement[]> {
-  return apiRequest<Announcement[]>(
+  const rows = await apiRequest<Announcement[]>(
     `/announcements?compId=${encodeURIComponent(compId)}`
   );
+  return rows.map((a) => ({
+    ...a,
+    image: resolveFileUrl(a.image),
+    file: resolveFileUrl(a.file),
+  }));
 }
 
 export interface Material {
@@ -41,7 +46,14 @@ export interface Material {
 
 /** Published study materials for a competition, plus every platform-wide one. */
 export async function getMaterials(compId: string): Promise<Material[]> {
-  return apiRequest<Material[]>(`/materials?compId=${encodeURIComponent(compId)}`);
+  const rows = await apiRequest<Material[]>(
+    `/materials?compId=${encodeURIComponent(compId)}`
+  );
+  return rows.map((m) => ({
+    ...m,
+    image: resolveFileUrl(m.image),
+    file: resolveFileUrl(m.file),
+  }));
 }
 
 /** Submit a piece of feedback for a competition to the organizer's inbox. */
