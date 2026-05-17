@@ -133,6 +133,31 @@ router.get("/certificates/verify/:code/pdf", async (req: Request, res: Response)
 });
 
 // ──────────────────────────────────────────────────────────────────────────
+// STUDENT — the caller's own certificates
+// ──────────────────────────────────────────────────────────────────────────
+
+// GET /api/certificates/mine?compId= — the authenticated caller's certificates.
+router.get("/certificates/mine", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const params: unknown[] = [req.userId];
+    let where = `user_id = $1 AND deleted_at IS NULL`;
+    const compId = trim(req.query.compId);
+    if (compId) {
+      params.push(compId);
+      where += ` AND comp_id = $${params.length}`;
+    }
+    const r = await pool.query(
+      `SELECT * FROM certificates WHERE ${where} ORDER BY issued_at DESC`,
+      params
+    );
+    res.json(r.rows.map(mapCertificate));
+  } catch (err) {
+    console.error("List my certificates error:", err);
+    res.status(500).json({ message: "Failed to load your certificates" });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────────
 // OPERATOR — /certificates/manage/* (admin + organizer, native comps only)
 // ──────────────────────────────────────────────────────────────────────────
 
