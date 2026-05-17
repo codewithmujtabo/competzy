@@ -156,6 +156,17 @@ export default function MyRegistrationDetailsScreen() {
               }
             />
             <Button
+              label="Store"
+              variant="secondary"
+              fullWidth
+              onPress={() =>
+                router.push({
+                  pathname: "/(competition)/store",
+                  params: { compId: registration.compId, compName: competition.name },
+                })
+              }
+            />
+            <Button
               label="Send Feedback"
               variant="secondary"
               fullWidth
