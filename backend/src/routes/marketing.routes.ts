@@ -548,6 +548,239 @@ router.post(
   }
 );
 
+// ──────────────────────────────────────────────────────────────────────────
+// Materials (Wave 10 Phase 5). T2 like announcements — comp-scoped or
+// platform-wide (comp_id NULL, admin-only). A study-material library:
+// files/images grouped by category, tagged with target grades.
+// ──────────────────────────────────────────────────────────────────────────
+
+async function mapMaterial(r: any) {
+  return {
+    id: r.id,
+    compId: r.comp_id ?? null,
+    title: r.title,
+    body: r.body ?? null,
+    type: r.type ?? null,
+    category: r.category ?? null,
+    grades: Array.isArray(r.grades) ? r.grades : [],
+    image: r.image ? await getSignedUrl(r.image) : null,
+    file: r.file ? await getSignedUrl(r.file) : null,
+    isActive: r.is_active,
+    publishedAt: r.published_at ?? null,
+    createdAt: r.created_at,
+  };
+}
+
+const gradesJson = (v: unknown): string =>
+  JSON.stringify(Array.isArray(v) ? v.filter((g) => typeof g === "string") : []);
+
+async function materialScopeIfAccessible(
+  req: Request,
+  id: string
+): Promise<{ platform: boolean; compId: string | null } | null> {
+  const r = await pool.query(
+    "SELECT comp_id FROM materials WHERE id = $1 AND deleted_at IS NULL",
+    [id]
+  );
+  if (r.rows.length === 0) return null;
+  return resolveScope(req, r.rows[0].comp_id ?? PLATFORM);
+}
+
+// ── GET /api/marketing/materials?compId= ──────────────────────────────────
+router.get("/marketing/materials", async (req: Request, res: Response) => {
+  try {
+    const scope = await resolveScope(req, req.query.compId);
+    if (!scope) {
+      res.status(403).json({ message: "No access to this scope" });
+      return;
+    }
+    const r = await pool.query(
+      `SELECT * FROM materials
+        WHERE ${scope.platform ? "comp_id IS NULL" : "comp_id = $1"}
+          AND deleted_at IS NULL
+        ORDER BY category NULLS LAST, COALESCE(published_at, created_at) DESC`,
+      scope.platform ? [] : [scope.compId]
+    );
+    res.json(await Promise.all(r.rows.map(mapMaterial)));
+  } catch (err) {
+    console.error("List materials error:", err);
+    res.status(500).json({ message: "Failed to load materials" });
+  }
+});
+
+// ── GET /api/marketing/materials/:id ──────────────────────────────────────
+router.get("/marketing/materials/:id", async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    if (!(await materialScopeIfAccessible(req, id))) {
+      res.status(404).json({ message: "Material not found" });
+      return;
+    }
+    const r = await pool.query("SELECT * FROM materials WHERE id = $1", [id]);
+    res.json(await mapMaterial(r.rows[0]));
+  } catch (err) {
+    console.error("Get material error:", err);
+    res.status(500).json({ message: "Failed to load the material" });
+  }
+});
+
+// ── POST /api/marketing/materials ─────────────────────────────────────────
+router.post(
+  "/marketing/materials",
+  audit({ action: "material.create", resourceType: "material" }),
+  async (req: Request, res: Response) => {
+    try {
+      const scope = await resolveScope(req, req.body?.compId);
+      if (!scope) {
+        res.status(403).json({ message: "No access to this scope" });
+        return;
+      }
+      const title = trim(req.body?.title);
+      if (!title) {
+        res.status(400).json({ message: "title is required" });
+        return;
+      }
+      const published = req.body?.published === true;
+      const inserted = await pool.query(
+        `INSERT INTO materials
+           (comp_id, title, body, type, category, grades, is_active, published_at)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7, ${published ? "now()" : "NULL"})
+         RETURNING *`,
+        [
+          scope.compId, title, trim(req.body?.body), trim(req.body?.type),
+          trim(req.body?.category), gradesJson(req.body?.grades),
+          req.body?.isActive !== false,
+        ]
+      );
+      res.status(201).json(await mapMaterial(inserted.rows[0]));
+    } catch (err) {
+      console.error("Create material error:", err);
+      res.status(500).json({ message: "Failed to create material" });
+    }
+  }
+);
+
+// ── PUT /api/marketing/materials/:id ──────────────────────────────────────
+router.put(
+  "/marketing/materials/:id",
+  audit({ action: "material.update", resourceType: "material", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.id);
+      if (!(await materialScopeIfAccessible(req, id))) {
+        res.status(404).json({ message: "Material not found" });
+        return;
+      }
+      const title = trim(req.body?.title);
+      if (!title) {
+        res.status(400).json({ message: "title is required" });
+        return;
+      }
+      const published = req.body?.published === true;
+      const updated = await pool.query(
+        `UPDATE materials
+            SET title=$1, body=$2, type=$3, category=$4, grades=$5::jsonb, is_active=$6,
+                published_at = ${published ? "COALESCE(published_at, now())" : "NULL"},
+                updated_at = now()
+          WHERE id=$7 AND deleted_at IS NULL
+        RETURNING *`,
+        [
+          title, trim(req.body?.body), trim(req.body?.type), trim(req.body?.category),
+          gradesJson(req.body?.grades), req.body?.isActive !== false, id,
+        ]
+      );
+      res.json(await mapMaterial(updated.rows[0]));
+    } catch (err) {
+      console.error("Update material error:", err);
+      res.status(500).json({ message: "Failed to update material" });
+    }
+  }
+);
+
+// ── DELETE /api/marketing/materials/:id ───────────────────────────────────
+router.delete(
+  "/marketing/materials/:id",
+  audit({ action: "material.delete", resourceType: "material", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.id);
+      if (!(await materialScopeIfAccessible(req, id))) {
+        res.status(404).json({ message: "Material not found" });
+        return;
+      }
+      await softDelete("materials", id);
+      res.json({ message: "Material removed" });
+    } catch (err) {
+      console.error("Delete material error:", err);
+      res.status(500).json({ message: "Failed to delete material" });
+    }
+  }
+);
+
+// ── POST /api/marketing/materials/:id/upload?kind=image|file ──────────────
+router.post(
+  "/marketing/materials/:id/upload",
+  assetUpload.single("file"),
+  audit({ action: "material.upload", resourceType: "material", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.id);
+      if (!(await materialScopeIfAccessible(req, id))) {
+        res.status(404).json({ message: "Material not found" });
+        return;
+      }
+      if (!req.file) {
+        res.status(400).json({ message: "No file uploaded" });
+        return;
+      }
+      const kind = req.query.kind === "image" ? "image" : "file";
+      if (kind === "image" && !req.file.mimetype.startsWith("image/")) {
+        res.status(400).json({ message: "Image must be an image file" });
+        return;
+      }
+      const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-60);
+      const path = await storeFile(
+        req.userId!,
+        req.file.buffer,
+        `material-${id}-${Date.now()}-${safeName}`,
+        req.file.mimetype
+      );
+      await pool.query(
+        `UPDATE materials SET ${kind} = $1, updated_at = now() WHERE id = $2`,
+        [path, id]
+      );
+      res.json({ [kind]: await getSignedUrl(path) });
+    } catch (err) {
+      console.error("Material upload error:", err);
+      res.status(500).json({ message: "Failed to upload the file" });
+    }
+  }
+);
+
+// ── GET /api/materials?compId= ────────────────────────────────────────────
+// Student-facing library — published + active materials for the competition
+// plus every platform-wide material.
+router.get("/materials", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const compId = trim(req.query.compId);
+    if (!compId) {
+      res.status(400).json({ message: "compId is required" });
+      return;
+    }
+    const r = await pool.query(
+      `SELECT * FROM materials
+        WHERE (comp_id = $1 OR comp_id IS NULL)
+          AND is_active = true AND published_at IS NOT NULL AND deleted_at IS NULL
+        ORDER BY category NULLS LAST, published_at DESC`,
+      [compId]
+    );
+    res.json(await Promise.all(r.rows.map(mapMaterial)));
+  } catch (err) {
+    console.error("Student materials library error:", err);
+    res.status(500).json({ message: "Failed to load materials" });
+  }
+});
+
 // ── GET /api/announcements?compId= ────────────────────────────────────────
 // Student-facing feed — published + active announcements for the competition
 // plus every platform-wide post. Auth'd (the competition portal is gated).

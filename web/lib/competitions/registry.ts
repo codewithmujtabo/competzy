@@ -84,5 +84,6 @@ export function competitionPaths(slug: string) {
     pay:       `/competitions/${slug}/pay`,
     store:     `/competitions/${slug}/store`,
     announcements: `/competitions/${slug}/announcements`,
+    materials: `/competitions/${slug}/materials`,
   };
 }
