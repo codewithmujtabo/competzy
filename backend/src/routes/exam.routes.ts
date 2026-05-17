@@ -5,7 +5,11 @@ import { requireRole } from "../middleware/require-role";
 import { audit } from "../middleware/audit";
 import { liveFilter, compFilter, softDelete } from "../db/query-helpers";
 import { hasCompAccess } from "../services/comp-access.service";
-import { recomputeSessionRollups, recomputePaperRollups } from "../services/exam-grading.service";
+import {
+  recomputeSessionRollups,
+  recomputePaperRollups,
+  scoreFor,
+} from "../services/exam-grading.service";
 import { issueCertificateIfEligible } from "../services/certificate.service";
 import { getSignedUrl } from "../services/storage.service";
 
@@ -420,11 +424,6 @@ router.get("/question-bank/grading/sessions/:id", async (req: Request, res: Resp
       }
     }
     const sess = s.rows[0];
-    const gradeScore = (matrix: unknown): number => {
-      if (!matrix || typeof matrix !== "object" || !sess.grade) return 0;
-      const v = Number((matrix as Record<string, unknown>)[sess.grade]);
-      return Number.isFinite(v) ? v : 0;
-    };
     res.json({
       id: sess.id,
       examName: sess.exam_name,
@@ -433,8 +432,8 @@ router.get("/question-bank/grading/sessions/:id", async (req: Request, res: Resp
       grade: sess.grade ?? null,
       finishedAt: sess.finished_at,
       totalPoint: sess.total_point != null ? Number(sess.total_point) : null,
-      suggestedCorrectPoint: gradeScore(sess.correct_score),
-      suggestedWrongPoint: gradeScore(sess.wrong_score),
+      suggestedCorrectPoint: scoreFor(sess.correct_score, sess.grade),
+      suggestedWrongPoint: scoreFor(sess.wrong_score, sess.grade),
       corrects: sess.corrects ?? {},
       wrongs: sess.wrongs ?? {},
       blanks: sess.blanks ?? {},
@@ -469,6 +468,62 @@ router.get("/question-bank/grading/sessions/:id", async (req: Request, res: Resp
   } catch (err) {
     console.error("Get grading session error:", err);
     res.status(500).json({ message: "Failed to load the session" });
+  }
+});
+
+// GET /api/question-bank/results?compId=&examId= — every finished exam attempt
+// for a competition (optionally one exam). Unlike the grading queue this is NOT
+// filtered to pending short-answer work — it is the operator's read-only record
+// of how students answered. The per-attempt detail reuses the grading-session
+// endpoint above. `awaitingGrading` flags an attempt whose score is still
+// partial (short answers not yet manually marked).
+router.get("/question-bank/results", async (req: Request, res: Response) => {
+  try {
+    const compId = String(req.query.compId ?? "");
+    if (!compId || !(await hasCompAccess(req.userId!, req.userRole!, compId))) {
+      res.status(403).json({ message: "No access to this competition" });
+      return;
+    }
+    const examId = String(req.query.examId ?? "").trim();
+    const params: unknown[] = [compId];
+    let examClause = "";
+    if (examId) {
+      params.push(examId);
+      examClause = " AND s.exam_id = $2";
+    }
+    const r = await pool.query(
+      `SELECT s.id, s.grade, s.finished_at, s.total_point,
+              u.full_name AS student_name,
+              e.name AS exam_name, e.code AS exam_code,
+              EXISTS (
+                SELECT 1 FROM periods p
+                 WHERE p.session_id = s.id AND p.type = 'short' AND p.is_correct IS NULL
+                   AND p.short_answer IS NOT NULL AND p.short_answer <> ''
+                   AND p.deleted_at IS NULL
+              ) AS awaiting_grading
+         FROM sessions s
+         JOIN users u ON u.id = s.user_id
+         JOIN exams e ON e.id = s.exam_id
+        WHERE s.comp_id = $1 AND s.deleted_at IS NULL
+          AND s.finished_at IS NOT NULL${examClause}
+        ORDER BY s.finished_at DESC`,
+      params
+    );
+    res.json(
+      r.rows.map((s) => ({
+        sessionId: s.id,
+        examName: s.exam_name,
+        examCode: s.exam_code,
+        studentName: s.student_name,
+        grade: s.grade ?? null,
+        finishedAt: s.finished_at,
+        totalPoint: s.total_point != null ? Number(s.total_point) : null,
+        awaitingGrading: s.awaiting_grading,
+      }))
+    );
+  } catch (err) {
+    console.error("Exam results error:", err);
+    res.status(500).json({ message: "Failed to load exam results" });
   }
 });
 
