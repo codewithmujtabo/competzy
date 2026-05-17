@@ -181,6 +181,91 @@ async function exam(
   return id;
 }
 
+// ── Commerce (Wave 9) ───────────────────────────────────────────────────
+async function product(
+  ownerId: string,
+  code: string,
+  name: string,
+  slug: string,
+  price: number,
+  description: string
+): Promise<{ id: string; price: number }> {
+  const found = await pool.query(
+    "SELECT id, price FROM products WHERE comp_id = $1 AND code = $2 AND deleted_at IS NULL",
+    [COMP, code]
+  );
+  if (found.rows[0]) return { id: found.rows[0].id, price: Number(found.rows[0].price) };
+  const imagePath = await storeFile(
+    ownerId,
+    Buffer.from(DEMO_JPEG_B64, "base64"),
+    `demo-product-${code}.jpg`,
+    "image/jpeg"
+  );
+  const r = await pool.query(
+    `INSERT INTO products (comp_id, code, name, slug, price, description, image, active)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,true) RETURNING id`,
+    [COMP, code, name, slug, price, description, imagePath]
+  );
+  return { id: r.rows[0].id, price };
+}
+
+async function voucherGroup(
+  code: string,
+  name: string,
+  discounted: number,
+  price: number,
+  count: number
+): Promise<void> {
+  const found = await pool.query(
+    "SELECT id FROM voucher_groups WHERE comp_id = $1 AND code = $2 AND deleted_at IS NULL",
+    [COMP, code]
+  );
+  if (found.rows[0]) return;
+  const g = await pool.query(
+    `INSERT INTO voucher_groups (comp_id, name, code, usable_count, price, discounted, is_active)
+     VALUES ($1,$2,$3,$4,$5,$6,true) RETURNING id`,
+    [COMP, name, code, count, price, discounted]
+  );
+  for (let i = 1; i <= count; i++) {
+    await pool.query(
+      "INSERT INTO vouchers (comp_id, group_id, code, used, max) VALUES ($1,$2,$3,0,1)",
+      [COMP, g.rows[0].id, `${code}-${String(i).padStart(3, "0")}`]
+    );
+  }
+}
+
+// A sample paid order (so the operator Orders screen + the student history
+// have data). Keyed by code — skipped on re-run.
+async function sampleOrder(
+  buyerId: string,
+  code: string,
+  lines: { id: string; name: string; price: number; quantity: number }[]
+): Promise<void> {
+  const found = await pool.query(
+    "SELECT id FROM orders WHERE comp_id = $1 AND code = $2 AND deleted_at IS NULL",
+    [COMP, code]
+  );
+  if (found.rows[0]) return;
+  const subtotal = lines.reduce((s, l) => s + l.price * l.quantity, 0);
+  const o = await pool.query(
+    `INSERT INTO orders
+       (comp_id, code, user_id, name, phone, address,
+        subtotal, discount, shipping, total, status, ordered_at, paid_at)
+     VALUES ($1,$2,$3,'Demo Student','+628120000000','Jl. Merdeka 1, Jakarta',
+             $4,0,0,$4,'paid', now() - interval '2 days', now() - interval '2 days')
+     RETURNING id`,
+    [COMP, code, buyerId, subtotal]
+  );
+  for (const l of lines) {
+    await pool.query(
+      `INSERT INTO order_items
+         (comp_id, order_id, product_id, description, quantity, price, discount, subtotal)
+       VALUES ($1,$2,$3,$4,$5,$6,0,$7)`,
+      [COMP, o.rows[0].id, l.id, l.name, l.quantity, l.price, l.price * l.quantity]
+    );
+  }
+}
+
 async function main() {
   const admin = await userId("admin@eduversal.com");
   const student = await userId("student@test.local");
@@ -308,12 +393,29 @@ async function main() {
     }
   }
 
+  // 6 — Commerce: products, a voucher batch, a sample order (Wave 9)
+  const tshirt = await product(admin, "PRD-D01", "EMC Official T-Shirt", "emc-official-t-shirt", 85000, "Soft cotton tee with the EMC 2026 crest.");
+  await product(admin, "PRD-D02", "EMC Hoodie", "emc-hoodie", 220000, "Fleece-lined hoodie — keeps you warm on exam day.");
+  const notebook = await product(admin, "PRD-D03", "EMC Math Notebook Set", "emc-math-notebook-set", 45000, "A set of three grid notebooks.");
+  await product(admin, "PRD-D04", "EMC Tumbler", "emc-tumbler", 60000, "500ml stainless-steel tumbler.");
+  await voucherGroup("VG-D01", "Demo school batch — SMAN 8 Jakarta", 20000, 35000, 10);
+  let orderNote = "skipped (no test student)";
+  if (student) {
+    await sampleOrder(student, "ORD-D01", [
+      { id: tshirt.id, name: "EMC Official T-Shirt", price: tshirt.price, quantity: 1 },
+      { id: notebook.id, name: "EMC Math Notebook Set", price: notebook.price, quantity: 1 },
+    ]);
+    orderNote = "ORD-D01 (paid, 2 items)";
+  }
+
   console.log("EMC demo data seeded:");
   console.log("  venues:    3 areas, 5 test centers");
   console.log("  taxonomy:  3 subjects, 6 topics, 4 subtopics");
   console.log("  questions: 12 (8 approved, 2 submitted, 2 draft)");
   console.log("  exams:     EMC-R1 (8 questions), EMC-PRAC (2 questions)");
   console.log(`  attempt:   ${attemptNote} — proctored, awaiting grading, 3 webcam snapshots`);
+  console.log("  commerce:  4 products, 1 voucher batch (10 codes)");
+  console.log(`  order:     ${orderNote}`);
   await pool.end();
 }
 
