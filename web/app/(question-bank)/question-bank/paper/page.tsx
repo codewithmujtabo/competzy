@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
@@ -44,9 +45,17 @@ interface PaperExam {
   id: string;
   studentName: string;
   grade: string | null;
+  testCenterName: string | null;
   totalPoint: number | null;
   answerCount: number;
 }
+interface TestCenter {
+  id: string;
+  name: string;
+  city: string | null;
+}
+
+const NO_TC = '__none__';
 interface Student {
   userId: string;
   name: string;
@@ -67,6 +76,8 @@ export default function PaperExamsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [studentFilter, setStudentFilter] = useState('');
   const [creating, setCreating] = useState(false);
+  const [testCenters, setTestCenters] = useState<TestCenter[]>([]);
+  const [testCenterId, setTestCenterId] = useState('');
 
   // Exams for the picked competition.
   useEffect(() => {
@@ -108,11 +119,15 @@ export default function PaperExamsPage() {
   const openAdd = async () => {
     if (!examId) return;
     setStudentFilter('');
+    setTestCenterId('');
     setAddOpen(true);
     try {
-      setStudents(
-        await questionBankHttp.get<Student[]>(`/question-bank/exams/${examId}/students`),
-      );
+      const [stu, tc] = await Promise.all([
+        questionBankHttp.get<Student[]>(`/question-bank/exams/${examId}/students`),
+        questionBankHttp.get<{ testCenters: TestCenter[] }>('/venues/test-centers?limit=100'),
+      ]);
+      setStudents(stu);
+      setTestCenters(tc.testCenters ?? []);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load students');
     }
@@ -124,6 +139,7 @@ export default function PaperExamsPage() {
       const pe = await questionBankHttp.post<{ id: string }>('/question-bank/paper-exams', {
         examId,
         userId,
+        testCenterId: testCenterId || undefined,
       });
       toast.success('Paper exam created.');
       setAddOpen(false);
@@ -211,6 +227,7 @@ export default function PaperExamsPage() {
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead className="w-24">Grade</TableHead>
+                  <TableHead>Test Center</TableHead>
                   <TableHead className="w-28">Answers</TableHead>
                   <TableHead className="w-24">Score</TableHead>
                   <TableHead className="w-28 text-right">Actions</TableHead>
@@ -220,7 +237,7 @@ export default function PaperExamsPage() {
                 {loading ? (
                   Array.from({ length: 3 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={5}>
+                      <TableCell colSpan={6}>
                         <Skeleton className="h-9 w-full" />
                       </TableCell>
                     </TableRow>
@@ -243,6 +260,9 @@ export default function PaperExamsPage() {
                       </TableCell>
                       <TableCell className="font-mono text-[11px] text-muted-foreground">
                         {pe.grade ?? '—'}
+                      </TableCell>
+                      <TableCell className="truncate text-sm text-muted-foreground">
+                        {pe.testCenterName ?? '—'}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-mono text-[10px]">
@@ -286,6 +306,28 @@ export default function PaperExamsPage() {
               Pick a registered student who sat this exam on paper.
             </DialogDescription>
           </DialogHeader>
+          <div>
+            <Label className="mb-1.5 text-xs text-muted-foreground">
+              Test center <span className="font-normal">(optional)</span>
+            </Label>
+            <Select
+              value={testCenterId || NO_TC}
+              onValueChange={(v) => setTestCenterId(v === NO_TC ? '' : v)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_TC}>No test center</SelectItem>
+                {testCenters.map((tc) => (
+                  <SelectItem key={tc.id} value={tc.id}>
+                    {tc.name}
+                    {tc.city ? ` · ${tc.city}` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input

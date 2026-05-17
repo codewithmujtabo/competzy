@@ -546,12 +546,13 @@ async function paperExamCompIfAccessible(req: Request, id: string): Promise<stri
 async function loadPaperExamDetail(id: string) {
   const pe = await pool.query(
     `SELECT pe.id, pe.exam_id, pe.user_id, pe.grade, pe.total_point,
-            pe.corrects, pe.wrongs, pe.blanks, pe.points,
+            pe.corrects, pe.wrongs, pe.blanks, pe.points, pe.test_center_id,
             u.full_name AS student_name, e.name AS exam_name, e.code AS exam_code,
-            e.correct_score, e.wrong_score
+            e.correct_score, e.wrong_score, tc.name AS test_center_name
        FROM paper_exams pe
        JOIN users u ON u.id = pe.user_id
        JOIN exams e ON e.id = pe.exam_id
+       LEFT JOIN test_centers tc ON tc.id = pe.test_center_id
       WHERE pe.id = $1 AND pe.deleted_at IS NULL`,
     [id]
   );
@@ -592,6 +593,8 @@ async function loadPaperExamDetail(id: string) {
     examCode: p.exam_code,
     studentName: p.student_name,
     grade: p.grade ?? null,
+    testCenterId: p.test_center_id ?? null,
+    testCenterName: p.test_center_name ?? null,
     totalPoint: p.total_point != null ? Number(p.total_point) : null,
     corrects: p.corrects ?? {},
     wrongs: p.wrongs ?? {},
@@ -672,11 +675,12 @@ router.get("/question-bank/paper-exams", async (req: Request, res: Response) => 
     }
     const r = await pool.query(
       `SELECT pe.id, pe.grade, pe.total_point, pe.corrects, pe.wrongs, pe.blanks,
-              u.full_name AS student_name,
+              u.full_name AS student_name, tc.name AS test_center_name,
               (SELECT COUNT(*)::int FROM paper_answers pa
                 WHERE pa.paper_exam_id = pe.id AND pa.deleted_at IS NULL) AS answer_count
          FROM paper_exams pe
          JOIN users u ON u.id = pe.user_id
+         LEFT JOIN test_centers tc ON tc.id = pe.test_center_id
         WHERE pe.exam_id = $1 AND pe.deleted_at IS NULL
         ORDER BY u.full_name ASC`,
       [examId]
@@ -686,6 +690,7 @@ router.get("/question-bank/paper-exams", async (req: Request, res: Response) => 
         id: p.id,
         studentName: p.student_name,
         grade: p.grade ?? null,
+        testCenterName: p.test_center_name ?? null,
         totalPoint: p.total_point != null ? Number(p.total_point) : null,
         answerCount: p.answer_count,
       }))
@@ -727,6 +732,18 @@ router.post(
       if (!userId) {
         res.status(400).json({ message: "userId is required" });
         return;
+      }
+      // Optional test center — the physical venue where the student sat.
+      const testCenterId = req.body?.testCenterId ? String(req.body.testCenterId) : null;
+      if (testCenterId) {
+        const tc = await pool.query(
+          "SELECT 1 FROM test_centers WHERE id = $1 AND deleted_at IS NULL",
+          [testCenterId]
+        );
+        if (tc.rows.length === 0) {
+          res.status(400).json({ message: "testCenterId is not a known test center" });
+          return;
+        }
       }
       const exam = await pool.query(
         "SELECT name, code FROM exams WHERE id = $1 AND deleted_at IS NULL",
@@ -772,9 +789,9 @@ router.post(
       try {
         await client.query("BEGIN");
         const pe = await client.query(
-          `INSERT INTO paper_exams (comp_id, user_id, exam_id, name, code, grade)
-           VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-          [compId, userId, examId, exam.rows[0].name, exam.rows[0].code, grade]
+          `INSERT INTO paper_exams (comp_id, user_id, exam_id, name, code, grade, test_center_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+          [compId, userId, examId, exam.rows[0].name, exam.rows[0].code, grade, testCenterId]
         );
         const paperExamId = pe.rows[0].id as string;
         let n = 1;
