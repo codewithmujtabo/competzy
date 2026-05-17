@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
+  Award,
   ClipboardCheck,
   ClipboardList,
   FileSpreadsheet,
@@ -67,6 +68,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
         { label: 'Grading', href: '/question-bank/grading', icon: PenLine },
         { label: 'Paper Exams', href: '/question-bank/paper', icon: FileSpreadsheet },
         { label: 'Proctoring', href: '/question-bank/proctoring', icon: Video },
+        { label: 'Certificates', href: '/question-bank/certificates', icon: Award },
       ],
     },
     {
