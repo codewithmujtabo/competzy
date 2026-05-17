@@ -156,9 +156,11 @@ router.post("/webhook", async (req: Request, res: Response) => {
 
     // ── Look up the payment record ─────────────────────────────────────────
     const paymentResult = await pool.query(
-      `SELECT p.id, p.registration_id, r.comp_id, r.voucher_code
+      `SELECT p.id, p.kind, p.registration_id, r.comp_id, r.voucher_code,
+              o.id AS order_db_id
          FROM payments p
          LEFT JOIN registrations r ON r.id = p.registration_id
+         LEFT JOIN orders o ON o.payment_id = p.id
         WHERE p.order_id = $1 LIMIT 1`,
       [order_id]
     );
@@ -172,9 +174,11 @@ router.post("/webhook", async (req: Request, res: Response) => {
 
     const {
       id: paymentDbId,
+      kind: paymentKind,
       registration_id,
       comp_id,
       voucher_code,
+      order_db_id,
     } = paymentResult.rows[0];
 
     // ── Determine new statuses ─────────────────────────────────────────────
@@ -206,6 +210,26 @@ router.post("/webhook", async (req: Request, res: Response) => {
       [newPaymentStatus, transaction_id ?? null, payment_type ?? null, paymentDbId]
     );
 
+    // ── Order-kind payment (Wave 9) — settle the merchandise order ─────────
+    if (paymentKind === "order") {
+      if (isSuccess && order_db_id) {
+        await pool.query(
+          `UPDATE orders SET status = 'paid', paid_at = now(), updated_at = now()
+            WHERE id = $1 AND status = 'ordered'`,
+          [order_db_id]
+        );
+        console.log(`Order payment settled: order=${order_id} → orders.${order_db_id} paid`);
+      }
+      // On expire/deny/cancel the order stays 'ordered' and is re-payable —
+      // the pay endpoint will mint a fresh Snap token.
+      console.log(
+        `Payment webhook: order=${order_id} kind=order status=${newPaymentStatus}`
+      );
+      res.json({ message: "OK" });
+      return;
+    }
+
+    // ── Registration-kind payment ──────────────────────────────────────────
     // T10: VA/payment expired — reset so student can try paying again
     if (transaction_status === "expire") {
       await pool.query(
