@@ -554,6 +554,7 @@ T21 (MinIO) ──────────────► T22 (storage migration
 
 ## Known Issues / Quirks
 
+- **Admin tables fit-to-width (Session 11):** the Registrations (`/registrations`) + Competitions (`/admin/competitions`) admin tables use `table-fixed` layout with sized narrow columns and `truncate`d text cells, so they no longer overflow horizontally (the Competitions Category cell — a giant multi-value string on some rows — is `max-w-full truncate`). Migration `1749200000000_backfill-school-location` filled the `schools.city`/`province` the `1748900000000` backfill left empty — derived from the most common city/province of the students linked to each school. New schools created via signup still arrive without a location — `upsertSchoolFromNpsn` doesn't capture it yet (small future enhancement).
 - ~~`next.config.ts` exists in `web/` alongside `next.config.mjs`.~~ Removed.
 - ~~`web/tsconfig.tsbuildinfo` is committed.~~ Untracked + `*.tsbuildinfo` gitignored.
 - ~~`app/constants/api.ts` and `app/config/api.ts` both exist.~~ Legacy `constants/api.ts` deleted; `admin.service.ts` now imports from `config/api.ts` directly.
