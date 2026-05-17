@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ClipboardCheck,
   ClipboardList,
+  FileSpreadsheet,
   FileText,
   FolderTree,
   LayoutGrid,
@@ -56,6 +57,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
         { label: 'Review', href: '/question-bank/review', icon: ClipboardCheck },
         { label: 'Exams', href: '/question-bank/exams', icon: ClipboardList },
         { label: 'Grading', href: '/question-bank/grading', icon: PenLine },
+        { label: 'Paper Exams', href: '/question-bank/paper', icon: FileSpreadsheet },
       ],
     },
     {

@@ -5,7 +5,7 @@ import { requireRole } from "../middleware/require-role";
 import { audit } from "../middleware/audit";
 import { liveFilter, compFilter, softDelete } from "../db/query-helpers";
 import { hasCompAccess } from "../services/comp-access.service";
-import { recomputeSessionRollups } from "../services/exam-grading.service";
+import { recomputeSessionRollups, recomputePaperRollups } from "../services/exam-grading.service";
 
 // Exam blueprint + builder + grading API (EMC Wave 7). Operator-facing — admin
 // + organizer, native competitions only (the `hasCompAccess` gate). Mounted at
@@ -511,6 +511,398 @@ router.put(
     } catch (err) {
       console.error("Grade period error:", err);
       res.status(500).json({ message: "Failed to grade the answer" });
+    }
+  }
+);
+
+// ── Paper exams (Wave 7 Phase 5) ──────────────────────────────────────────
+// The offline workflow: an operator records a student's paper attempt — one
+// `paper_exams` envelope + a `paper_answers` row per question. MC answers
+// auto-grade against the option key; short answers are marked by hand. The
+// bulk-save endpoint grades + recomputes the rollup in one shot.
+
+const CLEARED_REG = ["registered", "approved", "paid", "completed"];
+
+// Pull a per-grade score out of an exams.correct_score / wrong_score JSONB map.
+function perGradeScore(matrix: unknown, grade: string | null): number {
+  if (!matrix || typeof matrix !== "object" || !grade) return 0;
+  const v = Number((matrix as Record<string, unknown>)[grade]);
+  return Number.isFinite(v) ? v : 0;
+}
+
+// Resolve a paper exam's comp_id, then access-check.
+async function paperExamCompIfAccessible(req: Request, id: string): Promise<string | null> {
+  const r = await pool.query(
+    "SELECT comp_id FROM paper_exams WHERE id = $1 AND deleted_at IS NULL",
+    [id]
+  );
+  if (r.rows.length === 0) return null;
+  const compId = r.rows[0].comp_id as string;
+  return (await hasCompAccess(req.userId!, req.userRole!, compId)) ? compId : null;
+}
+
+// The full paper-exam detail — the envelope + every answer joined to its
+// question (by code-order `number`) + the MC options / short-answer key.
+async function loadPaperExamDetail(id: string) {
+  const pe = await pool.query(
+    `SELECT pe.id, pe.exam_id, pe.user_id, pe.grade, pe.total_point,
+            pe.corrects, pe.wrongs, pe.blanks, pe.points,
+            u.full_name AS student_name, e.name AS exam_name, e.code AS exam_code,
+            e.correct_score, e.wrong_score
+       FROM paper_exams pe
+       JOIN users u ON u.id = pe.user_id
+       JOIN exams e ON e.id = pe.exam_id
+      WHERE pe.id = $1 AND pe.deleted_at IS NULL`,
+    [id]
+  );
+  if (pe.rows.length === 0) return null;
+  const p = pe.rows[0];
+  const ans = await pool.query(
+    `WITH eq AS (
+       SELECT q.id AS qid, q.type, q.content, q.explanation,
+              row_number() OVER (ORDER BY q.code) AS num
+         FROM exam_question x JOIN questions q ON q.id = x.question_id
+        WHERE x.exam_id = $1 AND q.deleted_at IS NULL
+     )
+     SELECT pa.id, pa.number, pa.answer, pa.is_correct, pa.point,
+            eq.qid, eq.type, eq.content, eq.explanation
+       FROM paper_answers pa JOIN eq ON eq.num = pa.number
+      WHERE pa.paper_exam_id = $2 AND pa.deleted_at IS NULL
+      ORDER BY pa.number ASC`,
+    [p.exam_id, id]
+  );
+  const qids = [...new Set<string>(ans.rows.map((a) => a.qid))];
+  const optByQ = new Map<string, any[]>();
+  if (qids.length > 0) {
+    const opts = await pool.query(
+      `SELECT id, question_id, content, is_correct FROM answers
+        WHERE question_id = ANY($1::uuid[]) AND deleted_at IS NULL
+        ORDER BY created_at ASC`,
+      [qids]
+    );
+    for (const o of opts.rows) {
+      if (!optByQ.has(o.question_id)) optByQ.set(o.question_id, []);
+      optByQ.get(o.question_id)!.push(o);
+    }
+  }
+  return {
+    id: p.id,
+    examId: p.exam_id,
+    examName: p.exam_name,
+    examCode: p.exam_code,
+    studentName: p.student_name,
+    grade: p.grade ?? null,
+    totalPoint: p.total_point != null ? Number(p.total_point) : null,
+    corrects: p.corrects ?? {},
+    wrongs: p.wrongs ?? {},
+    blanks: p.blanks ?? {},
+    points: p.points ?? {},
+    suggestedCorrectPoint: perGradeScore(p.correct_score, p.grade),
+    suggestedWrongPoint: perGradeScore(p.wrong_score, p.grade),
+    answers: ans.rows.map((a) => {
+      const isShort = a.type === "short_answer";
+      const opts = optByQ.get(a.qid) ?? [];
+      return {
+        id: a.id,
+        number: a.number,
+        type: a.type,
+        questionContent: a.content ?? "",
+        explanation: a.explanation ?? null,
+        isCorrect: a.is_correct,
+        point: a.point != null ? Number(a.point) : null,
+        options: isShort
+          ? []
+          : opts.map((o) => ({ id: o.id, content: o.content ?? "", isCorrect: o.is_correct })),
+        selectedOptionId: isShort ? null : a.answer ?? null,
+        answerText: isShort ? a.answer ?? null : null,
+        answerKey: isShort ? opts.find((o) => o.is_correct)?.content ?? null : null,
+      };
+    }),
+  };
+}
+
+// GET /api/question-bank/exams/:examId/students — cleared registrants of the
+// exam's competition, for the paper-exam student picker.
+router.get("/question-bank/exams/:examId/students", async (req: Request, res: Response) => {
+  try {
+    const examId = String(req.params.examId);
+    const compId = await examCompIfAccessible(req, examId);
+    if (!compId) {
+      res.status(404).json({ message: "Exam not found" });
+      return;
+    }
+    const r = await pool.query(
+      `SELECT u.id, u.full_name, st.grade AS student_grade, r.profile_snapshot,
+              EXISTS (SELECT 1 FROM paper_exams pe
+                       WHERE pe.exam_id = $2 AND pe.user_id = u.id AND pe.deleted_at IS NULL)
+                AS has_paper
+         FROM registrations r
+         JOIN users u ON u.id = r.user_id
+         LEFT JOIN students st ON st.id = r.user_id
+        WHERE r.comp_id = $1 AND r.deleted_at IS NULL AND r.status = ANY($3)
+        ORDER BY u.full_name ASC`,
+      [compId, examId, CLEARED_REG]
+    );
+    res.json(
+      r.rows.map((u) => {
+        const snap = u.profile_snapshot;
+        const snapGrade =
+          snap && typeof snap === "object" && typeof snap.grade === "string" ? snap.grade : null;
+        return {
+          userId: u.id,
+          name: u.full_name,
+          grade: snapGrade || u.student_grade || null,
+          hasPaper: u.has_paper,
+        };
+      })
+    );
+  } catch (err) {
+    console.error("List exam students error:", err);
+    res.status(500).json({ message: "Failed to load students" });
+  }
+});
+
+// GET /api/question-bank/paper-exams?examId= ──────────────────────────────
+router.get("/question-bank/paper-exams", async (req: Request, res: Response) => {
+  try {
+    const examId = String(req.query.examId ?? "");
+    if (!examId || !(await examCompIfAccessible(req, examId))) {
+      res.status(403).json({ message: "No access to this exam" });
+      return;
+    }
+    const r = await pool.query(
+      `SELECT pe.id, pe.grade, pe.total_point, pe.corrects, pe.wrongs, pe.blanks,
+              u.full_name AS student_name,
+              (SELECT COUNT(*)::int FROM paper_answers pa
+                WHERE pa.paper_exam_id = pe.id AND pa.deleted_at IS NULL) AS answer_count
+         FROM paper_exams pe
+         JOIN users u ON u.id = pe.user_id
+        WHERE pe.exam_id = $1 AND pe.deleted_at IS NULL
+        ORDER BY u.full_name ASC`,
+      [examId]
+    );
+    res.json(
+      r.rows.map((p) => ({
+        id: p.id,
+        studentName: p.student_name,
+        grade: p.grade ?? null,
+        totalPoint: p.total_point != null ? Number(p.total_point) : null,
+        answerCount: p.answer_count,
+      }))
+    );
+  } catch (err) {
+    console.error("List paper exams error:", err);
+    res.status(500).json({ message: "Failed to load paper exams" });
+  }
+});
+
+// GET /api/question-bank/paper-exams/:id ──────────────────────────────────
+router.get("/question-bank/paper-exams/:id", async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    if (!(await paperExamCompIfAccessible(req, id))) {
+      res.status(404).json({ message: "Paper exam not found" });
+      return;
+    }
+    res.json(await loadPaperExamDetail(id));
+  } catch (err) {
+    console.error("Get paper exam error:", err);
+    res.status(500).json({ message: "Failed to load the paper exam" });
+  }
+});
+
+// POST /api/question-bank/paper-exams ─────────────────────────────────────
+router.post(
+  "/question-bank/paper-exams",
+  audit({ action: "paper_exam.create", resourceType: "paper_exam" }),
+  async (req: Request, res: Response) => {
+    try {
+      const examId = String(req.body?.examId ?? "");
+      const userId = String(req.body?.userId ?? "");
+      const compId = examId ? await examCompIfAccessible(req, examId) : null;
+      if (!compId) {
+        res.status(404).json({ message: "Exam not found" });
+        return;
+      }
+      if (!userId) {
+        res.status(400).json({ message: "userId is required" });
+        return;
+      }
+      const exam = await pool.query(
+        "SELECT name, code FROM exams WHERE id = $1 AND deleted_at IS NULL",
+        [examId]
+      );
+      // The user must be a cleared registrant of this competition.
+      const reg = await pool.query(
+        `SELECT r.profile_snapshot, st.grade AS student_grade
+           FROM registrations r
+           LEFT JOIN students st ON st.id = r.user_id
+          WHERE r.user_id = $1 AND r.comp_id = $2 AND r.deleted_at IS NULL
+            AND r.status = ANY($3)
+          ORDER BY r.created_at DESC LIMIT 1`,
+        [userId, compId, CLEARED_REG]
+      );
+      if (reg.rows.length === 0) {
+        res.status(400).json({ message: "That student is not registered for this competition" });
+        return;
+      }
+      const dup = await pool.query(
+        `SELECT 1 FROM paper_exams
+          WHERE exam_id = $1 AND user_id = $2 AND deleted_at IS NULL LIMIT 1`,
+        [examId, userId]
+      );
+      if (dup.rows.length > 0) {
+        res.status(409).json({ message: "This student already has a paper result for this exam" });
+        return;
+      }
+      const snap = reg.rows[0].profile_snapshot;
+      const snapGrade =
+        snap && typeof snap === "object" && typeof snap.grade === "string" ? snap.grade : null;
+      const grade = snapGrade || reg.rows[0].student_grade || null;
+      const questions = await pool.query(
+        `SELECT q.id FROM exam_question x JOIN questions q ON q.id = x.question_id
+          WHERE x.exam_id = $1 AND q.deleted_at IS NULL ORDER BY q.code ASC`,
+        [examId]
+      );
+      if (questions.rows.length === 0) {
+        res.status(409).json({ message: "This exam has no questions yet" });
+        return;
+      }
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const pe = await client.query(
+          `INSERT INTO paper_exams (comp_id, user_id, exam_id, name, code, grade)
+           VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+          [compId, userId, examId, exam.rows[0].name, exam.rows[0].code, grade]
+        );
+        const paperExamId = pe.rows[0].id as string;
+        let n = 1;
+        for (const _q of questions.rows) {
+          await client.query(
+            `INSERT INTO paper_answers (comp_id, user_id, paper_exam_id, number)
+             VALUES ($1,$2,$3,$4)`,
+            [compId, userId, paperExamId, n++]
+          );
+        }
+        await client.query("COMMIT");
+        res.status(201).json(await loadPaperExamDetail(paperExamId));
+      } catch (txErr) {
+        await client.query("ROLLBACK");
+        throw txErr;
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      console.error("Create paper exam error:", err);
+      res.status(500).json({ message: "Failed to create the paper exam" });
+    }
+  }
+);
+
+// PUT /api/question-bank/paper-exams/:id/answers ──────────────────────────
+// Bulk-save the answer sheet. MC entries (value = the chosen option id)
+// auto-grade; short entries (value = text + the operator's isCorrect/point)
+// are taken as given. Recomputes the rollup.
+router.put(
+  "/question-bank/paper-exams/:id/answers",
+  audit({ action: "paper_exam.answers.save", resourceType: "paper_exam", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    const client = await pool.connect();
+    try {
+      const id = String(req.params.id);
+      if (!(await paperExamCompIfAccessible(req, id))) {
+        res.status(404).json({ message: "Paper exam not found" });
+        return;
+      }
+      const pe = await pool.query(
+        "SELECT exam_id, grade FROM paper_exams WHERE id = $1",
+        [id]
+      );
+      const examId = pe.rows[0].exam_id as string;
+      const grade = pe.rows[0].grade as string | null;
+      const ex = await pool.query(
+        "SELECT correct_score, wrong_score FROM exams WHERE id = $1",
+        [examId]
+      );
+      const correctPt = perGradeScore(ex.rows[0]?.correct_score, grade);
+      const wrongPt = perGradeScore(ex.rows[0]?.wrong_score, grade);
+
+      // number -> { type, options[] }
+      const qrows = await pool.query(
+        `WITH eq AS (
+           SELECT q.id AS qid, q.type, row_number() OVER (ORDER BY q.code) AS num
+             FROM exam_question x JOIN questions q ON q.id = x.question_id
+            WHERE x.exam_id = $1 AND q.deleted_at IS NULL
+         )
+         SELECT eq.num, eq.type, a.id AS option_id, a.is_correct
+           FROM eq LEFT JOIN answers a ON a.question_id = eq.qid AND a.deleted_at IS NULL`,
+        [examId]
+      );
+      const byNumber = new Map<number, { type: string; options: Map<string, boolean> }>();
+      for (const row of qrows.rows) {
+        // row_number() is bigint → node-pg returns it as a string; coerce.
+        const num = Number(row.num);
+        if (!byNumber.has(num)) byNumber.set(num, { type: row.type, options: new Map() });
+        if (row.option_id) byNumber.get(num)!.options.set(row.option_id, row.is_correct);
+      }
+
+      const items = Array.isArray(req.body?.answers) ? req.body.answers : [];
+      await client.query("BEGIN");
+      for (const it of items) {
+        const number = Number(it?.number);
+        const q = byNumber.get(number);
+        if (!q) continue;
+        let answer: string | null = null;
+        let isCorrect: boolean | null = null;
+        let point = 0;
+        if (q.type === "short_answer") {
+          answer = typeof it?.value === "string" ? it.value : null;
+          isCorrect = typeof it?.isCorrect === "boolean" ? it.isCorrect : null;
+          point = isCorrect == null ? 0 : Number(it?.point) || 0;
+        } else {
+          const optId = typeof it?.value === "string" ? it.value : "";
+          if (optId && q.options.has(optId)) {
+            answer = optId;
+            isCorrect = !!q.options.get(optId);
+            point = isCorrect ? correctPt : wrongPt;
+          }
+        }
+        await client.query(
+          `UPDATE paper_answers SET answer=$1, is_correct=$2, point=$3, updated_at=now()
+            WHERE paper_exam_id=$4 AND number=$5 AND deleted_at IS NULL`,
+          [answer, isCorrect, point, id, number]
+        );
+      }
+      await recomputePaperRollups(client, id);
+      await client.query("COMMIT");
+      res.json(await loadPaperExamDetail(id));
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("Save paper answers error:", err);
+      res.status(500).json({ message: "Failed to save the answer sheet" });
+    } finally {
+      client.release();
+    }
+  }
+);
+
+// DELETE /api/question-bank/paper-exams/:id ───────────────────────────────
+router.delete(
+  "/question-bank/paper-exams/:id",
+  audit({ action: "paper_exam.delete", resourceType: "paper_exam", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      const id = String(req.params.id);
+      if (!(await paperExamCompIfAccessible(req, id))) {
+        res.status(404).json({ message: "Paper exam not found" });
+        return;
+      }
+      await softDelete("paper_exams", id);
+      res.json({ message: "Paper exam removed" });
+    } catch (err) {
+      console.error("Delete paper exam error:", err);
+      res.status(500).json({ message: "Failed to delete the paper exam" });
     }
   }
 );

@@ -99,6 +99,55 @@ export async function recomputeSessionRollups(db: DB, sessionId: string): Promis
   );
 }
 
+/**
+ * Recompute a paper exam's rollups from its `paper_answers`. The MC/short split
+ * is derived by joining each answer's `number` to the exam's questions in code
+ * order (paper_answers carries no type column).
+ */
+export async function recomputePaperRollups(db: DB, paperExamId: string): Promise<void> {
+  const pe = await db.query("SELECT exam_id FROM paper_exams WHERE id = $1", [paperExamId]);
+  if (pe.rows.length === 0) return;
+  const examId = pe.rows[0].exam_id;
+  const r = await db.query(
+    `WITH eq AS (
+       SELECT q.type, row_number() OVER (ORDER BY q.code) AS num
+         FROM exam_question x JOIN questions q ON q.id = x.question_id
+        WHERE x.exam_id = $2 AND q.deleted_at IS NULL
+     )
+     SELECT eq.type, pa.is_correct, pa.answer, pa.point
+       FROM paper_answers pa JOIN eq ON eq.num = pa.number
+      WHERE pa.paper_exam_id = $1 AND pa.deleted_at IS NULL`,
+    [paperExamId, examId]
+  );
+  const sec = {
+    choice: { correct: 0, wrong: 0, blank: 0, points: 0 },
+    short: { correct: 0, wrong: 0, blank: 0, points: 0 },
+  };
+  for (const a of r.rows) {
+    const k: "choice" | "short" = a.type === "short_answer" ? "short" : "choice";
+    const answered = !!(a.answer && String(a.answer).trim());
+    if (a.is_correct === true) sec[k].correct++;
+    else if (a.is_correct === false) sec[k].wrong++;
+    else if (!answered) sec[k].blank++;
+    sec[k].points += Number(a.point) || 0;
+  }
+  const total = sec.choice.points + sec.short.points;
+  await db.query(
+    `UPDATE paper_exams
+        SET corrects=$2::jsonb, wrongs=$3::jsonb, blanks=$4::jsonb,
+            points=$5::jsonb, total_point=$6, updated_at=now()
+      WHERE id=$1`,
+    [
+      paperExamId,
+      JSON.stringify({ choice: sec.choice.correct, short: sec.short.correct }),
+      JSON.stringify({ choice: sec.choice.wrong, short: sec.short.wrong }),
+      JSON.stringify({ choice: sec.choice.blank, short: sec.short.blank }),
+      JSON.stringify({ choice: sec.choice.points, short: sec.short.points }),
+      total,
+    ]
+  );
+}
+
 /** True if a finished session still has answered short-answer periods awaiting a manual grade. */
 export async function sessionHasPendingGrading(db: DB, sessionId: string): Promise<boolean> {
   const r = await db.query(
