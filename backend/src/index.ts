@@ -30,6 +30,7 @@ import favoritesRoutes from "./routes/favorites.routes";
 import historicalRoutes from "./routes/historical.routes";
 import competitionFlowsRoutes from "./routes/competition-flows.routes";
 import affiliatedCredentialsRoutes from "./routes/affiliated-credentials.routes";
+import questionBankRoutes from "./routes/question-bank.routes";
 import { initializeCronJobs } from "./services/cron.service";
 import { verifySignedUrlToken } from "./services/storage.service";
 import fs from "fs";
@@ -123,6 +124,8 @@ app.use("/api", competitionFlowsRoutes);
 // Affiliated-competition credentials — owns /registrations/:id/credentials and
 // /competitions/:id/credentials* (mounted at /api with full sub-paths).
 app.use("/api", affiliatedCredentialsRoutes);
+// Question-bank authoring — owns /question-bank/* (mounted at /api).
+app.use("/api", questionBankRoutes);
 
 // Sentry error handler must come before our own error handler
 Sentry.setupExpressErrorHandler(app);

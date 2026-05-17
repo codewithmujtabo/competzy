@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { GraduationCap, LayoutGrid, Loader2, Trophy, Users, Wallet } from 'lucide-react';
+import { GraduationCap, LayoutGrid, Library, Loader2, Trophy, Users, Wallet } from 'lucide-react';
 import { OrganizerProvider, useOrganizer } from '@/lib/auth/organizer-context';
 import { AppShell, type NavSection } from '@/components/shell/app-shell';
 
@@ -11,6 +11,7 @@ const NAV: NavSection[] = [
     items: [
       { label: 'Dashboard', href: '/organizer-dashboard', icon: LayoutGrid, exact: true },
       { label: 'Competitions', href: '/organizer-competitions', icon: Trophy },
+      { label: 'Question Bank', href: '/question-bank', icon: Library },
       { label: 'Participants', href: '/participants', icon: Users },
       { label: 'Revenue', href: '/revenue', icon: Wallet },
     ],

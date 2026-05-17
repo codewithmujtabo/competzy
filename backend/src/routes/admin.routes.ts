@@ -1372,4 +1372,5 @@ router.post("/payments/:id/refund", audit({ action: "admin.payment.refund", reso
   }
 });
 
+// ── Question-maker access management (Wave 6) ─────────────────────────────
 export default router;
