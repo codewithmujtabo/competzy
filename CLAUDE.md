@@ -57,25 +57,28 @@ EXPO_PUBLIC_API_URL=http://<MAC_LAN_IP>:3000/api
 
 ## Deployment
 
-Production runs on **Coolify** (self-hosted PaaS) — four services in one project:
+Production runs on **`144.126.243.200`** using a **host-nginx + Coolify hybrid** topology — Coolify (v4) supervises the four service containers, **host nginx 1.24 + certbot** handles every public domain and SSL termination. Coolify on this server is **not** running Traefik; each app binds directly to a host port and nginx reverse-proxies into it. The same server already hosts the `competzy.com` landing page (port 3000, separate repo `eduversal-team/competzy-web`) and an unrelated `pathvance.com` tenant (ports 3001/4000) — port choices below avoid those.
 
-| Service        | Source                | Internal port | Public domain                       |
-| -------------- | --------------------- | ------------- | ----------------------------------- |
-| PostgreSQL 16  | Coolify Database      | `5432`        | — (internal only)                   |
-| MinIO          | Coolify Service       | `9000`/`9001` | `https://minio.arena.competzy.com`  |
-| Backend (API)  | `backend/Dockerfile`  | `3000`        | `https://api.competzy.com`          |
-| Web (Next.js)  | `web/Dockerfile`      | `3001`        | `https://arena.competzy.com`        |
+| Service        | Coolify resource     | Host port | Internal port | Public domain                       |
+| -------------- | -------------------- | --------- | ------------- | ----------------------------------- |
+| PostgreSQL 16  | Database             | —         | `5432`        | — (internal docker network only)    |
+| MinIO          | Service              | `9000`/`9001` | `9000`/`9001` | `https://minio.arena.competzy.com` |
+| Backend (API)  | Application (Docker) | `3010`    | `3000`        | `https://api.competzy.com`          |
+| Web (Next.js)  | Application (Docker) | `3011`    | `3001`        | `https://arena.competzy.com`        |
 
 **Domain split:**
-- `competzy.com` — landing page, lives in a **separate repo** (`eduversal-team/competzy-web`); this repo doesn't touch it.
-- `arena.competzy.com` — the portal in this repo (`web/`); login + manage competitions, registrations, exams, etc.
+- `competzy.com` — landing page, **separate repo** `eduversal-team/competzy-web` (already deployed on this server at port 3000); this repo never touches it.
+- `arena.competzy.com` — the portal in this repo (`web/`); login + manage competitions, registrations, exams.
 - `api.competzy.com` — backend API (this repo's `backend/`).
+- `minio.arena.competzy.com` — public S3 endpoint for presigned URLs that the backend hands to browsers.
 
-`app/` (Expo React Native) does **not** deploy to Coolify — mobile binaries are built via EAS Build (`eas build --profile production`) from a developer machine. The Expo "web export" mode is not used in production.
+`app/` (Expo React Native) does **not** deploy here — mobile binaries are built via EAS Build (`eas build --profile production`) from a developer machine. The Expo "web export" mode is not used in production.
 
-Old VPS / nginx / pm2 deployment is retired. The `deploy/nginx.conf` and `deploy/pm2.config.js` files were removed on 2026-05-18. Anything in the sprint history below that references `deploy/nginx.conf`, `pm2.config.js`, or VPS-direct rollout is historical context — current source of truth is **`deploy/COOLIFY.md`**.
+**SSL** is provisioned with `certbot --nginx -d api.competzy.com -d arena.competzy.com -d minio.arena.competzy.com` (one shot for the trio), auto-renewed by `certbot.timer`. The nginx server-block template lives at `deploy/nginx.conf`.
 
-See `deploy/COOLIFY.md` for the full step-by-step (provision DB + MinIO, env vars, migrations, troubleshooting).
+**Coolify "Domains" field stays empty on every service** in this stack — host nginx is the public face. Each service's "Exposed Ports" controls the host port nginx proxies into.
+
+See `deploy/COOLIFY.md` for the full step-by-step (provision DB + MinIO, env vars, migrations, nginx + certbot wiring, troubleshooting).
 
 ---
 
@@ -303,13 +306,18 @@ We're porting the feature set of the legacy `eduversal-team/emc` Laravel app ont
 The Wave 3–12 stacked-PR backlog — 51 PRs — was merged bottom-up into `main` on 2026-05-17, followed by the mobile role-guard fix. **`origin/main` is now fully current** — 0 open PRs, every merged feature branch pruned, `origin` carries only `main`. (An earlier "8 commits ahead of `origin/main`" note here is obsolete — there is no longer an unpushed backlog.) The only remaining rollout work is the VPS / production checklist below.
 
 ### Manual rollout still required (Coolify deployment — 2026-05-18 refresh)
-Follow `deploy/COOLIFY.md` end-to-end. Summary of external prerequisites that can't be automated:
-- **DNS:** A records for `api.competzy.com`, `arena.competzy.com`, and `minio.arena.competzy.com` pointing at the Coolify server IP. (`competzy.com` itself lives in the separate `eduversal-team/competzy-web` repo.)
-- **Coolify project setup:** create `competzy` project → provision Postgres → provision MinIO (root creds + bucket `competzy` + non-root access keys) → deploy `backend/` and `web/` via Dockerfile build, with the env vars in `backend/.env.example` and the build arg `NEXT_PUBLIC_API_URL=https://api.competzy.com/api` on the web service.
-- **Run all migrations** on the Coolify backend container terminal: `npm run db:migrate` (applies `1746500000000` through `1749900000000` — Sprint 14–17, the Sprint 20 EMC schema batch, and EMC Waves 4–12: competition-flows, affiliated-competitions, question-bank/exam/commerce/marketing, certificates).
+Follow `deploy/COOLIFY.md` end-to-end. Server is `144.126.243.200` (Coolify already installed). Summary of external prerequisites:
+- **DNS:** A records pointing at `144.126.243.200`:
+  - `api.competzy.com`
+  - `arena.competzy.com`
+  - `minio.arena.competzy.com`
+  - (`competzy.com` is already pointed and served by the separate `eduversal-team/competzy-web` Coolify app on port 3000 — don't touch.)
+- **Coolify project setup:** create `competzy` project → provision Postgres → provision MinIO (root creds, bucket `competzy`, non-root access keys, exposed ports 9000/9001) → deploy `backend/` (exposed port `3010:3000`) and `web/` (exposed port `3011:3001`) from Dockerfile, with env vars per `backend/.env.example` and the build arg `NEXT_PUBLIC_API_URL=https://api.competzy.com/api` on the web service. **Leave Coolify "Domains" field empty on every service** — host nginx handles routing.
+- **Host nginx + certbot:** SSH to server, copy `deploy/nginx.conf` to `/etc/nginx/sites-available/competzy-arena`, symlink into `sites-enabled`, `sudo nginx -t && sudo systemctl reload nginx`, then `sudo certbot --nginx -d api.competzy.com -d arena.competzy.com -d minio.arena.competzy.com`. Certbot auto-renews via `certbot.timer`.
+- **Run all migrations** on the Coolify backend container terminal: `npm run db:migrate` (applies `1746500000000` through `1749900000000`).
 - **Seed/admin scripts** (`db:create-admin`, `db:seed:*`) use `ts-node` which is pruned from the production image — run them from a developer machine with `DATABASE_URL` pointed at the Coolify Postgres (publish temporarily or SSH tunnel).
 - **Midtrans production keys** + webhook URL `https://api.competzy.com/api/payments/webhook`.
-- **EAS init:** `cd app && npx eas init` (needs expo.dev account). Fill in `appleId`, `ascAppId`, `appleTeamId` in `app/eas.json`. Mobile rilis is independent of Coolify.
+- **EAS init:** `cd app && npx eas init` (needs expo.dev account). Fill in `appleId`, `ascAppId`, `appleTeamId` in `app/eas.json`. Mobile rilis is independent of the server.
 - **Apple Developer + Play Console** for App Store / Play Store submission.
 - **api.co.id production key** (`API_CO_ID_KEY` env on the backend service).
 - **Privacy + Terms legal review** of `web/app/privacy/page.tsx` and `web/app/terms/page.tsx` (currently DRAFT).
@@ -408,11 +416,12 @@ Follow `deploy/COOLIFY.md` end-to-end. Summary of external prerequisites that ca
 |---|---|---|
 | Backend container | Multi-stage `node:20-alpine`, tini, non-root, healthcheck `/api/health`, volume `/app/uploads` | `backend/Dockerfile`, `backend/.dockerignore` |
 | Web container | Multi-stage Next.js standalone (`output: 'standalone'`), healthcheck `/`, build-arg `NEXT_PUBLIC_API_URL` | `web/Dockerfile`, `web/.dockerignore`, `web/next.config.mjs` |
-| Coolify guide | Step-by-step: Postgres + MinIO + backend + web deploy on Coolify, env var map, migrations, troubleshooting | `deploy/COOLIFY.md` |
+| Coolify guide | Step-by-step deploy on 144.126.243.200 (Coolify hybrid + host nginx): Postgres + MinIO + backend + web, env var map, migrations, certbot, troubleshooting | `deploy/COOLIFY.md` |
+| nginx host config | Server-block template for `api.competzy.com` (`:3010`), `arena.competzy.com` (`:3011`), `minio.arena.competzy.com` (`:9000`) — reverse-proxies host nginx into Coolify-exposed container ports; certbot fills the SSL halves | `deploy/nginx.conf` |
 | Expo build config | development/preview/production profiles; production sets EXPO_PUBLIC_API_URL=`https://api.competzy.com/api` | `app/eas.json` |
 | k6 load test | 500-VU ramp testing signup → /me → /competitions → POST /registrations; thresholds p95<2s, error<2% | `loadtest/k6-registration.js`, `loadtest/README.md` |
 | Runbook | Common incident playbooks (API down, payment stuck, signed-URL 403, soft-delete recovery, audit-log forensics, rollback). **Note:** deploy steps in this file pre-date the Coolify migration — see `deploy/COOLIFY.md` for current rollout. | `docs/RUNBOOK.md` |
-| _Retired 2026-05-18_ | VPS nginx + pm2 templates (replaced by Coolify Dockerfiles) | _deleted_ |
+| _Retired 2026-05-18, restored 2026-05-18_ | `deploy/pm2.config.js` stays deleted (Coolify supervises containers). `deploy/nginx.conf` was deleted, then restored later same day after server inspection found the target host runs **host nginx + certbot** as the public proxy (no Traefik). | — |
 
 ### SPRINT 19 — Gen Z Playful Redesign + English/Back-Nav Mop-up (May 12, 2026 Session 7) ✅ COMPLETE
 | Task | What | Key files |

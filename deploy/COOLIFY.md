@@ -1,33 +1,57 @@
-# Deploy Competzy ke Coolify
+# Deploy Competzy ke Coolify (host-nginx + Coolify hybrid)
 
-Panduan ini mendeploy dua service web Competzy ke server Coolify:
+> **Server target:** `144.126.243.200` — sudah ada Coolify (`coolify`,
+> `coolify-db`, `coolify-realtime`, `coolify-redis`, `coolify-sentinel`
+> running healthy) **plus** host-level **nginx 1.24 + certbot** sebagai
+> reverse proxy publik. Coolify di server ini **tidak pakai Traefik** —
+> setiap container expose port langsung ke host, dan host nginx yang
+> handle domain + SSL.
 
-| Service        | Tipe Coolify | Image / Dockerfile     | Internal port | Domain publik             |
-| -------------- | ------------ | ---------------------- | ------------- | ------------------------- |
-| PostgreSQL     | Database     | `postgres:16-alpine`   | `5432`        | — (internal only)         |
-| MinIO          | Service      | `minio/minio`          | `9000` / `9001` | `https://minio.arena.competzy.com` |
-| `backend/`     | Application  | `backend/Dockerfile`   | `3000`        | `https://api.competzy.com` |
-| `web/`         | Application  | `web/Dockerfile`       | `3001`        | `https://arena.competzy.com` |
+## Arsitektur
 
-> `app/` (Expo React Native) **tidak** di-deploy ke Coolify — mobile binary di-build
-> via EAS Build (`eas build --profile production`) dari laptop. Landing page
-> `competzy.com` ada di repo terpisah (`eduversal-team/competzy-web`).
+```
+Internet ─► :80 / :443 ──► nginx host (certbot SSL)
+                            ├─► localhost:3000  → competzy.com landing (repo competzy-web)
+                            ├─► localhost:3001/4000 → pathvance.com (tenant lain)
+                            ├─► localhost:3010 → backend (Competzy API)        ◀── this guide
+                            ├─► localhost:3011 → web (Competzy arena)          ◀── this guide
+                            └─► localhost:9000 → minio S3 endpoint             ◀── this guide
+```
+
+Service yang akan diprovision di Coolify untuk repo ini:
+
+| Service        | Coolify resource     | Host port (exposed) | Internal port | Public domain                       |
+| -------------- | -------------------- | ------------------- | ------------- | ----------------------------------- |
+| PostgreSQL 16  | Database             | — (internal only)   | `5432`        | — (no public domain)                |
+| MinIO          | Service              | `9000`, `9001`      | `9000`/`9001` | `https://minio.arena.competzy.com`  |
+| Backend (API)  | Application (Docker) | `3010`              | `3000`        | `https://api.competzy.com`          |
+| Web (Next.js)  | Application (Docker) | `3011`              | `3001`        | `https://arena.competzy.com`        |
+
+**`app/` (Expo)** tidak deploy di sini — mobile binary di-build via EAS
+Build dari laptop (`eas build --profile production`).
 
 ---
 
 ## 0. Prasyarat
 
-- Server sudah ter-connect ke Coolify (v4+).
-- DNS sudah diarahkan ke IP server:
-  - `api.competzy.com` → A record
-  - `arena.competzy.com` → A record
-  - `minio.arena.competzy.com` → A record (untuk public MinIO endpoint)
-- Akses repo `eduversal-team/competzy` (public sekarang; nanti kalau private,
-  tambah deploy key di Coolify → Sources → GitHub App).
+- SSH access ke server sebagai user dengan sudo + docker group.
+- Akses ke DNS `competzy.com` untuk bikin A-record.
+- Coolify dashboard credentials (UI di `http://144.126.243.200:8000`).
+
+### DNS A-records yang harus dibuat
+
+```
+api.competzy.com           A    144.126.243.200    TTL 300
+arena.competzy.com         A    144.126.243.200    TTL 300
+minio.arena.competzy.com   A    144.126.243.200    TTL 300
+```
+
+Tunggu propagate (`dig +short api.competzy.com` harus return IP) sebelum
+jalankan certbot di Step 6.
 
 ---
 
-## 1. Buat Project
+## 1. Buat Project di Coolify
 
 Coolify UI → **Projects → + New Project**
 - Name: `competzy`
@@ -40,84 +64,92 @@ Coolify UI → **Projects → + New Project**
 Inside project → **+ New Resource → Database → PostgreSQL 16**
 - Name: `competzy-postgres`
 - Database name: `competzy`
-- Public: **OFF** (akses hanya dari docker network)
+- **Public Port: OFF** — backend container reach Postgres lewat docker
+  network internal Coolify, tidak perlu publish ke host.
 
-Setelah running, klik service → tab **Environment** → copy nilai
-**`Postgres URL`** (yang `postgres://postgres:<password>@<service>:5432/postgres`).
-Ganti suffix `/postgres` jadi `/competzy` saat dipakai sebagai `DATABASE_URL`
-di backend.
+Setelah deploy berhasil, klik service → tab **Environment** → catat:
+- Internal hostname (mis. `competzy-postgres` atau yang muncul di `Postgres URL`)
+- Password
+- Constructed URL: `postgres://postgres:<password>@<hostname>:5432/competzy`
 
 ---
 
 ## 3. Provision MinIO
 
-**+ New Resource → Services → MinIO** (atau pakai template Docker Image
-`minio/minio:latest` dengan command `server /data --console-address :9001`).
+**+ New Resource → Services → MinIO** (atau Docker Image `minio/minio:latest`
+dengan command `server /data --console-address :9001`).
 
-- Port API: `9000`
-- Port Console: `9001`
-- Volume: mount `/data` ke persistent volume (Coolify Storages tab)
+Settings:
+- **Exposed Ports** (host:container):
+  - `9000:9000` — S3 API (HTTP → nanti di-fronted nginx untuk HTTPS)
+  - `9001:9001` — Console (optional public, atau internal saja)
+- Persistent volume: mount `/data` ke storage (Coolify Storages tab)
 - Environment:
   - `MINIO_ROOT_USER=minio`
-  - `MINIO_ROOT_PASSWORD=<openssl rand -hex 24>`
-- Domain (port `9000`): `https://minio.arena.competzy.com`
-  > Ini yang dipakai browser untuk fetch presigned URL. Kalau mau
-  > console MinIO juga publik, expose port `9001` ke subdomain berbeda.
+  - `MINIO_ROOT_PASSWORD=` (generate: `openssl rand -hex 24`)
+- **Domains field di Coolify: kosongkan** — nginx host yang handle.
 
-Buat bucket awal:
-1. Buka console MinIO (port 9001) → login pakai root user/password.
+Setelah running, akses console di `http://144.126.243.200:9001` (sementara
+sebelum SSL siap):
+1. Login pakai root user/password.
 2. **Buckets → Create Bucket** → name: `competzy`.
-3. **Access Keys → Create** → simpan Access Key & Secret Key (jangan pakai
-   root creds untuk backend).
+3. **Access Keys → Create** → buat key non-root untuk backend. Simpan
+   `Access Key` + `Secret Key` (jangan pakai root creds untuk backend).
 
 ---
 
-## 4. Deploy Backend
+## 4. Deploy Backend (Express)
 
 **+ New Resource → Public Repository → Dockerfile**
 - Repository: `https://github.com/eduversal-team/competzy`
 - Branch: `main`
 - **Base Directory:** `/backend`
 - **Dockerfile Location:** `Dockerfile`
-- **Port:** `3000`
-- **Domain:** `https://api.competzy.com` (Coolify provision SSL otomatis)
-- **Healthcheck Path:** `/api/health`
-- **Persistent Storage:** mount volume ke `/app/uploads` (backup untuk file
-  lokal lama; produksi pakai MinIO).
-- **Environment Variables** (copy dari `backend/.env.example` dan isi):
+- **Exposed Port (host:container):** `3010:3000`
+  - Internal Dockerfile EXPOSE 3000; host bind ke 3010 untuk menghindari
+    tabrakan dengan landing competzy.com yang sudah pakai 3000.
+- **Domains field di Coolify: kosongkan.** nginx host yang routing.
+- **Healthcheck Path:** `/api/health` (Coolify boleh tetap configure;
+  nginx tidak butuh ini)
+- **Persistent Storage:** mount volume ke `/app/uploads`. (Selama
+  `MINIO_*` env set di bawah, path ini idle — file lewat MinIO. Volume
+  dipasang sebagai safety net.)
 
-  ```env
-  NODE_ENV=production
-  PORT=3000
-  DATABASE_URL=postgres://postgres:<password>@competzy-postgres:5432/competzy
-  JWT_SECRET=<openssl rand -hex 32>
-  JWT_EXPIRES_IN=7d
-  CORS_ORIGINS=https://arena.competzy.com
-  APP_URL=https://arena.competzy.com
-  SMTP_HOST=...
-  SMTP_PORT=587
-  SMTP_USER=...
-  SMTP_PASS=...
-  SMTP_FROM=Competzy <noreply@competzy.id>
-  OTP_EXPIRY_MINUTES=10
-  SENTRY_DSN=...
-  TWILIO_ACCOUNT_SID=...
-  TWILIO_AUTH_TOKEN=...
-  TWILIO_VERIFY_SID=...
-  MIDTRANS_SERVER_KEY=...
-  MIDTRANS_CLIENT_KEY=...
-  MIDTRANS_IS_PRODUCTION=true
-  API_CO_ID_KEY=...
-  MINIO_ENDPOINT=http://<minio-service-name>:9000
-  MINIO_ACCESS_KEY=<bucket access key>
-  MINIO_SECRET_KEY=<bucket secret key>
-  MINIO_BUCKET=competzy
-  MINIO_PUBLIC_URL=https://minio.arena.competzy.com
-  ```
+**Environment Variables** (copy dari `backend/.env.example`):
+```env
+NODE_ENV=production
+PORT=3000
+DATABASE_URL=postgres://postgres:<password>@<postgres-service-name>:5432/competzy
+JWT_SECRET=<openssl rand -hex 32>
+JWT_EXPIRES_IN=7d
+CORS_ORIGINS=https://arena.competzy.com
+APP_URL=https://arena.competzy.com
+SMTP_HOST=...
+SMTP_PORT=587
+SMTP_USER=...
+SMTP_PASS=...
+SMTP_FROM=Competzy <noreply@competzy.id>
+OTP_EXPIRY_MINUTES=10
+SENTRY_DSN=...
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_VERIFY_SID=...
+MIDTRANS_SERVER_KEY=...
+MIDTRANS_CLIENT_KEY=...
+MIDTRANS_IS_PRODUCTION=true
+API_CO_ID_KEY=...
+# MinIO: backend pakai internal docker hostname (lewat docker network),
+# browser pakai PUBLIC_URL (lewat nginx).
+MINIO_ENDPOINT=http://<minio-service-name>:9000
+MINIO_ACCESS_KEY=<bucket access key>
+MINIO_SECRET_KEY=<bucket secret key>
+MINIO_BUCKET=competzy
+MINIO_PUBLIC_URL=https://minio.arena.competzy.com
+```
 
-Deploy. Tunggu sampai healthcheck hijau.
+Deploy. Tunggu sampai container status "running".
 
-### Jalankan migrasi pertama kali
+### Migrasi DB pertama kali
 
 Coolify UI → service backend → tab **Terminal**:
 
@@ -125,14 +157,18 @@ Coolify UI → service backend → tab **Terminal**:
 npm run db:migrate
 ```
 
-Untuk seed/admin awal — `db:create-admin` dan teman-temannya pakai `ts-node`
-(devDependency, sudah dipangkas di image production). Jalankan dari laptop
-dengan `DATABASE_URL` mengarah ke Coolify Postgres (publikkan sementara,
-atau pakai SSH tunnel ke server):
+Seed/admin scripts (`db:create-admin`, `db:seed:*`) pakai `ts-node` yang
+sudah dipangkas dari image production. Jalankan dari laptop dengan
+`DATABASE_URL` mengarah ke Coolify Postgres:
 
 ```bash
+# Sementara expose Postgres ke public di Coolify UI, atau pakai SSH tunnel:
+ssh -L 5432:127.0.0.1:<postgres-host-port> eduadmin@144.126.243.200
+
+# Lalu di terminal lain:
 cd backend
-DATABASE_URL=postgres://... npm run db:create-admin
+DATABASE_URL=postgres://postgres:<password>@localhost:5432/competzy \
+  npm run db:create-admin
 ```
 
 ---
@@ -144,73 +180,135 @@ DATABASE_URL=postgres://... npm run db:create-admin
 - Branch: `main`
 - **Base Directory:** `/web`
 - **Dockerfile Location:** `Dockerfile`
-- **Port:** `3001`
-- **Domain:** `https://arena.competzy.com`
-- **Build Arguments** (penting — Next.js inline ini di build time):
+- **Exposed Port (host:container):** `3011:3001`
+- **Domains field di Coolify: kosongkan.**
+- **Build Arguments** (penting — Next.js inline ini saat build):
   ```
   NEXT_PUBLIC_API_URL=https://api.competzy.com/api
   ```
 - **Environment Variables** (runtime):
-  ```
+  ```env
   NODE_ENV=production
   PORT=3001
   HOSTNAME=0.0.0.0
   BACKEND_URL=http://<backend-service-name>:3000
   ```
 
-`BACKEND_URL` dipakai oleh `next.config.mjs` rewrites (server-side proxy
-`/api/*` → backend). `NEXT_PUBLIC_API_URL` dipakai client-side.
+`BACKEND_URL` dipakai server-side rewrites di `next.config.mjs`
+(`/api/:path*` → backend over docker network). `NEXT_PUBLIC_API_URL`
+dipakai oleh kode client-side.
 
 Deploy.
 
 ---
 
-## 6. Verifikasi
+## 6. Konfigurasi nginx host + SSL
 
-- `curl https://api.competzy.com/api/health` → `200 OK`
-- Buka `https://arena.competzy.com` → halaman login load, request ke
-  `/api/*` proxy mulus ke backend
-- Upload file (dari halaman registrasi) → object muncul di MinIO bucket
-- `https://minio.arena.competzy.com/competzy/<key>` accessible via
-  presigned URL yang di-generate backend
+File `deploy/nginx.conf` di repo ini adalah template siap-pakai. Dari
+server (SSH masuk dulu):
+
+```bash
+# Dari working copy repo di server, atau scp dari laptop:
+sudo cp deploy/nginx.conf /etc/nginx/sites-available/competzy-arena
+sudo ln -s /etc/nginx/sites-available/competzy-arena \
+           /etc/nginx/sites-enabled/competzy-arena
+
+# Smoke test config sebelum reload:
+sudo nginx -t
+
+# Reload nginx (zero downtime; existing competzy.com / pathvance.com tetap up):
+sudo systemctl reload nginx
+
+# Pastikan DNS sudah propagate:
+dig +short api.competzy.com arena.competzy.com minio.arena.competzy.com
+# (semuanya harus return 144.126.243.200)
+
+# Issue SSL untuk semua subdomain sekaligus:
+sudo certbot --nginx \
+  -d api.competzy.com \
+  -d arena.competzy.com \
+  -d minio.arena.competzy.com
+
+# Certbot akan modify /etc/nginx/sites-enabled/competzy-arena: tambah
+# `listen 443 ssl;` blocks dengan path cert, dan ubah listen 80 blocks
+# jadi HTTP→HTTPS redirect. Renewal otomatis lewat certbot.timer.
+
+# Verifikasi:
+sudo nginx -t && sudo systemctl reload nginx
+curl -sI https://api.competzy.com/api/health     # expect 200
+curl -sI https://arena.competzy.com/             # expect 200
+curl -sI https://minio.arena.competzy.com/minio/health/live  # expect 200
+```
 
 ---
 
-## 7. Operasi rutin
+## 7. Verifikasi end-to-end
+
+- `curl https://api.competzy.com/api/health` → `200 OK`
+- Browser buka `https://arena.competzy.com` → halaman login load,
+  request ke `/api/*` proxy mulus ke backend
+- Login dengan admin yang dibuat lewat `db:create-admin`
+- Upload file dari halaman registrasi → cek bucket MinIO (console di
+  `https://144.126.243.200:9001` atau `http://...:9001`) — object muncul
+  di bucket `competzy`
+- `https://minio.arena.competzy.com/competzy/<key>?<presigned-params>`
+  accessible — itu yang ditampilkan ke browser sebagai `fileUrl`
+
+---
+
+## 8. Operasi rutin
 
 | Task                          | Cara                                                                                   |
 | ----------------------------- | -------------------------------------------------------------------------------------- |
-| Deploy versi baru             | `git push origin main` → Coolify auto-deploy (kalau webhook aktif)                     |
+| Deploy versi baru             | `git push origin main` → Coolify auto-deploy (kalau webhook aktif di Source settings)  |
 | Tail log                      | Coolify service → tab **Logs**                                                         |
 | Run migrasi baru              | service backend → **Terminal** → `npm run db:migrate`                                  |
 | Rollback                      | service → **Deployments** → pilih commit lama → **Redeploy**                           |
-| Backup Postgres               | service postgres → **Backups** → enable scheduled S3 backup ke MinIO bucket terpisah    |
-| Backup MinIO                  | MinIO sendiri sudah ada di persistent volume; backup volume lewat Coolify Storages     |
-| Mobile app rilis              | Dari laptop: `cd app && eas build --profile production && eas submit`                  |
+| Backup Postgres               | service postgres → **Backups** → enable scheduled S3 backup ke MinIO bucket terpisah   |
+| Backup MinIO                  | persistent volume MinIO di-backup lewat Coolify Storages                               |
+| Tambah subdomain baru         | Edit `/etc/nginx/sites-available/competzy-arena`, `nginx -t`, reload, `certbot --nginx -d ...` |
+| Mobile rilis                  | Dari laptop: `cd app && eas build --profile production && eas submit`                  |
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
-**Backend gagal start dengan `Missing required environment variable: DATABASE_URL`**
+**Backend gagal start, `Missing required environment variable: DATABASE_URL`**
 → env var belum di-set di Coolify, atau pakai `${DATABASE_URL}` style yang
-nggak di-resolve. Pastikan paste raw value, bukan template.
+tidak di-resolve. Paste raw value, bukan template.
 
-**Web 502 saat panggil `/api/*`**
-→ `BACKEND_URL` salah. Cek dari Web container: `curl $BACKEND_URL/api/health`
-(tab Terminal). Service name harus persis sama dengan nama service backend
-di Coolify (lowercase, dash, contoh: `competzy-backend`).
+**`api.competzy.com` return 502 Bad Gateway**
+→ Backend container tidak listen di port 3010 host. Cek
+`docker ps --format "{{.Names}}\t{{.Ports}}" | grep 3010`. Pastikan
+Coolify "Exposed Ports" diset `3010:3000`, lalu redeploy.
 
-**CORS error di browser**
+**`arena.competzy.com` load, tapi `/api/*` 502**
+→ `BACKEND_URL` salah. Dari container web (Coolify Terminal):
+`curl $BACKEND_URL/api/health`. Service name harus persis sama dengan
+nama service backend di Coolify (lowercase + dash).
+
+**CORS error di browser console**
 → Tambah origin ke `CORS_ORIGINS` di env backend (comma-separated, tanpa
 trailing slash) lalu redeploy backend.
 
-**File upload sukses tapi gambar broken di browser**
-→ `MINIO_PUBLIC_URL` salah. Browser butuh URL HTTPS publik MinIO, bukan
-internal docker hostname. Pastikan ada DNS + SSL untuk
-`minio.arena.competzy.com`.
+**Upload sukses, gambar broken di browser**
+→ `MINIO_PUBLIC_URL` salah atau DNS belum propagate untuk
+`minio.arena.competzy.com`. Cek `curl -sI https://minio.arena.competzy.com/`
+→ harus 200/403 (bukan timeout / wrong cert).
+
+**`certbot --nginx` gagal di salah satu domain**
+→ DNS belum propagate. `dig +short <domain>` harus return IP server.
+Tunggu 5–10 menit, retry. Atau jalankan satu domain saja dulu untuk
+isolate error: `sudo certbot --nginx -d api.competzy.com`.
 
 **Next.js build warning soal multiple lockfiles**
 → Sudah ditangani via `outputFileTracingRoot` di `next.config.mjs`. Kalau
-tetap muncul, pastikan `Base Directory` di Coolify diset ke `/web`, bukan
-`/`.
+masih muncul, pastikan `Base Directory` di Coolify diset ke `/web`, bukan
+root repo.
+
+**`docker ps` menampilkan container baru tapi nginx 502**
+→ Service Coolify mungkin running tapi port mapping salah. Cek di Coolify
+service → **Settings → Network** → "Ports Mappings": pastikan format
+`<host-port>:<container-port>` dengan host-port = 3010 (backend) atau
+3011 (web), dan container-port match `EXPOSE` di Dockerfile (3000 atau
+3001).
