@@ -70,6 +70,8 @@ export const marketingHttp = makeHttp();
 // Certificates — operator certificate management, served inside the
 // question-bank workspace; admin + organizer; same cookie jar.
 export const certificatesHttp = makeHttp();
+// Country-representative portal — /api/rep/* + admin /api/country-representatives.
+export const countryRepHttp = makeHttp();
 
 // Used by callers that need the raw Response (e.g. CSV downloads).
 export async function schoolFetch(path: string, init: RequestInit = {}): Promise<Response> {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   ClipboardList,
   Clock,
+  Globe,
   GraduationCap,
   Layers,
   LayoutGrid,
@@ -37,6 +38,7 @@ const NAV: NavSection[] = [
     items: [
       { label: 'Pending Schools', href: '/schools-pending', icon: Clock },
       { label: 'Schools', href: '/schools', icon: School },
+      { label: 'Country Reps', href: '/country-reps', icon: Globe },
       { label: 'Users', href: '/users', icon: Users },
     ],
   },
