@@ -169,6 +169,34 @@ router.post("/webhook", async (req: Request, res: Response) => {
       return;
     }
 
+    // ── Rep bulk-payment batches settle their own covered registrations ────
+    if (typeof order_id === "string" && order_id.startsWith("REPBATCH-")) {
+      const batch = await pool.query(
+        "SELECT id, registration_ids, status FROM rep_payment_batches WHERE order_id = $1",
+        [order_id]
+      );
+      if (batch.rows.length > 0 && batch.rows[0].status !== "paid") {
+        if (transaction_status === "settlement" || transaction_status === "capture") {
+          await pool.query(
+            `UPDATE registrations SET status = 'pending_review', updated_at = now()
+              WHERE id = ANY($1::text[]) AND status = 'pending_payment' AND deleted_at IS NULL`,
+            [batch.rows[0].registration_ids]
+          );
+          await pool.query(
+            "UPDATE rep_payment_batches SET status = 'paid', updated_at = now() WHERE id = $1",
+            [batch.rows[0].id]
+          );
+        } else if (["expire", "cancel", "deny", "failure"].includes(String(transaction_status))) {
+          await pool.query(
+            "UPDATE rep_payment_batches SET status = 'expired', updated_at = now() WHERE id = $1",
+            [batch.rows[0].id]
+          );
+        }
+      }
+      res.json({ message: "OK" });
+      return;
+    }
+
     // ── Look up the payment record ─────────────────────────────────────────
     const paymentResult = await pool.query(
       `SELECT p.id, p.kind, p.registration_id, r.comp_id, r.voucher_code,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { toast } from 'sonner';
-import { Award, UserPlus, Upload } from 'lucide-react';
+import { Award, CreditCard, UserPlus, Upload } from 'lucide-react';
 import { countryRepHttp } from '@/lib/api/client';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
@@ -182,6 +182,8 @@ export default function RepPortalPage() {
   const [ctx, setCtx] = useState<RepContext | null>(null);
   const [loading, setLoading] = useState(true);
   const [dialog, setDialog] = useState<'students' | 'scores' | null>(null);
+  const [paying, setPaying] = useState(false);
+  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -197,6 +199,12 @@ export default function RepPortalPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    return () => {
+      if (pollTimer.current) clearInterval(pollTimer.current);
+    };
+  }, []);
 
   const importStudents = async (rows: Record<string, string>[]) => {
     const students = rows
@@ -239,7 +247,45 @@ export default function RepPortalPage() {
     await load();
   };
 
+  const payBatch = async () => {
+    setPaying(true);
+    try {
+      const res = await countryRepHttp.post<{ batchId: string; redirectUrl?: string }>(
+        '/rep/pay-batch',
+        {},
+      );
+      if (res.redirectUrl) window.open(res.redirectUrl, '_blank', 'noopener');
+      let tries = 0;
+      pollTimer.current = setInterval(async () => {
+        tries += 1;
+        if (tries > 40) {
+          if (pollTimer.current) clearInterval(pollTimer.current);
+          setPaying(false);
+          return;
+        }
+        try {
+          const v = await countryRepHttp.get<{ status: string }>(
+            `/rep/pay-batch/${res.batchId}/verify`,
+          );
+          if (v.status === 'paid') {
+            if (pollTimer.current) clearInterval(pollTimer.current);
+            setPaying(false);
+            toast.success('Payment received — your students are now registered.');
+            await load();
+          }
+        } catch {
+          /* transient — keep polling */
+        }
+      }, 4000);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to start the payment');
+      setPaying(false);
+    }
+  };
+
   const round = ctx?.localRound;
+  const unpaidCount =
+    ctx?.students.filter((s) => s.status === 'pending_payment').length ?? 0;
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-6 p-6 lg:p-8">
@@ -303,6 +349,21 @@ export default function RepPortalPage() {
                 Students: <span className="text-foreground">{ctx?.students.length ?? 0}</span>
               </span>
             </div>
+            {unpaidCount > 0 && round.fee > 0 && (
+              <div className="mt-4 flex flex-wrap items-center gap-3 border-t pt-4">
+                <Button onClick={payBatch} disabled={paying}>
+                  <CreditCard className="size-4" />
+                  {paying
+                    ? 'Waiting for payment…'
+                    : `Pay ${rupiah(unpaidCount * round.fee)} — ${unpaidCount} unpaid student(s)`}
+                </Button>
+                {paying && (
+                  <span className="text-xs text-muted-foreground">
+                    Finish in the new tab — this page updates automatically.
+                  </span>
+                )}
+              </div>
+            )}
           </Card>
 
           <Card className="overflow-hidden p-0">

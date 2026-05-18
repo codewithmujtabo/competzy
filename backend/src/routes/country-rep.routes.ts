@@ -7,6 +7,7 @@ import { adminOnly } from "../middleware/admin.middleware";
 import { requireRole } from "../middleware/require-role";
 import { audit } from "../middleware/audit";
 import { softDelete } from "../db/query-helpers";
+import { createSnapToken, getTransactionStatus } from "../services/midtrans.service";
 
 // Country-representative routes (Komodo Wave 2 — Phase C). A representative
 // (admin-created) manages one country's students for a competition's local
@@ -325,6 +326,112 @@ router.post("/rep/import-scores", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Rep import scores error:", err);
     res.status(500).json({ message: "Failed to import scores" });
+  }
+});
+
+// ── Rep: POST /api/rep/pay-batch ──────────────────────────────────────────
+// One Midtrans transaction for every unpaid student of the local round.
+router.post("/rep/pay-batch", async (req: Request, res: Response) => {
+  try {
+    const a = await repAssignment(req.userId!);
+    if (!a) {
+      res.status(404).json({ message: "No representative assignment found." });
+      return;
+    }
+    const round = await localRound(a.comp_id, a.country);
+    if (!round) {
+      res.status(400).json({ message: "Your local round has not been set up yet." });
+      return;
+    }
+    const fee = Number(round.fee) || 0;
+    if (fee <= 0) {
+      res.status(400).json({ message: "This round is free — no payment is needed." });
+      return;
+    }
+    const regs = await pool.query(
+      `SELECT id FROM registrations
+        WHERE round_id = $1 AND status = 'pending_payment' AND deleted_at IS NULL`,
+      [round.id],
+    );
+    if (regs.rows.length === 0) {
+      res.status(400).json({ message: "No unpaid students to pay for." });
+      return;
+    }
+    const regIds: string[] = regs.rows.map((x) => x.id);
+    const total = fee * regIds.length;
+    const me = await pool.query("SELECT full_name, email FROM users WHERE id = $1", [
+      req.userId,
+    ]);
+    const orderId = `REPBATCH-${randomUUID()}`.slice(0, 50);
+    const snap = await createSnapToken({
+      orderId,
+      amount: total,
+      customerName: me.rows[0]?.full_name || "Country Representative",
+      customerEmail: me.rows[0]?.email || "",
+      competitionName: `${round.round_name} — ${regIds.length} students`,
+    });
+    const ins = await pool.query(
+      `INSERT INTO rep_payment_batches
+         (comp_id, round_id, created_by, registration_ids, total_amount, order_id, snap_token)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       RETURNING id`,
+      [a.comp_id, round.id, req.userId, regIds, total, orderId, snap.snapToken],
+    );
+    res.status(201).json({
+      batchId: ins.rows[0].id,
+      snapToken: snap.snapToken,
+      redirectUrl: snap.redirectUrl,
+      totalAmount: total,
+      count: regIds.length,
+    });
+  } catch (err) {
+    console.error("Rep pay-batch error:", err);
+    res.status(500).json({ message: "Failed to start the batch payment" });
+  }
+});
+
+// ── Rep: GET /api/rep/pay-batch/:id/verify ────────────────────────────────
+// Polls Midtrans for the batch and, once settled, marks every covered
+// registration paid (the payment webhook does the same, server-to-server).
+router.get("/rep/pay-batch/:id/verify", async (req: Request, res: Response) => {
+  try {
+    const b = await pool.query(
+      `SELECT id, order_id, registration_ids, status
+         FROM rep_payment_batches WHERE id = $1 AND created_by = $2`,
+      [req.params.id, req.userId],
+    );
+    if (b.rows.length === 0) {
+      res.status(404).json({ message: "Payment batch not found." });
+      return;
+    }
+    const batch = b.rows[0];
+    if (batch.status === "paid") {
+      res.json({ status: "paid" });
+      return;
+    }
+    let txStatus = "pending";
+    try {
+      txStatus = await getTransactionStatus(batch.order_id);
+    } catch {
+      /* transient — keep the caller polling */
+    }
+    if (["settlement", "capture"].includes(txStatus)) {
+      await pool.query(
+        `UPDATE registrations SET status = 'pending_review', updated_at = now()
+          WHERE id = ANY($1::text[]) AND status = 'pending_payment' AND deleted_at IS NULL`,
+        [batch.registration_ids],
+      );
+      await pool.query(
+        "UPDATE rep_payment_batches SET status = 'paid', updated_at = now() WHERE id = $1",
+        [batch.id],
+      );
+      res.json({ status: "paid" });
+      return;
+    }
+    res.json({ status: txStatus });
+  } catch (err) {
+    console.error("Rep pay-batch verify error:", err);
+    res.status(500).json({ message: "Failed to verify the payment" });
   }
 });
 
