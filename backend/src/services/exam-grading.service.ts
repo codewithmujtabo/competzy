@@ -9,9 +9,8 @@ import { gradeTokens } from "./grade.service";
 type DB = { query: (text: string, params?: unknown[]) => Promise<{ rows: any[] }> };
 
 // Pull a per-grade score out of an exams.correct_score / wrong_score JSONB map.
-// The map may be keyed numerically ("9") or by school level ("SMP"); try every
-// token the student's grade reconciles to so a level-keyed map still scores a
-// numeric-grade student (the alternative is a correct answer worth 0 points).
+// The map is keyed by numeric grade ("9"); gradeTokens normalises the student's
+// grade so a non-canonical stored value ("09") still resolves to a score.
 export function scoreFor(matrix: unknown, grade: string | null): number {
   if (!matrix || typeof matrix !== "object" || !grade) return 0;
   const m = matrix as Record<string, unknown>;

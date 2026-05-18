@@ -432,29 +432,29 @@ async function main() {
   const mc = (content: string, opts: [string, boolean][]) =>
     opts.map(([content, isCorrect]) => ({ content, isCorrect }));
   const q: SeedQuestion[] = [
-    { code: "Q-D01", type: "multiple_choice", content: "What is 1/2 + 1/4?", grades: ["SD", "SMP"], level: "easy", status: "approved", topicId: fractions,
+    { code: "Q-D01", type: "multiple_choice", content: "What is 1/2 + 1/4?", grades: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], level: "easy", status: "approved", topicId: fractions,
       answers: mc("", [["3/4", true], ["1/2", false], ["2/6", false], ["1/4", false]]) },
-    { code: "Q-D02", type: "multiple_choice", content: "Solve: 2x + 3 = 11", grades: ["SMP"], level: "easy", status: "approved", topicId: linearEq,
+    { code: "Q-D02", type: "multiple_choice", content: "Solve: 2x + 3 = 11", grades: ["7", "8", "9"], level: "easy", status: "approved", topicId: linearEq,
       answers: mc("", [["x = 4", true], ["x = 5", false], ["x = 7", false], ["x = 3", false]]) },
-    { code: "Q-D03", type: "multiple_choice", content: "Sum of the interior angles of a triangle?", grades: ["SD", "SMP"], level: "easy", status: "approved", topicId: triangles,
+    { code: "Q-D03", type: "multiple_choice", content: "Sum of the interior angles of a triangle?", grades: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], level: "easy", status: "approved", topicId: triangles,
       answers: mc("", [["180°", true], ["90°", false], ["360°", false], ["270°", false]]) },
-    { code: "Q-D04", type: "multiple_choice", content: "What is 25% of 80?", grades: ["SD"], level: "easy", status: "approved", topicId: percentages,
+    { code: "Q-D04", type: "multiple_choice", content: "What is 25% of 80?", grades: ["1", "2", "3", "4", "5", "6"], level: "easy", status: "approved", topicId: percentages,
       answers: mc("", [["20", true], ["25", false], ["40", false], ["15", false]]) },
-    { code: "Q-D05", type: "multiple_choice", content: "Which of these is a prime number?", grades: ["SD", "SMP"], level: "medium", status: "approved",
+    { code: "Q-D05", type: "multiple_choice", content: "Which of these is a prime number?", grades: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], level: "medium", status: "approved",
       answers: mc("", [["7", true], ["9", false], ["15", false], ["21", false]]) },
-    { code: "Q-D06", type: "multiple_choice", content: "If x = 6, what is x²?", grades: ["SMP", "SMA"], level: "medium", status: "approved", topicId: quadratics,
+    { code: "Q-D06", type: "multiple_choice", content: "If x = 6, what is x²?", grades: ["7", "8", "9", "10", "11", "12"], level: "medium", status: "approved", topicId: quadratics,
       answers: mc("", [["36", true], ["12", false], ["18", false], ["66", false]]) },
-    { code: "Q-D07", type: "short_answer", content: "What is 12 × 12?", grades: ["SD", "SMP"], level: "easy", status: "approved",
+    { code: "Q-D07", type: "short_answer", content: "What is 12 × 12?", grades: ["1", "2", "3", "4", "5", "6", "7", "8", "9"], level: "easy", status: "approved",
       answers: [{ content: "144", isCorrect: true }] },
-    { code: "Q-D08", type: "short_answer", content: "Solve x² = 49 (give the positive value of x).", grades: ["SMP", "SMA"], level: "medium", status: "approved", topicId: quadratics,
+    { code: "Q-D08", type: "short_answer", content: "Solve x² = 49 (give the positive value of x).", grades: ["7", "8", "9", "10", "11", "12"], level: "medium", status: "approved", topicId: quadratics,
       answers: [{ content: "7", isCorrect: true }] },
-    { code: "Q-D09", type: "multiple_choice", content: "Area of a circle with radius 1 (in terms of π)?", grades: ["SMA"], level: "medium", status: "submitted", topicId: circles,
+    { code: "Q-D09", type: "multiple_choice", content: "Area of a circle with radius 1 (in terms of π)?", grades: ["10", "11", "12"], level: "medium", status: "submitted", topicId: circles,
       answers: mc("", [["π", true], ["2π", false], ["π²", false], ["1", false]]) },
-    { code: "Q-D10", type: "short_answer", content: "What is 100 ÷ 4?", grades: ["SD"], level: "easy", status: "submitted",
+    { code: "Q-D10", type: "short_answer", content: "What is 100 ÷ 4?", grades: ["1", "2", "3", "4", "5", "6"], level: "easy", status: "submitted",
       answers: [{ content: "25", isCorrect: true }] },
-    { code: "Q-D11", type: "multiple_choice", content: "What is the next prime number after 13?", grades: ["SMP"], level: "medium", status: "draft",
+    { code: "Q-D11", type: "multiple_choice", content: "What is the next prime number after 13?", grades: ["7", "8", "9"], level: "medium", status: "draft",
       answers: mc("", [["17", true], ["15", false], ["19", false], ["14", false]]) },
-    { code: "Q-D12", type: "short_answer", content: "What is half of 250?", grades: ["SD"], level: "easy", status: "draft",
+    { code: "Q-D12", type: "short_answer", content: "What is half of 250?", grades: ["1", "2", "3", "4", "5", "6"], level: "easy", status: "draft",
       answers: [{ content: "125", isCorrect: true }] },
   ];
   const qid: Record<string, string> = {};
@@ -462,11 +462,11 @@ async function main() {
 
   // 4 — Exams
   const round1 = await exam(
-    "EMC Mid-Year Round 1", "EMC-R1", ["SD", "SMP", "SMA"], 60,
+    "EMC Mid-Year Round 1", "EMC-R1", ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"], 60,
     ["Q-D01", "Q-D02", "Q-D03", "Q-D04", "Q-D05", "Q-D06", "Q-D07", "Q-D08"].map((c) => qid[c])
   );
   const practice = await exam(
-    "EMC Practice Test", "EMC-PRAC", ["SMA"], 30,
+    "EMC Practice Test", "EMC-PRAC", ["10", "11", "12"], 30,
     ["Q-D06", "Q-D08"].map((c) => qid[c])
   );
 
@@ -487,7 +487,7 @@ async function main() {
       const s = await pool.query(
         `INSERT INTO sessions (comp_id, user_id, exam_id, grade, started_at, finished_at,
                                camera_available, corrects, wrongs, blanks, points, total_point)
-         VALUES ($1,$2,$3,'SMA', now() - interval '1 hour', now() - interval '30 minutes',
+         VALUES ($1,$2,$3,'11', now() - interval '1 hour', now() - interval '30 minutes',
                  true, '{"choice":1,"short":0}'::jsonb, '{"choice":0,"short":0}'::jsonb,
                  '{"choice":0,"short":0}'::jsonb, '{"choice":4,"short":0}'::jsonb, 4)
          RETURNING id`,
@@ -555,8 +555,8 @@ async function main() {
     false,
     false
   );
-  await material(admin, "EMC 2025 Past Paper", "Last year's Round 1 paper with the full answer key.", "Past Papers", ["SD", "SMP"], true);
-  await material(admin, "Algebra Quick Reference", "A one-page summary of the algebra topics covered in the competition.", "Study Guides", ["SMP", "SMA"], true);
+  await material(admin, "EMC 2025 Past Paper", "Last year's Round 1 paper with the full answer key.", "Past Papers", ["1", "2", "3", "4", "5", "6", "7", "8", "9"], true);
+  await material(admin, "Algebra Quick Reference", "A one-page summary of the algebra topics covered in the competition.", "Study Guides", ["7", "8", "9", "10", "11", "12"], true);
   await material(admin, "Competition Day Checklist", "What to bring and how to prepare for any Competzy exam.", "Study Guides", [], false);
   if (student) {
     await suggestion(student, "The practice exam timer was great — could you add a 5-minute warning?", practice);

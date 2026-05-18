@@ -70,8 +70,8 @@ interface CompSpec {
   name: string;
   organizer: string;
   category: string;
-  gradeLevel: string; // "SD,SMP,SMA"
-  grades: string[]; // ["SD","SMP","SMA"]
+  gradeLevel: string; // comma-joined numeric grades, e.g. "1,2,3"
+  grades: string[]; // numeric grades, e.g. ["7","8","9"]
   fee: number;
   description: string;
   tag: string; // code prefix, e.g. "EMC"
@@ -87,6 +87,10 @@ interface CompSpec {
 // ── The three competitions ────────────────────────────────────────────────
 const mc = (...opts: [string, boolean][]): [string, boolean][] => opts;
 
+// Grade vocabulary — numeric grades 1-12 (replaced SD/SMP/SMA).
+const ALL_GRADES = Array.from({ length: 12 }, (_, i) => String(i + 1));
+const SECONDARY_GRADES = ["7", "8", "9", "10", "11", "12"];
+
 const SPECS: CompSpec[] = [
   {
     id: "comp-emc",
@@ -94,8 +98,8 @@ const SPECS: CompSpec[] = [
     name: "EMC — Mathematics Competition",
     organizer: "Competzy",
     category: "Mathematics",
-    gradeLevel: "SD,SMP,SMA",
-    grades: ["SD", "SMP", "SMA"],
+    gradeLevel: ALL_GRADES.join(","),
+    grades: ALL_GRADES,
     fee: 50000,
     description:
       "The Eduversal Mathematics Competition — a national math challenge spanning arithmetic, algebra and geometry for SD, SMP and SMA students.",
@@ -107,14 +111,14 @@ const SPECS: CompSpec[] = [
     ],
     examName: "EMC Round 1",
     questions: [
-      { content: "What is 1/2 + 1/4?", grades: ["SD", "SMP", "SMA"], options: mc(["3/4", true], ["1/2", false], ["2/6", false], ["1/4", false]) },
-      { content: "Solve: 2x + 3 = 11", grades: ["SD", "SMP", "SMA"], options: mc(["x = 4", true], ["x = 5", false], ["x = 7", false], ["x = 3", false]) },
-      { content: "Sum of the interior angles of a triangle?", grades: ["SD", "SMP", "SMA"], options: mc(["180°", true], ["90°", false], ["360°", false], ["270°", false]) },
-      { content: "What is 25% of 80?", grades: ["SD", "SMP", "SMA"], options: mc(["20", true], ["25", false], ["40", false], ["15", false]) },
-      { content: "Which of these is a prime number?", grades: ["SD", "SMP", "SMA"], options: mc(["7", true], ["9", false], ["15", false], ["21", false]) },
-      { content: "If x = 6, what is x²?", grades: ["SD", "SMP", "SMA"], options: mc(["36", true], ["12", false], ["18", false], ["66", false]) },
-      { content: "What is 12 × 12?", grades: ["SD", "SMP", "SMA"], options: mc(["144", true], ["121", false], ["169", false], ["132", false]) },
-      { content: "What is the positive value of x when x² = 49?", grades: ["SD", "SMP", "SMA"], options: mc(["7", true], ["8", false], ["6", false], ["9", false]) },
+      { content: "What is 1/2 + 1/4?", grades: ALL_GRADES, options: mc(["3/4", true], ["1/2", false], ["2/6", false], ["1/4", false]) },
+      { content: "Solve: 2x + 3 = 11", grades: ALL_GRADES, options: mc(["x = 4", true], ["x = 5", false], ["x = 7", false], ["x = 3", false]) },
+      { content: "Sum of the interior angles of a triangle?", grades: ALL_GRADES, options: mc(["180°", true], ["90°", false], ["360°", false], ["270°", false]) },
+      { content: "What is 25% of 80?", grades: ALL_GRADES, options: mc(["20", true], ["25", false], ["40", false], ["15", false]) },
+      { content: "Which of these is a prime number?", grades: ALL_GRADES, options: mc(["7", true], ["9", false], ["15", false], ["21", false]) },
+      { content: "If x = 6, what is x²?", grades: ALL_GRADES, options: mc(["36", true], ["12", false], ["18", false], ["66", false]) },
+      { content: "What is 12 × 12?", grades: ALL_GRADES, options: mc(["144", true], ["121", false], ["169", false], ["132", false]) },
+      { content: "What is the positive value of x when x² = 49?", grades: ALL_GRADES, options: mc(["7", true], ["8", false], ["6", false], ["9", false]) },
     ],
     products: [
       { name: "EMC Official T-Shirt", price: 85000, description: "Soft cotton tee with the EMC crest." },
@@ -138,8 +142,8 @@ const SPECS: CompSpec[] = [
     name: "ISPO — Science Project Olympiad",
     organizer: "Competzy",
     category: "Science",
-    gradeLevel: "SMP,SMA",
-    grades: ["SMP", "SMA"],
+    gradeLevel: SECONDARY_GRADES.join(","),
+    grades: SECONDARY_GRADES,
     fee: 75000,
     description:
       "The Indonesia Science Project Olympiad — a science competition covering physics, chemistry and biology for SMP and SMA students.",
@@ -151,14 +155,14 @@ const SPECS: CompSpec[] = [
     ],
     examName: "ISPO Round 1",
     questions: [
-      { content: "What is the chemical formula of water?", grades: ["SMP", "SMA"], options: mc(["H₂O", true], ["CO₂", false], ["O₂", false], ["NaCl", false]) },
-      { content: "Which planet is closest to the Sun?", grades: ["SMP", "SMA"], options: mc(["Mercury", true], ["Venus", false], ["Earth", false], ["Mars", false]) },
-      { content: "Which organelle is the powerhouse of the cell?", grades: ["SMP", "SMA"], options: mc(["Mitochondria", true], ["Nucleus", false], ["Ribosome", false], ["Chloroplast", false]) },
-      { content: "Which gas do plants absorb for photosynthesis?", grades: ["SMP", "SMA"], options: mc(["Carbon dioxide", true], ["Oxygen", false], ["Nitrogen", false], ["Hydrogen", false]) },
-      { content: "What force pulls objects toward the Earth?", grades: ["SMP", "SMA"], options: mc(["Gravity", true], ["Friction", false], ["Magnetism", false], ["Tension", false]) },
-      { content: "What is the hardest known natural material?", grades: ["SMP", "SMA"], options: mc(["Diamond", true], ["Gold", false], ["Iron", false], ["Quartz", false]) },
-      { content: "How many bones are in the adult human body?", grades: ["SMP", "SMA"], options: mc(["206", true], ["201", false], ["212", false], ["198", false]) },
-      { content: "Which part of a plant conducts photosynthesis?", grades: ["SMP", "SMA"], options: mc(["Leaf", true], ["Root", false], ["Stem", false], ["Flower", false]) },
+      { content: "What is the chemical formula of water?", grades: SECONDARY_GRADES, options: mc(["H₂O", true], ["CO₂", false], ["O₂", false], ["NaCl", false]) },
+      { content: "Which planet is closest to the Sun?", grades: SECONDARY_GRADES, options: mc(["Mercury", true], ["Venus", false], ["Earth", false], ["Mars", false]) },
+      { content: "Which organelle is the powerhouse of the cell?", grades: SECONDARY_GRADES, options: mc(["Mitochondria", true], ["Nucleus", false], ["Ribosome", false], ["Chloroplast", false]) },
+      { content: "Which gas do plants absorb for photosynthesis?", grades: SECONDARY_GRADES, options: mc(["Carbon dioxide", true], ["Oxygen", false], ["Nitrogen", false], ["Hydrogen", false]) },
+      { content: "What force pulls objects toward the Earth?", grades: SECONDARY_GRADES, options: mc(["Gravity", true], ["Friction", false], ["Magnetism", false], ["Tension", false]) },
+      { content: "What is the hardest known natural material?", grades: SECONDARY_GRADES, options: mc(["Diamond", true], ["Gold", false], ["Iron", false], ["Quartz", false]) },
+      { content: "How many bones are in the adult human body?", grades: SECONDARY_GRADES, options: mc(["206", true], ["201", false], ["212", false], ["198", false]) },
+      { content: "Which part of a plant conducts photosynthesis?", grades: SECONDARY_GRADES, options: mc(["Leaf", true], ["Root", false], ["Stem", false], ["Flower", false]) },
     ],
     products: [
       { name: "ISPO Lab Coat", price: 120000, description: "A junior lab coat for the science fair." },
@@ -182,8 +186,8 @@ const SPECS: CompSpec[] = [
     name: "OSEBI — Arts & Culture Competition",
     organizer: "Competzy",
     category: "Arts & Culture",
-    gradeLevel: "SD,SMP,SMA",
-    grades: ["SD", "SMP", "SMA"],
+    gradeLevel: ALL_GRADES.join(","),
+    grades: ALL_GRADES,
     fee: 60000,
     description:
       "The Olimpiade Seni & Budaya Indonesia — an arts and culture competition covering music, visual arts and literature.",
@@ -195,14 +199,14 @@ const SPECS: CompSpec[] = [
     ],
     examName: "OSEBI Round 1",
     questions: [
-      { content: "How many strings does a standard guitar have?", grades: ["SD", "SMP", "SMA"], options: mc(["6", true], ["4", false], ["5", false], ["7", false]) },
-      { content: "Which set are the primary colours?", grades: ["SD", "SMP", "SMA"], options: mc(["Red, yellow, blue", true], ["Red, green, blue", false], ["Orange, green, purple", false], ["Black, white, grey", false]) },
-      { content: "Who painted the Mona Lisa?", grades: ["SD", "SMP", "SMA"], options: mc(["Leonardo da Vinci", true], ["Pablo Picasso", false], ["Vincent van Gogh", false], ["Claude Monet", false]) },
-      { content: "How many lines does a haiku have?", grades: ["SD", "SMP", "SMA"], options: mc(["3", true], ["4", false], ["2", false], ["5", false]) },
-      { content: "What is the traditional Indonesian shadow-puppet theatre called?", grades: ["SD", "SMP", "SMA"], options: mc(["Wayang", true], ["Gamelan", false], ["Batik", false], ["Angklung", false]) },
-      { content: "Which instrument has black and white keys?", grades: ["SD", "SMP", "SMA"], options: mc(["Piano", true], ["Violin", false], ["Flute", false], ["Drum", false]) },
-      { content: "What is the Japanese art of paper folding called?", grades: ["SD", "SMP", "SMA"], options: mc(["Origami", true], ["Ikebana", false], ["Calligraphy", false], ["Sumi-e", false]) },
-      { content: "A large group of musicians playing together is an…?", grades: ["SD", "SMP", "SMA"], options: mc(["Orchestra", true], ["Solo", false], ["Duet", false], ["Choir", false]) },
+      { content: "How many strings does a standard guitar have?", grades: ALL_GRADES, options: mc(["6", true], ["4", false], ["5", false], ["7", false]) },
+      { content: "Which set are the primary colours?", grades: ALL_GRADES, options: mc(["Red, yellow, blue", true], ["Red, green, blue", false], ["Orange, green, purple", false], ["Black, white, grey", false]) },
+      { content: "Who painted the Mona Lisa?", grades: ALL_GRADES, options: mc(["Leonardo da Vinci", true], ["Pablo Picasso", false], ["Vincent van Gogh", false], ["Claude Monet", false]) },
+      { content: "How many lines does a haiku have?", grades: ALL_GRADES, options: mc(["3", true], ["4", false], ["2", false], ["5", false]) },
+      { content: "What is the traditional Indonesian shadow-puppet theatre called?", grades: ALL_GRADES, options: mc(["Wayang", true], ["Gamelan", false], ["Batik", false], ["Angklung", false]) },
+      { content: "Which instrument has black and white keys?", grades: ALL_GRADES, options: mc(["Piano", true], ["Violin", false], ["Flute", false], ["Drum", false]) },
+      { content: "What is the Japanese art of paper folding called?", grades: ALL_GRADES, options: mc(["Origami", true], ["Ikebana", false], ["Calligraphy", false], ["Sumi-e", false]) },
+      { content: "A large group of musicians playing together is an…?", grades: ALL_GRADES, options: mc(["Orchestra", true], ["Solo", false], ["Duet", false], ["Choir", false]) },
     ],
     products: [
       { name: "OSEBI Sketchbook", price: 55000, description: "A4 sketchbook for the visual-arts category." },

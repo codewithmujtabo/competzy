@@ -51,8 +51,8 @@ async function createTestAccounts() {
       if (a.role === "student") {
         await pool.query(
           `INSERT INTO students (id, school_name, grade) VALUES ($1, $2, $3)
-           ON CONFLICT (id) DO NOTHING`,
-          [userId, school?.name ?? "Test School", "SMA"]
+           ON CONFLICT (id) DO UPDATE SET grade = EXCLUDED.grade`,
+          [userId, school?.name ?? "Test School", "11"]
         );
       } else if (a.role === "parent") {
         await pool.query(

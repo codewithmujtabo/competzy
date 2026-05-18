@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { GradeMultiSelect } from '@/components/grade-multi-select';
 import {
   Select,
   SelectContent,
@@ -18,7 +19,6 @@ import {
 } from '@/components/ui/select';
 
 const CATEGORIES = ['Science', 'Math', 'Art', 'Sports', 'Technology', 'Literature', 'Music'];
-const GRADE_LEVELS = ['SD', 'SMP', 'SMA', 'Umum'];
 const STATUSES = ['Coming Soon', 'On Going', 'Closed'];
 
 export interface CompetitionFormValues {
@@ -203,19 +203,11 @@ export function CompetitionForm({ initial, submitLabel, cancelHref, onSubmit }: 
               onChange={(e) => set({ organizerName: e.target.value })}
             />
           </Field>
-          <Field label="Grade level">
-            <Select value={form.gradeLevel || undefined} onValueChange={(v) => set({ gradeLevel: v })}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select grade level" />
-              </SelectTrigger>
-              <SelectContent>
-                {GRADE_LEVELS.map((g) => (
-                  <SelectItem key={g} value={g}>
-                    {g}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <Field label="Grade level" hint="The grades that may enter this competition">
+            <GradeMultiSelect
+              value={form.gradeLevel}
+              onChange={(v) => set({ gradeLevel: v })}
+            />
           </Field>
         </div>
       </Section>

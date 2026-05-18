@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { GradeMultiSelect } from '@/components/grade-multi-select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
@@ -349,25 +350,24 @@ export default function CompetitionsPage() {
               </Select>
             </Field>
 
-            <Field label="Organizer" required className="sm:col-span-3">
+            <Field label="Organizer" required className="sm:col-span-4">
               <Input
                 value={form.organizer_name}
                 onChange={(e) => setForm((f) => ({ ...f, organizer_name: e.target.value }))}
                 placeholder="EMC Organizer"
               />
             </Field>
-            <Field label="Grade level" className="sm:col-span-2">
-              <Input
-                value={form.grade_level}
-                onChange={(e) => setForm((f) => ({ ...f, grade_level: e.target.value }))}
-                placeholder="SMP, SMA"
-              />
-            </Field>
-            <Field label="Fee (IDR)" className="sm:col-span-1">
+            <Field label="Fee (IDR)" className="sm:col-span-2">
               <Input
                 type="number"
                 value={form.fee}
                 onChange={(e) => setForm((f) => ({ ...f, fee: e.target.value }))}
+              />
+            </Field>
+            <Field label="Grade level" className="sm:col-span-6">
+              <GradeMultiSelect
+                value={form.grade_level}
+                onChange={(v) => setForm((f) => ({ ...f, grade_level: v }))}
               />
             </Field>
 
