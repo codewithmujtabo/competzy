@@ -25,12 +25,14 @@ export interface Competition {
     id: string;
     roundName: string;
     roundType: "Online" | "On-site" | "Hybrid";
+    roundCategory?: string;
     startDate?: string | null;
     registrationDeadline?: string | null;
     examDate?: string | null;
     resultsDate?: string | null;
     fee: number;
     location?: string | null;
+    examMode?: string;
     roundOrder?: number;
   }>;
   createdAt: string;

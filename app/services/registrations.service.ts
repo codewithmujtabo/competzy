@@ -4,6 +4,7 @@ import { Registration } from "@/context/AuthContext";
 interface CreateParams {
   id: string;
   compId: string;
+  roundId?: string;
   status?: string;
   meta?: Record<string, any>;
 }
@@ -13,6 +14,7 @@ function mapRow(raw: any): Registration {
   return {
     id: raw.id,
     compId: raw.compId,
+    roundId: raw.roundId ?? null,
     competitionName: meta.competitionName ?? "Unknown",
     fee: meta.fee ?? 0,
     status: raw.status,

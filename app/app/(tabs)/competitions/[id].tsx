@@ -151,8 +151,12 @@ export default function CompetitionDetailPage() {
   const firstCat = cats[0] || "General";
   const accent = CategoryAccent[firstCat] ?? Brand.primary;
   const accentBg = CategoryBg[firstCat] ?? Brand.primarySoft;
+  // A multi-round competition registers per round — the CTA opens the round picker.
+  const multiRound = (comp.rounds?.length ?? 0) > 0;
 
-  const ctaLabel = isClosed
+  const ctaLabel = multiRound
+    ? "View rounds"
+    : isClosed
     ? "Registration Closed"
     : already
     ? existingReg && (existingReg.status === "pending_payment" || existingReg.status === "registered")
@@ -380,6 +384,13 @@ export default function CompetitionDetailPage() {
         <Button
           label={ctaLabel}
           onPress={async () => {
+            if (multiRound) {
+              router.push({
+                pathname: "/(competition)/rounds",
+                params: { compId: comp.id, compName: comp.name },
+              });
+              return;
+            }
             if (!already && !isClosed) {
               Analytics.track("registration_started", {
                 competitionId: comp.id,
