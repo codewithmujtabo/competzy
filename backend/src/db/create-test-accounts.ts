@@ -17,6 +17,7 @@ const ACCOUNTS = [
   { email: "parent@test.local", fullName: "Test Parent", role: "parent" },
   { email: "teacher@test.local", fullName: "Test Teacher", role: "teacher" },
   { email: "schooladmin@test.local", fullName: "Test School Admin", role: "school_admin" },
+  { email: "rep@test.local", fullName: "Test Country Rep", role: "country_representative" },
 ];
 
 async function createTestAccounts() {
@@ -66,6 +67,20 @@ async function createTestAccounts() {
            ON CONFLICT (id) DO NOTHING`,
           [userId, school?.name ?? "Test School", "Mathematics"]
         );
+      } else if (a.role === "country_representative") {
+        // The test rep manages Komodo's Malaysia local round, if Komodo exists.
+        const komodo = await pool.query(
+          "SELECT id FROM competitions WHERE slug = 'komodo' LIMIT 1"
+        );
+        if (komodo.rows[0]) {
+          await pool.query(
+            `INSERT INTO country_representatives (id, comp_id, country)
+             VALUES ($1, $2, 'Malaysia')
+             ON CONFLICT (id) DO UPDATE
+               SET comp_id = EXCLUDED.comp_id, country = EXCLUDED.country`,
+            [userId, komodo.rows[0].id]
+          );
+        }
       }
 
       console.log(`✅ ${a.role.padEnd(13)} ${a.email}`);
@@ -108,7 +123,7 @@ async function createTestAccounts() {
 
     console.log(`✅ ${"roster".padEnd(13)} linked ${studentIds.length} student(s) to the test parent + teacher`);
 
-    console.log(`\n🔑 Password for all four: ${PASSWORD}`);
+    console.log(`\n🔑 Password for all test accounts: ${PASSWORD}`);
     process.exit(0);
   } catch (error) {
     console.error("❌ Error creating test accounts:", error);

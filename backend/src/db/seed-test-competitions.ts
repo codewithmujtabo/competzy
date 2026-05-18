@@ -75,6 +75,8 @@ interface RoundSpec {
   examDate: string; // the round's scheduled date, "YYYY-MM-DD"
   registrationDeadline?: string; // last day to register for the round
   location?: string;
+  country?: string; // for a local round — the country it serves
+  examMode?: string; // "online" (default) | "offline" (printed, score-imported)
   qualifyingScore?: number; // score at/above which a round attempt medals
   /** Omit for an open round. `mode`: prerequisite | qualified | unqualified. */
   gating?: { mode: string; requiresRoundIndex?: number; rule?: string };
@@ -341,6 +343,20 @@ const SPECS: CompSpec[] = [
         ],
       },
       {
+        roundName: "Local Round — Malaysia",
+        roundType: "On-site",
+        roundCategory: "local",
+        country: "Malaysia",
+        examMode: "offline",
+        fee: 200000,
+        examDate: ymd(40),
+        registrationDeadline: ymd(35),
+        qualifyingScore: 16,
+        examName: "Komodo Local Round — Malaysia",
+        examCode: "KMD-MY",
+        questions: [],
+      },
+      {
         roundName: "Bali Global Round",
         roundType: "On-site",
         roundCategory: "global",
@@ -488,6 +504,8 @@ async function seedCompetition(
       registrationDeadline: rd.registrationDeadline ?? null,
       fee: rd.fee,
       location: rd.location ?? null,
+      country: rd.country ?? null,
+      examMode: rd.examMode ?? "online",
       qualifyingScore: rd.qualifyingScore ?? null,
       gatingMode: rd.gating?.mode ?? "open",
       requiresRoundIndex: rd.gating?.requiresRoundIndex ?? null,
@@ -503,6 +521,8 @@ async function seedCompetition(
     let qNum = 1;
     for (let i = 0; i < spec.rounds.length; i++) {
       const rd = spec.rounds[i];
+      // An offline round has no online exam — scores arrive via CSV import.
+      if (rd.examMode === "offline") continue;
       const qids = await seedQuestionBank(spec, admin, rd.questions, qNum);
       qNum += rd.questions.length;
       await seedExam(spec.id, roundRows[i].id, rd.examName, rd.examCode, spec.grades, qids);
