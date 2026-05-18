@@ -15,6 +15,7 @@ import {
   Library,
   ListChecks,
   Loader2,
+  Medal,
   Megaphone,
   MessageSquare,
   Package,
@@ -71,6 +72,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
         { label: 'Paper Exams', href: '/question-bank/paper', icon: FileSpreadsheet },
         { label: 'Proctoring', href: '/question-bank/proctoring', icon: Video },
         { label: 'Certificates', href: '/question-bank/certificates', icon: Award },
+        { label: 'Medalists', href: '/question-bank/medalists', icon: Medal },
       ],
     },
     {

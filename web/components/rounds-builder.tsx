@@ -21,20 +21,34 @@ const GATING_RULES = [
   { value: 'paid', label: 'paid for it' },
   { value: 'completed', label: 'completed it' },
 ];
+const ROUND_CATEGORIES = [
+  { value: 'online', label: 'Online round' },
+  { value: 'fast_track', label: 'Fast Track (catch-up)' },
+  { value: 'local', label: 'Local round (a country)' },
+  { value: 'global', label: 'Global round (final)' },
+];
+const EXAM_MODES = [
+  { value: 'online', label: 'Online — on the platform' },
+  { value: 'offline', label: 'Offline — printed, scores imported' },
+];
 
 export interface RoundDraft {
   /** Stable client-side id — gating prerequisites reference this, not an index. */
   tempId: string;
   roundName: string;
   roundType: string;
+  roundCategory: string;
   startDate: string;
   registrationDeadline: string;
   examDate: string;
   resultsDate: string;
   fee: number;
+  qualifyingScore: number | null;
   location: string;
+  country: string;
+  examMode: string;
   requiredDocs: string[];
-  gatingMode: 'open' | 'prerequisite';
+  gatingMode: 'open' | 'prerequisite' | 'qualified' | 'unqualified';
   requiresTempId: string | null;
   gatingRule: 'registered' | 'paid' | 'completed';
 }
@@ -50,12 +64,16 @@ export function emptyRound(): RoundDraft {
     tempId: uid(),
     roundName: '',
     roundType: 'Online',
+    roundCategory: 'online',
     startDate: '',
     registrationDeadline: '',
     examDate: '',
     resultsDate: '',
     fee: 0,
+    qualifyingScore: null,
     location: '',
+    country: '',
+    examMode: 'online',
     requiredDocs: [],
     gatingMode: 'open',
     requiresTempId: null,
@@ -77,18 +95,23 @@ export function roundsToDrafts(rounds: unknown): RoundDraft[] {
   });
   return staged.map(({ r, tempId }) => {
     const reqId = r?.gating?.requiresRoundId ?? r?.requiresRoundId ?? null;
+    const mode = r?.gating?.mode;
     return {
       tempId,
       roundName: r?.roundName ?? '',
       roundType: ROUND_TYPES.includes(r?.roundType) ? r.roundType : 'Online',
+      roundCategory: r?.roundCategory ?? 'online',
       startDate: dateInput(r?.startDate),
       registrationDeadline: dateInput(r?.registrationDeadline),
       examDate: dateInput(r?.examDate),
       resultsDate: dateInput(r?.resultsDate),
       fee: Number(r?.fee) || 0,
+      qualifyingScore: r?.qualifyingScore != null ? Number(r.qualifyingScore) : null,
       location: r?.location ?? '',
+      country: r?.country ?? '',
+      examMode: r?.examMode === 'offline' ? 'offline' : 'online',
       requiredDocs: Array.isArray(r?.requiredDocs) ? r.requiredDocs : [],
-      gatingMode: r?.gating?.mode === 'prerequisite' ? 'prerequisite' : 'open',
+      gatingMode: ['prerequisite', 'qualified', 'unqualified'].includes(mode) ? mode : 'open',
       requiresTempId: reqId ? idToTemp.get(String(reqId)) ?? null : null,
       gatingRule: r?.gating?.rule ?? 'completed',
     } as RoundDraft;
@@ -100,12 +123,16 @@ export function draftsToPayload(drafts: RoundDraft[]) {
   return drafts.map((r) => ({
     roundName: r.roundName,
     roundType: r.roundType,
+    roundCategory: r.roundCategory,
     startDate: r.startDate || null,
     registrationDeadline: r.registrationDeadline || null,
     examDate: r.examDate || null,
     resultsDate: r.resultsDate || null,
     fee: Number(r.fee) || 0,
+    qualifyingScore: r.qualifyingScore,
     location: r.location || null,
+    country: r.country || null,
+    examMode: r.examMode,
     requiredDocs: r.requiredDocs,
     gatingMode: r.gatingMode,
     requiresRoundIndex:
@@ -301,6 +328,69 @@ function RoundCard({
         </div>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label className="mb-1 text-xs text-muted-foreground">Category</Label>
+          <Select
+            value={round.roundCategory}
+            onValueChange={(v) => onChange({ roundCategory: v })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ROUND_CATEGORIES.map((c) => (
+                <SelectItem key={c.value} value={c.value}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="mb-1 text-xs text-muted-foreground">
+            Qualifying score — medal threshold
+          </Label>
+          <Input
+            type="number"
+            value={round.qualifyingScore ?? ''}
+            onChange={(e) =>
+              onChange({
+                qualifyingScore: e.target.value === '' ? null : parseInt(e.target.value, 10),
+              })
+            }
+            placeholder="e.g. 16 — blank for none"
+          />
+        </div>
+        {round.roundCategory === 'local' && (
+          <>
+            <div>
+              <Label className="mb-1 text-xs text-muted-foreground">Country</Label>
+              <Input
+                value={round.country}
+                onChange={(e) => onChange({ country: e.target.value })}
+                placeholder="e.g. Malaysia"
+              />
+            </div>
+            <div>
+              <Label className="mb-1 text-xs text-muted-foreground">Exam mode</Label>
+              <Select value={round.examMode} onValueChange={(v) => onChange({ examMode: v })}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXAM_MODES.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-4">
         {DATE_FIELDS.map(([key, label]) => (
           <div key={key}>
@@ -327,6 +417,8 @@ function RoundCard({
             <SelectContent>
               <SelectItem value="open">Open entry</SelectItem>
               <SelectItem value="prerequisite">Requires another round</SelectItem>
+              <SelectItem value="qualified">Requires a medal (Global Round)</SelectItem>
+              <SelectItem value="unqualified">Catch-up — until the student qualifies</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -532,6 +532,87 @@ router.get("/question-bank/results", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/question-bank/medalists?compId= — the scored registrations of a
+// competition with their medal status. Medals are auto-decided (score vs the
+// round's qualifying_score); an operator can override here.
+router.get("/question-bank/medalists", async (req: Request, res: Response) => {
+  try {
+    const compId = String(req.query.compId ?? "");
+    if (!compId || !(await hasCompAccess(req.userId!, req.userRole!, compId))) {
+      res.status(403).json({ message: "No access to this competition" });
+      return;
+    }
+    const r = await pool.query(
+      `SELECT reg.id AS registration_id, reg.status, reg.score, reg.is_medalist,
+              reg.medalist_locked,
+              u.full_name AS student_name, u.email,
+              cr.id AS round_id, cr.round_name, cr.round_order, cr.qualifying_score
+         FROM registrations reg
+         JOIN users u ON u.id = reg.user_id AND u.deleted_at IS NULL
+         LEFT JOIN competition_rounds cr ON cr.id = reg.round_id
+        WHERE reg.comp_id = $1 AND reg.deleted_at IS NULL AND reg.score IS NOT NULL
+        ORDER BY cr.round_order ASC NULLS LAST, reg.score DESC NULLS LAST, u.full_name ASC`,
+      [compId],
+    );
+    res.json(
+      r.rows.map((x) => ({
+        registrationId: x.registration_id,
+        studentName: x.student_name,
+        email: x.email,
+        status: x.status,
+        roundId: x.round_id,
+        roundName: x.round_name,
+        qualifyingScore: x.qualifying_score != null ? Number(x.qualifying_score) : null,
+        score: x.score != null ? Number(x.score) : null,
+        isMedalist: x.is_medalist,
+        medalistLocked: x.medalist_locked,
+      })),
+    );
+  } catch (err) {
+    console.error("Medalists list error:", err);
+    res.status(500).json({ message: "Failed to load medalists" });
+  }
+});
+
+// PUT /api/question-bank/medalists/:registrationId — operator override of the
+// medal. Sets `medalist_locked` so the auto-grade / score-import won't revert it.
+router.put(
+  "/question-bank/medalists/:registrationId",
+  audit({
+    action: "exam.medalist.set",
+    resourceType: "registration",
+    resourceIdParam: "registrationId",
+  }),
+  async (req: Request, res: Response) => {
+    try {
+      const regId = String(req.params.registrationId);
+      const reg = await pool.query(
+        "SELECT comp_id FROM registrations WHERE id = $1 AND deleted_at IS NULL",
+        [regId],
+      );
+      if (reg.rows.length === 0) {
+        res.status(404).json({ message: "Registration not found" });
+        return;
+      }
+      if (!(await hasCompAccess(req.userId!, req.userRole!, reg.rows[0].comp_id))) {
+        res.status(403).json({ message: "No access to this competition" });
+        return;
+      }
+      const isMedalist = !!req.body?.isMedalist;
+      await pool.query(
+        `UPDATE registrations
+            SET is_medalist = $1, medalist_locked = true, updated_at = now()
+          WHERE id = $2`,
+        [isMedalist, regId],
+      );
+      res.json({ registrationId: regId, isMedalist, medalistLocked: true });
+    } catch (err) {
+      console.error("Medalist update error:", err);
+      res.status(500).json({ message: "Failed to update medalist" });
+    }
+  },
+);
+
 // PUT /api/question-bank/grading/periods/:periodId — mark one short answer.
 router.put(
   "/question-bank/grading/periods/:periodId",
