@@ -25,6 +25,8 @@ router.get("/", async (req: Request, res: Response) => {
       id: r.id,
       compId: r.comp_id,
       roundId: r.round_id ?? null,
+      score: r.score ?? null,
+      isMedalist: r.is_medalist ?? null,
       status: r.status,
       meta: r.meta,
       registrationNumber: r.registration_number,

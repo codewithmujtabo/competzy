@@ -73,6 +73,7 @@ interface RoundSpec {
   roundCategory?: string; // "online" (default) | "fast_track" | "local" | "global"
   fee: number;
   examDate: string; // the round's scheduled date, "YYYY-MM-DD"
+  registrationDeadline?: string; // last day to register for the round
   location?: string;
   qualifyingScore?: number; // score at/above which a round attempt medals
   /** Omit for an open round. `mode`: prerequisite | qualified | unqualified. */
@@ -268,7 +269,8 @@ const SPECS: CompSpec[] = [
         roundCategory: "online",
         fee: 200000,
         qualifyingScore: 16,
-        examDate: "2026-09-19",
+        examDate: ymd(-2),
+        registrationDeadline: ymd(-5),
         examName: "Komodo Online Round 1",
         examCode: "KMD-R1",
         questions: [
@@ -286,7 +288,8 @@ const SPECS: CompSpec[] = [
         roundCategory: "online",
         fee: 200000,
         qualifyingScore: 16,
-        examDate: "2026-10-31",
+        examDate: ymd(30),
+        registrationDeadline: ymd(25),
         examName: "Komodo Online Round 2",
         examCode: "KMD-R2",
         questions: [
@@ -304,7 +307,8 @@ const SPECS: CompSpec[] = [
         roundCategory: "online",
         fee: 200000,
         qualifyingScore: 16,
-        examDate: "2026-12-19",
+        examDate: ymd(60),
+        registrationDeadline: ymd(55),
         examName: "Komodo Online Round 3",
         examCode: "KMD-R3",
         questions: [
@@ -321,7 +325,8 @@ const SPECS: CompSpec[] = [
         roundType: "Online",
         roundCategory: "fast_track",
         fee: 200000,
-        examDate: "2027-01-31",
+        examDate: ymd(90),
+        registrationDeadline: ymd(85),
         qualifyingScore: 16,
         gating: { mode: "unqualified" },
         examName: "Komodo Fast Track Exam",
@@ -340,7 +345,8 @@ const SPECS: CompSpec[] = [
         roundType: "On-site",
         roundCategory: "global",
         fee: 500000,
-        examDate: "2027-03-15",
+        examDate: ymd(120),
+        registrationDeadline: ymd(115),
         location: "Bali, Indonesia",
         gating: { mode: "qualified" },
         examName: "Komodo Bali Global Round",
@@ -479,6 +485,7 @@ async function seedCompetition(
       roundType: rd.roundType,
       roundCategory: rd.roundCategory ?? "online",
       examDate: rd.examDate,
+      registrationDeadline: rd.registrationDeadline ?? null,
       fee: rd.fee,
       location: rd.location ?? null,
       qualifyingScore: rd.qualifyingScore ?? null,

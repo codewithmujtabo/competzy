@@ -11,12 +11,22 @@ import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface RegistrationRow {
   id: string;
   compId: string;
   roundId: string | null;
   status: string;
+  score: number | null;
+  isMedalist: boolean | null;
   registrationNumber: string | null;
 }
 
@@ -320,11 +330,24 @@ interface Round {
   id: string;
   roundName: string;
   roundType: string;
+  roundCategory: string;
   examDate: string | null;
+  registrationDeadline: string | null;
   fee: number;
   location: string | null;
   gating: { mode?: string; rule?: string; requiresRoundId?: string } | null;
 }
+
+const CATEGORY_LABEL: Record<string, string> = {
+  fast_track: 'Fast Track',
+  local: 'Local Round',
+  global: 'Global Round',
+};
+
+const PACKAGES = [
+  { value: 'one_day', label: 'One-day trip' },
+  { value: 'three_day', label: '3-day trip' },
+];
 
 function StatusPill({ status }: { status: string }) {
   const tone =
@@ -342,8 +365,150 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
+function hasMedal(regs: RegistrationRow[]): boolean {
+  return regs.some((r) => r.isMedalist === true);
+}
+
+type RoundState =
+  | { kind: 'registered' }
+  | { kind: 'missed' }
+  | { kind: 'locked'; note: string }
+  | { kind: 'open' };
+
+// Decide what a student sees for a round — registered / missed (window closed) /
+// locked (gating unmet) / open. The backend is authoritative on registration;
+// this drives the panel's display.
+function roundState(
+  round: Round,
+  reg: RegistrationRow | undefined,
+  regs: RegistrationRow[],
+  rounds: Round[],
+): RoundState {
+  if (reg) return { kind: 'registered' };
+  if (
+    round.registrationDeadline &&
+    new Date(round.registrationDeadline).getTime() < Date.now()
+  ) {
+    return { kind: 'missed' };
+  }
+  const mode = round.gating?.mode;
+  if (mode === 'prerequisite') {
+    const prereq = rounds.find((r) => r.id === round.gating?.requiresRoundId);
+    const prereqReg = prereq ? regs.find((r) => r.roundId === prereq.id) : undefined;
+    const rule = round.gating?.rule ?? 'completed';
+    const ok =
+      rule === 'registered'
+        ? !!prereqReg && prereqReg.status !== 'rejected'
+        : rule === 'paid'
+          ? !!prereqReg &&
+            ['paid', 'pending_review', 'approved', 'submitted', 'completed'].includes(
+              prereqReg.status,
+            )
+          : prereqReg?.status === 'completed';
+    return ok
+      ? { kind: 'open' }
+      : {
+          kind: 'locked',
+          note: `Opens once you ${
+            rule === 'registered' ? 'register for' : rule === 'paid' ? 'pay for' : 'complete'
+          } ${prereq?.roundName ?? 'an earlier round'}.`,
+        };
+  }
+  if (mode === 'qualified') {
+    return hasMedal(regs)
+      ? { kind: 'open' }
+      : { kind: 'locked', note: 'Opens once you earn a qualifying score in a round.' };
+  }
+  if (mode === 'unqualified') {
+    return hasMedal(regs)
+      ? { kind: 'locked', note: "You've already qualified — the Fast Track isn't needed." }
+      : { kind: 'open' };
+  }
+  return { kind: 'open' };
+}
+
+// The Global Round needs a couple of extra inputs before registering.
+function GlobalRoundDialog({
+  round,
+  registering,
+  onClose,
+  onConfirm,
+}: {
+  round: Round | null;
+  registering: string | null;
+  onClose: () => void;
+  onConfirm: (meta: Record<string, unknown>) => void;
+}) {
+  const [participantType, setParticipantType] = useState<'local' | 'international'>('local');
+  const [pkg, setPkg] = useState('one_day');
+
+  return (
+    <Dialog open={!!round} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{round?.roundName ?? 'Global Round'}</DialogTitle>
+          <DialogDescription>
+            A few details before you register for the Grand Final.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Participant type</p>
+            <div className="flex gap-2">
+              {(['local', 'international'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setParticipantType(t)}
+                  className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
+                    participantType === t
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-input hover:bg-accent'
+                  }`}
+                >
+                  {t === 'local' ? 'Local (Indonesian)' : 'International'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Trip package</p>
+            <div className="flex gap-2">
+              {PACKAGES.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setPkg(p.value)}
+                  className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
+                    pkg === p.value
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-input hover:bg-accent'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!!round && registering === round.id}
+            onClick={() => onConfirm({ participantType, package: pkg })}
+          >
+            Register
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // The per-round registration panel for a multi-round competition — register
-// and pay for each round independently.
+// and pay for each round independently; missed and locked rounds are shown.
 function RoundsPanel({
   rounds,
   regs,
@@ -357,9 +522,11 @@ function RoundsPanel({
   slug: string;
   wordmark: string;
   registering: string | null;
-  onRegister: (roundId: string) => void;
+  onRegister: (roundId: string, meta?: Record<string, unknown>) => void;
 }) {
   const byRound = new Map(regs.filter((r) => r.roundId).map((r) => [r.roundId, r]));
+  const [globalRound, setGlobalRound] = useState<Round | null>(null);
+
   return (
     <Card className="gap-0 p-7">
       <h2 className="font-serif text-xl font-medium text-foreground">Competition rounds</h2>
@@ -369,19 +536,25 @@ function RoundsPanel({
       <ol className="space-y-3">
         {rounds.map((round, i) => {
           const reg = byRound.get(round.id);
-          const prereq =
-            round.gating?.mode === 'prerequisite'
-              ? rounds.find((r) => r.id === round.gating?.requiresRoundId)
-              : null;
+          const state = roundState(round, reg, regs, rounds);
+          const categoryLabel = CATEGORY_LABEL[round.roundCategory];
           return (
             <li key={round.id} className="rounded-lg border bg-card p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {round.roundName || `Round ${i + 1}`}
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-medium text-foreground">
+                      {round.roundName || `Round ${i + 1}`}
+                    </p>
+                    {categoryLabel && (
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-muted-foreground">
+                        {categoryLabel}
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {round.roundType}
+                    {round.location ? ` · ${round.location}` : ''}
                     {round.examDate
                       ? ` · ${new Date(round.examDate).toLocaleDateString('en-US', {
                           day: 'numeric',
@@ -392,39 +565,63 @@ function RoundsPanel({
                     {` · ${round.fee > 0 ? rupiah(round.fee) : 'Free'}`}
                   </p>
                 </div>
-                {reg && <StatusPill status={reg.status} />}
+                {reg ? (
+                  <StatusPill status={reg.status} />
+                ) : state.kind === 'missed' ? (
+                  <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+                    Missed
+                  </span>
+                ) : null}
               </div>
-              {prereq && !reg && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Unlocks after {prereq.roundName || 'an earlier round'}.
-                </p>
-              )}
+
               <div className="mt-3">
-                {!reg ? (
+                {reg ? (
+                  reg.status === 'pending_payment' ? (
+                    <Button size="sm" asChild>
+                      <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
+                        Pay round fee
+                      </Link>
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {STATUS_COPY[reg.status]?.body ??
+                        `Status: ${reg.status.replace(/_/g, ' ')}`}
+                    </p>
+                  )
+                ) : state.kind === 'missed' ? (
+                  <p className="text-xs text-muted-foreground">
+                    You didn’t register before this round closed.
+                  </p>
+                ) : state.kind === 'locked' ? (
+                  <p className="text-xs text-muted-foreground">{state.note}</p>
+                ) : (
                   <Button
                     size="sm"
                     disabled={registering === round.id}
-                    onClick={() => onRegister(round.id)}
+                    onClick={() =>
+                      round.roundCategory === 'global'
+                        ? setGlobalRound(round)
+                        : onRegister(round.id)
+                    }
                   >
                     {registering === round.id ? 'Registering…' : 'Register for this round'}
                   </Button>
-                ) : reg.status === 'pending_payment' ? (
-                  <Button size="sm" asChild>
-                    <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
-                      Pay round fee
-                    </Link>
-                  </Button>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    {STATUS_COPY[reg.status]?.body ??
-                      `Status: ${reg.status.replace(/_/g, ' ')}`}
-                  </p>
                 )}
               </div>
             </li>
           );
         })}
       </ol>
+
+      <GlobalRoundDialog
+        round={globalRound}
+        registering={registering}
+        onClose={() => setGlobalRound(null)}
+        onConfirm={(meta) => {
+          if (globalRound) onRegister(globalRound.id, meta);
+          setGlobalRound(null);
+        }}
+      />
     </Card>
   );
 }
@@ -587,7 +784,7 @@ export default function CompetitionDashboardPage() {
     }
   };
 
-  const enrollRound = async (roundId: string) => {
+  const enrollRound = async (roundId: string, meta?: Record<string, unknown>) => {
     if (!comp?.id) return;
     setRegistering(roundId);
     setErr(null);
@@ -596,6 +793,7 @@ export default function CompetitionDashboardPage() {
         id: crypto.randomUUID(),
         compId: comp.id,
         roundId,
+        ...(meta ? { meta } : {}),
       });
       await refresh(comp.id);
     } catch (e) {
