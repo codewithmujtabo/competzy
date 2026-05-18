@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 
 const TEXTAREA_CLS =
   'flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-60';
-const GRADE_OPTIONS = ['SD', 'SMP', 'SMA'];
+const GRADE_OPTIONS = Array.from({ length: 12 }, (_, i) => String(i + 1));
 
 interface ExamQuestion {
   id: string;

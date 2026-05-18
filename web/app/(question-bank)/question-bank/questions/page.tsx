@@ -115,7 +115,7 @@ export default function QuestionsListPage() {
     }
   };
 
-  const gradeOptions = ['SD', 'SMP', 'SMA'];
+  const gradeOptions = Array.from({ length: 12 }, (_, i) => String(i + 1));
 
   if (!compsLoading && competitions.length === 0) {
     return (

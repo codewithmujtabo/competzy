@@ -27,7 +27,7 @@ const TEXTAREA_CLS =
 const NONE = '__none__';
 const LEVELS = ['easy', 'medium', 'hard'];
 const COGNITIVE = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
-const GRADE_OPTIONS = ['SD', 'SMP', 'SMA'];
+const GRADE_OPTIONS = Array.from({ length: 12 }, (_, i) => String(i + 1));
 
 interface Answer {
   content: string;
