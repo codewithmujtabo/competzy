@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { GradeMultiSelect } from '@/components/grade-multi-select';
+import { RoundsBuilder, type RoundDraft, draftsToPayload } from '@/components/rounds-builder';
 import {
   Select,
   SelectContent,
@@ -42,6 +43,7 @@ export interface CompetitionFormValues {
   imageUrl: string;
   participantInstructions: string;
   postPaymentRedirectUrl: string;
+  rounds: RoundDraft[];
 }
 
 const DEFAULTS: CompetitionFormValues = {
@@ -65,6 +67,7 @@ const DEFAULTS: CompetitionFormValues = {
   imageUrl: '',
   participantInstructions: '',
   postPaymentRedirectUrl: '',
+  rounds: [],
 };
 
 const TEXTAREA_CLS =
@@ -163,7 +166,7 @@ export function CompetitionForm({ initial, submitLabel, cancelHref, onSubmit }: 
         imageUrl: form.imageUrl || null,
         participantInstructions: form.participantInstructions || null,
         postPaymentRedirectUrl: form.postPaymentRedirectUrl || null,
-        rounds: [],
+        rounds: draftsToPayload(form.rounds),
       });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save competition');
@@ -284,6 +287,10 @@ export function CompetitionForm({ initial, submitLabel, cancelHref, onSubmit }: 
             </Select>
           </Field>
         </div>
+      </Section>
+
+      <Section title="Competition rounds">
+        <RoundsBuilder rounds={form.rounds} onChange={(rounds) => set({ rounds })} />
       </Section>
 
       <Section title="Important dates">

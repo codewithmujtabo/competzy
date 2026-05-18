@@ -12,7 +12,7 @@ import {
   Type,
   Text as TextColor,
 } from "@/constants/theme";
-import { Button, Card, EmptyState, Pill, SectionHeader, SubjectCircle } from "@/components/ui";
+import { Button, Card, CompetitionMark, EmptyState, Pill, SectionHeader } from "@/components/ui";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@/context/AuthContext";
 import { useRouter } from "expo-router";
@@ -122,7 +122,7 @@ const CompetitionCard = memo(function CompetitionCard({
 
       <View style={{ paddingRight: 36 }}>
         <View style={styles.cardEmojiRow}>
-          <SubjectCircle label={item.name} size={52} />
+          <CompetitionMark name={item.name} logoUrl={item.logoUrl} size={52} />
           <View style={{ flex: 1 }}>
             <Text style={[Type.title, { lineHeight: 22 }]} numberOfLines={2}>
               {item.name}
@@ -194,7 +194,7 @@ const RecommendedCard = memo(function RecommendedCard({
       style={{ width: 220, marginRight: Spacing.md }}
       padding="lg"
     >
-      <SubjectCircle label={item.name} size={56} />
+      <CompetitionMark name={item.name} logoUrl={item.logoUrl} size={56} />
       <Text style={[Type.title, { marginTop: Spacing.md }]} numberOfLines={2}>
         {item.name}
       </Text>

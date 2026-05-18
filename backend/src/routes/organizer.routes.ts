@@ -7,6 +7,7 @@ import { audit } from "../middleware/audit";
 import * as pushService from "../services/push.service";
 import { storeFile } from "../services/storage.service";
 import { seedDefaultFlow } from "../services/competition-flow.service";
+import { replaceRounds } from "../services/competition-rounds.service";
 
 const csvUpload = multer({
   storage: multer.memoryStorage(),
@@ -17,6 +18,13 @@ const csvUpload = multer({
                file.originalname.endsWith(".csv");
     cb(null, ok);
   },
+});
+
+// Competition logo uploads — in-memory, image-only, 5 MB cap.
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => cb(null, file.mimetype.startsWith("image/")),
 });
 
 const router = Router();
@@ -206,24 +214,7 @@ router.post("/competitions", audit({ action: "organizer.competition.create", res
       ]
     );
 
-    if (rounds?.length > 0) {
-      for (let i = 0; i < rounds.length; i++) {
-        const round = rounds[i];
-        await client.query(
-          `INSERT INTO competition_rounds (
-             comp_id, round_name, round_type, start_date,
-             registration_deadline, exam_date, results_date,
-             fee, location, round_order
-           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-          [
-            compId, round.roundName, round.roundType ?? null,
-            round.startDate ?? null, round.registrationDeadline ?? null,
-            round.examDate ?? null, round.resultsDate ?? null,
-            round.fee ?? 0, round.location ?? null, i + 1,
-          ]
-        );
-      }
-    }
+    await replaceRounds(client, compId, rounds);
 
     await seedDefaultFlow(client, compId, kind);
 
@@ -285,26 +276,7 @@ router.put("/competitions/:id", audit({ action: "organizer.competition.update", 
       return;
     }
 
-    await client.query("DELETE FROM competition_rounds WHERE comp_id = $1", [id]);
-
-    if (rounds?.length > 0) {
-      for (let i = 0; i < rounds.length; i++) {
-        const round = rounds[i];
-        await client.query(
-          `INSERT INTO competition_rounds (
-             comp_id, round_name, round_type, start_date,
-             registration_deadline, exam_date, results_date,
-             fee, location, round_order
-           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-          [
-            id, round.roundName, round.roundType ?? null,
-            round.startDate ?? null, round.registrationDeadline ?? null,
-            round.examDate ?? null, round.resultsDate ?? null,
-            round.fee ?? 0, round.location ?? null, i + 1,
-          ]
-        );
-      }
-    }
+    await replaceRounds(client, String(id), rounds);
 
     await client.query("COMMIT");
     res.json({ message: "Competition updated", competition: compResult.rows[0] });
@@ -347,6 +319,16 @@ router.get("/competitions/:id", async (req: Request, res: Response) => {
     }
 
     const c = result.rows[0];
+    const roundRows = (await pool.query(
+      `SELECT id, round_name, round_type, start_date, registration_deadline,
+              exam_date, results_date, fee, location, round_order,
+              requires_round_id, gating, required_docs,
+              round_category, country, exam_mode, qualifying_score
+         FROM competition_rounds
+        WHERE comp_id = $1
+        ORDER BY round_order ASC, created_at ASC`,
+      [competitionId]
+    )).rows;
     res.json({
       id: c.id,
       name: c.name,
@@ -364,6 +346,7 @@ router.get("/competitions/:id", async (req: Request, res: Response) => {
       isInternational: c.is_international,
       websiteUrl: c.website_url,
       imageUrl: c.image_url,
+      logoUrl: c.logo_url ?? null,
       posterUrl: c.poster_url,
       participantInstructions: c.participant_instructions,
       requiredDocs: c.required_docs,
@@ -371,6 +354,25 @@ router.get("/competitions/:id", async (req: Request, res: Response) => {
       csvTemplateUrl: c.csv_template_url ?? null,
       postPaymentRedirectUrl: c.post_payment_redirect_url ?? null,
       kind: c.kind ?? "native",
+      rounds: roundRows.map((round) => ({
+        id: round.id,
+        roundName: round.round_name,
+        roundType: round.round_type,
+        startDate: round.start_date,
+        registrationDeadline: round.registration_deadline,
+        examDate: round.exam_date,
+        resultsDate: round.results_date,
+        fee: round.fee,
+        location: round.location,
+        roundOrder: round.round_order,
+        requiresRoundId: round.requires_round_id ?? null,
+        gating: round.gating ?? null,
+        requiredDocs: round.required_docs ?? [],
+        roundCategory: round.round_category ?? 'online',
+        country: round.country ?? null,
+        examMode: round.exam_mode ?? 'online',
+        qualifyingScore: round.qualifying_score ?? null,
+      })),
       createdAt: c.created_at,
     });
   } catch (err) {
@@ -765,6 +767,38 @@ router.post(
     } catch (err) {
       console.error("POST /organizers/competitions/:id/csv-template error:", err);
       res.status(500).json({ message: "Failed to upload CSV template" });
+    }
+  }
+);
+
+// ── POST /api/organizers/competitions/:id/logo ────────────────────────────
+router.post(
+  "/competitions/:id/logo",
+  imageUpload.single("file"),
+  audit({ action: "organizer.competition.logo", resourceType: "competition", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      if (!await ownsCompetition(req.params.id as string, req.userId!, (req as any).userRole)) {
+        res.status(403).json({ message: "You do not own this competition" });
+        return;
+      }
+      if (!req.file) {
+        res.status(400).json({ message: "An image file is required" });
+        return;
+      }
+      const url = await storeFile(
+        req.userId!,
+        req.file.buffer,
+        `competition-logo-${Date.now()}-${req.file.originalname}`,
+        req.file.mimetype
+      );
+      await pool.query("UPDATE competitions SET logo_url = $1 WHERE id = $2", [
+        url, req.params.id,
+      ]);
+      res.json({ logoUrl: url });
+    } catch (err) {
+      console.error("POST /organizers/competitions/:id/logo error:", err);
+      res.status(500).json({ message: "Failed to upload competition logo" });
     }
   }
 );

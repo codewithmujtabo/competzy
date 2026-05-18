@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { ListChecks, Pencil, Plus, Trash2 } from 'lucide-react';
 import { competitionsApi } from '@/lib/api';
+import { adminHttp } from '@/lib/api/client';
 import type { Competition } from '@/types';
 import { FlowEditorDialog } from '@/components/flow-editor-dialog';
+import { CompetitionLogoUploader } from '@/components/competition-logo-uploader';
 import { PageHeader } from '@/components/shell/page-header';
 import { Pager } from '@/components/shell/pager';
 import { Card } from '@/components/ui/card';
@@ -15,6 +17,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GradeMultiSelect } from '@/components/grade-multi-select';
+import {
+  RoundsBuilder,
+  roundsToDrafts,
+  draftsToPayload,
+  type RoundDraft,
+} from '@/components/rounds-builder';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
@@ -56,6 +64,7 @@ const FORM_DEFAULTS = {
   reg_close_date: '',
   competition_date: '',
   post_payment_redirect_url: '',
+  rounds: [] as RoundDraft[],
 };
 
 function fmtForInput(d?: string) {
@@ -102,6 +111,7 @@ export default function CompetitionsPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(FORM_DEFAULTS);
   const [flowComp, setFlowComp] = useState<{ id: string; name: string } | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,11 +139,13 @@ export default function CompetitionsPage() {
   const openAdd = () => {
     setEditId(null);
     setForm({ ...FORM_DEFAULTS });
+    setLogoUrl(null);
     setShowForm(true);
   };
 
-  const openEdit = (c: Competition) => {
+  const openEdit = async (c: Competition) => {
     setEditId(c.id);
+    setLogoUrl(c.logo_url ?? null);
     setForm({
       name: c.name,
       organizer_name: c.organizer_name,
@@ -146,15 +158,27 @@ export default function CompetitionsPage() {
       reg_close_date: fmtForInput(c.reg_close_date),
       competition_date: fmtForInput(c.competition_date),
       post_payment_redirect_url: c.post_payment_redirect_url || '',
+      rounds: [],
     });
     setShowForm(true);
+    // The list endpoint omits rounds — fetch the detail to populate them.
+    try {
+      const detail = await competitionsApi.get(c.id);
+      setForm((f) => ({ ...f, rounds: roundsToDrafts(detail.rounds) }));
+    } catch {
+      /* rounds stay empty — the competition is still editable */
+    }
   };
 
   const save = async () => {
     if (!form.name || !form.organizer_name) return;
     setSaving(true);
     try {
-      const payload = { ...form, fee: parseInt(form.fee, 10) || 0 };
+      const payload = {
+        ...form,
+        fee: parseInt(form.fee, 10) || 0,
+        rounds: draftsToPayload(form.rounds),
+      };
       if (editId) {
         await competitionsApi.update(editId, payload);
         toast.success('Competition updated.');
@@ -432,6 +456,28 @@ export default function CompetitionsPage() {
                 placeholder="Describe the competition…"
                 className="flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               />
+            </Field>
+
+            <Field label="Competition rounds" className="sm:col-span-6">
+              <RoundsBuilder
+                rounds={form.rounds}
+                onChange={(rounds) => setForm((f) => ({ ...f, rounds }))}
+              />
+            </Field>
+
+            <Field label="Logo" className="sm:col-span-6">
+              {editId ? (
+                <CompetitionLogoUploader
+                  endpoint={`/admin/competitions/${editId}/logo`}
+                  http={adminHttp}
+                  logoUrl={logoUrl}
+                  onUploaded={setLogoUrl}
+                />
+              ) : (
+                <p className="text-[11px] text-muted-foreground">
+                  Create the competition first, then reopen it to upload a logo.
+                </p>
+              )}
             </Field>
           </div>
 

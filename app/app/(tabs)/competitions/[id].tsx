@@ -1,4 +1,4 @@
-import { Button, Card, Pill, ScreenHeader, SubjectCircle } from "@/components/ui";
+import { Button, Card, CompetitionMark, Pill, ScreenHeader } from "@/components/ui";
 import {
   Brand,
   CategoryAccent,
@@ -203,7 +203,7 @@ export default function CompetitionDetailPage() {
       <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={[styles.hero, { backgroundColor: accentBg }]}>
-          <SubjectCircle label={comp.name} size={96} />
+          <CompetitionMark name={comp.name} logoUrl={comp.logoUrl} size={96} />
           <Text style={[Type.h1, { textAlign: "center", marginTop: Spacing.lg }]} numberOfLines={3}>
             {comp.name}
           </Text>

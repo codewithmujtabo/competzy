@@ -24,7 +24,12 @@ const router = Router();
 router.use("/question-bank", authMiddleware);
 router.use("/question-bank", requireRole("admin", "organizer"));
 
-const EXAM_COLS = `id, comp_id, name, code, year, date, grades, choice, short,
+// `date` is a DATE column — cast it to text here so node-pg returns a plain
+// 'YYYY-MM-DD' string. If left as a DATE, node-pg parses it into a local-
+// midnight JS Date and res.json() serialises that to UTC, rolling the calendar
+// date back a day on any UTC+ server (the exam-date "save reverts" bug).
+const EXAM_COLS = `id, comp_id, name, code, year,
+  to_char(date, 'YYYY-MM-DD') AS date, grades, choice, short,
   choice_count, short_count, start_time, end_time, minutes, correct_score,
   wrong_score, description, created_at, updated_at`;
 

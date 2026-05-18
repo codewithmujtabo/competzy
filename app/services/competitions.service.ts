@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequest, resolveFileUrl } from "./api";
 
 export interface Competition {
   id: string;
@@ -18,6 +18,7 @@ export interface Competition {
   description: string | null;
   detailedDescription?: string | null;
   imageUrl: string | null;
+  logoUrl: string | null;
   websiteUrl?: string | null;
   participantInstructions?: string | null;
   rounds?: Array<{
@@ -60,6 +61,7 @@ function mapRow(raw: any): Competition {
     description: raw.description ?? null,
     detailedDescription: raw.detailed_description ?? raw.detailedDescription ?? null,
     imageUrl: raw.image_url ?? raw.imageUrl ?? null,
+    logoUrl: resolveFileUrl(raw.logo_url ?? raw.logoUrl ?? null),
     websiteUrl: raw.website_url ?? raw.websiteUrl ?? null,
     participantInstructions:
       raw.participant_instructions ?? raw.participantInstructions ?? null,

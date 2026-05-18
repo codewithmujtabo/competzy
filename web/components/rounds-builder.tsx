@@ -1,0 +1,420 @@
+'use client';
+
+import { useState } from 'react';
+import { X, Plus, ChevronUp, ChevronDown } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const ROUND_TYPES = ['Online', 'On-site', 'Hybrid'];
+const GATING_RULES = [
+  { value: 'registered', label: 'registered for it' },
+  { value: 'paid', label: 'paid for it' },
+  { value: 'completed', label: 'completed it' },
+];
+
+export interface RoundDraft {
+  /** Stable client-side id — gating prerequisites reference this, not an index. */
+  tempId: string;
+  roundName: string;
+  roundType: string;
+  startDate: string;
+  registrationDeadline: string;
+  examDate: string;
+  resultsDate: string;
+  fee: number;
+  location: string;
+  requiredDocs: string[];
+  gatingMode: 'open' | 'prerequisite';
+  requiresTempId: string | null;
+  gatingRule: 'registered' | 'paid' | 'completed';
+}
+
+function uid(): string {
+  return typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+}
+
+export function emptyRound(): RoundDraft {
+  return {
+    tempId: uid(),
+    roundName: '',
+    roundType: 'Online',
+    startDate: '',
+    registrationDeadline: '',
+    examDate: '',
+    resultsDate: '',
+    fee: 0,
+    location: '',
+    requiredDocs: [],
+    gatingMode: 'open',
+    requiresTempId: null,
+    gatingRule: 'completed',
+  };
+}
+
+const dateInput = (v: unknown): string =>
+  typeof v === 'string' && v ? v.split('T')[0] : '';
+
+/** Backend round objects (from a GET /competitions/:id) → editable drafts. */
+export function roundsToDrafts(rounds: unknown): RoundDraft[] {
+  if (!Array.isArray(rounds)) return [];
+  const idToTemp = new Map<string, string>();
+  const staged = rounds.map((r) => {
+    const tempId = uid();
+    if (r?.id) idToTemp.set(String(r.id), tempId);
+    return { r, tempId };
+  });
+  return staged.map(({ r, tempId }) => {
+    const reqId = r?.gating?.requiresRoundId ?? r?.requiresRoundId ?? null;
+    return {
+      tempId,
+      roundName: r?.roundName ?? '',
+      roundType: ROUND_TYPES.includes(r?.roundType) ? r.roundType : 'Online',
+      startDate: dateInput(r?.startDate),
+      registrationDeadline: dateInput(r?.registrationDeadline),
+      examDate: dateInput(r?.examDate),
+      resultsDate: dateInput(r?.resultsDate),
+      fee: Number(r?.fee) || 0,
+      location: r?.location ?? '',
+      requiredDocs: Array.isArray(r?.requiredDocs) ? r.requiredDocs : [],
+      gatingMode: r?.gating?.mode === 'prerequisite' ? 'prerequisite' : 'open',
+      requiresTempId: reqId ? idToTemp.get(String(reqId)) ?? null : null,
+      gatingRule: r?.gating?.rule ?? 'completed',
+    } as RoundDraft;
+  });
+}
+
+/** Editable drafts → the `rounds` payload for a POST/PUT competition. */
+export function draftsToPayload(drafts: RoundDraft[]) {
+  return drafts.map((r) => ({
+    roundName: r.roundName,
+    roundType: r.roundType,
+    startDate: r.startDate || null,
+    registrationDeadline: r.registrationDeadline || null,
+    examDate: r.examDate || null,
+    resultsDate: r.resultsDate || null,
+    fee: Number(r.fee) || 0,
+    location: r.location || null,
+    requiredDocs: r.requiredDocs,
+    gatingMode: r.gatingMode,
+    requiresRoundIndex:
+      r.gatingMode === 'prerequisite' && r.requiresTempId
+        ? drafts.findIndex((x) => x.tempId === r.requiresTempId)
+        : null,
+    gatingRule: r.gatingRule,
+  }));
+}
+
+/**
+ * The competition rounds editor — add / remove / reorder rounds, each with its
+ * own type, dates, fee, location, required documents and a configurable
+ * round-to-round gating rule. A competition with no rounds is single-stage.
+ */
+export function RoundsBuilder({
+  rounds,
+  onChange,
+}: {
+  rounds: RoundDraft[];
+  onChange: (rounds: RoundDraft[]) => void;
+}) {
+  const update = (i: number, patch: Partial<RoundDraft>) =>
+    onChange(rounds.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+
+  const add = () => onChange([...rounds, emptyRound()]);
+
+  const remove = (i: number) => {
+    const removed = rounds[i];
+    onChange(
+      rounds
+        .filter((_, idx) => idx !== i)
+        .map((r) =>
+          r.requiresTempId === removed.tempId
+            ? { ...r, gatingMode: 'open' as const, requiresTempId: null }
+            : r,
+        ),
+    );
+  };
+
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= rounds.length) return;
+    const next = [...rounds];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      {rounds.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          No rounds — this competition uses a single registration and fee. Add
+          rounds for a multi-stage competition where students register and pay
+          per round.
+        </p>
+      )}
+      {rounds.map((r, i) => (
+        <RoundCard
+          key={r.tempId}
+          round={r}
+          index={i}
+          all={rounds}
+          isFirst={i === 0}
+          isLast={i === rounds.length - 1}
+          onChange={(patch) => update(i, patch)}
+          onRemove={() => remove(i)}
+          onMove={(dir) => move(i, dir)}
+        />
+      ))}
+      <Button type="button" variant="outline" onClick={add}>
+        <Plus className="size-4" />
+        Add round
+      </Button>
+    </div>
+  );
+}
+
+const DATE_FIELDS = [
+  ['startDate', 'Starts'],
+  ['registrationDeadline', 'Reg. deadline'],
+  ['examDate', 'Exam date'],
+  ['resultsDate', 'Results'],
+] as const;
+
+function RoundCard({
+  round,
+  index,
+  all,
+  isFirst,
+  isLast,
+  onChange,
+  onRemove,
+  onMove,
+}: {
+  round: RoundDraft;
+  index: number;
+  all: RoundDraft[];
+  isFirst: boolean;
+  isLast: boolean;
+  onChange: (patch: Partial<RoundDraft>) => void;
+  onRemove: () => void;
+  onMove: (dir: -1 | 1) => void;
+}) {
+  const [newDoc, setNewDoc] = useState('');
+  const others = all.filter((r) => r.tempId !== round.tempId);
+
+  const addDoc = () => {
+    const d = newDoc.trim();
+    if (d && !round.requiredDocs.includes(d)) {
+      onChange({ requiredDocs: [...round.requiredDocs, d] });
+      setNewDoc('');
+    }
+  };
+
+  return (
+    <Card className="space-y-3 border-dashed p-4">
+      <div className="flex items-center gap-2">
+        <Badge variant="secondary" className="shrink-0 font-mono">
+          Round {index + 1}
+        </Badge>
+        <Input
+          value={round.roundName}
+          onChange={(e) => onChange({ roundName: e.target.value })}
+          placeholder="Round name — e.g. Online Round 1"
+          className="h-8 flex-1"
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          disabled={isFirst}
+          onClick={() => onMove(-1)}
+          aria-label="Move round up"
+        >
+          <ChevronUp className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          disabled={isLast}
+          onClick={() => onMove(1)}
+          aria-label="Move round down"
+        >
+          <ChevronDown className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8 text-destructive hover:text-destructive"
+          onClick={onRemove}
+          aria-label="Remove round"
+        >
+          <X className="size-4" />
+        </Button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <Label className="mb-1 text-xs text-muted-foreground">Type</Label>
+          <Select value={round.roundType} onValueChange={(v) => onChange({ roundType: v })}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ROUND_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {t}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="mb-1 text-xs text-muted-foreground">Fee (IDR)</Label>
+          <Input
+            type="number"
+            value={round.fee}
+            onChange={(e) => onChange({ fee: parseInt(e.target.value, 10) || 0 })}
+          />
+        </div>
+        <div>
+          <Label className="mb-1 text-xs text-muted-foreground">Location</Label>
+          <Input
+            value={round.location}
+            onChange={(e) => onChange({ location: e.target.value })}
+            placeholder="Online / a city"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-4">
+        {DATE_FIELDS.map(([key, label]) => (
+          <div key={key}>
+            <Label className="mb-1 text-xs text-muted-foreground">{label}</Label>
+            <Input
+              type="date"
+              value={round[key]}
+              onChange={(e) => onChange({ [key]: e.target.value } as Partial<RoundDraft>)}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <Label className="mb-1 text-xs text-muted-foreground">Access</Label>
+          <Select
+            value={round.gatingMode}
+            onValueChange={(v) => onChange({ gatingMode: v as RoundDraft['gatingMode'] })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open">Open entry</SelectItem>
+              <SelectItem value="prerequisite">Requires another round</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {round.gatingMode === 'prerequisite' && (
+          <>
+            <div>
+              <Label className="mb-1 text-xs text-muted-foreground">Prerequisite round</Label>
+              <Select
+                value={round.requiresTempId ?? undefined}
+                onValueChange={(v) => onChange({ requiresTempId: v })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a round" />
+                </SelectTrigger>
+                <SelectContent>
+                  {others.map((o) => (
+                    <SelectItem key={o.tempId} value={o.tempId}>
+                      {`Round ${all.findIndex((x) => x.tempId === o.tempId) + 1}${
+                        o.roundName ? ` — ${o.roundName}` : ''
+                      }`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="mb-1 text-xs text-muted-foreground">Student must have…</Label>
+              <Select
+                value={round.gatingRule}
+                onValueChange={(v) => onChange({ gatingRule: v as RoundDraft['gatingRule'] })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {GATING_RULES.map((g) => (
+                    <SelectItem key={g.value} value={g.value}>
+                      {g.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div>
+        <Label className="mb-1 text-xs text-muted-foreground">
+          Required documents for this round
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            value={newDoc}
+            onChange={(e) => setNewDoc(e.target.value)}
+            placeholder="e.g. Student ID"
+            className="h-8"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addDoc();
+              }
+            }}
+          />
+          <Button type="button" variant="outline" size="sm" onClick={addDoc}>
+            Add
+          </Button>
+        </div>
+        {round.requiredDocs.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {round.requiredDocs.map((doc) => (
+              <Badge key={doc} variant="secondary" className="gap-1 font-normal">
+                {doc}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange({ requiredDocs: round.requiredDocs.filter((d) => d !== doc) })
+                  }
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label={`Remove ${doc}`}
+                >
+                  <X className="size-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}

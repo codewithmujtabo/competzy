@@ -6,12 +6,22 @@ import { audit } from "../middleware/audit";
 import * as pushService from "../services/push.service";
 import { refundPayment } from "../services/midtrans.service";
 import { seedDefaultFlow } from "../services/competition-flow.service";
+import { replaceRounds } from "../services/competition-rounds.service";
+import { storeFile } from "../services/storage.service";
+import multer from "multer";
 
 const router = Router();
 
 // All routes require authentication and admin role
 router.use(authMiddleware);
 router.use(adminOnly);
+
+// Competition logo uploads — in-memory, image-only, 5 MB cap.
+const logoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => cb(null, file.mimetype.startsWith("image/")),
+});
 
 /**
  * GET /api/admin/competitions
@@ -136,31 +146,8 @@ router.post("/competitions", audit({ action: "admin.competition.create", resourc
       ]
     );
 
-    // Insert rounds if provided
-    if (rounds && rounds.length > 0) {
-      for (let i = 0; i < rounds.length; i++) {
-        const round = rounds[i];
-        await client.query(
-          `INSERT INTO competition_rounds (
-            comp_id, round_name, round_type, start_date,
-            registration_deadline, exam_date, results_date,
-            fee, location, round_order
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-          [
-            compId,
-            round.roundName,
-            round.roundType,
-            round.startDate,
-            round.registrationDeadline,
-            round.examDate,
-            round.resultsDate,
-            round.fee || 0,
-            round.location,
-            i + 1,
-          ]
-        );
-      }
-    }
+    // Insert the competition's rounds (with configurable gating).
+    await replaceRounds(client, compId, rounds);
 
     await seedDefaultFlow(client, compId, kind);
 
@@ -271,34 +258,8 @@ router.put("/competitions/:id", audit({ action: "admin.competition.update", reso
       return res.status(404).json({ message: "Competition not found" });
     }
 
-    // Delete existing rounds
-    await client.query("DELETE FROM competition_rounds WHERE comp_id = $1", [id]);
-
-    // Insert new rounds
-    if (rounds && rounds.length > 0) {
-      for (let i = 0; i < rounds.length; i++) {
-        const round = rounds[i];
-        await client.query(
-          `INSERT INTO competition_rounds (
-            comp_id, round_name, round_type, start_date,
-            registration_deadline, exam_date, results_date,
-            fee, location, round_order
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-          [
-            id,
-            round.roundName,
-            round.roundType,
-            round.startDate,
-            round.registrationDeadline,
-            round.examDate,
-            round.resultsDate,
-            round.fee || 0,
-            round.location,
-            i + 1,
-          ]
-        );
-      }
-    }
+    // Replace the competition's rounds (with configurable gating).
+    await replaceRounds(client, String(id), rounds);
 
     await client.query("COMMIT");
 
@@ -314,6 +275,40 @@ router.put("/competitions/:id", audit({ action: "admin.competition.update", reso
     client.release();
   }
 });
+
+/**
+ * POST /api/admin/competitions/:id/logo
+ * Upload or replace a competition's logo image.
+ */
+router.post(
+  "/competitions/:id/logo",
+  logoUpload.single("file"),
+  audit({ action: "admin.competition.logo", resourceType: "competition", resourceIdParam: "id" }),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "An image file is required" });
+      }
+      const url = await storeFile(
+        req.userId!,
+        req.file.buffer,
+        `competition-logo-${Date.now()}-${req.file.originalname}`,
+        req.file.mimetype
+      );
+      const result = await pool.query(
+        "UPDATE competitions SET logo_url = $1 WHERE id = $2 RETURNING id",
+        [url, req.params.id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+      res.json({ logoUrl: url });
+    } catch (error) {
+      console.error("Error uploading competition logo:", error);
+      res.status(500).json({ message: "Failed to upload competition logo" });
+    }
+  }
+);
 
 /**
  * DELETE /api/admin/competitions/:id

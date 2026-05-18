@@ -10,6 +10,7 @@ import {
 } from "../services/exam-grading.service";
 import { issueCertificateIfEligible } from "../services/certificate.service";
 import { gradeTokens } from "../services/grade.service";
+import { applyMedalFromSession } from "../services/round-gating.service";
 
 // Online exam attempt API (EMC Wave 7 Phase 3). Student-facing — any
 // authenticated user; every session is owned by `req.userId` and each route
@@ -39,19 +40,30 @@ const CLEARED = ["registered", "approved", "paid", "completed"];
 // students row) and whether they hold a cleared registration.
 async function studentContext(userId: string, compId: string) {
   const r = await pool.query(
-    `SELECT r.profile_snapshot, st.grade AS student_grade
+    `SELECT r.round_id, r.profile_snapshot, st.grade AS student_grade
        FROM registrations r
        LEFT JOIN students st ON st.id = r.user_id
       WHERE r.user_id = $1 AND r.comp_id = $2 AND r.deleted_at IS NULL
         AND r.status = ANY($3)
-      ORDER BY r.created_at DESC LIMIT 1`,
+      ORDER BY r.created_at DESC`,
     [userId, compId, CLEARED]
   );
-  if (r.rows.length === 0) return { registered: false, grade: null as string | null };
+  if (r.rows.length === 0) {
+    return { registered: false, grade: null as string | null, clearedRounds: new Set<string>() };
+  }
   const snap = r.rows[0].profile_snapshot;
   const snapGrade =
     snap && typeof snap === "object" && typeof snap.grade === "string" ? snap.grade : null;
-  return { registered: true, grade: (snapGrade || r.rows[0].student_grade || null) as string | null };
+  // The round ids the student holds a cleared registration for. A NULL-round
+  // (whole-competition) registration is not in the set — `registered` covers it.
+  const clearedRounds = new Set<string>(
+    r.rows.map((x) => x.round_id).filter((x): x is string => !!x)
+  );
+  return {
+    registered: true,
+    grade: (snapGrade || r.rows[0].student_grade || null) as string | null,
+    clearedRounds,
+  };
 }
 
 type WindowStatus = "unscheduled" | "upcoming" | "open" | "closed";
@@ -105,7 +117,7 @@ router.get("/exams/available", async (req: Request, res: Response) => {
       return;
     }
     const exams = await pool.query(
-      `SELECT id, name, code, minutes, date::text AS date,
+      `SELECT id, name, code, minutes, round_id, date::text AS date,
               start_time::text AS start_time, end_time::text AS end_time
          FROM exams
         WHERE comp_id = $1 AND deleted_at IS NULL AND grades ?| $2::text[]
@@ -119,8 +131,13 @@ router.get("/exams/available", async (req: Request, res: Response) => {
     );
     const byExam = new Map<string, any>();
     for (const s of sessions.rows) byExam.set(s.exam_id, s);
+    // A round-scoped exam is only visible once the student has a cleared
+    // registration for that round; a NULL-round exam needs only competition
+    // registration (the !ctx.registered early-return above already gated that).
     res.json(
-      exams.rows.map((e) => {
+      exams.rows
+        .filter((e) => (e.round_id ? ctx.clearedRounds.has(e.round_id) : true))
+        .map((e) => {
         const s = byExam.get(e.id);
         return {
           examId: e.id,
@@ -146,7 +163,7 @@ router.post("/exams/:examId/sessions", async (req: Request, res: Response) => {
   try {
     const examId = String(req.params.examId);
     const ex = await pool.query(
-      `SELECT id, comp_id, grades, date::text AS date,
+      `SELECT id, comp_id, grades, round_id, date::text AS date,
               start_time::text AS start_time, end_time::text AS end_time
          FROM exams WHERE id = $1 AND deleted_at IS NULL`,
       [examId]
@@ -159,6 +176,13 @@ router.post("/exams/:examId/sessions", async (req: Request, res: Response) => {
     const ctx = await studentContext(req.userId!, exam.comp_id);
     if (!ctx.registered) {
       res.status(403).json({ message: "You are not registered for this competition" });
+      return;
+    }
+    // A round-scoped exam needs a cleared registration for that specific round.
+    if (exam.round_id && !ctx.clearedRounds.has(exam.round_id)) {
+      res.status(403).json({
+        message: "Register and pay for this round before sitting its exam.",
+      });
       return;
     }
     const grades = Array.isArray(exam.grades) ? exam.grades : [];
@@ -429,6 +453,12 @@ router.post("/sessions/:id/submit", async (req: Request, res: Response) => {
       }
     } catch (certErr) {
       console.error("Certificate auto-issue (session submit) failed:", certErr);
+    }
+    // Record the round medal result from the exam score (best-effort).
+    try {
+      await applyMedalFromSession(pool, id);
+    } catch (medalErr) {
+      console.error("Medal application (session submit) failed:", medalErr);
     }
     res.json({ finished: true, awaitingGrading: await sessionHasPendingGrading(pool, id) });
   } catch (err) {

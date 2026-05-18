@@ -15,8 +15,13 @@ import { Button } from '@/components/ui/button';
 interface RegistrationRow {
   id: string;
   compId: string;
+  roundId: string | null;
   status: string;
   registrationNumber: string | null;
+}
+
+function rupiah(n: number): string {
+  return `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
 }
 
 type StepStatus = 'done' | 'current' | 'upcoming';
@@ -310,6 +315,120 @@ function CertificateBlock({ compId }: { compId: string | null }) {
   );
 }
 
+// A round of a multi-round competition (from GET /competitions/:id).
+interface Round {
+  id: string;
+  roundName: string;
+  roundType: string;
+  examDate: string | null;
+  fee: number;
+  location: string | null;
+  gating: { mode?: string; rule?: string; requiresRoundId?: string } | null;
+}
+
+function StatusPill({ status }: { status: string }) {
+  const tone =
+    status === 'paid' || status === 'approved' || status === 'completed'
+      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+      : status === 'rejected'
+        ? 'bg-destructive/10 text-destructive'
+        : 'bg-primary/10 text-primary';
+  return (
+    <span
+      className={`shrink-0 rounded-full px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wide ${tone}`}
+    >
+      {status.replace(/_/g, ' ')}
+    </span>
+  );
+}
+
+// The per-round registration panel for a multi-round competition — register
+// and pay for each round independently.
+function RoundsPanel({
+  rounds,
+  regs,
+  slug,
+  wordmark,
+  registering,
+  onRegister,
+}: {
+  rounds: Round[];
+  regs: RegistrationRow[];
+  slug: string;
+  wordmark: string;
+  registering: string | null;
+  onRegister: (roundId: string) => void;
+}) {
+  const byRound = new Map(regs.filter((r) => r.roundId).map((r) => [r.roundId, r]));
+  return (
+    <Card className="gap-0 p-7">
+      <h2 className="font-serif text-xl font-medium text-foreground">Competition rounds</h2>
+      <p className="mt-1 mb-5 text-sm text-muted-foreground">
+        Register and pay for each round of {wordmark} you want to enter.
+      </p>
+      <ol className="space-y-3">
+        {rounds.map((round, i) => {
+          const reg = byRound.get(round.id);
+          const prereq =
+            round.gating?.mode === 'prerequisite'
+              ? rounds.find((r) => r.id === round.gating?.requiresRoundId)
+              : null;
+          return (
+            <li key={round.id} className="rounded-lg border bg-card p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {round.roundName || `Round ${i + 1}`}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {round.roundType}
+                    {round.examDate
+                      ? ` · ${new Date(round.examDate).toLocaleDateString('en-US', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}`
+                      : ''}
+                    {` · ${round.fee > 0 ? rupiah(round.fee) : 'Free'}`}
+                  </p>
+                </div>
+                {reg && <StatusPill status={reg.status} />}
+              </div>
+              {prereq && !reg && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Unlocks after {prereq.roundName || 'an earlier round'}.
+                </p>
+              )}
+              <div className="mt-3">
+                {!reg ? (
+                  <Button
+                    size="sm"
+                    disabled={registering === round.id}
+                    onClick={() => onRegister(round.id)}
+                  >
+                    {registering === round.id ? 'Registering…' : 'Register for this round'}
+                  </Button>
+                ) : reg.status === 'pending_payment' ? (
+                  <Button size="sm" asChild>
+                    <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
+                      Pay round fee
+                    </Link>
+                  </Button>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {STATUS_COPY[reg.status]?.body ??
+                      `Status: ${reg.status.replace(/_/g, ' ')}`}
+                  </p>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </Card>
+  );
+}
+
 function Stepper({
   steps,
   externalUrl,
@@ -381,17 +500,17 @@ export default function CompetitionDashboardPage() {
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
-  const paths = competitionPaths(slug);
 
-  const { user, logout } = useCompetitionAuth();
+  const { user } = useCompetitionAuth();
   const { comp } = usePortalComp(slug);
-  const router = useRouter();
 
   const [regs, setRegs] = useState<RegistrationRow[] | null>(null);
   const [progress, setProgress] = useState<FlowProgress | null>(null);
   const [access, setAccess] = useState<AccessInfo | null>(null);
   const [enroll, setEnroll] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [rounds, setRounds] = useState<Round[] | null>(null);
+  const [registering, setRegistering] = useState<string | null>(null);
 
   useEffect(() => {
     if (!config) notFound();
@@ -408,6 +527,16 @@ export default function CompetitionDashboardPage() {
 
   useEffect(() => {
     if (comp?.id) void refresh(comp.id);
+  }, [comp?.id]);
+
+  // A competition's rounds — drives the multi-round per-round panel. An empty
+  // array means a single-stage competition (the flow-stepper path).
+  useEffect(() => {
+    if (!comp?.id) return;
+    emcHttp
+      .get<{ rounds?: Round[] }>(`/competitions/${comp.id}`)
+      .then((d) => setRounds(Array.isArray(d.rounds) ? d.rounds : []))
+      .catch(() => setRounds([]));
   }, [comp?.id]);
 
   // Once we know the registration, pull its step-flow progress + (for
@@ -458,9 +587,22 @@ export default function CompetitionDashboardPage() {
     }
   };
 
-  const signOut = async () => {
-    await logout();
-    router.replace(paths.login);
+  const enrollRound = async (roundId: string) => {
+    if (!comp?.id) return;
+    setRegistering(roundId);
+    setErr(null);
+    try {
+      await emcHttp.post('/registrations', {
+        id: crypto.randomUUID(),
+        compId: comp.id,
+        roundId,
+      });
+      await refresh(comp.id);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not register for this round');
+    } finally {
+      setRegistering(null);
+    }
   };
 
   if (!config) return null;
@@ -469,40 +611,14 @@ export default function CompetitionDashboardPage() {
   const fallbackCopy = reg ? STATUS_COPY[reg.status] : null;
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-10">
-        <header className="flex items-center justify-between">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
-              {config.shortName} 2026
-            </p>
-            <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">
-              Hi {user?.fullName || user?.full_name || 'there'} 👋
-            </h1>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={competitionPaths(slug).announcements}>News</Link>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={competitionPaths(slug).materials}>Materials</Link>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={competitionPaths(slug).store}>Store</Link>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={competitionPaths(slug).feedback}>Feedback</Link>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={competitionPaths(slug).certificate}>Certificate</Link>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/competitions">All competitions</Link>
-            </Button>
-            <Button variant="ghost" size="sm" onClick={signOut}>
-              Sign out
-            </Button>
-          </div>
+    <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-10">
+        <header>
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
+            {config.shortName} 2026
+          </p>
+          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">
+            Hi {user?.fullName || user?.full_name || 'there'} 👋
+          </h1>
         </header>
 
         {err && (
@@ -511,11 +627,35 @@ export default function CompetitionDashboardPage() {
           </div>
         )}
 
-        {!regs ? (
+        {!regs || rounds === null ? (
           <Card className="items-center gap-3 p-10 text-center">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Loading your registration…</p>
           </Card>
+        ) : rounds.length > 0 ? (
+          <>
+            <RoundsPanel
+              rounds={rounds}
+              regs={regs}
+              slug={slug}
+              wordmark={config.wordmark}
+              registering={registering}
+              onRegister={enrollRound}
+            />
+            <Card className="gap-0 p-7">
+              <h2 className="font-serif text-xl font-medium text-foreground">Your exams</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Exams unlock once you’ve registered and paid for their round.
+              </p>
+              <ExamBlock compId={comp?.id ?? null} slug={slug} />
+            </Card>
+            <Card className="gap-0 p-7">
+              <h2 className="font-serif text-xl font-medium text-foreground">
+                Your certificates
+              </h2>
+              <CertificateBlock compId={comp?.id ?? null} />
+            </Card>
+          </>
         ) : reg ? (
           <Card className="gap-0 p-7">
             <div className="flex items-center justify-between">
@@ -579,7 +719,6 @@ export default function CompetitionDashboardPage() {
             )}
           </Card>
         )}
-      </div>
     </div>
   );
 }

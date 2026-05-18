@@ -102,6 +102,7 @@ router.get("/", async (req: Request, res: Response) => {
       registrationStatus: c.registration_status,
       isInternational: c.is_international,
       imageUrl: c.image_url,
+      logoUrl: c.logo_url ?? null,
       participantInstructions: c.participant_instructions,
       kind: c.kind ?? "native",
       createdAt: c.created_at,
@@ -145,7 +146,14 @@ router.get("/:id", async (req: Request, res: Response) => {
               results_date,
               fee,
               location,
-              round_order
+              round_order,
+              requires_round_id,
+              gating,
+              required_docs,
+              round_category,
+              country,
+              exam_mode,
+              qualifying_score
             FROM competition_rounds
             WHERE comp_id = $1
             ORDER BY round_order ASC, created_at ASC`,
@@ -172,6 +180,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       registrationStatus: c.registration_status,
       isInternational: c.is_international,
       imageUrl: c.image_url,
+      logoUrl: c.logo_url ?? null,
       websiteUrl: c.website_url,
       participantInstructions: c.participant_instructions,
       rounds: rounds.map((round) => ({
@@ -185,6 +194,13 @@ router.get("/:id", async (req: Request, res: Response) => {
         fee: round.fee,
         location: round.location,
         roundOrder: round.round_order,
+        requiresRoundId: round.requires_round_id ?? null,
+        gating: round.gating ?? null,
+        requiredDocs: round.required_docs ?? [],
+        roundCategory: round.round_category ?? 'online',
+        country: round.country ?? null,
+        examMode: round.exam_mode ?? 'online',
+        qualifyingScore: round.qualifying_score ?? null,
       })),
       createdAt: c.created_at,
     });

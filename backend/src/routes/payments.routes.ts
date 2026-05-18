@@ -352,12 +352,13 @@ router.post("/snap", async (req: Request, res: Response) => {
          r.comp_id     AS comp_id,
          r.voucher_code AS persisted_voucher_code,
          c.name        AS competition_name,
-         c.fee,
+         COALESCE(cr.fee, c.fee) AS fee,
          u.full_name,
          u.email,
          s.npsn        AS student_npsn
        FROM registrations r
        JOIN competitions c ON c.id = r.comp_id
+       LEFT JOIN competition_rounds cr ON cr.id = r.round_id
        JOIN users u ON u.id = r.user_id
        LEFT JOIN students s ON s.id = r.user_id
        WHERE r.id = $1`,

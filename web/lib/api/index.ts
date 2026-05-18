@@ -38,6 +38,7 @@ export const competitionsApi = {
       },
     }));
   },
+  get: (id: string) => adminHttp.get<any>(`/competitions/${id}`),
   create: (data: Partial<Competition>) =>
     adminHttp.post<Competition>('/admin/competitions', data),
   update: (id: string, data: Partial<Competition>) =>
