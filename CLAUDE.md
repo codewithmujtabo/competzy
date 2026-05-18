@@ -55,6 +55,30 @@ EXPO_PUBLIC_API_URL=http://<MAC_LAN_IP>:3000/api
 
 ---
 
+## Deployment
+
+Production runs on **Coolify** (self-hosted PaaS) — four services in one project:
+
+| Service        | Source                | Internal port | Public domain                       |
+| -------------- | --------------------- | ------------- | ----------------------------------- |
+| PostgreSQL 16  | Coolify Database      | `5432`        | — (internal only)                   |
+| MinIO          | Coolify Service       | `9000`/`9001` | `https://minio.arena.competzy.com`  |
+| Backend (API)  | `backend/Dockerfile`  | `3000`        | `https://api.competzy.com`          |
+| Web (Next.js)  | `web/Dockerfile`      | `3001`        | `https://arena.competzy.com`        |
+
+**Domain split:**
+- `competzy.com` — landing page, lives in a **separate repo** (`eduversal-team/competzy-web`); this repo doesn't touch it.
+- `arena.competzy.com` — the portal in this repo (`web/`); login + manage competitions, registrations, exams, etc.
+- `api.competzy.com` — backend API (this repo's `backend/`).
+
+`app/` (Expo React Native) does **not** deploy to Coolify — mobile binaries are built via EAS Build (`eas build --profile production`) from a developer machine. The Expo "web export" mode is not used in production.
+
+Old VPS / nginx / pm2 deployment is retired. The `deploy/nginx.conf` and `deploy/pm2.config.js` files were removed on 2026-05-18. Anything in the sprint history below that references `deploy/nginx.conf`, `pm2.config.js`, or VPS-direct rollout is historical context — current source of truth is **`deploy/COOLIFY.md`**.
+
+See `deploy/COOLIFY.md` for the full step-by-step (provision DB + MinIO, env vars, migrations, troubleshooting).
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -62,10 +86,10 @@ EXPO_PUBLIC_API_URL=http://<MAC_LAN_IP>:3000/api
 | Mobile | React Native + Expo SDK 52 + TypeScript + Expo Router (file-based) |
 | Web | Next.js 16 App Router + React 19 + TypeScript + Tailwind v4 + shadcn/ui + recharts (EMC Wave 2) |
 | Backend | Express.js 5 + TypeScript + node-pg (raw SQL, no ORM) |
-| Database | PostgreSQL — self-hosted on VPS |
+| Database | PostgreSQL — self-hosted (Coolify Postgres service) |
 | Auth | JWT (7-day) + Email OTP + Phone OTP via Twilio |
 | Payments | Midtrans Snap (GoPay, OVO, Dana, Bank VA, QRIS) |
-| File storage | Currently local disk `/backend/uploads/` → needs MinIO migration |
+| File storage | MinIO (S3-compatible) as a Coolify service; backend falls back to local disk `/app/uploads` (Coolify persistent volume) when MinIO env vars are absent |
 | Push notifications | Expo Push Service |
 | Email | Nodemailer (SMTP / Gmail) |
 | Regions data | Static JSON from emsifa.com (called directly from app, not proxied) |
@@ -75,7 +99,7 @@ EXPO_PUBLIC_API_URL=http://<MAC_LAN_IP>:3000/api
 
 ## Rules — Always Follow
 
-1. **Never propose Supabase, Neon, RDS, PlanetScale, or any managed DBaaS.** Self-hosted PostgreSQL on VPS only.
+1. **Never propose Supabase, Neon, RDS, PlanetScale, or any managed DBaaS.** Self-hosted PostgreSQL only — provisioned as a Coolify Database service in production.
 2. **Never use an ORM.** Raw SQL with `node-pg` (`pool.query()`). Migrations are plain `.sql` files in `backend/migrations/`.
 3. **All web pages must have `'use client'`** if they use React state, hooks, or browser APIs. Next.js App Router defaults to Server Components.
 4. **Web calls backend via Next.js rewrite** (`/api/*` → `http://localhost:3000/api/*`). Never hardcode backend URLs in web code — always use relative `/api/...` paths.
@@ -136,7 +160,7 @@ EXPO_PUBLIC_API_URL=http://<MAC_LAN_IP>:3000/api
 - **All client-facing URLs are now signed and 15-min expiry** (Sprint 14):
   - S3/MinIO: real presigned GET URLs via `@aws-sdk/s3-request-presigner`
   - Local disk dev: JWT-token URLs at `/uploads-signed/<token>` served by an endpoint in `index.ts` with path-traversal guard
-- `GET /api/documents` returns signed URLs in the `fileUrl` field. Raw `/uploads/...` static path still served for backward compat in dev — **remove from production nginx config**.
+- `GET /api/documents` returns signed URLs in the `fileUrl` field. Raw `/uploads/...` static path still served for backward compat in dev. In production the `MINIO_*` env vars are set on the Coolify backend service, so all client URLs route through MinIO presigned GETs — the local-disk static path is never exposed publicly.
 - `backend/src/services/storage.service.ts` exposes `storeFile`, `deleteFile`, `getSignedUrl`, `verifySignedUrlToken`, and `isS3Configured`.
 
 ### Audit Log (Sprint 14)
@@ -250,7 +274,7 @@ EXPO_PUBLIC_API_URL=http://<MAC_LAN_IP>:3000/api
 - **Dev (default):** local disk `backend/uploads/<userId>/`, served as static by Express.
 - **Production (MinIO):** set `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_BUCKET`, `MINIO_PUBLIC_URL` in `backend/.env`. The code automatically switches to S3 when these are set.
 - All three upload routes (users, documents, payments) now use `multer.memoryStorage()` + `storeFile()` from `storage.service.ts`.
-- T21 (MinIO Docker on VPS) is the only remaining infrastructure step before production storage works.
+- T21 (production MinIO) is now done as a Coolify service — provision via the Coolify UI, see `deploy/COOLIFY.md` step 3. The backend reaches it over the docker network (`MINIO_ENDPOINT=http://minio:9000`); browsers reach it over the public domain via `MINIO_PUBLIC_URL`.
 
 ---
 
@@ -278,16 +302,16 @@ We're porting the feature set of the legacy `eduversal-team/emc` Laravel app ont
 
 The Wave 3–12 stacked-PR backlog — 51 PRs — was merged bottom-up into `main` on 2026-05-17, followed by the mobile role-guard fix. **`origin/main` is now fully current** — 0 open PRs, every merged feature branch pruned, `origin` carries only `main`. (An earlier "8 commits ahead of `origin/main`" note here is obsolete — there is no longer an unpushed backlog.) The only remaining rollout work is the VPS / production checklist below.
 
-### Manual rollout still required (Sprint 13/17 — needs your access)
-- **MinIO Docker on VPS** (T21): `docker run -d -p 9000:9000 -p 9001:9001 -e MINIO_ROOT_USER=... -e MINIO_ROOT_PASSWORD=... quay.io/minio/minio server /data --console-address :9001`, then set the 5 `MINIO_*` env vars in VPS `backend/.env`.
-- **Run all migrations on VPS:** `cd backend && npm run db:migrate` to apply `1746500000000` through `1749900000000` (covers Sprint 14–17, the Sprint 20 EMC schema batch, and EMC Waves 4–12 — the competition-flows, affiliated-competitions, question-bank/exam/commerce/marketing, and certificates migrations).
-- **Rename DB on VPS:** `ALTER DATABASE kompetix RENAME TO competzy;` (or `beyond_classroom RENAME TO competzy;`). Update VPS `DATABASE_URL`.
-- **Production deploy:** copy `deploy/nginx.conf` to `/etc/nginx/sites-available/competzy.conf`; `pm2 start deploy/pm2.config.js --env production` after `npm run build` in `backend/` and `web/`. See `docs/RUNBOOK.md`.
-- **DNS + SSL:** A records for `competzy.com`, `api.competzy.com`, `admin.competzy.com`, `organizer.competzy.com`, `partner.competzy.com`, `compete.competzy.com`. Then `certbot --nginx -d ...`.
+### Manual rollout still required (Coolify deployment — 2026-05-18 refresh)
+Follow `deploy/COOLIFY.md` end-to-end. Summary of external prerequisites that can't be automated:
+- **DNS:** A records for `api.competzy.com`, `arena.competzy.com`, and `minio.arena.competzy.com` pointing at the Coolify server IP. (`competzy.com` itself lives in the separate `eduversal-team/competzy-web` repo.)
+- **Coolify project setup:** create `competzy` project → provision Postgres → provision MinIO (root creds + bucket `competzy` + non-root access keys) → deploy `backend/` and `web/` via Dockerfile build, with the env vars in `backend/.env.example` and the build arg `NEXT_PUBLIC_API_URL=https://api.competzy.com/api` on the web service.
+- **Run all migrations** on the Coolify backend container terminal: `npm run db:migrate` (applies `1746500000000` through `1749900000000` — Sprint 14–17, the Sprint 20 EMC schema batch, and EMC Waves 4–12: competition-flows, affiliated-competitions, question-bank/exam/commerce/marketing, certificates).
+- **Seed/admin scripts** (`db:create-admin`, `db:seed:*`) use `ts-node` which is pruned from the production image — run them from a developer machine with `DATABASE_URL` pointed at the Coolify Postgres (publish temporarily or SSH tunnel).
 - **Midtrans production keys** + webhook URL `https://api.competzy.com/api/payments/webhook`.
-- **EAS init:** `cd app && npx eas init` (needs expo.dev account). Fill in `appleId`, `ascAppId`, `appleTeamId` in `app/eas.json`.
+- **EAS init:** `cd app && npx eas init` (needs expo.dev account). Fill in `appleId`, `ascAppId`, `appleTeamId` in `app/eas.json`. Mobile rilis is independent of Coolify.
 - **Apple Developer + Play Console** for App Store / Play Store submission.
-- **api.co.id production key** (`API_CO_ID_KEY` in VPS `.env`).
+- **api.co.id production key** (`API_CO_ID_KEY` env on the backend service).
 - **Privacy + Terms legal review** of `web/app/privacy/page.tsx` and `web/app/terms/page.tsx` (currently DRAFT).
 - **Load test against staging** once it's up: `k6 run loadtest/k6-registration.js --env BASE=https://staging-api.competzy.com`.
 
@@ -382,11 +406,13 @@ The Wave 3–12 stacked-PR backlog — 51 PRs — was merged bottom-up into `mai
 ### SPRINT 13 — Production Infra Templates (May 9, 2026 Session 5) ✅ LOCAL ARTIFACTS DONE
 | Item | What | Files |
 |---|---|---|
-| nginx config | Reverse proxy + SSL termination for api/admin/organizer/school/partner subdomains, 12 MB body limit, HTTP→HTTPS redirect | `deploy/nginx.conf` |
-| pm2 supervisor | Cluster mode for backend (one worker per CPU), single fork for Next.js, log rotation paths | `deploy/pm2.config.js` |
+| Backend container | Multi-stage `node:20-alpine`, tini, non-root, healthcheck `/api/health`, volume `/app/uploads` | `backend/Dockerfile`, `backend/.dockerignore` |
+| Web container | Multi-stage Next.js standalone (`output: 'standalone'`), healthcheck `/`, build-arg `NEXT_PUBLIC_API_URL` | `web/Dockerfile`, `web/.dockerignore`, `web/next.config.mjs` |
+| Coolify guide | Step-by-step: Postgres + MinIO + backend + web deploy on Coolify, env var map, migrations, troubleshooting | `deploy/COOLIFY.md` |
 | Expo build config | development/preview/production profiles; production sets EXPO_PUBLIC_API_URL=`https://api.competzy.com/api` | `app/eas.json` |
 | k6 load test | 500-VU ramp testing signup → /me → /competitions → POST /registrations; thresholds p95<2s, error<2% | `loadtest/k6-registration.js`, `loadtest/README.md` |
-| Runbook | Deploy steps, common incident playbooks (API down, payment stuck, signed-URL 403, soft-delete recovery, audit-log forensics, rollback) | `docs/RUNBOOK.md` |
+| Runbook | Common incident playbooks (API down, payment stuck, signed-URL 403, soft-delete recovery, audit-log forensics, rollback). **Note:** deploy steps in this file pre-date the Coolify migration — see `deploy/COOLIFY.md` for current rollout. | `docs/RUNBOOK.md` |
+| _Retired 2026-05-18_ | VPS nginx + pm2 templates (replaced by Coolify Dockerfiles) | _deleted_ |
 
 ### SPRINT 19 — Gen Z Playful Redesign + English/Back-Nav Mop-up (May 12, 2026 Session 7) ✅ COMPLETE
 | Task | What | Key files |
@@ -646,7 +672,7 @@ T21 (MinIO) ──────────────► T22 (storage migration
 - `pay.tsx` polling: after browser close (any path), calls `GET /api/payments/verify/:registrationId` up to 6× with 3s gaps. The verify endpoint calls Midtrans Status API and force-updates DB — this is what makes sandbox work without a live webhook. In production the webhook arrives first and verify is a no-op.
 - **Sprint 14 dual-auth quirk:** auth middleware accepts both Authorization Bearer header AND `competzy_token` cookie. This means existing localStorage-based logins (from before the cookie migration) continue to work in the wild as long as the JWT hasn't expired. Once everyone re-logins or the JWT TTL elapses (7 days), only cookies will be in use.
 - **Sprint 14 retention sweep**: kicks in nightly. If you accidentally delete a doc-related `competition_date` in the past, the next 02:00 run will soft-delete those docs. Use `restore()` from `query-helpers.ts` to recover.
-- **`/uploads/...` static path is still served unsigned by the backend** for backward-compat in dev. Production nginx config (`deploy/nginx.conf`) now returns 404 for `/uploads/` on `api.competzy.com`, so signed URLs are the only public access path.
+- **`/uploads/...` static path is still served unsigned by the backend** for backward-compat in dev. In Coolify production, file uploads go to MinIO (presigned URLs only) — the unsigned `/uploads/*` route is effectively unreachable because no public client ever stores `MINIO_*`-less files. If MinIO env vars are ever cleared on the Coolify backend service, the backend falls back to local disk + JWT-signed `/uploads-signed/<token>` URLs (still no public unsigned access).
 - **Cookie auth single-session caveat**: one browser → one session. Admins who used to keep admin + organizer tabs open simultaneously must now use two browsers or two profiles.
 - **Hard nav after login is load-bearing.** The per-role `AuthProvider`s (admin/organizer/school/competition) each hydrate from `/auth/me` exactly once on mount. The unified login at `/` calls `adminHttp.post('/auth/login')` directly (it accepts any role) instead of going through the role-specific provider's `login()`, so the destination provider's `user` state never updates. Use `window.location.assign(destinationFor(role))` after login, not `router.replace`. Same in `web/app/(competitions)/[slug]/register/page.tsx` post-signup. (Earlier client-side `router.replace` caused a redirect loop: `/` → `/dashboard` → bounce back to `/` because provider still saw `user=null` → page re-detected the cookie via its own `/auth/me` → looked like a refresh.)
 - **`docs/PROJECT_PLAN.md` and `docs/PROJECT_PLAN.docx`** are out-of-sync with this CLAUDE.md after Sprint 14–16. Treat CLAUDE.md as the source of truth; update PROJECT_PLAN later if needed for stakeholder reporting.
