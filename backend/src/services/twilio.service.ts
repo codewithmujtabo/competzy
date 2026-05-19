@@ -30,6 +30,21 @@ export function phoneVariants(phone: string): string[] {
   ];
 }
 
+/**
+ * Canonical storage form of an Indonesian phone number: the local 0-prefixed
+ * format (e.g. 0897654321). Accepts +62xxx / 62xxx / 8xxx / 08xxx and any
+ * spacing or punctuation. Every write path normalises through this so the DB
+ * holds one consistent format. Returns "" for an empty/blank input.
+ */
+export function toLocalPhone(phone: string | null | undefined): string {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("62")) return `0${digits.slice(2)}`;
+  if (digits.startsWith("0")) return digits;
+  if (digits.startsWith("8")) return `0${digits}`;
+  return digits;
+}
+
 function getClient() {
   return twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
 }

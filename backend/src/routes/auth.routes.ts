@@ -10,7 +10,7 @@ import {
   generateOtp,
 } from "../services/auth.service";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service";
-import { sendPhoneOtp, verifyPhoneOtp, toE164, phoneVariants } from "../services/twilio.service";
+import { sendPhoneOtp, verifyPhoneOtp, toE164, phoneVariants, toLocalPhone } from "../services/twilio.service";
 import { authMiddleware } from "../middleware/auth";
 import {
   otpSendLimiter,
@@ -177,7 +177,8 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
         `INSERT INTO users (email, password_hash, full_name, phone, city, province, role, consent_accepted_at, consent_version)
          VALUES ($1, $2, $3, $4, $5, $6, $7, now(), $8)
          RETURNING id`,
-        [email, passwordHash, fullName, phone || null, city || null, province || null, role, "1.0"]
+        // Phone is normalised to the local 0-prefixed format on the way in.
+        [email, passwordHash, fullName, phone ? toLocalPhone(phone) || null : null, city || null, province || null, role, "1.0"]
       );
       const userId = userResult.rows[0].id;
 
