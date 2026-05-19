@@ -15,6 +15,36 @@ export function toE164(phone: string): string {
   return `+62${digits}`;
 }
 
+/**
+ * Every plausible stored form of an Indonesian phone number. Numbers have
+ * been persisted in mixed formats over time (08xxx saved by the mobile app,
+ * +62xxx by the web), so a phone lookup must compare against all of them.
+ */
+export function phoneVariants(phone: string): string[] {
+  const digits = phone.replace(/\D/g, "");
+  let national = digits;
+  if (digits.startsWith("62")) national = digits.slice(2);
+  else if (digits.startsWith("0")) national = digits.slice(1);
+  return [
+    ...new Set([`+62${national}`, `62${national}`, `0${national}`, national, phone.trim()]),
+  ];
+}
+
+/**
+ * Canonical storage form of an Indonesian phone number: the local 0-prefixed
+ * format (e.g. 0897654321). Accepts +62xxx / 62xxx / 8xxx / 08xxx and any
+ * spacing or punctuation. Every write path normalises through this so the DB
+ * holds one consistent format. Returns "" for an empty/blank input.
+ */
+export function toLocalPhone(phone: string | null | undefined): string {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("62")) return `0${digits.slice(2)}`;
+  if (digits.startsWith("0")) return digits;
+  if (digits.startsWith("8")) return `0${digits}`;
+  return digits;
+}
+
 function getClient() {
   return twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
 }
