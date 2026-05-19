@@ -49,6 +49,15 @@ export const competitionRegistry: Record<string, CompetitionPortalConfig> = {
     accentDark: '#a81a5d',
     gradient: ['#D9277B', '#a81a5d'] as const,
   },
+  komodo: {
+    slug: 'komodo',
+    shortName: 'Komodo',
+    wordmark: 'International Math Competition',
+    tagline: 'Compete with the world in mathematics',
+    accent: '#C2410C',
+    accentDark: '#9A3412',
+    gradient: ['#C2410C', '#9A3412'] as const,
+  },
 };
 
 /**

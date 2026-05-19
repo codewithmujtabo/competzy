@@ -10,10 +10,17 @@ const nextConfig = {
   },
   outputFileTracingRoot: import.meta.dirname,
   async rewrites() {
+    const backend = process.env.BACKEND_URL ?? 'http://localhost:3000';
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.BACKEND_URL ?? 'http://localhost:3000'}/api/:path*`,
+        destination: `${backend}/api/:path*`,
+      },
+      {
+        // Uploaded files (competition logos, etc.) are served by the backend
+        // outside /api — proxy them so the web app can render them in dev.
+        source: '/uploads/:path*',
+        destination: `${backend}/uploads/:path*`,
       },
     ];
   },

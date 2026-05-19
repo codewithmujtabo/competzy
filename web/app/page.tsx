@@ -64,6 +64,8 @@ function destinationFor(role: string): string {
     case 'student':
     case 'parent':
       return '/competitions';
+    case 'country_representative':
+      return '/rep-portal';
     default:
       return '/dashboard';
   }
@@ -532,12 +534,7 @@ export default function UnifiedLogin() {
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 New to Competzy?{' '}
                 <Link href={defaultCompetition.register} className="font-medium text-primary hover:underline">
-                  Create a student account
-                </Link>
-              </p>
-              <p className="mt-2 text-center text-sm text-muted-foreground">
-                <Link href="/school-signup" className="font-medium text-primary hover:underline">
-                  Sign up as a school
+                  Sign Up
                 </Link>
               </p>
 

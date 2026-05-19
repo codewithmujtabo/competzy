@@ -37,6 +37,7 @@ import venuesRoutes from "./routes/venues.routes";
 import commerceRoutes from "./routes/commerce.routes";
 import marketingRoutes from "./routes/marketing.routes";
 import certificatesRoutes from "./routes/certificates.routes";
+import countryRepRoutes from "./routes/country-rep.routes";
 import { initializeCronJobs } from "./services/cron.service";
 import { verifySignedUrlToken } from "./services/storage.service";
 import fs from "fs";
@@ -150,6 +151,8 @@ app.use("/api", examSessionRoutes);
 app.use("/api", venuesRoutes);
 // Commerce — owns /commerce/* (mounted at /api).
 app.use("/api", commerceRoutes);
+// Country representatives — owns /country-representatives/* + /rep/* (at /api).
+app.use("/api", countryRepRoutes);
 
 // Sentry error handler must come before our own error handler
 Sentry.setupExpressErrorHandler(app);

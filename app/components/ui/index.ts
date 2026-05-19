@@ -5,5 +5,6 @@ export { SectionHeader } from "./SectionHeader";
 export { EmptyState } from "./EmptyState";
 export { ScreenHeader } from "./ScreenHeader";
 export { SubjectCircle } from "./SubjectCircle";
+export { CompetitionMark } from "./CompetitionMark";
 export { StatTile } from "./StatTile";
 export { GeometricHeader } from "./GeometricHeader";

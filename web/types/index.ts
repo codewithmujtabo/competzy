@@ -14,6 +14,7 @@ export interface Competition {
   required_docs?: string[];
   description?: string;
   image_url?: string;
+  logo_url?: string;
   website_url?: string;
   registration_status?: 'On Going' | 'Closed' | 'Coming Soon';  // ← это вместо status
   poster_url?: string;

@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 interface RegistrationRow {
   id: string;
   compId: string;
+  roundId: string | null;
   status: string;
   registrationNumber: string | null;
 }
@@ -42,6 +43,10 @@ export default function CompetitionPayPage() {
   const { comp } = usePortalComp(slug);
   const [regs, setRegs] = useState<RegistrationRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // The specific registration to pay (a round registration), from ?registrationId=.
+  const [targetRegId, setTargetRegId] = useState<string | null>(null);
+  // round id → { fee, name } for a multi-round competition.
+  const [roundInfo, setRoundInfo] = useState<Record<string, { fee: number; name: string }>>({});
 
   // Voucher.
   const [code, setCode] = useState('');
@@ -59,11 +64,28 @@ export default function CompetitionPayPage() {
   }, [config]);
 
   useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    setTargetRegId(p.get('registrationId'));
+  }, []);
+
+  useEffect(() => {
     if (!comp?.id) return;
     emcHttp
       .get<RegistrationRow[]>(`/registrations?compId=${encodeURIComponent(comp.id)}`)
       .then(setRegs)
       .catch((e) => setErr(e instanceof Error ? e.message : 'Failed to load registration'));
+    emcHttp
+      .get<{ rounds?: { id: string; fee: number; roundName: string }[] }>(
+        `/competitions/${comp.id}`,
+      )
+      .then((d) => {
+        const m: Record<string, { fee: number; name: string }> = {};
+        for (const r of d.rounds ?? []) {
+          m[r.id] = { fee: Number(r.fee) || 0, name: r.roundName };
+        }
+        setRoundInfo(m);
+      })
+      .catch(() => {});
   }, [comp?.id]);
 
   useEffect(() => {
@@ -72,7 +94,13 @@ export default function CompetitionPayPage() {
     };
   }, []);
 
-  const reg = regs?.[0];
+  // Pay the registration named in ?registrationId=, else the first payable one.
+  const reg = regs
+    ? (targetRegId
+        ? regs.find((r) => r.id === targetRegId)
+        : regs.find((r) => !NON_PAYABLE.includes(r.status)) ?? regs[0])
+    : undefined;
+  const round = reg?.roundId ? roundInfo[reg.roundId] : undefined;
 
   const applyVoucher = async () => {
     if (!reg || !code.trim()) return;
@@ -152,7 +180,8 @@ export default function CompetitionPayPage() {
 
   if (!config) return null;
 
-  const fee = voucher?.originalFee ?? comp?.fee ?? 0;
+  const baseFee = round ? round.fee : comp?.fee ?? 0;
+  const fee = voucher?.originalFee ?? baseFee;
   const payable = reg && !NON_PAYABLE.includes(reg.status);
   const amountDue = voucher?.valid ? (voucher.discountedFee ?? fee) : fee;
 
@@ -171,7 +200,7 @@ export default function CompetitionPayPage() {
             {config.shortName} 2026
           </p>
           <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">
-            Registration payment
+            {round ? `${round.name} payment` : 'Registration payment'}
           </h1>
         </div>
 

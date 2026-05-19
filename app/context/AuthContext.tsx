@@ -33,6 +33,7 @@ export type RegistrationStatus =
 export interface Registration {
   id: string;
   compId: string;
+  roundId?: string | null;
   competitionName: string;
   fee: number;
   status: RegistrationStatus;
@@ -231,6 +232,7 @@ export function AuthProvider({
     const reg: Registration = {
       id,
       compId,
+      roundId: meta.roundId ?? null,
       competitionName: meta.competitionName ?? "Unknown",
       fee: meta.fee ?? 0,
       status: optimisticStatus,
@@ -244,6 +246,7 @@ export function AuthProvider({
       const { id: serverId, status: serverStatus } = await registrationsService.create({
         id,
         compId,
+        roundId: meta.roundId,
         meta,
       });
       // Use server status as source of truth

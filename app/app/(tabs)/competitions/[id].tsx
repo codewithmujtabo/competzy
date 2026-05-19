@@ -1,4 +1,4 @@
-import { Button, Card, Pill, ScreenHeader, SubjectCircle } from "@/components/ui";
+import { Button, Card, CompetitionMark, Pill, ScreenHeader } from "@/components/ui";
 import {
   Brand,
   CategoryAccent,
@@ -151,8 +151,12 @@ export default function CompetitionDetailPage() {
   const firstCat = cats[0] || "General";
   const accent = CategoryAccent[firstCat] ?? Brand.primary;
   const accentBg = CategoryBg[firstCat] ?? Brand.primarySoft;
+  // A multi-round competition registers per round — the CTA opens the round picker.
+  const multiRound = (comp.rounds?.length ?? 0) > 0;
 
-  const ctaLabel = isClosed
+  const ctaLabel = multiRound
+    ? "View rounds"
+    : isClosed
     ? "Registration Closed"
     : already
     ? existingReg && (existingReg.status === "pending_payment" || existingReg.status === "registered")
@@ -203,7 +207,7 @@ export default function CompetitionDetailPage() {
       <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={[styles.hero, { backgroundColor: accentBg }]}>
-          <SubjectCircle label={comp.name} size={96} />
+          <CompetitionMark name={comp.name} logoUrl={comp.logoUrl} size={96} />
           <Text style={[Type.h1, { textAlign: "center", marginTop: Spacing.lg }]} numberOfLines={3}>
             {comp.name}
           </Text>
@@ -380,6 +384,13 @@ export default function CompetitionDetailPage() {
         <Button
           label={ctaLabel}
           onPress={async () => {
+            if (multiRound) {
+              router.push({
+                pathname: "/(competition)/rounds",
+                params: { compId: comp.id, compName: comp.name },
+              });
+              return;
+            }
             if (!already && !isClosed) {
               Analytics.track("registration_started", {
                 competitionId: comp.id,
