@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, User, LayoutGrid, Trophy } from 'lucide-react';
+import { Loader2, User, FileText, LayoutGrid, Trophy } from 'lucide-react';
 import {
   CompetitionAuthProvider,
   useCompetitionAuth,
@@ -28,7 +28,10 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
 
 const NAV: NavSection[] = [
   {
-    items: [{ label: 'Profile', href: '/account/profile', icon: User }],
+    items: [
+      { label: 'Profile', href: '/account/profile', icon: User },
+      { label: 'Documents', href: '/account/documents', icon: FileText },
+    ],
   },
   {
     label: 'Browse',
