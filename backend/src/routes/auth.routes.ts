@@ -8,10 +8,12 @@ import {
   comparePassword,
   generateToken,
   generateOtp,
+  isSuperAdminEmail,
 } from "../services/auth.service";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service";
 import { sendPhoneOtp, verifyPhoneOtp, toE164 } from "../services/twilio.service";
 import { authMiddleware } from "../middleware/auth";
+import { audit } from "../middleware/audit";
 import {
   otpSendLimiter,
   otpVerifyLimiter,
@@ -544,10 +546,121 @@ router.get("/me", authMiddleware, async (req: Request, res: Response) => {
     }
     // T13: Fire-and-forget auto-link — does not block the response
     autoLinkHistoricalRecords(req.userId!, user.email ?? null, user.phone ?? null);
-    res.json(user);
+
+    // Impersonation context — when this session was started by the super-admin
+    // acting as someone else, expose who, so the UI can show a banner.
+    let impersonatedBy: { id: string; fullName: string | null; email: string | null } | null = null;
+    if (req.impersonatorId) {
+      const imp = await pool.query(
+        "SELECT full_name, email FROM users WHERE id = $1",
+        [req.impersonatorId],
+      );
+      impersonatedBy = {
+        id: req.impersonatorId,
+        fullName: imp.rows[0]?.full_name ?? null,
+        email: imp.rows[0]?.email ?? null,
+      };
+    }
+
+    res.json({
+      ...user,
+      // True only for the configured super-admin in a non-impersonated session.
+      isSuperAdmin: isSuperAdminEmail(user.email),
+      impersonating: !!req.impersonatorId,
+      impersonatedBy,
+    });
   } catch (err) {
     console.error("Get me error:", err);
     res.status(500).json({ message: "Failed to fetch user" });
+  }
+});
+
+// ── POST /api/auth/impersonate/:userId ────────────────────────────────────
+// The super-admin signs in as another user. Issues a short-lived (1h) token
+// for the target that also carries the super-admin's id (`imp`), so the
+// session is recognisably an impersonation and can be unwound.
+router.post(
+  "/impersonate/:userId",
+  authMiddleware,
+  audit({ action: "admin.user.impersonate", resourceType: "user", resourceIdParam: "userId" }),
+  async (req: Request, res: Response) => {
+    try {
+      // No nested impersonation — an impersonation session may not start another.
+      if (req.impersonatorId) {
+        res.status(403).json({ message: "Stop the current impersonation session first." });
+        return;
+      }
+      // Only the configured super-admin may impersonate.
+      const caller = await pool.query(
+        "SELECT email FROM users WHERE id = $1 AND deleted_at IS NULL",
+        [req.userId],
+      );
+      if (!isSuperAdminEmail(caller.rows[0]?.email)) {
+        res.status(403).json({ message: "Only the super-admin may impersonate users." });
+        return;
+      }
+      const targetId = String(req.params.userId);
+      if (targetId === req.userId) {
+        res.status(400).json({ message: "You cannot impersonate yourself." });
+        return;
+      }
+      const target = await pool.query(
+        "SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL",
+        [targetId],
+      );
+      if (target.rows.length === 0) {
+        res.status(404).json({ message: "User not found." });
+        return;
+      }
+      issueAuthCookie(res, generateToken(targetId, { impersonatorId: req.userId! }));
+      const user = await fetchUserWithRole(targetId);
+      res.json({ user });
+    } catch (err) {
+      console.error("Impersonate error:", err);
+      res.status(500).json({ message: "Could not start impersonation" });
+    }
+  },
+);
+
+// ── POST /api/auth/stop-impersonation ─────────────────────────────────────
+// End an impersonation session — re-issue a normal token for the original
+// super-admin and restore their cookie.
+router.post("/stop-impersonation", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const impersonatorId = req.impersonatorId;
+    if (!impersonatorId) {
+      res.status(400).json({ message: "Not in an impersonation session." });
+      return;
+    }
+    const admin = await pool.query(
+      "SELECT email FROM users WHERE id = $1 AND deleted_at IS NULL",
+      [impersonatorId],
+    );
+    if (!isSuperAdminEmail(admin.rows[0]?.email)) {
+      // The original admin is gone — clear the session rather than restore it.
+      clearAuthCookie(res);
+      res.status(403).json({
+        message: "The original admin account is no longer available. Please sign in again.",
+      });
+      return;
+    }
+    issueAuthCookie(res, generateToken(impersonatorId));
+    const user = await fetchUserWithRole(impersonatorId);
+    // Audit the stop with the super-admin as the actor — the audit() middleware
+    // would record the impersonated user instead.
+    const ip = req.ip ?? null;
+    const ua = req.headers["user-agent"] ?? null;
+    pool
+      .query(
+        `INSERT INTO audit_log (user_id, user_role, action, resource_type, resource_id, ip, user_agent, payload)
+         VALUES ($1, 'admin', 'admin.user.stop_impersonation', 'user', $2, $3, $4, NULL)`,
+        [impersonatorId, req.userId, ip, ua],
+      )
+      .catch((e) => console.error("[audit] stop-impersonation log failed:", e.message));
+    res.json({ user });
+  } catch (err) {
+    console.error("Stop impersonation error:", err);
+    res.status(500).json({ message: "Could not stop impersonation" });
   }
 });
 

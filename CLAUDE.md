@@ -125,6 +125,7 @@ See `deploy/COOLIFY.md` for the full step-by-step (provision DB + MinIO, env var
 - `GET /api/auth/me` is the user hydration endpoint on app startup. Now returns `kid` (KX-2026-NNNNNNN) and, for `school_admin`, `schoolVerificationStatus` + `schoolRejectionReason`.
 - **Password reset (Sprint 20 Phase B):** `POST /api/auth/forgot-password` accepts `{email}`, always returns 200 (no enumeration), and emails a `/reset-password?token=…` link when the email matches a live user. Tokens live in `password_reset_tokens` (migration `1748050000000`), SHA-256 hashed at rest, single-use, 15-min TTL. `POST /api/auth/reset-password` accepts `{token, password}`, requires ≥ 8 chars, marks the token used + invalidates any other outstanding tokens for the same user. Both endpoints rate-limited (5/15min per IP+identifier).
 - **Phone OTP on web (Sprint 20 Phase B):** the `/` login page now has an Email ↔ Phone mode toggle. Phone path reuses the existing `POST /api/auth/phone/{send,verify}-otp` endpoints; same cookie issuance flow. Dev OTP bypass still applies (`000000` when `TWILIO_VERIFY_SID` is unset).
+- **Super-admin impersonation (2026-05-19):** the configured super-admin (`SUPER_ADMIN_EMAIL` env, default `admin@eduversal.com`) can sign in as any user. `POST /api/auth/impersonate/:userId` issues the target a **short-lived (1h)** JWT carrying an `imp` claim — the super-admin's id; `POST /api/auth/stop-impersonation` re-issues a normal token for the original admin. `generateToken(userId, {impersonatorId})` embeds `imp`; the auth middleware sets `req.impersonatorId` from it. `GET /api/auth/me` returns `isSuperAdmin` + `impersonating` + `impersonatedBy`. Self-impersonation and nested impersonation are rejected; both transitions are written to `audit_log` (`admin.user.impersonate` / `admin.user.stop_impersonation`). Web: an **Impersonate** action on the admin `/users` page (shown only to the super-admin) + a sticky `ImpersonationBanner` (root layout, self-fetches `/auth/me`) with a one-click "Stop impersonating". `destinationFor()` lives in `web/lib/auth/role-destination.ts` (shared with the login page). Web-only — admins don't use the mobile app.
 
 ### Database
 - Schema is in `backend/src/db/schema.sql`.
@@ -317,13 +318,46 @@ Follow `deploy/COOLIFY.md` end-to-end. Server is `144.126.243.200` (Coolify alre
 - **Coolify project setup:** create `competzy` project → provision Postgres → provision MinIO (root creds, bucket `competzy`, non-root access keys, exposed ports 9000/9001) → deploy `backend/` (exposed port `3010:3000`) and `web/` (exposed port `3011:3001`) from Dockerfile, with env vars per `backend/.env.example` and the build arg `NEXT_PUBLIC_API_URL=https://api.competzy.com/api` on the web service. **Leave Coolify "Domains" field empty on every service** — host nginx handles routing.
 - **Host nginx + certbot:** SSH to server, copy `deploy/nginx.conf` to `/etc/nginx/sites-available/competzy-arena`, symlink into `sites-enabled`, `sudo nginx -t && sudo systemctl reload nginx`, then `sudo certbot --nginx -d api.competzy.com -d arena.competzy.com -d minio.arena.competzy.com`. Certbot auto-renews via `certbot.timer`.
 - **Run all migrations** on the Coolify backend container terminal: `npm run db:migrate` (applies `1746500000000` through `1749900000000`).
-- **Seed/admin scripts** (`db:create-admin`, `db:seed:*`) use `ts-node` which is pruned from the production image — run them from a developer machine with `DATABASE_URL` pointed at the Coolify Postgres (publish temporarily or SSH tunnel).
+- **Seed/admin scripts** (`db:create-admin`, `db:seed:*`) use `ts-node` which is pruned from the production image. The compiled JS still ships in `dist/db/`, so run them straight inside the backend container: `docker exec <backend> node dist/db/create-admin.js` (same pattern for `create-organizer`, `create-test-accounts`, `seed-test-competitions`). `db:import-historical` additionally needs `xlsx` (devDep, also pruned) — `docker exec <backend> npm install --no-save xlsx` first, then `node dist/db/import-historical.js /path/to/Eduversal_Database.xlsx` (`scp` the Excel onto the server beforehand). The "run from a developer machine + SSH tunnel" path still works but is rarely needed.
 - **Midtrans production keys** + webhook URL `https://api.competzy.com/api/payments/webhook`.
 - **EAS init:** `cd app && npx eas init` (needs expo.dev account). Fill in `appleId`, `ascAppId`, `appleTeamId` in `app/eas.json`. Mobile rilis is independent of the server.
 - **Apple Developer + Play Console** for App Store / Play Store submission.
 - **api.co.id production key** (`API_CO_ID_KEY` env on the backend service).
 - **Privacy + Terms legal review** of `web/app/privacy/page.tsx` and `web/app/terms/page.tsx` (currently DRAFT).
 - **Load test against staging** once it's up: `k6 run loadtest/k6-registration.js --env BASE=https://staging-api.competzy.com`.
+
+### Deployment record — 2026-05-18 evening (Phase 1 LIVE) ✅
+Server `144.126.243.200` came up in one session. SSH `eduadmin` (sudo + docker group). Server already runs the `competzy.com` landing page (port `3000`, repo `eduversal-team/competzy-web`) and an unrelated `pathvance.com` tenant (`3001`/`4000`) — new ports chosen to avoid the collision.
+
+| Layer | Service | Host port | Container (Coolify name) | Domain | TLS |
+| --- | --- | --- | --- | --- | --- |
+| DB | Postgres 16 | — internal | `n2r4m6jlot313hgb6rjeweqk` | — | — |
+| Object store | MinIO | `9000`, `9001` | `minio-l14682okii93bd66xlnwq3jf` | `https://minio.arena.competzy.com` | Let's Encrypt (host nginx) |
+| API | Backend (Express) | `3010 → 3000` | `xej8i74qc06bcgzkpok3znv2-…` | `https://api.competzy.com` | Let's Encrypt (host nginx) |
+| Web | Next.js | `3011 → 3001` | `z8lyn12pi8p95tbyvr6wuris-…` | `https://arena.competzy.com` | Let's Encrypt (host nginx) |
+
+- **TLS** — single Let's Encrypt SAN cert covering all three subdomains (api + arena + minio.arena), valid through `2026-08-16`, auto-renewed by `certbot.timer`. Provisioned with `sudo certbot --nginx -d api.competzy.com -d arena.competzy.com -d minio.arena.competzy.com` against the `competzy-arena` server-block template (`deploy/nginx.conf` → `/etc/nginx/sites-available/competzy-arena`, symlinked into `sites-enabled`).
+- **MinIO** — provisioned via Coolify "Docker Compose Empty" (not "Docker Image" — that resource type has no CMD-override field, so the required `server /data --console-address :9001` argument couldn't be passed). Compose file pins `image: minio/minio:latest`, declares `command: server /data --console-address :9001`, mounts a Docker named volume `minio-data:/data`, and binds 9000+9001 to host. Bucket `competzy` + a non-root service account were created via `mc admin user svcacct add` from inside the MinIO container (the slim console UI doesn't expose Access Keys management).
+- **Database** — 60 tables migrated (`1744070400000` → `1750000000000_grades-numeric`) via `docker exec <backend> npm run db:migrate`. Seeds run via the **compiled JS** (the production image prunes `ts-node`, but `tsc` already emits `dist/db/*.js`):
+  - `node dist/db/create-admin.js` → `admin@eduversal.com` / `admin123`
+  - `node dist/db/create-organizer.js` → `organizer@eduversal.com` / `organizer123`
+  - `node dist/db/create-test-accounts.js` → `student/parent/teacher/schooladmin@test.local` / `Test123!` (parent + teacher rosters pre-linked to the test student)
+  - `node dist/db/seed-test-competitions.js` → 3 native competitions (EMC, ISPO, OSEBI) with full lifecycle wiring (8 questions each, an open exam `<TAG>-R1`, 2 products, voucher batch `<TAG>-VG1`, 2 affiliate referrals `<TAG>-AFF1/2`, areas + test centers, the 6-step flow)
+- **Smoke test** — `curl -X POST https://api.competzy.com/api/auth/login` with admin creds returns 200, the `competzy_token` cookie (`HttpOnly; Secure; SameSite=Lax`), and the user payload (`kid: KX-2026-0000001`, `role: admin`). CORS allow-origin echoes `https://arena.competzy.com`, JWT, and the 20/15min rate-limiter are all wired.
+- **In-flight fix during deploy** — `web/Dockerfile` had `COPY --from=builder /app/public ./public` but the repo ships no `public/` folder, so the first web deploy failed at runtime stage 4/6 with `failed to calculate checksum of ref "/app/public": not found`. Fixed in commit `e53da3a` by adding `RUN mkdir -p public` before `npm run build` in the builder stage. Future Dockerfile templates: don't `COPY` a directory you don't guarantee the source ships.
+- **Skipped / deferred:**
+  - `db:seed:emc-demo` — fails by design (targets the now-removed `comp-1-eduversal-mathematics-competition` id, **superseded by `db:seed:test-competitions`** — don't run on this server).
+  - `db:import-historical` — the 63k-row `Eduversal_Database.xlsx` is off-repo PII and not on the server. To run: `scp` the file onto the server (`/home/eduadmin/`), `docker exec <backend> npm install --no-save xlsx`, then `docker exec <backend> node dist/db/import-historical.js /home/eduadmin/Eduversal_Database.xlsx`. Until run, the claim-your-records feature has zero hits.
+  - Production keys for SMTP / Twilio Verify / Midtrans / Sentry / `API_CO_ID_KEY` — placeholder env vars on the backend service; those vendor features are dark until the real keys land + container restarts.
+- **Coolify quirk** — this Coolify install has no proxy (no Traefik), and the "Domains" field on each service is left empty — host nginx is the public face, and Coolify "Exposed Ports" controls the host port nginx proxies into. The `Coolify-helper:1.0.13` container is the one that performs the per-deploy `git clone` + `docker build`; if a build hangs you can target it directly to read the logs.
+- **Coolify root login** — the only admin on the dashboard is `server@eduversal.org`. If the password gets lost, reset it from the server with `docker exec -it coolify php artisan root:reset-password` (interactive; no flag override). Same command works for any future admin too.
+
+**Pre-launch watch-list (still open):**
+- Change the `admin` + `organizer` passwords through the UI — `admin123` / `organizer123` are dev fixtures fine for soak testing only.
+- Wire SMTP, Twilio Verify, Midtrans production keys, Sentry DSN, and `API_CO_ID_KEY` once those vendor accounts go live; redeploy backend to pick them up.
+- Run `db:import-historical` once the Excel file is on the server.
+- Mobile binaries via EAS Build (`cd app && eas build --profile production`).
+- Privacy + Terms legal review (`web/app/privacy/page.tsx`, `web/app/terms/page.tsx`).
 
 ---
 
