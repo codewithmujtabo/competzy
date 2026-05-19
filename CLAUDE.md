@@ -352,12 +352,38 @@ Server `144.126.243.200` came up in one session. SSH `eduadmin` (sudo + docker g
 - **Coolify quirk** — this Coolify install has no proxy (no Traefik), and the "Domains" field on each service is left empty — host nginx is the public face, and Coolify "Exposed Ports" controls the host port nginx proxies into. The `Coolify-helper:1.0.13` container is the one that performs the per-deploy `git clone` + `docker build`; if a build hangs you can target it directly to read the logs.
 - **Coolify root login** — the only admin on the dashboard is `server@eduversal.org`. If the password gets lost, reset it from the server with `docker exec -it coolify php artisan root:reset-password` (interactive; no flag override). Same command works for any future admin too.
 
+### Deployment record — 2026-05-19 (Sprint 33 + My Account suite + phone normalization) ✅
+Two redeploys landed on production within hours of the Phase 1 launch — `main` advanced from `3cd8bef` → `94c1320` → `d45bb05` (a teammate's 24-commit batch).
+
+**Wave 1 — Sprint 33 (commit `94c1320`):** multi-round competitions + Komodo. 6 migrations applied via `docker exec <backend> npm run db:migrate`:
+- `1750100000000_competition-rounds-gating.sql` — per-round gating + prerequisites
+- `1750200000000_competition-logo.sql` — competition logo URL column
+- `1750300000000_registrations-round-id.sql` — registrations attach to a specific round
+- `1750400000000_komodo-round-model.sql` — Komodo-style multi-round schema (online / fast-track / local / global tiers)
+- `1750500000000_rep-payment-batches.sql` — country-rep payment batches (mirrors school batches)
+- `1750600000000_round-activation.sql` — `competition_rounds.is_active` toggle; existing `fast_track` + `global` rows backfilled to `is_active=false` so the operator activates them per cohort
+- New seed `node dist/db/seed-komodo.js` — non-destructive, idempotent (`Komodo already exists` no-op on re-run). Inserts `comp-komodo` (slug `komodo`, native) with 6 rounds: 3 Online (active) + Fast Track (inactive) + Local Malaysia offline (active) + Bali Global (inactive).
+
+**Wave 2 — My Account suite + super-admin impersonation + phone normalization (commit `d45bb05`):**
+- 1 migration applied: `1750700000000_normalize-user-phones.sql` — rewrites every `users.phone` from E.164 (`+62...`) to local 0-prefixed (`08...`) using `regexp_replace`; the migration ships a diagnostic SQL block (commented out) for finding post-normalization collisions, and PR #11 made the script collision-safe before merge.
+- Web fitur baru live di `https://arena.competzy.com`: **My Account** for students (documents, notifications, competitions, historical-records claim, parent-family linking — PRs #4/#7/#8/#9/#10), catalog favorites, **super-admin user impersonation**, phone-login normalization (PR #5).
+- Mobile: per-round registration UI for the Komodo flow.
+
+**State after both waves:**
+- 68 migrations applied total (up from 61 after Phase 1 launch).
+- 6 competitions in `competitions`: EMC, ISPO, OSEBI (from `seed:test-competitions`), Komodo (from `seed:komodo`), plus two operator-created via UI (`Owlypia Online Round 8` affiliated, `EMC — Mathematics Competition Final` native).
+- 7 user phones present + correctly normalized — these include real account testers (mujtabo05@upi.edu, sizu@eduversal.org, plus a few @gmail tester accounts), confirming people are actively poking at the live portal.
+- Latest backend container: `xej8i74qc06bcgzkpok3znv2-153523268184` (image tag `d45bb05…`), web container also on `d45bb05…`. Smoke test admin login: 200 / 256ms.
+
+Both redeploys triggered manually from the Coolify UI (auto-deploy webhook still not wired). Pattern from Phase 1 held: `npm run db:migrate` runs cleanly inside the new container, seeds run via `node dist/db/<name>.js` (no ts-node install needed).
+
 **Pre-launch watch-list (still open):**
 - Change the `admin` + `organizer` passwords through the UI — `admin123` / `organizer123` are dev fixtures fine for soak testing only.
-- Wire SMTP, Twilio Verify, Midtrans production keys, Sentry DSN, and `API_CO_ID_KEY` once those vendor accounts go live; redeploy backend to pick them up.
+- Wire SMTP, Twilio Verify, Midtrans production keys, Sentry DSN, and `API_CO_ID_KEY` once those vendor accounts go live; redeploy backend to pick them up. Reminder: only `MIDTRANS_SERVER_KEY` / `MIDTRANS_CLIENT_KEY` / `MIDTRANS_IS_PRODUCTION` go on the backend service — never on web/app — and the Midtrans dashboard's webhook URL must be set to `https://api.competzy.com/api/payments/webhook` for the settle flow to land.
 - Run `db:import-historical` once the Excel file is on the server.
 - Mobile binaries via EAS Build (`cd app && eas build --profile production`).
 - Privacy + Terms legal review (`web/app/privacy/page.tsx`, `web/app/terms/page.tsx`).
+- Operator action on Komodo: flip `Fast Track` + `Bali Global Round` to active in the round-activation toggle UI when each round opens for registration.
 
 ---
 
