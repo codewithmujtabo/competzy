@@ -3,6 +3,7 @@ import { AuthProvider } from '@/lib/auth/context';
 import { ThemeProvider } from '@/lib/theme/context';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
+import { ImpersonationBanner } from '@/components/impersonation-banner';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ThemeProvider>
+          <ImpersonationBanner />
           <AuthProvider>
             <TooltipProvider delayDuration={200}>
               {children}

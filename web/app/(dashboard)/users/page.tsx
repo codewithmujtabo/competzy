@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Search, X } from 'lucide-react';
+import { Search, UserCog, X } from 'lucide-react';
 import { usersApi } from '@/lib/api';
+import { adminHttp } from '@/lib/api/client';
+import { useAuth } from '@/lib/auth/context';
+import { destinationFor } from '@/lib/auth/role-destination';
 import type { User } from '@/types';
 import { PageHeader } from '@/components/shell/page-header';
 import { Pager } from '@/components/shell/pager';
@@ -51,6 +54,23 @@ export default function UsersPage() {
   const [role, setRole] = useState('all');
   const [search, setSearch] = useState('');
   const [searchVal, setSearchVal] = useState('');
+
+  // Impersonation is gated to the super-admin (GET /auth/me → isSuperAdmin).
+  const { user: me } = useAuth();
+  const canImpersonate = !!me?.isSuperAdmin;
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
+
+  const impersonate = async (u: User) => {
+    setImpersonatingId(u.id);
+    try {
+      await adminHttp.post(`/auth/impersonate/${u.id}`, {});
+      // Hard nav so every per-role auth provider re-hydrates as the target user.
+      window.location.assign(destinationFor(u.role));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not impersonate this user');
+      setImpersonatingId(null);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -147,20 +167,24 @@ export default function UsersPage() {
                 <TableHead>Role</TableHead>
                 <TableHead>City</TableHead>
                 <TableHead>Joined</TableHead>
+                {canImpersonate && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={canImpersonate ? 6 : 5}>
                       <Skeleton className="h-8 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-sm text-muted-foreground">
+                  <TableCell
+                    colSpan={canImpersonate ? 6 : 5}
+                    className="h-32 text-center text-sm text-muted-foreground"
+                  >
                     No users found.
                   </TableCell>
                 </TableRow>
@@ -190,6 +214,23 @@ export default function UsersPage() {
                           })
                         : '—'}
                     </TableCell>
+                    {canImpersonate && (
+                      <TableCell className="text-right">
+                        {u.id === me?.id ? (
+                          <span className="text-xs text-muted-foreground">You</span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={impersonatingId === u.id}
+                            onClick={() => impersonate(u)}
+                          >
+                            <UserCog className="size-3.5" />
+                            {impersonatingId === u.id ? 'Starting…' : 'Impersonate'}
+                          </Button>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
