@@ -11,7 +11,7 @@ import {
   isSuperAdminEmail,
 } from "../services/auth.service";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service";
-import { sendPhoneOtp, verifyPhoneOtp, toE164 } from "../services/twilio.service";
+import { sendPhoneOtp, verifyPhoneOtp, toE164, phoneVariants, toLocalPhone } from "../services/twilio.service";
 import { authMiddleware } from "../middleware/auth";
 import { audit } from "../middleware/audit";
 import {
@@ -179,7 +179,8 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
         `INSERT INTO users (email, password_hash, full_name, phone, city, province, role, consent_accepted_at, consent_version)
          VALUES ($1, $2, $3, $4, $5, $6, $7, now(), $8)
          RETURNING id`,
-        [email, passwordHash, fullName, phone || null, city || null, province || null, role, "1.0"]
+        // Phone is normalised to the local 0-prefixed format on the way in.
+        [email, passwordHash, fullName, phone ? toLocalPhone(phone) || null : null, city || null, province || null, role, "1.0"]
       );
       const userId = userResult.rows[0].id;
 
@@ -364,18 +365,21 @@ router.post("/phone/verify-otp", otpVerifyLimiter, async (req: Request, res: Res
     }
 
     const e164 = toE164(phone);
+    const variants = phoneVariants(phone);
 
-    // Find existing user by phone
+    // Find an existing user by phone — match any stored format (08xxx saved
+    // by the app, +62xxx by the web, …) so a phone-format mismatch can't make
+    // an existing account look unregistered.
     const result = await pool.query(
-      "SELECT id FROM users WHERE phone = $1 OR phone = $2",
-      [phone, e164]
+      "SELECT id FROM users WHERE phone = ANY($1::text[])",
+      [variants]
     );
 
     if (result.rows.length === 0) {
       // Check historical_participants — if this phone was in a past competition, pre-fill signup
       const histResult = await pool.query(
-        `SELECT full_name, email FROM historical_participants WHERE phone = $1 LIMIT 1`,
-        [e164]
+        `SELECT full_name, email FROM historical_participants WHERE phone = ANY($1::text[]) LIMIT 1`,
+        [variants]
       );
       if (histResult.rows.length > 0) {
         const { full_name, email } = histResult.rows[0];
