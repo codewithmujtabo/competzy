@@ -22,6 +22,12 @@ const nextConfig = {
         source: '/uploads/:path*',
         destination: `${backend}/uploads/:path*`,
       },
+      {
+        // Signed file URLs (documents) — the backend serves these JWT-token
+        // links outside /api in dev; proxy them so downloads work on the web.
+        source: '/uploads-signed/:path*',
+        destination: `${backend}/uploads-signed/:path*`,
+      },
     ];
   },
   async headers() {
