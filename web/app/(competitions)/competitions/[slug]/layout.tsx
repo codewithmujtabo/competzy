@@ -82,6 +82,7 @@ function ShelledCompetition({ slug, children }: { slug: string; children: ReactN
     <AppShell
       brand={{ name: config.shortName, tagline: config.wordmark, icon: Trophy }}
       nav={nav}
+      notificationsHref="/account/notifications"
       user={{
         name: user.fullName || user.full_name || 'Student',
         email: user.email,

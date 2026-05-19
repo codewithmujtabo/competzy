@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, User, FileText, LayoutGrid, Trophy } from 'lucide-react';
+import { Loader2, User, FileText, Bell, LayoutGrid, Trophy } from 'lucide-react';
 import {
   CompetitionAuthProvider,
   useCompetitionAuth,
@@ -31,6 +31,7 @@ const NAV: NavSection[] = [
     items: [
       { label: 'Profile', href: '/account/profile', icon: User },
       { label: 'Documents', href: '/account/documents', icon: FileText },
+      { label: 'Notifications', href: '/account/notifications', icon: Bell },
     ],
   },
   {
@@ -63,6 +64,7 @@ function ShelledAccount({ children }: { children: ReactNode }) {
     <AppShell
       brand={{ name: 'Competzy', tagline: 'My Account', icon: Trophy }}
       nav={NAV}
+      notificationsHref="/account/notifications"
       user={{
         name: user.fullName || user.full_name || 'Student',
         email: user.email,

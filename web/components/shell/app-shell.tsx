@@ -63,6 +63,8 @@ export interface AppShellProps {
   nav: NavSection[];
   user: AppShellUser;
   onSignOut: () => void;
+  /** When set, the top-bar bell links here; otherwise it stays inert. */
+  notificationsHref?: string;
   children: React.ReactNode;
 }
 
@@ -86,7 +88,14 @@ function isActive(pathname: string, item: NavItem): boolean {
  * sticky top bar. Every web portal renders its pages inside one of these,
  * passing its own role-gated `nav` config; the look is identical across roles.
  */
-export function AppShell({ brand, nav, user, onSignOut, children }: AppShellProps) {
+export function AppShell({
+  brand,
+  nav,
+  user,
+  onSignOut,
+  notificationsHref,
+  children,
+}: AppShellProps) {
   const pathname = usePathname() ?? '';
   const { theme, toggle } = useTheme();
   const isMobile = useIsMobile();
@@ -203,9 +212,17 @@ export function AppShell({ brand, nav, user, onSignOut, children }: AppShellProp
             >
               {theme === 'dark' ? <Sun className="size-[1.1rem]" /> : <Moon className="size-[1.1rem]" />}
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Notifications" title="Notifications">
-              <Bell className="size-[1.1rem]" />
-            </Button>
+            {notificationsHref ? (
+              <Button variant="ghost" size="icon" aria-label="Notifications" title="Notifications" asChild>
+                <Link href={notificationsHref}>
+                  <Bell className="size-[1.1rem]" />
+                </Link>
+              </Button>
+            ) : (
+              <Button variant="ghost" size="icon" aria-label="Notifications" title="Notifications">
+                <Bell className="size-[1.1rem]" />
+              </Button>
+            )}
           </div>
         </header>
         <main className={cn('flex-1 overflow-y-auto')}>{children}</main>
