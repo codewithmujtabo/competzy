@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 const ROUND_TYPES = ['Online', 'On-site', 'Hybrid'];
 const GATING_RULES = [
@@ -51,6 +52,8 @@ export interface RoundDraft {
   gatingMode: 'open' | 'prerequisite' | 'qualified' | 'unqualified';
   requiresTempId: string | null;
   gatingRule: 'registered' | 'paid' | 'completed';
+  /** Operator visibility toggle — false hides the round from students. */
+  isActive: boolean;
 }
 
 function uid(): string {
@@ -78,6 +81,7 @@ export function emptyRound(): RoundDraft {
     gatingMode: 'open',
     requiresTempId: null,
     gatingRule: 'completed',
+    isActive: true,
   };
 }
 
@@ -114,6 +118,7 @@ export function roundsToDrafts(rounds: unknown): RoundDraft[] {
       gatingMode: ['prerequisite', 'qualified', 'unqualified'].includes(mode) ? mode : 'open',
       requiresTempId: reqId ? idToTemp.get(String(reqId)) ?? null : null,
       gatingRule: r?.gating?.rule ?? 'completed',
+      isActive: r?.isActive !== false,
     } as RoundDraft;
   });
 }
@@ -140,7 +145,71 @@ export function draftsToPayload(drafts: RoundDraft[]) {
         ? drafts.findIndex((x) => x.tempId === r.requiresTempId)
         : null,
     gatingRule: r.gatingRule,
+    isActive: r.isActive,
   }));
+}
+
+const isPastDate = (s: string): boolean => {
+  if (!s) return false;
+  const t = new Date(s).getTime();
+  return !Number.isNaN(t) && t < Date.now();
+};
+
+// Registration for a round is still open if it has no deadline, or the
+// deadline hasn't passed yet.
+const registrationOpen = (r: RoundDraft): boolean =>
+  !r.registrationDeadline || !isPastDate(r.registrationDeadline);
+
+// A round has "finished" once its results date — or, failing that, its exam
+// date — has passed.
+const roundFinished = (r: RoundDraft): boolean =>
+  isPastDate(r.resultsDate || r.examDate);
+
+/**
+ * Advisory hint for a Fast Track / Global round, given the other rounds.
+ * Never blocks — it just nudges the operator toward the right toggle state.
+ */
+function activationAdvice(
+  round: RoundDraft,
+  all: RoundDraft[],
+): { tone: 'warn' | 'info'; text: string } | null {
+  if (round.roundCategory === 'fast_track') {
+    const openOnline = all.filter(
+      (r) => r.roundCategory === 'online' && registrationOpen(r),
+    );
+    const onlineCount = all.filter((r) => r.roundCategory === 'online').length;
+    if (round.isActive && openOnline.length > 0) {
+      return {
+        tone: 'warn',
+        text: `${openOnline.length} online round${openOnline.length > 1 ? 's are' : ' is'} still open for registration. Fast Track is normally kept off until students can no longer enter the online rounds.`,
+      };
+    }
+    if (!round.isActive && onlineCount > 0 && openOnline.length === 0) {
+      return {
+        tone: 'info',
+        text: 'Every online round has closed registration — you can turn Fast Track on now.',
+      };
+    }
+    return null;
+  }
+  if (round.roundCategory === 'global') {
+    const others = all.filter((r) => r.tempId !== round.tempId);
+    const unfinished = others.filter((r) => !roundFinished(r));
+    if (round.isActive && unfinished.length > 0) {
+      return {
+        tone: 'warn',
+        text: `${unfinished.length} other round${unfinished.length > 1 ? 's have' : ' has'} not finished yet. The Global Round is normally kept off until every earlier round is done.`,
+      };
+    }
+    if (!round.isActive && others.length > 0 && unfinished.length === 0) {
+      return {
+        tone: 'info',
+        text: 'Every other round has finished — you can open the Global Round now.',
+      };
+    }
+    return null;
+  }
+  return null;
 }
 
 /**
@@ -239,6 +308,7 @@ function RoundCard({
 }) {
   const [newDoc, setNewDoc] = useState('');
   const others = all.filter((r) => r.tempId !== round.tempId);
+  const advice = activationAdvice(round, all);
 
   const addDoc = () => {
     const d = newDoc.trim();
@@ -292,6 +362,43 @@ function RoundCard({
         >
           <X className="size-4" />
         </Button>
+      </div>
+
+      <div className="rounded-md border bg-muted/40 p-3">
+        <div className="flex items-start gap-3">
+          <Switch
+            id={`round-active-${round.tempId}`}
+            checked={round.isActive}
+            onCheckedChange={(v) => onChange({ isActive: v })}
+            className="mt-0.5"
+          />
+          <div className="min-w-0 flex-1">
+            <Label
+              htmlFor={`round-active-${round.tempId}`}
+              className="text-xs font-medium text-foreground"
+            >
+              {round.isActive ? 'Visible to students' : 'Hidden from students'}
+            </Label>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+              Turn off to hide this round from students — they won’t see it or be
+              able to register. Use it to stage a round: keep Fast Track off while
+              the online rounds are still open, or the Global Round off until they
+              finish.
+            </p>
+          </div>
+        </div>
+        {advice && (
+          <p
+            className={
+              'mt-2 rounded-md px-2.5 py-1.5 text-[11px] leading-relaxed ' +
+              (advice.tone === 'warn'
+                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200'
+                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200')
+            }
+          >
+            {advice.text}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">

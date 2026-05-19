@@ -323,7 +323,7 @@ router.get("/competitions/:id", async (req: Request, res: Response) => {
       `SELECT id, round_name, round_type, start_date, registration_deadline,
               exam_date, results_date, fee, location, round_order,
               requires_round_id, gating, required_docs,
-              round_category, country, exam_mode, qualifying_score
+              round_category, country, exam_mode, qualifying_score, is_active
          FROM competition_rounds
         WHERE comp_id = $1
         ORDER BY round_order ASC, created_at ASC`,
@@ -372,6 +372,7 @@ router.get("/competitions/:id", async (req: Request, res: Response) => {
         country: round.country ?? null,
         examMode: round.exam_mode ?? 'online',
         qualifyingScore: round.qualifying_score ?? null,
+        isActive: round.is_active !== false,
       })),
       createdAt: c.created_at,
     });

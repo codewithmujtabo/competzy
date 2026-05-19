@@ -34,6 +34,7 @@ export interface Competition {
     location?: string | null;
     examMode?: string;
     roundOrder?: number;
+    isActive?: boolean;
   }>;
   createdAt: string;
 }

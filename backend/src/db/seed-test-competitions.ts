@@ -78,6 +78,7 @@ interface RoundSpec {
   country?: string; // for a local round — the country it serves
   examMode?: string; // "online" (default) | "offline" (printed, score-imported)
   qualifyingScore?: number; // score at/above which a round attempt medals
+  isActive?: boolean; // operator visibility toggle — default true; false = hidden
   /** Omit for an open round. `mode`: prerequisite | qualified | unqualified. */
   gating?: { mode: string; requiresRoundIndex?: number; rule?: string };
   examName: string;
@@ -330,6 +331,8 @@ const SPECS: CompSpec[] = [
         examDate: ymd(90),
         registrationDeadline: ymd(85),
         qualifyingScore: 16,
+        // Staged off — an operator turns it on once the online rounds close.
+        isActive: false,
         gating: { mode: "unqualified" },
         examName: "Komodo Fast Track Exam",
         examCode: "KMD-FT",
@@ -364,6 +367,8 @@ const SPECS: CompSpec[] = [
         examDate: ymd(120),
         registrationDeadline: ymd(115),
         location: "Bali, Indonesia",
+        // Staged off — an operator opens it once every earlier round finishes.
+        isActive: false,
         gating: { mode: "qualified" },
         examName: "Komodo Bali Global Round",
         examCode: "KMD-R4",
@@ -507,6 +512,7 @@ async function seedCompetition(
       country: rd.country ?? null,
       examMode: rd.examMode ?? "online",
       qualifyingScore: rd.qualifyingScore ?? null,
+      isActive: rd.isActive ?? true,
       gatingMode: rd.gating?.mode ?? "open",
       requiresRoundIndex: rd.gating?.requiresRoundIndex ?? null,
       gatingRule: rd.gating?.rule ?? null,

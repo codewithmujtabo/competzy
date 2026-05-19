@@ -26,7 +26,7 @@ export async function checkRoundGating(
   roundId: string,
 ): Promise<GatingResult> {
   const r = await db.query(
-    `SELECT cr.gating, cr.requires_round_id, cr.comp_id,
+    `SELECT cr.gating, cr.requires_round_id, cr.comp_id, cr.is_active,
             req.round_name AS prereq_name
        FROM competition_rounds cr
        LEFT JOIN competition_rounds req ON req.id = cr.requires_round_id
@@ -35,7 +35,13 @@ export async function checkRoundGating(
   );
   if (r.rows.length === 0) return { allowed: false, reason: "Round not found." };
 
-  const { gating, requires_round_id, comp_id, prereq_name } = r.rows[0];
+  const { gating, requires_round_id, comp_id, prereq_name, is_active } = r.rows[0];
+
+  // Operator visibility toggle — an inactive round is not open to anyone.
+  if (is_active === false) {
+    return { allowed: false, reason: "This round isn't open for registration yet." };
+  }
+
   const mode: string | undefined = gating?.mode;
 
   // Global Round — needs a medal anywhere in the competition.

@@ -57,7 +57,8 @@ export default function CompetitionRoundsScreen() {
     enabled: !!compId,
   });
 
-  const rounds = comp?.rounds ?? [];
+  // Rounds an operator has deactivated are hidden from students.
+  const rounds = (comp?.rounds ?? []).filter((r) => r.isActive !== false);
 
   const register = async (round: Round) => {
     if (!comp) return;

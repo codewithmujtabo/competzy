@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
@@ -336,6 +336,7 @@ interface Round {
   fee: number;
   location: string | null;
   gating: { mode?: string; rule?: string; requiresRoundId?: string } | null;
+  isActive: boolean;
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -727,12 +728,19 @@ export default function CompetitionDashboardPage() {
   }, [comp?.id]);
 
   // A competition's rounds — drives the multi-round per-round panel. An empty
-  // array means a single-stage competition (the flow-stepper path).
+  // array means a single-stage competition (the flow-stepper path). Rounds an
+  // operator has deactivated are filtered out so students never see them.
   useEffect(() => {
     if (!comp?.id) return;
     emcHttp
       .get<{ rounds?: Round[] }>(`/competitions/${comp.id}`)
-      .then((d) => setRounds(Array.isArray(d.rounds) ? d.rounds : []))
+      .then((d) =>
+        setRounds(
+          Array.isArray(d.rounds)
+            ? d.rounds.filter((r) => r.isActive !== false)
+            : [],
+        ),
+      )
       .catch(() => setRounds([]));
   }, [comp?.id]);
 
@@ -810,13 +818,22 @@ export default function CompetitionDashboardPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-10">
-        <header>
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
-            {config.shortName} 2026
-          </p>
-          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">
-            Hi {user?.fullName || user?.full_name || 'there'} 👋
-          </h1>
+        <header className="space-y-3">
+          <Link
+            href="/competitions"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" />
+            All competitions
+          </Link>
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
+              {config.shortName} 2026
+            </p>
+            <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">
+              Hi {user?.fullName || user?.full_name || 'there'} 👋
+            </h1>
+          </div>
         </header>
 
         {err && (
