@@ -10,7 +10,7 @@ import {
   generateOtp,
 } from "../services/auth.service";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service";
-import { sendPhoneOtp, verifyPhoneOtp, toE164 } from "../services/twilio.service";
+import { sendPhoneOtp, verifyPhoneOtp, toE164, phoneVariants } from "../services/twilio.service";
 import { authMiddleware } from "../middleware/auth";
 import {
   otpSendLimiter,
@@ -362,18 +362,21 @@ router.post("/phone/verify-otp", otpVerifyLimiter, async (req: Request, res: Res
     }
 
     const e164 = toE164(phone);
+    const variants = phoneVariants(phone);
 
-    // Find existing user by phone
+    // Find an existing user by phone — match any stored format (08xxx saved
+    // by the app, +62xxx by the web, …) so a phone-format mismatch can't make
+    // an existing account look unregistered.
     const result = await pool.query(
-      "SELECT id FROM users WHERE phone = $1 OR phone = $2",
-      [phone, e164]
+      "SELECT id FROM users WHERE phone = ANY($1::text[])",
+      [variants]
     );
 
     if (result.rows.length === 0) {
       // Check historical_participants — if this phone was in a past competition, pre-fill signup
       const histResult = await pool.query(
-        `SELECT full_name, email FROM historical_participants WHERE phone = $1 LIMIT 1`,
-        [e164]
+        `SELECT full_name, email FROM historical_participants WHERE phone = ANY($1::text[]) LIMIT 1`,
+        [variants]
       );
       if (histResult.rows.length > 0) {
         const { full_name, email } = histResult.rows[0];
