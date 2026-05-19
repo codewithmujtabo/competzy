@@ -9,11 +9,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, Loader2, Trophy } from 'lucide-react';
+import { ArrowRight, CalendarDays, Heart, Loader2, Trophy } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { emcHttp } from '@/lib/api/client';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { getCompetitionConfig } from '@/lib/competitions/registry';
+import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,7 +38,15 @@ function fmtDate(d: string | null): string {
     : '—';
 }
 
-function CompetitionCard({ comp }: { comp: CatalogCompetition }) {
+function CompetitionCard({
+  comp,
+  isFav,
+  onToggleFav,
+}: {
+  comp: CatalogCompetition;
+  isFav: boolean;
+  onToggleFav: (compId: string) => void;
+}) {
   const hasPortal = comp.slug ? getCompetitionConfig(comp.slug) : null;
 
   const body = (
@@ -50,18 +60,34 @@ function CompetitionCard({ comp }: { comp: CatalogCompetition }) {
         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Trophy className="size-5" />
         </div>
-        {comp.fee === 0 ? (
-          <Badge
-            variant="outline"
-            className="border-transparent bg-emerald-100 font-mono text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={isFav ? 'Remove from saved' : 'Save competition'}
+            title={isFav ? 'Remove from saved' : 'Save competition'}
+            onClick={(e) => {
+              // The card may be wrapped in a Link — keep this click local.
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleFav(comp.id);
+            }}
+            className="rounded-full p-1 text-muted-foreground transition-colors hover:text-primary"
           >
-            Free
-          </Badge>
-        ) : (
-          <span className="text-sm font-medium tabular-nums text-foreground">
-            Rp {comp.fee.toLocaleString('id-ID')}
-          </span>
-        )}
+            <Heart className={cn('size-5', isFav && 'fill-primary text-primary')} />
+          </button>
+          {comp.fee === 0 ? (
+            <Badge
+              variant="outline"
+              className="border-transparent bg-emerald-100 font-mono text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+            >
+              Free
+            </Badge>
+          ) : (
+            <span className="text-sm font-medium tabular-nums text-foreground">
+              Rp {comp.fee.toLocaleString('id-ID')}
+            </span>
+          )}
+        </div>
       </div>
 
       <h2 className="mt-4 font-serif text-lg font-medium leading-snug text-foreground">
@@ -114,6 +140,7 @@ export default function CompetitionCatalogPage() {
   const router = useRouter();
 
   const [comps, setComps] = useState<CatalogCompetition[] | null>(null);
+  const [favIds, setFavIds] = useState<Set<string>>(new Set());
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -126,7 +153,34 @@ export default function CompetitionCatalogPage() {
       .get<CatalogCompetition[]>('/competitions')
       .then(setComps)
       .catch((e) => setErr(e instanceof Error ? e.message : 'Failed to load competitions'));
+    emcHttp
+      .get<{ favorites: { id: string }[] }>('/favorites')
+      .then((r) => setFavIds(new Set(r.favorites.map((f) => f.id))))
+      .catch(() => {});
   }, [user]);
+
+  async function toggleFav(compId: string) {
+    const wasFav = favIds.has(compId);
+    setFavIds((prev) => {
+      const next = new Set(prev);
+      if (wasFav) next.delete(compId);
+      else next.add(compId);
+      return next;
+    });
+    try {
+      if (wasFav) await emcHttp.delete<{ message: string }>(`/favorites/${compId}`);
+      else await emcHttp.post<{ message: string }>('/favorites', { compId });
+    } catch (e) {
+      // Revert on failure.
+      setFavIds((prev) => {
+        const next = new Set(prev);
+        if (wasFav) next.add(compId);
+        else next.delete(compId);
+        return next;
+      });
+      toast.error(e instanceof Error ? e.message : 'Could not update saved competitions');
+    }
+  }
 
   if (authLoading || !user) {
     return (
@@ -188,7 +242,12 @@ export default function CompetitionCatalogPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {comps.map((c) => (
-              <CompetitionCard key={c.id} comp={c} />
+              <CompetitionCard
+                key={c.id}
+                comp={c}
+                isFav={favIds.has(c.id)}
+                onToggleFav={toggleFav}
+              />
             ))}
           </div>
         )}
