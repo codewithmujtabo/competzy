@@ -7,6 +7,8 @@ declare global {
     interface Request {
       userId?: string;
       userRole?: string;
+      // Set when this session is an impersonation — the super-admin's id.
+      impersonatorId?: string;
     }
   }
 }
@@ -36,6 +38,8 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
   }
 
   req.userId = payload.sub;
+  // An impersonation token carries `imp` — the super-admin who started it.
+  req.impersonatorId = payload.imp;
 
   // Fetch user role for authorization, rejecting soft-deleted users (UU PDP / account-deleted protection).
   try {

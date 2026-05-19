@@ -1,0 +1,21 @@
+// Where each role lands after authenticating — shared by the unified login
+// page and the super-admin impersonation flow (so "impersonate" drops the
+// super-admin onto the target user's home, exactly as a real login would).
+export function destinationFor(role: string): string {
+  switch (role) {
+    case 'admin':
+      return '/dashboard';
+    case 'organizer':
+      return '/organizer-dashboard';
+    case 'school_admin':
+    case 'teacher':
+      return '/school-dashboard';
+    case 'student':
+    case 'parent':
+      return '/competitions';
+    case 'country_representative':
+      return '/rep-portal';
+    default:
+      return '/dashboard';
+  }
+}

@@ -18,6 +18,9 @@ export const env = {
   DATABASE_URL: required("DATABASE_URL"),
   JWT_SECRET: required("JWT_SECRET"),
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
+  // The single account allowed to impersonate other users. Configurable so it
+  // can change without a code edit; defaults to the project's admin account.
+  SUPER_ADMIN_EMAIL: (process.env.SUPER_ADMIN_EMAIL || "admin@eduversal.com").toLowerCase(),
   SMTP_HOST: process.env.SMTP_HOST || "smtp.gmail.com",
   SMTP_PORT: parseInt(process.env.SMTP_PORT || "587", 10),
   SMTP_USER: process.env.SMTP_USER || "",

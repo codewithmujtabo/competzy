@@ -24,6 +24,7 @@ import { ArrowRight, Eye, EyeOff, Lock, Mail, Moon, Phone, Sun } from 'lucide-re
 import { adminHttp } from '@/lib/api/client';
 import { useTheme } from '@/lib/theme/context';
 import type { AuthUser } from '@/types';
+import { destinationFor } from '@/lib/auth/role-destination';
 import { DEFAULT_COMPETITION_SLUG, competitionPaths } from '@/lib/competitions/registry';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -51,25 +52,6 @@ const TAGLINES: { lead: string; accent: string }[] = [
 const WORD_SLOTS = Math.max(
   ...TAGLINES.map((t) => t.lead.split(' ').length + t.accent.split(' ').length),
 );
-
-function destinationFor(role: string): string {
-  switch (role) {
-    case 'admin':
-      return '/dashboard';
-    case 'organizer':
-      return '/organizer-dashboard';
-    case 'school_admin':
-    case 'teacher':
-      return '/school-dashboard';
-    case 'student':
-    case 'parent':
-      return '/competitions';
-    case 'country_representative':
-      return '/rep-portal';
-    default:
-      return '/dashboard';
-  }
-}
 
 function goTo(role: string) {
   // Hard nav — see the comment block at the top of this file.

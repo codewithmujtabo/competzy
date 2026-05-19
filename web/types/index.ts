@@ -61,6 +61,10 @@ export interface AuthUser {
   // teacher
   subject?: string;
   department?: string;
+  // super-admin / impersonation (from GET /auth/me)
+  isSuperAdmin?: boolean;
+  impersonating?: boolean;
+  impersonatedBy?: { id: string; fullName: string | null; email: string | null } | null;
 }
 
 export interface Pagination {
