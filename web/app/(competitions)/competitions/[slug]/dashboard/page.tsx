@@ -95,7 +95,7 @@ const STATUS_COPY: Record<string, { title: string; body: string }> = {
 function currentHint(checkType: CheckType): string {
   switch (checkType) {
     case 'profile':
-      return 'Complete your profile in the Competzy app to move forward.';
+      return 'Complete your profile to move forward.';
     case 'documents':
       return 'Upload the required documents in the Competzy app.';
     case 'payment':
@@ -649,6 +649,7 @@ function Stepper({
         const showExam = s.stepKey === 'exam' && s.status !== 'upcoming';
         const showCert = s.stepKey === 'results';
         const showPay = s.checkType === 'payment' && s.status === 'current';
+        const showProfile = s.checkType === 'profile' && s.status === 'current';
         return (
           <li key={s.id} className="flex gap-4">
             <div className="flex flex-col items-center">
@@ -684,6 +685,11 @@ function Stepper({
               {showPay && (
                 <Button asChild size="sm" className="mt-2">
                   <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
+                </Button>
+              )}
+              {showProfile && (
+                <Button asChild size="sm" className="mt-2">
+                  <Link href="/account/profile">Complete your profile</Link>
                 </Button>
               )}
             </div>
