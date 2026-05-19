@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, User, FileText, Bell, Trophy, History, LayoutGrid } from 'lucide-react';
+import { Loader2, User, FileText, Bell, Trophy, History, Users, LayoutGrid } from 'lucide-react';
 import {
   CompetitionAuthProvider,
   useCompetitionAuth,
@@ -34,6 +34,7 @@ const NAV: NavSection[] = [
       { label: 'Notifications', href: '/account/notifications', icon: Bell },
       { label: 'My Competitions', href: '/account/competitions', icon: Trophy },
       { label: 'Records', href: '/account/records', icon: History },
+      { label: 'Family', href: '/account/family', icon: Users },
     ],
   },
   {
