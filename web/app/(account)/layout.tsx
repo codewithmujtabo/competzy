@@ -32,6 +32,7 @@ const NAV: NavSection[] = [
       { label: 'Profile', href: '/account/profile', icon: User },
       { label: 'Documents', href: '/account/documents', icon: FileText },
       { label: 'Notifications', href: '/account/notifications', icon: Bell },
+      { label: 'My Competitions', href: '/account/competitions', icon: Trophy },
     ],
   },
   {
