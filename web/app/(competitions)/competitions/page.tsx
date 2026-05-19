@@ -154,9 +154,16 @@ export default function CompetitionCatalogPage() {
               Pick a competition to register or check your progress.
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            Sign out
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {user.role === 'student' && (
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/account/profile">My Account</Link>
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={signOut}>
+              Sign out
+            </Button>
+          </div>
         </header>
 
         {err && (

@@ -11,6 +11,7 @@ import {
   Award,
   MessageSquare,
   Trophy,
+  UserCircle,
 } from 'lucide-react';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
@@ -68,6 +69,12 @@ function ShelledCompetition({ slug, children }: { slug: string; children: ReactN
         { label: 'Certificates', href: paths.certificate, icon: Award },
         { label: 'Feedback', href: paths.feedback, icon: MessageSquare },
       ],
+    },
+    {
+      label: 'Account',
+      // The global My Account area — account-wide pages (profile, documents, …)
+      // that aren't tied to this competition.
+      items: [{ label: 'My Account', href: '/account/profile', icon: UserCircle }],
     },
   ];
 
