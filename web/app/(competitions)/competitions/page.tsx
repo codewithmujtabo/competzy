@@ -66,7 +66,6 @@ interface CatalogCompetition {
   organizerName: string;
   category: string | null;
   gradeLevel: string | null;
-  fee: number;
   regCloseDate: string | null;
   competitionDate: string | null;
 }
@@ -184,29 +183,18 @@ function CompetitionCard({
         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Trophy className="size-5" />
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={isFav ? 'Remove from saved' : 'Save competition'}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onToggleFav(comp.id);
-            }}
-            className="rounded-full p-1 text-muted-foreground transition-colors hover:text-primary"
-          >
-            <Heart className={cn('size-5', isFav && 'fill-primary text-primary')} />
-          </button>
-          {comp.fee === 0 ? (
-            <Badge variant="outline" className="border-transparent bg-emerald-100 font-mono text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-              Free
-            </Badge>
-          ) : (
-            <span className="text-sm font-medium tabular-nums text-foreground">
-              Rp {comp.fee.toLocaleString('id-ID')}
-            </span>
-          )}
-        </div>
+        <button
+          type="button"
+          aria-label={isFav ? 'Remove from saved' : 'Save competition'}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleFav(comp.id);
+          }}
+          className="rounded-full p-1 text-muted-foreground transition-colors hover:text-primary"
+        >
+          <Heart className={cn('size-5', isFav && 'fill-primary text-primary')} />
+        </button>
       </div>
       <h2 className="mt-4 font-serif text-lg font-medium leading-snug text-foreground">{comp.name}</h2>
       <p className="mt-1 text-sm text-muted-foreground">{comp.organizerName}</p>
@@ -235,7 +223,7 @@ function CompetitionCard({
   );
 
   if (hasPortal && comp.slug) {
-    return <Link href={`/competitions/${comp.slug}/dashboard`} className="block">{body}</Link>;
+    return <Link href={`/competitions/${comp.slug}`} className="block">{body}</Link>;
   }
   return body;
 }
@@ -499,7 +487,7 @@ export default function CompetitionCatalogPage() {
           <div className="mb-3 flex items-end justify-between">
             <div>
               <h2 className="font-serif text-xl font-semibold text-foreground">All competitions</h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">Tap one to register or check your progress.</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">Tap one to learn more.</p>
             </div>
           </div>
           {!comps ? (

@@ -36,10 +36,6 @@ import { Analytics } from "@/services/analytics";
 
 // ─── Filters & helpers ───────────────────────────────────────────────────────
 
-function formatPrice(fee: number) {
-  return fee === 0 ? "FREE" : `Rp ${fee.toLocaleString("id-ID")}`;
-}
-
 function formatDeadline(date: string | null) {
   if (!date) return "-";
   return new Date(date).toLocaleDateString("en-US", {
@@ -155,11 +151,7 @@ const CompetitionCard = memo(function CompetitionCard({
       </View>
 
       <View style={styles.cardFooter}>
-        {item.fee === 0 ? (
-          <Pill label="FREE" tone="success" />
-        ) : (
-          <Text style={[Type.h3, { color: TextColor.primary }]}>{formatPrice(item.fee)}</Text>
-        )}
+        <View style={{ flex: 1 }} />
         <View style={styles.viewBtn}>
           <Text style={[Type.label, { color: accent }]}>View details →</Text>
         </View>
@@ -202,7 +194,7 @@ const RecommendedCard = memo(function RecommendedCard({
         {item.organizerName}
       </Text>
       <View style={{ flexDirection: "row", marginTop: Spacing.md, alignItems: "center" }}>
-        <Text style={[Type.h3, { color: accent, flex: 1 }]}>{formatPrice(item.fee)}</Text>
+        <Text style={[Type.label, { color: accent, flex: 1 }]}>View details →</Text>
         {urgency ? <Pill label={urgency.label} tone={urgency.tone} size="sm" /> : null}
       </View>
     </Card>

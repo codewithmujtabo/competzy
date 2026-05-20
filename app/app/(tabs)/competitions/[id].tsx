@@ -21,6 +21,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -205,6 +206,15 @@ export default function CompetitionDetailPage() {
       />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+        {comp.imageUrl ? (
+          <Image
+            source={{ uri: comp.imageUrl }}
+            style={styles.heroBanner}
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+          />
+        ) : null}
+
         {/* Hero */}
         <View style={[styles.hero, { backgroundColor: accentBg }]}>
           <CompetitionMark name={comp.name} logoUrl={comp.logoUrl} size={96} />
@@ -447,6 +457,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomLeftRadius: Radius["4xl"],
     borderBottomRightRadius: Radius["4xl"],
+  },
+  heroBanner: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    backgroundColor: Surface.cardAlt,
   },
   heroPills: {
     flexDirection: "row",
