@@ -1,68 +1,69 @@
 /**
- * Competzy design tokens — the competzy.com brand identity (EMC Wave 3).
+ * Competzy design tokens — Futuristic palette.
  *
- * Editorial, not playful: Electric Indigo violet + Hot Pink accent on ivory
- * cream paper, ink text. Bricolage Grotesque for display, Plus Jakarta Sans
- * for body/UI (loaded in app/app/_layout.tsx via expo-font). Flat radii and
- * soft ink shadows — calm and grown-up.
+ * Pop-art futurism: Deep Indigo #3D087B primary, Hot Pink #F43B86 accent,
+ * Solar Yellow #FFE459 highlight, Midnight #11052C ink on soft mauve paper.
+ * Bricolage Grotesque (display) + Plus Jakarta Sans (body/UI). Crisp radii,
+ * indigo-tinted shadows, yellow-on-indigo CTAs for the futuristic pop.
  *
  * Import tokens — never hardcode hex values, spacing, radius, or shadows.
  */
 
 import { Platform, TextStyle } from "react-native";
 
-// ─── Brand palette — the competzy.com identity ───────────────────────────────
-// Electric Indigo anchors trust + every CTA; Hot Pink is the punchy accent;
-// Gold highlights; everything sits on warm ivory paper.
+// ─── Brand palette — Futuristic ───────────────────────────────────────────────
+// Deep Indigo anchors every CTA; Hot Pink is the punchy accent; Solar Yellow
+// highlights the pop-art moments; Midnight is the deepest ink. Everything sits
+// on soft mauve paper.
 export const Brand = {
-  primary: "#5627FF",         // Electric Indigo — main CTA, links, active state
-  primaryDark: "#3F18CC",     // deeper indigo — pressed state
-  primaryLight: "#B19EFF",    // sirih light violet — soft highlights
-  primarySoft: "#E9E3FF",     // violet tint — chips, container surfaces
+  primary: "#3D087B",         // Deep Indigo — main CTA, links, active state
+  primaryDark: "#1F0454",     // Pressed indigo
+  primaryLight: "#7A3FC4",    // Lifted indigo — highlights, hover, soft
+  primarySoft: "#EDE1F5",     // Mauve tint — chips, container surfaces
 
-  navy: "#211A2E",            // deep ink-violet — display headers, anchor text
-  navyDark: "#161214",        // near-black ink — pressed
-  navySoft: "#ECE6FF",        // pale violet halo
+  navy: "#11052C",            // Midnight — display headers, deepest ink
+  navyDark: "#080117",        // Pressed midnight
+  navySoft: "#E5DDF0",        // Pale lavender halo
 
-  sunshine: "#F8DB46",        // gold — highlights, streaks, badges
-  sunshineSoft: "#FCEFB6",
-  coral: "#D9277B",           // hot pink — secondary actions, accents
-  coralSoft: "#FBDDEC",
-  mint: "#1F9D57",            // green — success, progress
+  sunshine: "#FFE459",        // Solar Yellow — highlights, accent dots, badges
+  sunshineSoft: "#FFF6C9",
+  coral: "#F43B86",           // Hot Pink — secondary actions, accents
+  coralSoft: "#FDDAE7",
+  mint: "#1F9D57",            // Green — success, progress
   mintSoft: "#D6EEDF",
-  sky: "#7D63FF",             // sirih violet tint — cool background accent
-  skySoft: "#ECE7FF",
+  sky: "#A36EF0",             // Lavender — cool background accent
+  skySoft: "#F1E4FE",
 
   // Semantic aliases (keep these stable so screens don't break)
-  secondary: "#D9277B",
-  secondarySoft: "#FBDDEC",
+  secondary: "#F43B86",
+  secondarySoft: "#FDDAE7",
   success: "#1F9D57",
   successSoft: "#D6EEDF",
-  warning: "#F8DB46",
-  warningSoft: "#FCEFB6",
+  warning: "#FFE459",
+  warningSoft: "#FFF6C9",
   error: "#D92D2D",
   errorSoft: "#F8DEDE",
-  info: "#5627FF",
-  infoSoft: "#E9E3FF",
+  info: "#3D087B",
+  infoSoft: "#EDE1F5",
 } as const;
 
 // ─── Semantic neutral surfaces (light) ───────────────────────────────────────
-// The app is light-only — competzy.com is an ivory-paper brand.
+// The app is light-only — futuristic on soft mauve paper.
 export const Surface = {
-  background: "#F4ECDC",      // ivory cream — page background
-  card: "#FBF5E6",            // lighter cream — raised cards
-  cardAlt: "#ECE1CA",         // warm cream — alt / inset surface
-  overlay: "rgba(22, 18, 20, 0.55)",  // ink-tinted overlay
-  divider: "#E4DAC4",
-  border: "#DDD1B9",          // mist border
-  borderStrong: "#CFC6B0",
+  background: "#F4EEF9",      // soft mauve — page background
+  card: "#FFFFFF",            // crisp white — raised cards
+  cardAlt: "#EDE1F5",         // light mauve — alt / inset surface
+  overlay: "rgba(17, 5, 44, 0.55)",   // midnight overlay
+  divider: "#E0D2EE",
+  border: "#DCCAEE",          // mauve border
+  borderStrong: "#C7B0E0",
 } as const;
 
 // ─── Semantic text colors ────────────────────────────────────────────────────
 export const Text = {
-  primary: "#161214",        // ink — body & headings
-  secondary: "#6E6358",      // warm mist-grey
-  tertiary: "#9C9080",       // light warm grey
+  primary: "#11052C",        // midnight — body & headings
+  secondary: "#5C4677",      // muted purple-grey
+  tertiary: "#8A78A3",       // light purple-grey
   inverse: "#FFFFFF",
   link: Brand.primary,
 } as const;
@@ -106,9 +107,9 @@ type Elevation = {
 export const Shadow: Record<"sm" | "md" | "lg" | "xl" | "playful", Elevation> = {
   sm: Platform.select<Elevation>({
     ios: {
-      shadowColor: "#161214",
+      shadowColor: "#11052C",
       shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
+      shadowOpacity: 0.06,
       shadowRadius: 3,
     },
     android: { elevation: 1 },
@@ -116,9 +117,9 @@ export const Shadow: Record<"sm" | "md" | "lg" | "xl" | "playful", Elevation> = 
   })!,
   md: Platform.select<Elevation>({
     ios: {
-      shadowColor: "#161214",
+      shadowColor: "#11052C",
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.07,
+      shadowOpacity: 0.08,
       shadowRadius: 10,
     },
     android: { elevation: 2 },
@@ -126,9 +127,9 @@ export const Shadow: Record<"sm" | "md" | "lg" | "xl" | "playful", Elevation> = 
   })!,
   lg: Platform.select<Elevation>({
     ios: {
-      shadowColor: "#161214",
+      shadowColor: "#11052C",
       shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.1,
+      shadowOpacity: 0.12,
       shadowRadius: 18,
     },
     android: { elevation: 5 },
@@ -136,23 +137,23 @@ export const Shadow: Record<"sm" | "md" | "lg" | "xl" | "playful", Elevation> = 
   })!,
   xl: Platform.select<Elevation>({
     ios: {
-      shadowColor: "#161214",
+      shadowColor: "#11052C",
       shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.13,
+      shadowOpacity: 0.16,
       shadowRadius: 24,
     },
     android: { elevation: 9 },
     default: {},
   })!,
-  // Calm brand-tinted lift for primary CTAs (was the Sprint-19 clay halo).
+  // Indigo-tinted lift for primary CTAs — the futuristic halo.
   playful: Platform.select<Elevation>({
     ios: {
       shadowColor: Brand.primary,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.18,
-      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.32,
+      shadowRadius: 18,
     },
-    android: { elevation: 4 },
+    android: { elevation: 6 },
     default: {},
   })!,
 };
@@ -218,37 +219,37 @@ export const Colors = {
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: "#F1E9DA",
-    textSecondary: "#A99FB2",
-    background: "#17131B",
-    surface: "#211B27",
-    border: "#2B2431",
+    text: "#F4EEF9",
+    textSecondary: "#B8A8D6",
+    background: "#11052C",
+    surface: "#1A0D3D",
+    border: "#2A1850",
     tint: tintColorDark,
-    icon: "#A99FB2",
-    tabIconDefault: "#A99FB2",
+    icon: "#B8A8D6",
+    tabIconDefault: "#B8A8D6",
     tabIconSelected: tintColorDark,
   },
 };
 
-// ─── Category color system — harmonised with the ivory + violet brand ────────
+// ─── Category color system — Futuristic 4-color cycle ────────────────────────
 export const CategoryAccent: Record<string, string> = {
-  Math:       "#5627FF",    // electric indigo
-  Science:    "#1F9D57",    // green
-  Debate:     "#D9277B",    // hot pink
-  Arts:       "#E07A1F",    // warm amber
-  Language:   "#7D63FF",    // sirih violet
-  Technology: "#211A2E",    // ink
-  Sports:     "#C0392B",    // berry red
+  Math:       "#3D087B",    // deep indigo
+  Science:    "#1F9D57",    // green (kept for semantic)
+  Debate:     "#F43B86",    // hot pink
+  Arts:       "#8A6D14",    // dark gold (ink-readable on yellow tint)
+  Language:   "#7A3FC4",    // lifted indigo
+  Technology: "#11052C",    // midnight
+  Sports:     "#D92D2D",    // berry red
 };
 
 export const CategoryBg: Record<string, string> = {
-  Math:       "#E9E3FF",
+  Math:       "#EDE1F5",
   Science:    "#D6EEDF",
-  Debate:     "#FBDDEC",
-  Arts:       "#F7E6CC",
-  Language:   "#ECE7FF",
-  Technology: "#E4DAC4",
-  Sports:     "#F4DAD6",
+  Debate:     "#FDDAE7",
+  Arts:       "#FFF6C9",
+  Language:   "#F1E4FE",
+  Technology: "#E5DDF0",
+  Sports:     "#F8DEDE",
 };
 
 // Kept for back-compat. New screens should use <SubjectCircle> with the
@@ -267,14 +268,14 @@ export const CategoryEmoji: Record<string, string> = {
 // Used by <SubjectCircle> to pick a stable color per subject name/letter.
 // Falls back to a deterministic hash if not in the table.
 export const SubjectColors: { bg: string; fg: string }[] = [
-  { bg: "#5627FF", fg: "#FFFFFF" },  // electric indigo
-  { bg: "#D9277B", fg: "#FFFFFF" },  // hot pink
-  { bg: "#211A2E", fg: "#F8DB46" },  // ink + gold letter
-  { bg: "#1F9D57", fg: "#FFFFFF" },  // green
-  { bg: "#F8DB46", fg: "#211A2E" },  // gold + ink letter
-  { bg: "#7D63FF", fg: "#FFFFFF" },  // sirih violet
-  { bg: "#E07A1F", fg: "#FFFFFF" },  // amber
-  { bg: "#B19EFF", fg: "#211A2E" },  // light violet + ink letter
+  { bg: "#3D087B", fg: "#FFE459" },  // deep indigo + yellow letter
+  { bg: "#F43B86", fg: "#FFFFFF" },  // hot pink + cream
+  { bg: "#11052C", fg: "#FFE459" },  // midnight + yellow letter
+  { bg: "#FFE459", fg: "#11052C" },  // yellow + midnight letter
+  { bg: "#7A3FC4", fg: "#FFFFFF" },  // lifted indigo + white
+  { bg: "#F43B86", fg: "#FFE459" },  // pink + yellow letter (pop-art)
+  { bg: "#A36EF0", fg: "#11052C" },  // lavender + midnight letter
+  { bg: "#1F0454", fg: "#FFE459" },  // deepest indigo + yellow letter
 ];
 
 export function subjectColorFor(key: string): { bg: string; fg: string } {
@@ -284,13 +285,13 @@ export function subjectColorFor(key: string): { bg: string; fg: string } {
 }
 
 export const GradeBg: Record<string, string> = {
-  SD:  "#E9E3FF",
+  SD:  "#EDE1F5",
   SMP: "#D6EEDF",
-  SMA: "#FCEFB6",
+  SMA: "#FFF6C9",
 };
 
 export const GradeText: Record<string, string> = {
-  SD:  "#3F18CC",
+  SD:  "#3D087B",
   SMP: "#15703E",
   SMA: "#8A6D14",
 };

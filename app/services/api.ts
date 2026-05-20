@@ -20,6 +20,23 @@ interface RequestOptions {
   auth?: boolean;
 }
 
+/**
+ * Error type for non-2xx HTTP responses. Carries the status + the parsed
+ * response body so callers that care about specific codes (e.g.
+ * `409 PROFILE_INCOMPLETE`) can branch on `.body`. Existing call sites that
+ * only read `.message` keep working — this extends Error.
+ */
+export class HttpError extends Error {
+  status: number;
+  body: Record<string, any>;
+  constructor(message: string, status: number, body: Record<string, any>) {
+    super(message);
+    this.name = "HttpError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {}
@@ -51,10 +68,11 @@ export async function apiRequest<T>(
 
     clearTimeout(timeoutId);
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      throw new Error(data.message || `Request failed: ${res.status}`);
+      const message = data?.message || `Request failed: ${res.status}`;
+      throw new HttpError(message, res.status, data ?? {});
     }
 
     return data as T;

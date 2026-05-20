@@ -9,6 +9,11 @@ import { Brand, Spacing, Surface, Text as TextColor, Type } from "@/constants/th
 import { useUser } from "@/context/AuthContext";
 import type { Competition } from "@/services/competitions.service";
 import * as competitionsService from "@/services/competitions.service";
+import { HttpError } from "@/services/api";
+import {
+  ProfileCompletionModal,
+  type ProfileFieldKey,
+} from "@/components/profile/ProfileCompletionModal";
 
 type Round = NonNullable<Competition["rounds"]>[number];
 
@@ -50,6 +55,13 @@ export default function CompetitionRoundsScreen() {
   const insets = useSafeAreaInsets();
   const { registrations, registerCompetition } = useUser();
   const [busy, setBusy] = useState<string | null>(null);
+  // When POST /registrations returns 409 PROFILE_INCOMPLETE we capture which
+  // round + missing fields the student was trying to register so the modal
+  // can collect the data and we can retry the same registration.
+  const [profileGate, setProfileGate] = useState<{
+    round: Round;
+    missingFields: ProfileFieldKey[];
+  } | null>(null);
 
   const { data: comp, isLoading, isError, refetch } = useQuery({
     queryKey: ["competition", compId],
@@ -59,6 +71,16 @@ export default function CompetitionRoundsScreen() {
 
   // Rounds an operator has deactivated are hidden from students.
   const rounds = (comp?.rounds ?? []).filter((r) => r.isActive !== false);
+
+  // Extract the missingFields list from a 409 PROFILE_INCOMPLETE response.
+  // Returns null when the error is something else (we surface as an Alert).
+  const profileGateFrom = (e: unknown): ProfileFieldKey[] | null => {
+    if (!(e instanceof HttpError) || e.status !== 409) return null;
+    if (e.body?.code !== "PROFILE_INCOMPLETE") return null;
+    const raw = e.body?.missingFields;
+    if (!Array.isArray(raw)) return null;
+    return raw.filter((x): x is ProfileFieldKey => typeof x === "string");
+  };
 
   const register = async (round: Round) => {
     if (!comp) return;
@@ -76,11 +98,33 @@ export default function CompetitionRoundsScreen() {
         Alert.alert("Registered", `You're registered for ${round.roundName}.`);
       }
     } catch (e: any) {
-      Alert.alert("Couldn't register", e?.message || "Please try again.");
+      // The server gates Komodo registrations on a 9-field profile checklist;
+      // when any are blank we open the inline form modal instead of a generic
+      // "couldn't register" alert. After save the modal calls onCompleted, we
+      // retry the registration POST, and the student lands on payment.
+      const missing = profileGateFrom(e);
+      if (missing) {
+        setProfileGate({ round, missingFields: missing });
+      } else {
+        Alert.alert("Couldn't register", e?.message || "Please try again.");
+      }
     } finally {
       setBusy(null);
     }
   };
+
+  // After the modal saves the missing fields, re-run register(). The retry
+  // skips the modal-on-success path (the gate has cleared) and goes straight
+  // to payment.
+  const retryAfterProfileSaved = async () => {
+    const round = profileGate?.round;
+    setProfileGate(null);
+    if (round) await register(round);
+  };
+
+  const profileGateLabel = profileGate
+    ? `${comp?.name ?? "This competition"} — ${profileGate.round.roundName}`
+    : undefined;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -161,6 +205,14 @@ export default function CompetitionRoundsScreen() {
           })}
         </ScrollView>
       )}
+
+      <ProfileCompletionModal
+        visible={!!profileGate}
+        missingFields={profileGate?.missingFields ?? []}
+        contextLabel={profileGateLabel}
+        onClose={() => setProfileGate(null)}
+        onCompleted={() => void retryAfterProfileSaved()}
+      />
     </View>
   );
 }
