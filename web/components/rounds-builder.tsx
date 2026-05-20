@@ -54,6 +54,12 @@ export interface RoundDraft {
   gatingRule: 'registered' | 'paid' | 'completed';
   /** Operator visibility toggle — false hides the round from students. */
   isActive: boolean;
+  /**
+   * For age-grouped competitions (Komodo): the date the student's age is
+   * measured against to pick a creature bracket. Per-round so the bracket
+   * shifts as students age between rounds. Blank for grade-based comps.
+   */
+  ageCutoffDate: string;
 }
 
 function uid(): string {
@@ -82,6 +88,7 @@ export function emptyRound(): RoundDraft {
     requiresTempId: null,
     gatingRule: 'completed',
     isActive: true,
+    ageCutoffDate: '',
   };
 }
 
@@ -119,6 +126,7 @@ export function roundsToDrafts(rounds: unknown): RoundDraft[] {
       requiresTempId: reqId ? idToTemp.get(String(reqId)) ?? null : null,
       gatingRule: r?.gating?.rule ?? 'completed',
       isActive: r?.isActive !== false,
+      ageCutoffDate: dateInput(r?.ageCutoffDate),
     } as RoundDraft;
   });
 }
@@ -146,6 +154,7 @@ export function draftsToPayload(drafts: RoundDraft[]) {
         : null,
     gatingRule: r.gatingRule,
     isActive: r.isActive,
+    ageCutoffDate: r.ageCutoffDate || null,
   }));
 }
 
@@ -509,6 +518,24 @@ function RoundCard({
             />
           </div>
         ))}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label className="mb-1 text-xs text-muted-foreground">
+            Age cutoff date — age-grouped competitions only
+          </Label>
+          <Input
+            type="date"
+            value={round.ageCutoffDate}
+            onChange={(e) => onChange({ ageCutoffDate: e.target.value })}
+          />
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            For Komodo and other age-grouped competitions: the date the
+            student&apos;s age is measured against to pick their creature
+            bracket. Leave blank for grade-based competitions.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">

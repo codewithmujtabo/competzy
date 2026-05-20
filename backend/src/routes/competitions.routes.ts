@@ -3,6 +3,7 @@ import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
 import * as recommendationsService from "../services/recommendations.service";
 import * as pushService from "../services/push.service";
+import { classifyCreature } from "../services/komodo-creature.service";
 
 const router = Router();
 
@@ -154,7 +155,8 @@ router.get("/:id", async (req: Request, res: Response) => {
               country,
               exam_mode,
               qualifying_score,
-              is_active
+              is_active,
+              age_cutoff_date
             FROM competition_rounds
             WHERE comp_id = $1
             ORDER BY round_order ASC, created_at ASC`,
@@ -203,12 +205,65 @@ router.get("/:id", async (req: Request, res: Response) => {
         examMode: round.exam_mode ?? 'online',
         qualifyingScore: round.qualifying_score ?? null,
         isActive: round.is_active !== false,
+        ageCutoffDate: round.age_cutoff_date ?? null,
       })),
       createdAt: c.created_at,
     });
   } catch (err) {
     console.error("Get competition error:", err);
     res.status(500).json({ message: "Failed to fetch competition" });
+  }
+});
+
+// ── GET /api/competitions/:id/my-creature ────────────────────────────────
+// Returns the per-round creature classification for the calling student based
+// on their date_of_birth and each round's age_cutoff_date. Empty list when
+// the competition has no age-cutoff rounds (e.g. ISPO / EMC). The endpoint
+// is open to any authed user — non-students with no DOB simply get empty
+// creature entries (the array still surfaces the rounds + cutoffs).
+router.get("/:id/my-creature", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const dobRes = await pool.query(
+      "SELECT date_of_birth FROM students WHERE id = $1",
+      [req.userId],
+    );
+    const dob: Date | null = dobRes.rows[0]?.date_of_birth ?? null;
+
+    const rounds = await pool.query(
+      `SELECT id, round_name, round_order, age_cutoff_date::text AS age_cutoff_date
+         FROM competition_rounds
+        WHERE comp_id = $1 AND age_cutoff_date IS NOT NULL
+        ORDER BY round_order ASC, created_at ASC`,
+      [req.params.id],
+    );
+
+    res.json({
+      rounds: rounds.rows.map((r) => {
+        const creature = classifyCreature(dob, r.age_cutoff_date);
+        return {
+          roundId: r.id,
+          roundName: r.round_name,
+          ageCutoffDate: r.age_cutoff_date,
+          creature: creature
+            ? {
+                key: creature.key,
+                name: creature.name,
+                ageRange: creature.ageRange,
+                photoUrl: creature.photoUrl,
+                placeholder: creature.placeholder ?? false,
+                ageAtCutoff: creature.ageAtCutoff,
+              }
+            : null,
+          // null when the student has no DOB on file OR the computed age is
+          // out of bracket — the UI surfaces "Add your date of birth" in
+          // that case.
+          missingDob: !dob,
+        };
+      }),
+    });
+  } catch (err) {
+    console.error("My creature error:", err);
+    res.status(500).json({ message: "Failed to load creature" });
   }
 });
 
