@@ -103,15 +103,19 @@ export function AppShell({
 
   return (
     <SidebarProvider>
-      <Sidebar collapsible="icon">
-        <SidebarHeader>
-          <div className="flex items-center gap-2.5 px-1.5 py-1.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-              <BrandIcon className="size-5" />
+      <Sidebar
+        collapsible="icon"
+        className="border-r-0 bg-gradient-to-b from-white via-white to-[#f5f0ff]"
+      >
+        <SidebarHeader className="border-b border-sidebar-border/60 pb-3">
+          <div className="flex items-center gap-3 px-2 py-2">
+            <div className="relative flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-[#7849ff] to-[#937aff] text-primary-foreground shadow-[0_10px_28px_-12px_rgba(86,39,255,0.65)]">
+              <BrandIcon className="size-[1.4rem]" />
+              <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-[#f8db46] ring-2 ring-white" />
             </div>
             <div className="grid leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="font-serif text-base font-medium">{brand.name}</span>
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <span className="font-serif text-lg font-semibold tracking-tight">{brand.name}</span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary/70">
                 {brand.tagline}
               </span>
             </div>
@@ -147,22 +151,22 @@ export function AppShell({
           ))}
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter className="border-t border-sidebar-border/60 pt-3">
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
                     size="lg"
-                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                    className="rounded-2xl bg-gradient-to-br from-[#f5f0ff] to-white data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   >
-                    <Avatar className="size-8 rounded-lg">
-                      <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-semibold">
+                    <Avatar className="size-10 rounded-xl">
+                      <AvatarFallback className="rounded-xl bg-gradient-to-br from-primary to-[#7849ff] text-primary-foreground font-semibold">
                         {initials(user.name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left leading-tight">
-                      <span className="truncate text-sm font-medium">{user.name}</span>
+                      <span className="truncate text-sm font-semibold">{user.name}</span>
                       <span className="truncate text-xs text-muted-foreground">{user.email}</span>
                     </div>
                     <ChevronsUpDown className="ml-auto size-4" />

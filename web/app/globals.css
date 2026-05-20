@@ -7,8 +7,8 @@
 /* ──────────────────────────────────────────────────────────────────────────
    Competzy design system — Tailwind v4 + shadcn/ui token layer.
    Brand = the competzy.com identity: Electric Indigo violet primary,
-   Hot Pink accent, Ivory cream surfaces. Fonts: Bricolage Grotesque (display)
-   / Plus Jakarta Sans (body) / JetBrains Mono (loaded in app/layout.tsx).
+   Hot Pink accent, lavender→white gradient surfaces. Fonts: Bricolage
+   Grotesque (display) / Plus Jakarta Sans (body) / JetBrains Mono.
    ────────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
@@ -69,19 +69,19 @@
 
   --radius: 0.7rem;
 
-  /* Light — ivory paper, ink text, Electric Indigo primary */
-  --background: #f4ecdc;
+  /* Light — lavender→white gradient surfaces, ink text, Electric Indigo primary */
+  --background: #f3eeff;
   --foreground: #161214;
-  --card: #faf3e3;
+  --card: #ffffff;
   --card-foreground: #161214;
-  --popover: #faf3e3;
+  --popover: #ffffff;
   --popover-foreground: #161214;
   --primary: #5627ff;
-  --primary-foreground: #faf3e3;
-  --secondary: #ebe0c8;
+  --primary-foreground: #ffffff;
+  --secondary: #ede7ff;
   --secondary-foreground: #2a2226;
-  --muted: #ece1ca;
-  --muted-foreground: #6e6358;
+  --muted: #ede7ff;
+  --muted-foreground: #6b6480;
   --accent: #e9e3ff;
   --accent-foreground: #3f18cc;
   --destructive: #d92d2d;
@@ -92,8 +92,8 @@
   --warning-foreground: #161214;
   --brand-pink: #d9277b;
   --brand-gold: #f8db46;
-  --border: #ddd1b9;
-  --input: #ddd1b9;
+  --border: #e0d8f5;
+  --input: #e0d8f5;
   --ring: #5627ff;
 
   --chart-1: #5627ff;
@@ -102,13 +102,13 @@
   --chart-4: #937aff;
   --chart-5: #1f9d57;
 
-  --sidebar: #faf3e3;
+  --sidebar: #ffffff;
   --sidebar-foreground: #2a2226;
   --sidebar-primary: #5627ff;
-  --sidebar-primary-foreground: #faf3e3;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #e9e3ff;
   --sidebar-accent-foreground: #3f18cc;
-  --sidebar-border: #ddd1b9;
+  --sidebar-border: #e0d8f5;
   --sidebar-ring: #5627ff;
 }
 
@@ -159,10 +159,18 @@
   * {
     border-color: var(--border);
   }
-  body {
+  html {
     background-color: var(--background);
+  }
+  body {
+    background: linear-gradient(180deg, #e9e3ff 0%, #ffffff 70%);
+    background-attachment: fixed;
+    min-height: 100vh;
     color: var(--foreground);
     font-family: var(--ff-body);
     -webkit-font-smoothing: antialiased;
+  }
+  .dark body {
+    background: var(--background);
   }
 }
