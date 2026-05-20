@@ -5,7 +5,7 @@ import { useRouter, useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { ArrowLeft, Check, Loader2 } from 'lucide-react';
-import { emcHttp } from '@/lib/api/client';
+import { emcHttp, HttpError } from '@/lib/api/client';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
@@ -19,6 +19,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  ProfileCompletionDialog,
+  type ProfileFieldKey,
+} from '@/components/profile/profile-completion-dialog';
 
 interface RegistrationRow {
   id: string;
@@ -721,6 +725,14 @@ export default function CompetitionDashboardPage() {
   const [err, setErr] = useState<string | null>(null);
   const [rounds, setRounds] = useState<Round[] | null>(null);
   const [registering, setRegistering] = useState<string | null>(null);
+  // When POST /registrations returns 409 PROFILE_INCOMPLETE, capture what the
+  // user was trying to register for so we can retry once the dialog saves the
+  // missing fields.
+  const [profileGate, setProfileGate] = useState<{
+    roundId: string | null;
+    meta?: Record<string, unknown>;
+    missingFields: ProfileFieldKey[];
+  } | null>(null);
 
   useEffect(() => {
     if (!config) notFound();
@@ -788,6 +800,17 @@ export default function CompetitionDashboardPage() {
     };
   }, [reg?.id]);
 
+  // Extract a PROFILE_INCOMPLETE response. Returns the missing-fields list
+  // (always at least one element when the server returned the gate) or null
+  // when the error is something else.
+  const profileGateFrom = (e: unknown): ProfileFieldKey[] | null => {
+    if (!(e instanceof HttpError) || e.status !== 409) return null;
+    if (e.body?.code !== 'PROFILE_INCOMPLETE') return null;
+    const raw = e.body?.missingFields;
+    if (!Array.isArray(raw)) return null;
+    return raw.filter((x): x is ProfileFieldKey => typeof x === 'string');
+  };
+
   const enrollNow = async () => {
     if (!comp?.id) return;
     setEnroll(true);
@@ -796,9 +819,14 @@ export default function CompetitionDashboardPage() {
       await emcHttp.post('/registrations', { id: crypto.randomUUID(), compId: comp.id });
       await refresh(comp.id);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : '';
-      if (!/already exists/i.test(msg)) setErr(msg || 'Enroll failed');
-      else await refresh(comp.id);
+      const gate = profileGateFrom(e);
+      if (gate) {
+        setProfileGate({ roundId: null, missingFields: gate });
+      } else {
+        const msg = e instanceof Error ? e.message : '';
+        if (!/already exists/i.test(msg)) setErr(msg || 'Enroll failed');
+        else await refresh(comp.id);
+      }
     } finally {
       setEnroll(false);
     }
@@ -817,11 +845,54 @@ export default function CompetitionDashboardPage() {
       });
       await refresh(comp.id);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not register for this round');
+      const gate = profileGateFrom(e);
+      if (gate) {
+        setProfileGate({ roundId, meta, missingFields: gate });
+      } else {
+        setErr(e instanceof Error ? e.message : 'Could not register for this round');
+      }
     } finally {
       setRegistering(null);
     }
   };
+
+  // After the Profile Completion Dialog saves the missing fields, retry the
+  // original registration POST so the student lands on payment with no extra
+  // clicks. Mirrors enrollNow / enrollRound but skips the loading state so the
+  // dialog's spinner has already covered the user-visible wait.
+  const retryAfterProfileSaved = async () => {
+    if (!comp?.id || !profileGate) return;
+    const { roundId, meta } = profileGate;
+    setProfileGate(null);
+    try {
+      await emcHttp.post('/registrations', {
+        id: crypto.randomUUID(),
+        compId: comp.id,
+        ...(roundId ? { roundId } : {}),
+        ...(meta ? { meta } : {}),
+      });
+      await refresh(comp.id);
+    } catch (e) {
+      // If the server still reports missing fields, surface them again.
+      const gate = profileGateFrom(e);
+      if (gate) {
+        setProfileGate({ roundId, meta, missingFields: gate });
+      } else {
+        setErr(e instanceof Error ? e.message : 'Could not register');
+      }
+    }
+  };
+
+  // Friendly context label for the dialog — the round name when registering
+  // for a multi-round comp; the competition name otherwise.
+  const profileGateContext = (() => {
+    if (!profileGate) return undefined;
+    if (profileGate.roundId && rounds) {
+      const r = rounds.find((rr) => rr.id === profileGate.roundId);
+      if (r) return `${config?.shortName ?? ''} — ${r.roundName}`.trim();
+    }
+    return config?.shortName;
+  })();
 
   if (!config) return null;
 
@@ -946,6 +1017,13 @@ export default function CompetitionDashboardPage() {
             )}
           </Card>
         )}
+        <ProfileCompletionDialog
+          open={!!profileGate}
+          missingFields={profileGate?.missingFields ?? []}
+          contextLabel={profileGateContext}
+          onCancel={() => setProfileGate(null)}
+          onCompleted={() => void retryAfterProfileSaved()}
+        />
     </div>
   );
 }

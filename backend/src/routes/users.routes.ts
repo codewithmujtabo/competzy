@@ -98,6 +98,7 @@ router.get("/me", async (req: Request, res: Response) => {
       fullName: user.full_name,
       phone: user.phone,
       city: user.city,
+      country: user.country,
       role: user.role,
       photoUrl: user.photo_url,
       createdAt: user.created_at,
@@ -113,7 +114,7 @@ router.get("/me", async (req: Request, res: Response) => {
 // ── PUT /api/users/me ─────────────────────────────────────────────────────
 router.put("/me", async (req: Request, res: Response) => {
   try {
-    const { fullName, phone, city, photoUrl } = req.body;
+    const { fullName, phone, city, country, photoUrl } = req.body;
 
     // Update users table
     const fields: string[] = [];
@@ -124,6 +125,16 @@ router.put("/me", async (req: Request, res: Response) => {
     // Phone is normalised to the local 0-prefixed format on the way in.
     if (phone !== undefined) { fields.push(`phone = $${idx++}`); values.push(phone ? toLocalPhone(phone) || null : null); }
     if (city !== undefined) { fields.push(`city = $${idx++}`); values.push(city); }
+    // Country is stored as the ISO 3166-1 alpha-2 code in uppercase. Reject
+    // anything that isn't two letters so analytics stays normalised.
+    if (country !== undefined) {
+      if (country !== null && country !== "" && !/^[A-Za-z]{2}$/.test(String(country))) {
+        res.status(400).json({ message: "country must be a 2-letter ISO code" });
+        return;
+      }
+      fields.push(`country = $${idx++}`);
+      values.push(country ? String(country).toUpperCase() : null);
+    }
     if (photoUrl !== undefined) { fields.push(`photo_url = $${idx++}`); values.push(photoUrl); }
 
     if (fields.length > 0) {
