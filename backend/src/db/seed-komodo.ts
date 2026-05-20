@@ -114,16 +114,14 @@ const ROUNDS: RoundInput[] = [
 ];
 
 async function main(): Promise<void> {
-  // Idempotency — never duplicate Komodo.
+  // Idempotency — never duplicate Komodo, but DO backfill missing rounds /
+  // flow when the competition row exists from an earlier run that predates
+  // the multi-round migrations. This is the path operators on prod hit when
+  // the comp was created via the admin UI without rounds.
   const existing = await pool.query(
     "SELECT id FROM competitions WHERE id = $1 OR slug = $2 LIMIT 1",
     [COMP_ID, COMP_SLUG],
   );
-  if (existing.rows.length > 0) {
-    console.log(`Komodo already exists (id=${existing.rows[0].id}) — nothing to do.`);
-    await pool.end();
-    return;
-  }
 
   // Owner — prefer an admin, then an organizer; NULL is acceptable (the
   // competition is still valid and an admin can claim it later).
@@ -138,30 +136,64 @@ async function main(): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await client.query(
-      `INSERT INTO competitions
-         (id, name, organizer_name, category, grade_level, fee, quota,
-          reg_open_date, reg_close_date, competition_date, required_docs,
-          description, slug, kind, registration_status, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,500,$7,$8,$9,'{}',$10,$11,'native','On Going',$12)`,
-      [
-        COMP_ID,
-        "Komodo — International Math Competition",
-        "Competzy",
-        "Mathematics",
-        GRADE_LEVEL,
-        200000,
-        ymd(-30),
-        ymd(30),
-        ymd(45),
-        "The Komodo International Math Competition — a global mathematics challenge " +
-          "with three online qualification rounds leading to the Grand Final in Bali, Indonesia.",
-        COMP_SLUG,
-        createdBy,
-      ],
+
+    let compId: string;
+    if (existing.rows.length > 0) {
+      compId = existing.rows[0].id as string;
+      console.log(`Komodo already exists (id=${compId}) — checking rounds + flow.`);
+    } else {
+      await client.query(
+        `INSERT INTO competitions
+           (id, name, organizer_name, category, grade_level, fee, quota,
+            reg_open_date, reg_close_date, competition_date, required_docs,
+            description, slug, kind, registration_status, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,500,$7,$8,$9,'{}',$10,$11,'native','On Going',$12)`,
+        [
+          COMP_ID,
+          "Komodo — International Math Competition",
+          "Competzy",
+          "Mathematics",
+          GRADE_LEVEL,
+          200000,
+          ymd(-30),
+          ymd(30),
+          ymd(45),
+          "The Komodo International Math Competition — a global mathematics challenge " +
+            "with three online qualification rounds leading to the Grand Final in Bali, Indonesia.",
+          COMP_SLUG,
+          createdBy,
+        ],
+      );
+      compId = COMP_ID;
+      console.log(`Komodo created (id=${compId}).`);
+    }
+
+    // Backfill the 6-step native flow if it's missing. seedDefaultFlow inserts
+    // unconditionally — guard with a count so it stays a no-op when present.
+    const flowCount = await client.query(
+      "SELECT COUNT(*)::int AS n FROM competition_flows WHERE comp_id = $1 AND deleted_at IS NULL",
+      [compId],
     );
-    await seedDefaultFlow(client, COMP_ID, "native");
-    await replaceRounds(client, COMP_ID, ROUNDS);
+    if (flowCount.rows[0].n === 0) {
+      await seedDefaultFlow(client, compId, "native");
+      console.log(`  + Seeded the 6-step native flow.`);
+    } else {
+      console.log(`  · Flow already present (${flowCount.rows[0].n} steps) — left alone.`);
+    }
+
+    // Backfill the 6 rounds if missing. We deliberately DO NOT replace existing
+    // rounds — an operator may have edited dates / fees and we'd clobber them.
+    const roundCount = await client.query(
+      "SELECT COUNT(*)::int AS n FROM competition_rounds WHERE comp_id = $1",
+      [compId],
+    );
+    if (roundCount.rows[0].n === 0) {
+      await replaceRounds(client, compId, ROUNDS);
+      console.log(`  + Seeded ${ROUNDS.length} rounds.`);
+    } else {
+      console.log(`  · Rounds already present (${roundCount.rows[0].n}) — left alone.`);
+    }
+
     await client.query("COMMIT");
   } catch (err) {
     await client.query("ROLLBACK");
@@ -171,8 +203,8 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `Komodo added (id=${COMP_ID}, slug=${COMP_SLUG}) with ${ROUNDS.length} rounds` +
-      (createdBy ? ` — owner ${createdBy}.` : " — no owner set; an admin can claim it."),
+    `Komodo seed finished (slug=${COMP_SLUG})` +
+      (createdBy ? ` — owner candidate ${createdBy}.` : " — no admin/organizer found to own it."),
   );
   await pool.end();
 }
