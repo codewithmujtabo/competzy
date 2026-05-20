@@ -2,7 +2,11 @@ import { Router, Request, Response } from "express";
 import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
 import * as pushService from "../services/push.service";
-import { computeCompleteness } from "../services/readiness.service";
+import {
+  computeCompleteness,
+  computeMissingProfileFields,
+  getRequiredProfileFields,
+} from "../services/readiness.service";
 import { checkRoundGating } from "../services/round-gating.service";
 
 const router = Router();
@@ -314,6 +318,25 @@ router.post("/", async (req: Request, res: Response) => {
     if (compResult.rows.length === 0) {
       res.status(404).json({ message: "Competition not found" });
       return;
+    }
+
+    // Pre-payment gate (Komodo + any future competition with
+    // required_profile_fields): refuse to create the registration if the
+    // student is missing any mandatory profile field. The web client opens an
+    // inline dialog with the missingFields list, lets the user fill them, then
+    // re-POSTs. Empty list ⇒ the competition has no extra requirements and
+    // registration proceeds straight to payment as before.
+    const required = await getRequiredProfileFields(compId);
+    if (required.length > 0) {
+      const missingFields = await computeMissingProfileFields(req.userId!, required);
+      if (missingFields.length > 0) {
+        res.status(409).json({
+          code: "PROFILE_INCOMPLETE",
+          message: "Please complete your profile before registering",
+          missingFields,
+        });
+        return;
+      }
     }
 
     // Multi-round: a registration may target a specific round. Validate the

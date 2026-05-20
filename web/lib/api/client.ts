@@ -11,6 +11,23 @@
 
 const BASE = '/api';
 
+/**
+ * Error type for non-2xx HTTP responses. Carries the status + the parsed
+ * response body so callers that care about specific codes (e.g.
+ * `409 PROFILE_INCOMPLETE`) can branch on `.body`. Existing call sites that
+ * only read `.message` keep working — this extends Error.
+ */
+export class HttpError extends Error {
+  status: number;
+  body: Record<string, unknown>;
+  constructor(message: string, status: number, body: Record<string, unknown>) {
+    super(message);
+    this.name = 'HttpError';
+    this.status = status;
+    this.body = body;
+  }
+}
+
 async function httpReq<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -25,7 +42,8 @@ async function httpReq<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
-    throw new Error(body.message ?? `HTTP ${res.status}`);
+    const message = (body as { message?: string }).message ?? `HTTP ${res.status}`;
+    throw new HttpError(message, res.status, body as Record<string, unknown>);
   }
   return res.json() as Promise<T>;
 }
@@ -38,7 +56,8 @@ async function httpFormData<T>(path: string, formData: FormData): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
-    throw new Error(body.message ?? `HTTP ${res.status}`);
+    const message = (body as { message?: string }).message ?? `HTTP ${res.status}`;
+    throw new HttpError(message, res.status, body as Record<string, unknown>);
   }
   return res.json() as Promise<T>;
 }

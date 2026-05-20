@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { CountrySelect } from '@/components/ui/country-select';
 
 // Editable text fields. Photo + student card upload separately; email is
 // read-only. Mirrors the mobile app's student profile form
@@ -21,6 +22,7 @@ interface Form {
   fullName: string;
   phone: string;
   city: string;
+  country: string | null;
   dateOfBirth: string;
   referralSource: string;
   schoolName: string;
@@ -42,7 +44,7 @@ interface Form {
 }
 
 const EMPTY_FORM: Form = {
-  fullName: '', phone: '', city: '', dateOfBirth: '', referralSource: '',
+  fullName: '', phone: '', city: '', country: null, dateOfBirth: '', referralSource: '',
   schoolName: '', grade: '', nisn: '', npsn: '', schoolAddress: '', schoolEmail: '',
   schoolWhatsapp: '', schoolPhone: '', supervisorName: '', supervisorEmail: '',
   supervisorWhatsapp: '', supervisorPhone: '', parentName: '', parentOccupation: '',
@@ -110,6 +112,7 @@ export default function AccountProfilePage() {
         fullName: d.fullName ?? '',
         phone: d.phone ?? '',
         city: d.city ?? '',
+        country: d.country ?? null,
         dateOfBirth: toDateInputValue(d.dateOfBirth),
         referralSource: d.referralSource ?? '',
         schoolName: d.schoolName ?? '',
@@ -206,6 +209,7 @@ export default function AccountProfilePage() {
         fullName: form.fullName,
         phone: form.phone,
         city: form.city,
+        country: form.country,
         // A DATE column rejects '' — omit an empty value rather than clear it.
         dateOfBirth: form.dateOfBirth || undefined,
         interests: interests.join(', '),
@@ -318,6 +322,15 @@ export default function AccountProfilePage() {
             onChange={(e) => set('city', e.target.value)}
             placeholder="Your city"
           />
+          <div className="space-y-1.5">
+            <Label htmlFor="profile-country">Country</Label>
+            <CountrySelect
+              id="profile-country"
+              value={form.country}
+              onChange={(code) => setForm((f) => ({ ...f, country: code }))}
+              placeholder="Select country"
+            />
+          </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>Interests</Label>
             <div className="flex flex-wrap gap-2">
