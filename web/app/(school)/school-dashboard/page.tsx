@@ -61,9 +61,12 @@ const ADMIN_QUICK: QuickLink[] = [
 
 const TEACHER_QUICK: QuickLink[] = [
   { href: '/school-my-students', icon: Users, label: 'My Students', desc: 'View your students' },
+  { href: '/bulk-registration', icon: Upload, label: 'Bulk Registration', desc: 'Register multiple students at once' },
   { href: '/school-my-competitions', icon: Trophy, label: 'My Competitions', desc: 'Competitions your students joined' },
   { href: '/school-registrations', icon: ClipboardList, label: 'Registrations', desc: 'Track registrations' },
+  { href: '/bulk-payment', icon: CreditCard, label: 'Bulk Payment', desc: 'Pay for multiple registrations' },
   { href: '/school-deadline', icon: CalendarClock, label: 'Deadlines', desc: 'Upcoming deadlines' },
+  { href: '/api/teachers/export/achievement.pdf', icon: Award, label: 'Achievement PDF', desc: 'Download your roster results report', external: true },
 ];
 
 export default function SchoolDashboardPage() {
