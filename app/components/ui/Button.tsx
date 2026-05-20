@@ -45,7 +45,8 @@ function ButtonImpl({
   const palette = (() => {
     switch (variant) {
       case "primary":
-        return { bg: Brand.primary, fg: "#FFFFFF", press: Brand.primaryDark };
+        // Solar Yellow ink on Deep Indigo — the futuristic pop-art CTA.
+        return { bg: Brand.primary, fg: Brand.sunshine, press: Brand.primaryDark };
       case "secondary":
         return { bg: Brand.primarySoft, fg: Brand.primary, press: Brand.navySoft };
       case "ghost":

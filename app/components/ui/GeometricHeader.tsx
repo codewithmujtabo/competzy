@@ -25,8 +25,8 @@ function paletteColors(p: Palette) {
 }
 
 /**
- * Editorial header — a solid brand panel with a restrained concentric-ring
- * motif (competzy.com feel). Replaces the Sprint-19 playful SVG blobs.
+ * Futuristic header — a solid brand panel with concentric white rings and a
+ * yellow accent halo + dot. Pop-art moment, restrained execution.
  */
 function GeometricHeaderImpl({
   height = 220,
@@ -60,10 +60,13 @@ function GeometricHeaderImpl({
         <Circle cx="344" cy="44" r="128" stroke="#FFFFFF" strokeOpacity={0.09} strokeWidth={1.5} fill="none" />
         <Circle cx="344" cy="44" r="84" stroke="#FFFFFF" strokeOpacity={0.13} strokeWidth={1.5} fill="none" />
         <Circle cx="344" cy="44" r="44" stroke="#FFFFFF" strokeOpacity={0.17} strokeWidth={1.5} fill="none" />
-        {/* Small accent dot on the ring */}
-        <Circle cx="344" cy="44" r="9" fill={c.dot} opacity={0.95} />
+        {/* Yellow accent halo + dot — the futuristic pop. */}
+        <Circle cx="344" cy="44" r="22" stroke={c.dot} strokeOpacity={0.35} strokeWidth={2} fill="none" />
+        <Circle cx="344" cy="44" r="12" fill={c.dot} opacity={0.98} />
         {/* Faint counter-ring, bottom-left */}
         <Circle cx="36" cy="208" r="72" stroke="#FFFFFF" strokeOpacity={0.07} strokeWidth={1.5} fill="none" />
+        {/* Pink micro-dot, bottom-left — futuristic counter-accent */}
+        <Circle cx="36" cy="208" r="6" fill={Brand.coral} opacity={0.85} />
       </Svg>
       {children}
     </View>

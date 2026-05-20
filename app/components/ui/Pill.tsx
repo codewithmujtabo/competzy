@@ -13,14 +13,15 @@ type Props = {
 };
 
 function tonePalette(tone: Props["tone"], selected: boolean) {
-  if (selected) return { bg: Brand.primary, fg: "#FFFFFF", border: Brand.primary };
+  if (selected) return { bg: Brand.primary, fg: Brand.sunshine, border: Brand.primary };
   switch (tone) {
     case "brand":
       return { bg: Brand.primarySoft, fg: Brand.primary, border: Brand.primarySoft };
     case "success":
       return { bg: Brand.successSoft, fg: Brand.success, border: Brand.successSoft };
     case "warning":
-      return { bg: Brand.warningSoft, fg: "#B45309", border: Brand.warningSoft };
+      // Solar Yellow tint with midnight ink — futuristic readable.
+      return { bg: Brand.warningSoft, fg: "#8A6D14", border: Brand.warningSoft };
     case "danger":
       return { bg: Brand.errorSoft, fg: Brand.error, border: Brand.errorSoft };
     case "info":
