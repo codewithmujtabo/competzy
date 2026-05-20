@@ -229,6 +229,141 @@ router.put("/me", async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /api/users/me/dashboard-summary ──────────────────────────────────────
+// Single round-trip for the Gen-Z student dashboard at `/competitions`:
+// counts, the student's best score across all comps, a "continue where you
+// left off" task (the most recent unfinished thing), and the three most-recent
+// earned certificates with their verify codes.
+router.get("/me/dashboard-summary", async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+
+    // Counts — one query each, all wrapped in a single Promise.all so the
+    // payload comes back in one round-trip's worth of latency.
+    const [regCount, certCount, favCount, bestScore] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*)::int AS n
+           FROM registrations
+          WHERE user_id = $1 AND deleted_at IS NULL`,
+        [userId],
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS n
+           FROM certificates
+          WHERE user_id = $1 AND deleted_at IS NULL AND revoked_at IS NULL`,
+        [userId],
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS n FROM favorites WHERE user_id = $1`,
+        [userId],
+      ),
+      pool.query(
+        `SELECT r.score, c.name AS comp_name, cr.round_name
+           FROM registrations r
+           JOIN competitions c ON c.id = r.comp_id
+      LEFT JOIN competition_rounds cr ON cr.id = r.round_id
+          WHERE r.user_id = $1 AND r.deleted_at IS NULL AND r.score IS NOT NULL
+          ORDER BY r.score DESC
+          LIMIT 1`,
+        [userId],
+      ),
+    ]);
+
+    // Continue where you left off — first pending payment, then any unfinished
+    // exam session. Either gives the dashboard a single, concrete CTA.
+    const continueRes = await pool.query(
+      `SELECT r.id AS registration_id, r.status, c.slug AS comp_slug, c.name AS comp_name
+         FROM registrations r
+         JOIN competitions c ON c.id = r.comp_id
+        WHERE r.user_id = $1 AND r.deleted_at IS NULL AND r.status = 'pending_payment'
+        ORDER BY r.created_at DESC
+        LIMIT 1`,
+      [userId],
+    );
+
+    let continueTask: {
+      type: "pay" | "exam";
+      registrationId: string;
+      slug: string | null;
+      compName: string;
+      label: string;
+    } | null = null;
+
+    if (continueRes.rows.length > 0) {
+      const row = continueRes.rows[0];
+      continueTask = {
+        type: "pay",
+        registrationId: row.registration_id,
+        slug: row.comp_slug,
+        compName: row.comp_name,
+        label: `Complete payment for ${row.comp_name}`,
+      };
+    } else {
+      const examRes = await pool.query(
+        `SELECT s.id AS session_id, s.exam_id, c.slug AS comp_slug, c.name AS comp_name,
+                e.name AS exam_name
+           FROM sessions s
+           JOIN exams e ON e.id = s.exam_id
+           JOIN competitions c ON c.id = e.comp_id
+          WHERE s.user_id = $1 AND s.deleted_at IS NULL AND s.finished_at IS NULL
+          ORDER BY s.started_at DESC NULLS LAST
+          LIMIT 1`,
+        [userId],
+      );
+      if (examRes.rows.length > 0) {
+        const row = examRes.rows[0];
+        continueTask = {
+          type: "exam",
+          registrationId: row.session_id,
+          slug: row.comp_slug,
+          compName: row.comp_name,
+          label: `Finish ${row.exam_name}`,
+        };
+      }
+    }
+
+    const certs = await pool.query(
+      `SELECT c.certificate_number, c.type, c.award_label, c.issued_at,
+              c.verification_code, comp.name AS competition_name, comp.slug AS comp_slug
+         FROM certificates c
+         JOIN competitions comp ON comp.id = c.comp_id
+        WHERE c.user_id = $1 AND c.deleted_at IS NULL AND c.revoked_at IS NULL
+        ORDER BY c.issued_at DESC
+        LIMIT 4`,
+      [userId],
+    );
+
+    const best = bestScore.rows[0];
+    res.json({
+      counts: {
+        registrations: regCount.rows[0]?.n ?? 0,
+        certificates: certCount.rows[0]?.n ?? 0,
+        savedComps: favCount.rows[0]?.n ?? 0,
+      },
+      bestScore: best
+        ? {
+            value: Number(best.score),
+            compName: best.comp_name,
+            roundName: best.round_name ?? null,
+          }
+        : null,
+      continueTask,
+      recentCertificates: certs.rows.map((c) => ({
+        certificateNumber: c.certificate_number,
+        type: c.type,
+        awardLabel: c.award_label,
+        issuedAt: c.issued_at,
+        verificationCode: c.verification_code,
+        competitionName: c.competition_name,
+        competitionSlug: c.comp_slug,
+      })),
+    });
+  } catch (err) {
+    console.error("Dashboard summary error:", err);
+    res.status(500).json({ message: "Failed to load dashboard summary" });
+  }
+});
+
 // ── POST /api/users/photo ─────────────────────────────────────────────────────
 // Upload profile photo
 router.post(
