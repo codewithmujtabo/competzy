@@ -36,6 +36,12 @@ export interface RoundInput {
   gatingRule?: string | null;
   /** Operator visibility toggle — false = hidden from students. Default true. */
   isActive?: boolean | null;
+  /**
+   * For age-grouped competitions (Komodo): the date the student's age is
+   * measured against to pick a creature/bracket. Per-round so the bracket
+   * can shift across rounds. ISO 'YYYY-MM-DD'. Null for grade-based comps.
+   */
+  ageCutoffDate?: string | null;
 }
 
 /**
@@ -77,8 +83,9 @@ export async function replaceRounds(
          comp_id, round_name, round_type, start_date,
          registration_deadline, exam_date, results_date,
          fee, location, round_order, required_docs, gating,
-         round_category, country, exam_mode, qualifying_score, is_active
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+         round_category, country, exam_mode, qualifying_score, is_active,
+         age_cutoff_date
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
        RETURNING id`,
       [
         compId,
@@ -98,6 +105,7 @@ export async function replaceRounds(
         examMode,
         r.qualifyingScore ?? null,
         r.isActive !== false,
+        r.ageCutoffDate || null,
       ],
     );
     ids.push(inserted.rows[0].id as string);

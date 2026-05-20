@@ -23,6 +23,7 @@ import {
   ProfileCompletionDialog,
   type ProfileFieldKey,
 } from '@/components/profile/profile-completion-dialog';
+import { CreatureCard, type CreatureRow } from '@/components/profile/creature-card';
 
 interface RegistrationRow {
   id: string;
@@ -733,6 +734,9 @@ export default function CompetitionDashboardPage() {
     meta?: Record<string, unknown>;
     missingFields: ProfileFieldKey[];
   } | null>(null);
+  // Komodo + future age-grouped comps — per-round creature classification.
+  // Empty array for grade-based comps; null while we haven't fetched yet.
+  const [creatureRounds, setCreatureRounds] = useState<CreatureRow[] | null>(null);
 
   useEffect(() => {
     if (!config) notFound();
@@ -766,6 +770,19 @@ export default function CompetitionDashboardPage() {
         ),
       )
       .catch(() => setRounds([]));
+  }, [comp?.id]);
+
+  // Komodo / age-grouped comps — fetch the per-round creature classification
+  // for the calling student. Empty `rounds` here just means this competition
+  // has no age-cutoff rounds (a grade-based comp); the card is hidden.
+  useEffect(() => {
+    if (!comp?.id) return;
+    let cancelled = false;
+    emcHttp
+      .get<{ rounds: CreatureRow[] }>(`/competitions/${comp.id}/my-creature`)
+      .then((d) => { if (!cancelled) setCreatureRounds(d.rounds ?? []); })
+      .catch(() => { if (!cancelled) setCreatureRounds([]); });
+    return () => { cancelled = true; };
   }, [comp?.id]);
 
   // Once we know the registration, pull its step-flow progress + (for
@@ -932,6 +949,9 @@ export default function CompetitionDashboardPage() {
           </Card>
         ) : rounds.length > 0 ? (
           <>
+            {creatureRounds && creatureRounds.length > 0 && (
+              <CreatureCard rounds={creatureRounds} />
+            )}
             <RoundsPanel
               rounds={rounds}
               regs={regs}
