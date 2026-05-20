@@ -236,9 +236,9 @@ export function ProfileCompletionModal({
           </View>
 
           <ScrollView
-            style={{ flex: 1 }}
             contentContainerStyle={{ paddingBottom: Spacing.xl }}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
             <View style={styles.banner}>
               <Ionicons name="information-circle" size={16} color={Brand.primary} />
@@ -301,8 +301,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(17, 5, 44, 0.55)",
     justifyContent: "flex-end",
   },
+  // The sheet hugs its content (no `flex`) so a short 1-2 field form sits
+  // compactly above the actions, while a longer form still works thanks to
+  // the maxHeight + ScrollView combo.
   sheet: {
-    flex: 0.92,
+    maxHeight: "90%",
     backgroundColor: Surface.background,
     borderTopLeftRadius: Radius["2xl"],
     borderTopRightRadius: Radius["2xl"],
