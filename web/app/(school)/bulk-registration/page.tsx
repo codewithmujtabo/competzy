@@ -17,7 +17,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import {
+  ManualEntryGrid,
+  isRowEmpty,
+  isValidRow,
+  type ManualRow,
+} from '@/components/bulk/manual-entry-grid';
 
 interface Competition {
   id: string;
@@ -75,6 +82,20 @@ export default function BulkRegistrationPage() {
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Manual-entry mode — Step 2's alternative to CSV upload. Starts with 10
+  // empty rows so the operator sees an inviting grid the moment they switch.
+  const [mode, setMode] = useState<'csv' | 'manual'>('csv');
+  const [manualRows, setManualRows] = useState<ManualRow[]>(() =>
+    Array.from({ length: 10 }, () => ({
+      fullName: '',
+      email: '',
+      phone: '',
+      nisn: '',
+      grade: '',
+      schoolName: '',
+    })),
+  );
 
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -186,6 +207,44 @@ export default function BulkRegistrationPage() {
       setSubmitting(false);
     }
   };
+
+  // Manual mode — POST the valid (non-empty + email-valid) rows to the new
+  // /bulk-registration/manual endpoint. The server queues a job in the same
+  // bulk_registration_jobs table, so polling + the Step 3 / 4 UI reuses
+  // unchanged.
+  const handleSubmitManual = async () => {
+    if (!selectedComp) return;
+    const validRows = manualRows.filter((r) => isValidRow(r));
+    if (validRows.length === 0) {
+      toast.error('Add at least one student with a name and a valid email');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const data = await schoolHttp.post<{ jobId: string; totalRows: number }>(
+        '/bulk-registration/manual',
+        { compId: selectedComp.id, rows: validRows },
+      );
+      setJobStatus({
+        id: data.jobId,
+        status: 'pending',
+        totalRows: data.totalRows,
+        processedRows: 0,
+        successfulRows: 0,
+        failedRows: 0,
+        errors: [],
+        progress: 0,
+      });
+      setStep(3);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to submit students');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const manualValidCount = manualRows.filter(isValidRow).length;
+  const manualIssueCount = manualRows.filter((r) => !isRowEmpty(r) && !isValidRow(r)).length;
 
   const issueCount = csvRows.filter(rowHasIssue).length;
   const errorRowNums = new Set(jobStatus?.errors.map((e) => e.row) ?? []);
@@ -301,7 +360,7 @@ export default function BulkRegistrationPage() {
         </Card>
       )}
 
-      {/* Step 2 — upload & preview */}
+      {/* Step 2 — upload & preview (CSV) OR inline entry (Manual) */}
       {step === 2 && (
         <Card className="gap-4 p-5">
           <div>
@@ -310,6 +369,14 @@ export default function BulkRegistrationPage() {
             </p>
             <p className="mt-0.5 text-sm font-medium text-foreground">{selectedComp?.name}</p>
           </div>
+
+          <Tabs value={mode} onValueChange={(v) => setMode(v as 'csv' | 'manual')}>
+            <TabsList className="grid w-full grid-cols-2 sm:w-fit">
+              <TabsTrigger value="csv">Upload CSV</TabsTrigger>
+              <TabsTrigger value="manual">Enter manually</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="csv" className="mt-4 space-y-4">
 
           <input
             ref={fileInputRef}
@@ -417,6 +484,36 @@ export default function BulkRegistrationPage() {
               {submitting ? 'Submitting…' : `Register ${csvRows.length} student${csvRows.length === 1 ? '' : 's'}`}
             </Button>
           </div>
+            </TabsContent>
+
+            <TabsContent value="manual" className="mt-4 space-y-4">
+              <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+                Just a handful of students? Type them in here, or paste a block from Excel /
+                Google Sheets — the grid splits the cells automatically.
+                {manualIssueCount > 0 && (
+                  <span className="ml-1 font-medium text-amber-700 dark:text-amber-300">
+                    {' '}{manualIssueCount} row{manualIssueCount === 1 ? '' : 's'} need
+                    {manualIssueCount === 1 ? 's' : ''} a name and a valid email.
+                  </span>
+                )}
+              </div>
+              <ManualEntryGrid rows={manualRows} onChange={setManualRows} />
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep(1)}>
+                  Back
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleSubmitManual}
+                  disabled={manualValidCount === 0 || submitting}
+                >
+                  {submitting
+                    ? 'Submitting…'
+                    : `Register ${manualValidCount} student${manualValidCount === 1 ? '' : 's'}`}
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
         </Card>
       )}
 
