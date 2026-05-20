@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
+  Award,
   CalendarClock,
   ClipboardList,
   CreditCard,
@@ -26,16 +27,43 @@ const ADMIN_NAV: NavSection[] = [
       { label: 'Registrations', href: '/school-registrations', icon: ClipboardList },
     ],
   },
+  {
+    label: 'Reports',
+    items: [
+      {
+        label: 'Achievement PDF',
+        href: '/api/schools/export/achievement.pdf',
+        icon: Award,
+        external: true,
+      },
+    ],
+  },
 ];
 
+// Teacher nav mirrors the dashboard quick-actions (Phase 4 added Bulk
+// Registration / Bulk Payment / Achievement PDF) so every action surfaced on
+// /school-dashboard is reachable from the left sidebar too.
 const TEACHER_NAV: NavSection[] = [
   {
     items: [
       { label: 'Dashboard', href: '/school-dashboard', icon: LayoutGrid, exact: true },
       { label: 'My Students', href: '/school-my-students', icon: Users },
       { label: 'My Competitions', href: '/school-my-competitions', icon: Trophy },
+      { label: 'Bulk Registration', href: '/bulk-registration', icon: Upload },
+      { label: 'Bulk Payment', href: '/bulk-payment', icon: CreditCard },
       { label: 'Registrations', href: '/school-registrations', icon: ClipboardList },
       { label: 'Deadlines', href: '/school-deadline', icon: CalendarClock },
+    ],
+  },
+  {
+    label: 'Reports',
+    items: [
+      {
+        label: 'Achievement PDF',
+        href: '/api/teachers/export/achievement.pdf',
+        icon: Award,
+        external: true,
+      },
     ],
   },
 ];

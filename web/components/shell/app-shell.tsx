@@ -44,6 +44,12 @@ export interface NavItem {
   /** Match the pathname exactly instead of by prefix. */
   exact?: boolean;
   badge?: string | number;
+  /**
+   * When true, render a plain anchor instead of a Next.js Link — used for
+   * download links (e.g. the Achievement PDF endpoint) and any href that
+   * shouldn't take part in client-side navigation.
+   */
+  external?: boolean;
 }
 
 export interface NavSection {
@@ -134,10 +140,19 @@ export function AppShell({
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
-                          <Link href={item.href}>
-                            <Icon />
-                            <span>{item.label}</span>
-                          </Link>
+                          {item.external ? (
+                            // Plain anchor for download endpoints (e.g. PDFs).
+                            // target="_blank" so the active page state survives.
+                            <a href={item.href} target="_blank" rel="noreferrer">
+                              <Icon />
+                              <span>{item.label}</span>
+                            </a>
+                          ) : (
+                            <Link href={item.href}>
+                              <Icon />
+                              <span>{item.label}</span>
+                            </Link>
+                          )}
                         </SidebarMenuButton>
                         {item.badge != null && (
                           <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
