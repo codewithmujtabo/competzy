@@ -89,29 +89,21 @@ export default function SchoolRegistrationsPage() {
         setRegs(r.registrations);
         setTotal(r.pagination.total);
       } else {
-        const response = await schoolHttp.get<{ competitions?: unknown[] }>('/teachers/my-competitions');
-        const competitionsArray = (response.competitions || []) as Array<{
-          id: string;
-          name: string;
-          category?: string;
-          students?: Array<{ id: string; fullName?: string; name?: string; email?: string; grade?: string; status?: string }>;
-        }>;
-        const allRegs: Registration[] = [];
-        for (const comp of competitionsArray) {
-          for (const s of comp.students ?? []) {
-            allRegs.push({
-              registrationId: s.id || `reg-${comp.id}`,
-              status: s.status || 'registered',
-              registeredAt: new Date().toISOString(),
-              student: { id: s.id, name: s.fullName || s.name || '', email: s.email || '', grade: s.grade },
-              competition: { id: comp.id, name: comp.name, category: comp.category },
-            });
-          }
-        }
-        const filtered = compFilter ? allRegs.filter((r) => r.competition.id === compFilter) : allRegs;
-        const start = (page - 1) * LIMIT;
-        setRegs(filtered.slice(start, start + LIMIT));
-        setTotal(filtered.length);
+        // Teacher path now uses /teachers/registrations — shape parity with
+        // /schools/registrations, so the same status tabs + filters + pager
+        // work without further branching.
+        const q = new URLSearchParams({
+          page: String(page),
+          limit: String(LIMIT),
+          ...(compFilter && { compId: compFilter }),
+          ...(statusFilter && { status: statusFilter }),
+        });
+        const r = await schoolHttp.get<{
+          registrations: Registration[];
+          pagination: { total: number };
+        }>(`/teachers/registrations?${q}`);
+        setRegs(r.registrations);
+        setTotal(r.pagination.total);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load registrations');

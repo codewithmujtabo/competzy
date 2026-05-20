@@ -48,7 +48,16 @@ export async function processPendingJobs(): Promise<void> {
 
     console.log(`Processing bulk job ${job.id}: ${job.file_name}`);
 
-    await processJob(job.id, job.csv_data);
+    // Resolve the uploader's role so we can auto-link new/matched students
+    // into a teacher's roster when the uploader is a teacher (Phase 4 parity).
+    const uploader = await client.query(
+      "SELECT id, role FROM users WHERE id = $1",
+      [job.uploaded_by],
+    );
+    const uploaderId: string | null = uploader.rows[0]?.id ?? null;
+    const uploaderRole: string | null = uploader.rows[0]?.role ?? null;
+
+    await processJob(job.id, job.csv_data, uploaderId, uploaderRole);
   } catch (err) {
     console.error("Error in bulk job processor:", err);
   } finally {
@@ -59,7 +68,12 @@ export async function processPendingJobs(): Promise<void> {
 /**
  * Process a single bulk registration job
  */
-async function processJob(jobId: string, csvData: CsvRow[]): Promise<void> {
+async function processJob(
+  jobId: string,
+  csvData: CsvRow[],
+  uploaderId: string | null,
+  uploaderRole: string | null,
+): Promise<void> {
   const errors: ProcessingError[] = [];
   let successful = 0;
 
@@ -68,7 +82,7 @@ async function processJob(jobId: string, csvData: CsvRow[]): Promise<void> {
     const rowNumber = i + 2; // +2 for header row and 1-based indexing
 
     try {
-      await processRow(row);
+      await processRow(row, uploaderId, uploaderRole);
       successful++;
 
       // Update progress every 10 rows
@@ -105,9 +119,17 @@ async function processJob(jobId: string, csvData: CsvRow[]): Promise<void> {
 }
 
 /**
- * Process a single CSV row
+ * Process a single CSV row. When the uploader is a teacher, we additionally
+ * link the resulting student (newly created OR matched) into the teacher's
+ * roster via teacher_student_links — Phase 4 parity, so bulk-registering
+ * students through the teacher portal automatically populates the My
+ * Students roster.
  */
-async function processRow(row: CsvRow): Promise<void> {
+async function processRow(
+  row: CsvRow,
+  uploaderId: string | null,
+  uploaderRole: string | null,
+): Promise<void> {
   // Validate required fields
   if (!row.full_name || !row.email || !row.competition_id) {
     throw new Error("Missing required fields: full_name, email, competition_id");
@@ -270,6 +292,31 @@ async function processRow(row: CsvRow): Promise<void> {
     throw err;
   } finally {
     client.release();
+  }
+
+  // Auto-link to the teacher's roster when the uploader is a teacher. Runs
+  // outside the registration transaction — failure here doesn't roll back
+  // the registration. ON CONFLICT keeps it idempotent (safe on a resume).
+  if (uploaderRole === "teacher" && uploaderId) {
+    try {
+      // userId is set by either the match path or the create path above; if
+      // both somehow miss the row would have thrown before COMMIT.
+      const studentIdResult = await pool.query(
+        "SELECT id FROM users WHERE email = $1 AND role = 'student'",
+        [row.email.toLowerCase()],
+      );
+      const studentId: string | null = studentIdResult.rows[0]?.id ?? null;
+      if (studentId) {
+        await pool.query(
+          `INSERT INTO teacher_student_links (teacher_id, student_id, created_at)
+           VALUES ($1, $2, now())
+           ON CONFLICT (teacher_id, student_id) DO NOTHING`,
+          [uploaderId, studentId],
+        );
+      }
+    } catch (linkErr) {
+      console.error(`[bulk-processor] Failed to link student to teacher roster:`, linkErr);
+    }
   }
 
   // T3: Email temp password after successful commit — failure here doesn't roll back the registration
