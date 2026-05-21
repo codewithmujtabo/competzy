@@ -112,25 +112,19 @@ export default function CompetitionLandingPage() {
     };
   }, [slug]);
 
-  // If the student is already enrolled, take them straight to the dashboard.
-  // Only checks when both the user and the comp are loaded; visitors and
-  // unenrolled students just see the landing page.
+  // Every signed-in student goes straight to the dashboard — that view
+  // handles every state (no registration yet, pending payment, paid, missed,
+  // per-round flow for multi-round comps) in one place, so we don't need a
+  // separate welcome/landing screen for new students vs returning ones.
+  // The landing page is only kept for unauthenticated visitors who land here
+  // via a direct link — but the layout already bounces them to login, so in
+  // practice this redirect always fires.
   useEffect(() => {
-    if (authLoading || !user || !comp) return;
+    if (authLoading || !user) return;
     if (redirecting !== null) return;
-    emcHttp
-      .get<RegistrationRow[]>('/registrations')
-      .then((rows) => {
-        const hit = rows.find((r) => r.compId === comp.id);
-        if (hit) {
-          setRedirecting(true);
-          router.replace(paths.dashboard);
-        } else {
-          setRedirecting(false);
-        }
-      })
-      .catch(() => setRedirecting(false));
-  }, [authLoading, user, comp, redirecting, paths.dashboard, router]);
+    setRedirecting(true);
+    router.replace(paths.dashboard);
+  }, [authLoading, user, redirecting, paths.dashboard, router]);
 
   // Register CTA — branches on auth state. New visitor goes through the
   // signup page (which auto-enrolls). Signed-in student calls /registrations

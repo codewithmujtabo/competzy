@@ -223,7 +223,9 @@ function CompetitionCard({
   );
 
   if (hasPortal && comp.slug) {
-    return <Link href={`/competitions/${comp.slug}`} className="block">{body}</Link>;
+    // Send students straight to the dashboard — that view handles every state
+    // (no registration, pending payment, missed, paid, etc.) in one place.
+    return <Link href={`/competitions/${comp.slug}/dashboard`} className="block">{body}</Link>;
   }
   return body;
 }

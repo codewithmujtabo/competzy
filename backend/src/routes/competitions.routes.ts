@@ -146,6 +146,7 @@ router.get("/:id", async (req: Request, res: Response) => {
               exam_date,
               results_date,
               fee,
+              fee_international,
               location,
               round_order,
               requires_round_id,
@@ -195,6 +196,8 @@ router.get("/:id", async (req: Request, res: Response) => {
         examDate: round.exam_date,
         resultsDate: round.results_date,
         fee: round.fee,
+        feeInternational:
+          round.fee_international != null ? Number(round.fee_international) : null,
         location: round.location,
         roundOrder: round.round_order,
         requiresRoundId: round.requires_round_id ?? null,

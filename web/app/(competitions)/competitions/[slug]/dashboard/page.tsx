@@ -339,9 +339,25 @@ interface Round {
   examDate: string | null;
   registrationDeadline: string | null;
   fee: number;
+  /** Optional international price in USD — display-only, no online payment yet. */
+  feeInternational: number | null;
   location: string | null;
   gating: { mode?: string; rule?: string; requiresRoundId?: string } | null;
   isActive: boolean;
+}
+
+function usd(n: number): string {
+  // Show no fractional cents for whole-dollar amounts, two decimals otherwise.
+  const fixed = Number.isInteger(n) ? n.toString() : n.toFixed(2);
+  return `$${fixed} USD`;
+}
+
+// A student is "international" iff their profile carries a country that isn't
+// Indonesia. Treat missing/blank as local (Indonesia is the default audience
+// and the only one with a live Midtrans flow).
+function isInternationalStudent(country: string | null | undefined): boolean {
+  if (!country) return false;
+  return country.toUpperCase() !== 'ID';
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -522,6 +538,7 @@ function RoundsPanel({
   wordmark,
   registering,
   onRegister,
+  userCountry,
 }: {
   rounds: Round[];
   regs: RegistrationRow[];
@@ -529,9 +546,21 @@ function RoundsPanel({
   wordmark: string;
   registering: string | null;
   onRegister: (roundId: string, meta?: Record<string, unknown>) => void;
+  userCountry: string | null;
 }) {
   const byRound = new Map(regs.filter((r) => r.roundId).map((r) => [r.roundId, r]));
   const [globalRound, setGlobalRound] = useState<Round | null>(null);
+  const intl = isInternationalStudent(userCountry);
+
+  // Helper — pick the price string to show for a round given the caller's
+  // country. Returns null for free rounds.
+  const priceFor = (round: Round): string | null => {
+    if (intl && round.feeInternational != null && round.feeInternational > 0) {
+      return usd(round.feeInternational);
+    }
+    if (round.fee > 0) return rupiah(round.fee);
+    return null;
+  };
 
   return (
     <Card className="gap-0 p-7">
@@ -568,7 +597,7 @@ function RoundsPanel({
                           year: 'numeric',
                         })}`
                       : ''}
-                    {` · ${round.fee > 0 ? rupiah(round.fee) : 'Free'}`}
+                    {` · ${priceFor(round) ?? 'Free'}`}
                   </p>
                 </div>
                 {reg ? (
@@ -583,11 +612,22 @@ function RoundsPanel({
               <div className="mt-3">
                 {reg ? (
                   reg.status === 'pending_payment' ? (
-                    <Button size="sm" asChild>
-                      <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
-                        Pay round fee
-                      </Link>
-                    </Button>
+                    intl ? (
+                      // International students don't have a live online-payment
+                      // path yet — they settle the USD fee with the organizer
+                      // offline. Show a clear instruction instead of the
+                      // Midtrans-driven Pay button.
+                      <p className="text-xs text-muted-foreground">
+                        International payment is offline for now. Contact the organizer to settle your{' '}
+                        {round.feeInternational != null ? usd(round.feeInternational) : 'round'} fee.
+                      </p>
+                    ) : (
+                      <Button size="sm" asChild>
+                        <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
+                          Pay round fee
+                        </Link>
+                      </Button>
+                    )
                   ) : (
                     <p className="text-xs text-muted-foreground">
                       {STATUS_COPY[reg.status]?.body ??
@@ -737,10 +777,29 @@ export default function CompetitionDashboardPage() {
   // Komodo + future age-grouped comps — per-round creature classification.
   // Empty array for grade-based comps; null while we haven't fetched yet.
   const [creatureRounds, setCreatureRounds] = useState<CreatureRow[] | null>(null);
+  // The caller's stored country code (uppercase, e.g. 'ID', 'MY', 'US').
+  // Drives the local-vs-international price the rounds panel shows.
+  // Null while we haven't fetched yet OR if they have no country saved.
+  const [userCountry, setUserCountry] = useState<string | null>(null);
 
   useEffect(() => {
     if (!config) notFound();
   }, [config]);
+
+  // One-shot fetch of the caller's profile to read `country`. The competition
+  // auth context doesn't carry this field, so we read it directly. Best-effort
+  // — on failure we leave userCountry null and the panel falls back to the
+  // local (IDR) price for everyone.
+  useEffect(() => {
+    let cancelled = false;
+    emcHttp
+      .get<{ country?: string | null }>('/users/me')
+      .then((me) => {
+        if (!cancelled) setUserCountry(typeof me.country === 'string' ? me.country : null);
+      })
+      .catch(() => { /* silent — see comment above */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const refresh = async (compId?: string | null) => {
     try {
@@ -959,6 +1018,7 @@ export default function CompetitionDashboardPage() {
               wordmark={config.wordmark}
               registering={registering}
               onRegister={enrollRound}
+              userCountry={userCountry}
             />
             <Card className="gap-0 p-7">
               <h2 className="font-serif text-xl font-medium text-foreground">Your exams</h2>

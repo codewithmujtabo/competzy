@@ -44,6 +44,12 @@ export interface RoundDraft {
   examDate: string;
   resultsDate: string;
   fee: number;
+  /**
+   * Optional international price in USD. Null means "no international price"
+   * — non-Indonesian students will see the round but won't get a price quote.
+   * Stored as a number so cents are allowed (e.g. 19.99).
+   */
+  feeInternational: number | null;
   qualifyingScore: number | null;
   location: string;
   country: string;
@@ -79,6 +85,7 @@ export function emptyRound(): RoundDraft {
     examDate: '',
     resultsDate: '',
     fee: 0,
+    feeInternational: null,
     qualifyingScore: null,
     location: '',
     country: '',
@@ -117,6 +124,10 @@ export function roundsToDrafts(rounds: unknown): RoundDraft[] {
       examDate: dateInput(r?.examDate),
       resultsDate: dateInput(r?.resultsDate),
       fee: Number(r?.fee) || 0,
+      feeInternational:
+        r?.feeInternational != null && Number.isFinite(Number(r.feeInternational))
+          ? Number(r.feeInternational)
+          : null,
       qualifyingScore: r?.qualifyingScore != null ? Number(r.qualifyingScore) : null,
       location: r?.location ?? '',
       country: r?.country ?? '',
@@ -142,6 +153,7 @@ export function draftsToPayload(drafts: RoundDraft[]) {
     examDate: r.examDate || null,
     resultsDate: r.resultsDate || null,
     fee: Number(r.fee) || 0,
+    feeInternational: r.feeInternational != null ? Number(r.feeInternational) : null,
     qualifyingScore: r.qualifyingScore,
     location: r.location || null,
     country: r.country || null,
@@ -427,7 +439,7 @@ function RoundCard({
           </Select>
         </div>
         <div>
-          <Label className="mb-1 text-xs text-muted-foreground">Fee (IDR)</Label>
+          <Label className="mb-1 text-xs text-muted-foreground">Fee (IDR — local)</Label>
           <Input
             type="number"
             value={round.fee}
@@ -435,13 +447,30 @@ function RoundCard({
           />
         </div>
         <div>
-          <Label className="mb-1 text-xs text-muted-foreground">Location</Label>
+          <Label className="mb-1 text-xs text-muted-foreground">
+            International fee (USD) <span className="text-muted-foreground/70">— optional</span>
+          </Label>
           <Input
-            value={round.location}
-            onChange={(e) => onChange({ location: e.target.value })}
-            placeholder="Online / a city"
+            type="number"
+            step="0.01"
+            value={round.feeInternational ?? ''}
+            onChange={(e) => {
+              const raw = e.target.value.trim();
+              const next = raw === '' ? null : Number(raw);
+              onChange({ feeInternational: next != null && Number.isFinite(next) ? next : null });
+            }}
+            placeholder="e.g. 20"
           />
         </div>
+      </div>
+
+      <div>
+        <Label className="mb-1 text-xs text-muted-foreground">Location</Label>
+        <Input
+          value={round.location}
+          onChange={(e) => onChange({ location: e.target.value })}
+          placeholder="Online / a city"
+        />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
