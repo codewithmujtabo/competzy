@@ -98,6 +98,7 @@ router.get("/me", async (req: Request, res: Response) => {
       fullName: user.full_name,
       phone: user.phone,
       city: user.city,
+      province: user.province,
       country: user.country,
       role: user.role,
       photoUrl: user.photo_url,
@@ -114,7 +115,7 @@ router.get("/me", async (req: Request, res: Response) => {
 // ── PUT /api/users/me ─────────────────────────────────────────────────────
 router.put("/me", async (req: Request, res: Response) => {
   try {
-    const { fullName, phone, city, country, photoUrl } = req.body;
+    const { fullName, phone, city, province, country, photoUrl } = req.body;
 
     // Update users table
     const fields: string[] = [];
@@ -125,6 +126,7 @@ router.put("/me", async (req: Request, res: Response) => {
     // Phone is normalised to the local 0-prefixed format on the way in.
     if (phone !== undefined) { fields.push(`phone = $${idx++}`); values.push(phone ? toLocalPhone(phone) || null : null); }
     if (city !== undefined) { fields.push(`city = $${idx++}`); values.push(city); }
+    if (province !== undefined) { fields.push(`province = $${idx++}`); values.push(province); }
     // Country is stored as the ISO 3166-1 alpha-2 code in uppercase. Reject
     // anything that isn't two letters so analytics stays normalised.
     if (country !== undefined) {

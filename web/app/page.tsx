@@ -18,14 +18,20 @@
 // to /. A hard nav remounts the whole tree, the AuthProvider re-hydrates with
 // the fresh cookie, and the destination renders normally.
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Moon, Phone, Sun } from 'lucide-react';
 import { adminHttp } from '@/lib/api/client';
 import { useTheme } from '@/lib/theme/context';
 import type { AuthUser } from '@/types';
 import { destinationFor } from '@/lib/auth/role-destination';
-import { DEFAULT_COMPETITION_SLUG, competitionPaths } from '@/lib/competitions/registry';
+import {
+  DEFAULT_COMPETITION_SLUG,
+  competitionPaths,
+  competitionRegistry,
+  getCompetitionConfig,
+  type CompetitionPortalConfig,
+} from '@/lib/competitions/registry';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -36,6 +42,26 @@ import { cn } from '@/lib/utils';
 type Mode = 'email' | 'phone';
 
 const defaultCompetition = competitionPaths(DEFAULT_COMPETITION_SLUG);
+
+// Default brand for the unified login when no `?comp=` is present.
+const COMPETZY_BRAND = {
+  shortName: 'CZ',
+  wordmark: 'Competzy Portal',
+  tagline:
+    "Indonesia's unified stage for student competitions — admins, organizers, schools, and students, in one place.",
+  gradient: ['#5627ff', '#3f18cc'] as const,
+};
+
+// Returns the `?comp=<slug>` value from the current URL, normalised + only
+// when it matches a known competition. Falls back to null so the page can
+// keep its generic Competzy branding.
+function readSlugFromUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+  const raw = new URLSearchParams(window.location.search).get('comp');
+  if (!raw) return null;
+  const slug = raw.trim().toLowerCase();
+  return slug in competitionRegistry ? slug : null;
+}
 
 // Motivational one-liners that cycle on the brand panel. Each is split into a
 // neutral `lead` and an amber `accent` tail — the accent is the punchy ending.
@@ -53,13 +79,27 @@ const WORD_SLOTS = Math.max(
   ...TAGLINES.map((t) => t.lead.split(' ').length + t.accent.split(' ').length),
 );
 
-function goTo(role: string) {
+// When a competition slug is in play, student/parent post-login lands on
+// that competition's dashboard instead of the catalog. Other roles ignore
+// the slug — admins/organizers/schools always go to their own workspace.
+function goTo(role: string, slug: string | null) {
+  if (slug && (role === 'student' || role === 'parent')) {
+    window.location.assign(competitionPaths(slug).dashboard);
+    return;
+  }
   // Hard nav — see the comment block at the top of this file.
   window.location.assign(destinationFor(role));
 }
 
-// Right-hand violet panel with the cycling, word-by-word animated tagline.
-function BrandPanel() {
+// Right-hand brand panel with the cycling, word-by-word animated tagline.
+// When a competition is in scope (via `?comp=`), uses that competition's
+// gradient/shortName/wordmark; otherwise renders the default Competzy brand.
+function BrandPanel({ config }: { config: CompetitionPortalConfig | null }) {
+  const shortName = config?.shortName ?? COMPETZY_BRAND.shortName;
+  const wordmark = config?.wordmark ?? COMPETZY_BRAND.wordmark;
+  const tagline = config?.tagline ?? COMPETZY_BRAND.tagline;
+  const [from, to] = config?.gradient ?? COMPETZY_BRAND.gradient;
+
   const [index, setIndex] = useState(0);
   const [shown, setShown] = useState(false);
 
@@ -93,7 +133,7 @@ function BrandPanel() {
   return (
     <div
       className="relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:flex"
-      style={{ background: 'linear-gradient(135deg,#5627ff 0%,#6f47ff 55%,#3f18cc 100%)' }}
+      style={{ background: `linear-gradient(135deg, ${from} 0%, ${to} 100%)` }}
     >
       {/* grid texture */}
       <div
@@ -112,8 +152,8 @@ function BrandPanel() {
 
       {/* logo */}
       <div className="relative flex items-center gap-3.5">
-        <div className="flex size-12 items-center justify-center rounded-xl border border-white/30 bg-white/15 font-mono text-sm font-semibold backdrop-blur">
-          CZ
+        <div className="flex size-12 items-center justify-center rounded-xl border border-white/30 bg-white/15 font-mono text-sm font-semibold tracking-wide backdrop-blur">
+          {shortName}
         </div>
         <span className="font-mono text-[11px] uppercase tracking-[0.18em] opacity-80">Competzy</span>
       </div>
@@ -144,11 +184,8 @@ function BrandPanel() {
 
       {/* footer */}
       <div className="relative max-w-sm">
-        <p className="font-medium opacity-95">Competzy Portal</p>
-        <p className="mt-1 text-sm italic opacity-75">
-          “Indonesia’s unified stage for student competitions — admins, organizers, schools, and
-          students, in one place.”
-        </p>
+        <p className="font-medium opacity-95">{wordmark}</p>
+        <p className="mt-1 text-sm italic opacity-75">&ldquo;{tagline}&rdquo;</p>
         <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.12em] opacity-60">
           © 2026 Competzy
         </p>
@@ -163,6 +200,7 @@ export default function UnifiedLogin() {
 
   const [hydrating, setHydrating] = useState(true);
   const [mode, setMode] = useState<Mode>('email');
+  const [slug, setSlug] = useState<string | null>(null);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -180,12 +218,23 @@ export default function UnifiedLogin() {
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const phoneValid = /^\+?\d{8,15}$/.test(phone.replace(/[\s-]/g, ''));
 
+  const brandConfig = useMemo(() => (slug ? getCompetitionConfig(slug) : null), [slug]);
+  const signUpHref = slug ? competitionPaths(slug).register : defaultCompetition.register;
+  const forgotHref = slug ? competitionPaths(slug).forgotPassword : '/forgot-password';
+
+  // Read `?comp=` once on mount, BEFORE the auth-hydrate check, so a
+  // signed-in student that arrived from competzy.com/komodo lands on the
+  // Komodo dashboard instead of the generic catalog.
+  useEffect(() => {
+    setSlug(readSlugFromUrl());
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     adminHttp
       .get<AuthUser>('/auth/me')
       .then((me) => {
-        if (!cancelled) goTo(me.role);
+        if (!cancelled) goTo(me.role, readSlugFromUrl());
       })
       .catch(() => {
         if (!cancelled) setHydrating(false);
@@ -214,7 +263,7 @@ export default function UnifiedLogin() {
         email,
         password,
       });
-      goTo(res.user.role);
+      goTo(res.user.role, slug);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (/invalid email or password/i.test(msg)) {
@@ -269,7 +318,7 @@ export default function UnifiedLogin() {
         { phone, code: otpCode },
       );
       if (res.user) {
-        goTo(res.user.role);
+        goTo(res.user.role, slug);
         return;
       } else if (res.historicalMatch) {
         setError('We found your historical record. Open the Competzy app and tap Sign up to claim it.');
@@ -317,11 +366,13 @@ export default function UnifiedLogin() {
           ) : (
             <>
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
-                Competzy · Web Portal
+                {brandConfig ? `${brandConfig.shortName} · Sign in` : 'Competzy · Web Portal'}
               </p>
               <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">Welcome back.</h1>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                Sign in to continue to your workspace.
+                {brandConfig
+                  ? `Sign in to continue to ${brandConfig.wordmark}.`
+                  : 'Sign in to continue to your workspace.'}
               </p>
 
               <Tabs
@@ -412,7 +463,7 @@ export default function UnifiedLogin() {
                       />
                       Remember me
                     </label>
-                    <Link href="/forgot-password" className="font-medium text-primary hover:underline">
+                    <Link href={forgotHref} className="font-medium text-primary hover:underline">
                       Forgot password?
                     </Link>
                   </div>
@@ -514,8 +565,8 @@ export default function UnifiedLogin() {
               )}
 
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                New to Competzy?{' '}
-                <Link href={defaultCompetition.register} className="font-medium text-primary hover:underline">
+                New to {brandConfig?.wordmark ?? 'Competzy'}?{' '}
+                <Link href={signUpHref} className="font-medium text-primary hover:underline">
                   Sign Up
                 </Link>
               </p>
@@ -542,7 +593,7 @@ export default function UnifiedLogin() {
       </div>
 
       {/* Brand panel — RIGHT */}
-      <BrandPanel />
+      <BrandPanel config={brandConfig} />
     </div>
   );
 }

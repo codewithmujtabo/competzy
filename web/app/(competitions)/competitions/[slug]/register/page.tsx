@@ -7,7 +7,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, Eye, EyeOff, Lock, Mail, MapPin, Phone, User } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Lock, Mail, Phone, User } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { SplitScreenAuth } from '@/components/competition-portal/SplitScreenAuth';
@@ -16,6 +16,7 @@ import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { RegionSelect } from '@/components/ui/region-select';
 
 type SignupResponse = { token: string; user: { id: string; role: string } };
 
@@ -271,37 +272,20 @@ export default function CompetitionRegisterPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="reg-city" className="mb-1.5 text-xs text-muted-foreground">
-              City (optional)
-            </Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="reg-city"
-                className="pl-9"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                autoComplete="address-level2"
-              />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="reg-prov" className="mb-1.5 text-xs text-muted-foreground">
-              Province (optional)
-            </Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="reg-prov"
-                className="pl-9"
-                value={province}
-                onChange={(e) => setProvince(e.target.value)}
-                autoComplete="address-level1"
-              />
-            </div>
-          </div>
+        <div>
+          <Label className="mb-1.5 text-xs text-muted-foreground">
+            Province & city (optional)
+          </Label>
+          <RegionSelect
+            idProvince="reg-prov"
+            idCity="reg-city"
+            province={province || null}
+            city={city || null}
+            onChange={({ province: p, city: c }) => {
+              setProvince(p ?? '');
+              setCity(c ?? '');
+            }}
+          />
         </div>
 
         <label className="flex items-start gap-2.5 text-sm text-muted-foreground">

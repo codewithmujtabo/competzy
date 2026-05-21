@@ -4,19 +4,33 @@
 // POST /api/auth/reset-password. Token is single-use server-side; the client
 // just validates length + match and trusts the backend's verdict.
 
-import { Suspense, useState, type FormEvent } from 'react';
+import { Suspense, useMemo, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, Eye, EyeOff, Lock } from 'lucide-react';
 import { adminHttp } from '@/lib/api/client';
 import { HubAuthShell } from '@/components/hub-auth-shell';
+import {
+  competitionPaths,
+  competitionRegistry,
+  getCompetitionConfig,
+} from '@/lib/competitions/registry';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 
 function ResetPasswordInner() {
   const router = useRouter();
-  const token = useSearchParams().get('token') ?? '';
+  const search = useSearchParams();
+  const token = search.get('token') ?? '';
+  const rawComp = search.get('comp');
+  const slug = useMemo(() => {
+    if (!rawComp) return null;
+    const s = rawComp.trim().toLowerCase();
+    return s in competitionRegistry ? s : null;
+  }, [rawComp]);
+  const brand = useMemo(() => (slug ? getCompetitionConfig(slug) : null), [slug]);
+  const signInHref = slug ? competitionPaths(slug).login : '/';
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -37,7 +51,7 @@ function ResetPasswordInner() {
     try {
       await adminHttp.post('/auth/reset-password', { token, password });
       setDone(true);
-      setTimeout(() => router.replace('/'), 2200);
+      setTimeout(() => router.replace(signInHref), 2200);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reset password. Please try again.');
     } finally {
@@ -51,9 +65,10 @@ function ResetPasswordInner() {
       headlineBottom="password."
       caption="Almost there."
       quote="Choose a password at least 8 characters long. We’ll sign you in next."
+      brand={brand}
     >
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
-        Competzy · Password reset
+        {brand ? `${brand.shortName} · Password reset` : 'Competzy · Password reset'}
       </p>
 
       {!token ? (
@@ -64,7 +79,7 @@ function ResetPasswordInner() {
             automatically.
           </p>
           <Button asChild size="lg" className="mt-6 w-full">
-            <Link href="/forgot-password">
+            <Link href={slug ? competitionPaths(slug).forgotPassword : '/forgot-password'}>
               Request a new link
               <ArrowRight className="size-4" />
             </Link>
@@ -77,7 +92,7 @@ function ResetPasswordInner() {
             You can sign in with the new password now. Redirecting to sign-in…
           </p>
           <Button asChild size="lg" className="mt-6 w-full">
-            <Link href="/">
+            <Link href={signInHref}>
               Sign in now
               <ArrowRight className="size-4" />
             </Link>
@@ -158,7 +173,7 @@ function ResetPasswordInner() {
           </form>
 
           <p className="mt-5 text-center text-sm text-muted-foreground">
-            <Link href="/" className="font-medium text-primary hover:underline">
+            <Link href={signInHref} className="font-medium text-primary hover:underline">
               Back to sign in
             </Link>
           </p>
