@@ -178,6 +178,13 @@ router.get("/:id", async (req: Request, res: Response) => {
       regCloseDate: c.reg_close_date,
       competitionDate: c.competition_date,
       requiredDocs: c.required_docs,
+      // Profile fields the student must have on file before they can register.
+      // Empty for most comps; populated for Komodo & friends. The web dashboard
+      // uses this to render the confirm-your-profile dialog with every field
+      // pre-filled — not only the ones currently missing.
+      requiredProfileFields: Array.isArray(c.required_profile_fields)
+        ? c.required_profile_fields
+        : [],
       description: c.description,
       detailedDescription: c.detailed_description,
       kind: c.kind ?? "native",
