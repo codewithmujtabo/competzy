@@ -100,12 +100,17 @@ export interface User {
 
 export interface PendingRegistration {
   registrationId: string;
+  registrationNumber?: string | null;
   status: string;
   registeredAt: string;
   student: {
+    id?: string;
     name: string;
     email: string;
     phone?: string;
+    country?: string | null;
+    city?: string | null;
+    province?: string | null;
     school?: string;
     grade?: string;
     nisn?: string;
@@ -114,5 +119,7 @@ export interface PendingRegistration {
     id: string;
     name: string;
     fee: number;
+    feeInternational?: number | null;
   };
+  round?: { id: string; name: string } | null;
 }

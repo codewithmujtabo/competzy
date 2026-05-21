@@ -59,8 +59,26 @@ export const usersApi = {
 };
 
 export const registrationsApi = {
-  listPending: (status = 'pending_approval') =>
-    adminHttp.get<{ pendingRegistrations: PendingRegistration[] }>(`/admin/registrations/pending?status=${status}`),
+  listPending: (p: {
+    status?: string;
+    compId?: string;
+    year?: number;
+    search?: string;
+    page?: number;
+    limit?: number;
+  } = {}) => {
+    const q = new URLSearchParams();
+    if (p.status)  q.set('status',  p.status);
+    if (p.compId)  q.set('compId',  p.compId);
+    if (p.year)    q.set('year',    String(p.year));
+    if (p.search)  q.set('search',  p.search);
+    if (p.page)    q.set('page',    String(p.page));
+    if (p.limit)   q.set('limit',   String(p.limit));
+    return adminHttp.get<{
+      pendingRegistrations: PendingRegistration[];
+      pagination?: { total: number; page: number; limit: number; totalPages: number };
+    }>(`/admin/registrations/pending?${q}`);
+  },
   approve: (id: string) =>
     adminHttp.post<{ message: string; status: string }>(`/admin/registrations/${id}/approve`, {}),
   reject: (id: string, reason: string) =>

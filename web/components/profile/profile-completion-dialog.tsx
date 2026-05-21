@@ -225,7 +225,7 @@ export function ProfileCompletionDialog({
         }
       }
       await emcHttp.put<{ message: string }>('/users/me', payload);
-      toast.success('Profile updated — let’s finish your registration');
+      toast.success('Details confirmed — continuing to registration');
       onCompleted();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save your details');
@@ -238,12 +238,12 @@ export function ProfileCompletionDialog({
     <Dialog open={open} onOpenChange={(v) => { if (!v) onCancel(); }}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Complete your profile to register</DialogTitle>
+          <DialogTitle>Confirm your details</DialogTitle>
           <DialogDescription>
             {contextLabel ? (
-              <>This competition (<span className="font-medium text-foreground">{contextLabel}</span>) needs a few more details before you can register and pay. We&apos;ll save these to your profile so you only enter them once.</>
+              <>Review the details below for <span className="font-medium text-foreground">{contextLabel}</span>. We&apos;ve pre-filled everything from your profile — edit anything that needs fixing, then continue to payment.</>
             ) : (
-              <>This competition needs a few more details before you can register and pay. We&apos;ll save them to your profile.</>
+              <>Review the details below before registering. We&apos;ve pre-filled everything from your profile — edit anything that needs fixing, then continue to payment.</>
             )}
           </DialogDescription>
         </DialogHeader>
@@ -281,7 +281,7 @@ export function ProfileCompletionDialog({
           </Button>
           <Button type="button" onClick={handleSave} disabled={!canSave}>
             {saving && <Loader2 className="size-4 animate-spin" />}
-            Save and continue
+            Confirm and continue
           </Button>
         </DialogFooter>
       </DialogContent>

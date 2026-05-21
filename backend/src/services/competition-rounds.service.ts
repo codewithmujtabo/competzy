@@ -18,6 +18,8 @@ export interface RoundInput {
   examDate?: string | null;
   resultsDate?: string | null;
   fee?: number | null;
+  /** Optional international price in USD (display-only — Midtrans is IDR-only). */
+  feeInternational?: number | null;
   location?: string | null;
   requiredDocs?: string[] | null;
   /** "online" (default) | "fast_track" | "local" | "global". */
@@ -82,10 +84,10 @@ export async function replaceRounds(
       `INSERT INTO competition_rounds (
          comp_id, round_name, round_type, start_date,
          registration_deadline, exam_date, results_date,
-         fee, location, round_order, required_docs, gating,
+         fee, fee_international, location, round_order, required_docs, gating,
          round_category, country, exam_mode, qualifying_score, is_active,
          age_cutoff_date
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
        RETURNING id`,
       [
         compId,
@@ -96,6 +98,10 @@ export async function replaceRounds(
         r.examDate || null,
         r.resultsDate || null,
         r.fee || 0,
+        // NUMERIC accepts null; the column means "no international price".
+        r.feeInternational != null && Number.isFinite(Number(r.feeInternational))
+          ? Number(r.feeInternational)
+          : null,
         r.location || null,
         i + 1,
         JSON.stringify(Array.isArray(r.requiredDocs) ? r.requiredDocs : []),

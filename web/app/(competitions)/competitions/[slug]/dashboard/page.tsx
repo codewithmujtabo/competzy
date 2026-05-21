@@ -339,9 +339,25 @@ interface Round {
   examDate: string | null;
   registrationDeadline: string | null;
   fee: number;
+  /** Optional international price in USD — display-only, no online payment yet. */
+  feeInternational: number | null;
   location: string | null;
   gating: { mode?: string; rule?: string; requiresRoundId?: string } | null;
   isActive: boolean;
+}
+
+function usd(n: number): string {
+  // Show no fractional cents for whole-dollar amounts, two decimals otherwise.
+  const fixed = Number.isInteger(n) ? n.toString() : n.toFixed(2);
+  return `$${fixed} USD`;
+}
+
+// A student is "international" iff their profile carries a country that isn't
+// Indonesia. Treat missing/blank as local (Indonesia is the default audience
+// and the only one with a live Midtrans flow).
+function isInternationalStudent(country: string | null | undefined): boolean {
+  if (!country) return false;
+  return country.toUpperCase() !== 'ID';
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -522,6 +538,7 @@ function RoundsPanel({
   wordmark,
   registering,
   onRegister,
+  userCountry,
 }: {
   rounds: Round[];
   regs: RegistrationRow[];
@@ -529,9 +546,21 @@ function RoundsPanel({
   wordmark: string;
   registering: string | null;
   onRegister: (roundId: string, meta?: Record<string, unknown>) => void;
+  userCountry: string | null;
 }) {
   const byRound = new Map(regs.filter((r) => r.roundId).map((r) => [r.roundId, r]));
   const [globalRound, setGlobalRound] = useState<Round | null>(null);
+  const intl = isInternationalStudent(userCountry);
+
+  // Helper — pick the price string to show for a round given the caller's
+  // country. Returns null for free rounds.
+  const priceFor = (round: Round): string | null => {
+    if (intl && round.feeInternational != null && round.feeInternational > 0) {
+      return usd(round.feeInternational);
+    }
+    if (round.fee > 0) return rupiah(round.fee);
+    return null;
+  };
 
   return (
     <Card className="gap-0 p-7">
@@ -539,37 +568,46 @@ function RoundsPanel({
       <p className="mt-1 mb-5 text-sm text-muted-foreground">
         Register and pay for each round of {wordmark} you want to enter.
       </p>
-      <ol className="space-y-3">
+      {/* Catalog-style grid — 1 column on phones, 2 on tablets, 3 on desktops.
+          Each card is a fixed-height tile so the CTA always sits at the
+          bottom edge regardless of how long the metadata line is. */}
+      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {rounds.map((round, i) => {
           const reg = byRound.get(round.id);
           const state = roundState(round, reg, regs, rounds);
           const categoryLabel = CATEGORY_LABEL[round.roundCategory];
+          const price = priceFor(round);
+          const examDate = round.examDate
+            ? new Date(round.examDate).toLocaleDateString('en-US', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })
+            : null;
+          const deadline = round.registrationDeadline
+            ? new Date(round.registrationDeadline).toLocaleDateString('en-US', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })
+            : null;
+
           return (
-            <li key={round.id} className="rounded-lg border bg-card p-4">
+            <li
+              key={round.id}
+              className="flex h-full flex-col gap-3 rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
+            >
+              {/* Header — title, category chip, status pill. */}
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-medium text-foreground">
-                      {round.roundName || `Round ${i + 1}`}
-                    </p>
-                    {categoryLabel && (
-                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-muted-foreground">
-                        {categoryLabel}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {round.roundType}
-                    {round.location ? ` · ${round.location}` : ''}
-                    {round.examDate
-                      ? ` · ${new Date(round.examDate).toLocaleDateString('en-US', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}`
-                      : ''}
-                    {` · ${round.fee > 0 ? rupiah(round.fee) : 'Free'}`}
+                <div className="min-w-0">
+                  <p className="truncate text-base font-semibold text-foreground">
+                    {round.roundName || `Round ${i + 1}`}
                   </p>
+                  {categoryLabel && (
+                    <span className="mt-1.5 inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+                      {categoryLabel}
+                    </span>
+                  )}
                 </div>
                 {reg ? (
                   <StatusPill status={reg.status} />
@@ -580,14 +618,49 @@ function RoundsPanel({
                 ) : null}
               </div>
 
-              <div className="mt-3">
+              {/* Metadata — one row per fact so the card breathes. */}
+              <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+                <dt className="font-mono uppercase tracking-wide text-[10px]">Mode</dt>
+                <dd className="text-foreground">
+                  {round.roundType}
+                  {round.location ? ` · ${round.location}` : ''}
+                </dd>
+                {examDate && (
+                  <>
+                    <dt className="font-mono uppercase tracking-wide text-[10px]">Exam</dt>
+                    <dd className="text-foreground">{examDate}</dd>
+                  </>
+                )}
+                {deadline && !reg && state.kind !== 'missed' && (
+                  <>
+                    <dt className="font-mono uppercase tracking-wide text-[10px]">Closes</dt>
+                    <dd className="text-foreground">{deadline}</dd>
+                  </>
+                )}
+                <dt className="font-mono uppercase tracking-wide text-[10px]">Fee</dt>
+                <dd className="text-foreground">{price ?? 'Free'}</dd>
+              </dl>
+
+              {/* CTA — pinned to the bottom of the card via mt-auto. */}
+              <div className="mt-auto pt-2">
                 {reg ? (
                   reg.status === 'pending_payment' ? (
-                    <Button size="sm" asChild>
-                      <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
-                        Pay round fee
-                      </Link>
-                    </Button>
+                    intl ? (
+                      // International students don't have a live online-payment
+                      // path yet — they settle the USD fee with the organizer
+                      // offline. Show a clear instruction instead of the
+                      // Midtrans-driven Pay button.
+                      <p className="text-xs text-muted-foreground">
+                        International payment is offline for now. Contact the organizer to settle your{' '}
+                        {round.feeInternational != null ? usd(round.feeInternational) : 'round'} fee.
+                      </p>
+                    ) : (
+                      <Button size="sm" asChild className="w-full">
+                        <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
+                          Pay round fee
+                        </Link>
+                      </Button>
+                    )
                   ) : (
                     <p className="text-xs text-muted-foreground">
                       {STATUS_COPY[reg.status]?.body ??
@@ -604,6 +677,7 @@ function RoundsPanel({
                   <Button
                     size="sm"
                     disabled={registering === round.id}
+                    className="w-full"
                     onClick={() =>
                       round.roundCategory === 'global'
                         ? setGlobalRound(round)
@@ -617,7 +691,7 @@ function RoundsPanel({
             </li>
           );
         })}
-      </ol>
+      </ul>
 
       <GlobalRoundDialog
         round={globalRound}
@@ -737,10 +811,33 @@ export default function CompetitionDashboardPage() {
   // Komodo + future age-grouped comps — per-round creature classification.
   // Empty array for grade-based comps; null while we haven't fetched yet.
   const [creatureRounds, setCreatureRounds] = useState<CreatureRow[] | null>(null);
+  // The caller's stored country code (uppercase, e.g. 'ID', 'MY', 'US').
+  // Drives the local-vs-international price the rounds panel shows.
+  // Null while we haven't fetched yet OR if they have no country saved.
+  const [userCountry, setUserCountry] = useState<string | null>(null);
+  // The competition's full `required_profile_fields` list (e.g. Komodo's 9
+  // mandatory keys). The dialog renders every entry — pre-filled with the
+  // student's current value — so they can confirm/edit before payment.
+  const [requiredProfileFields, setRequiredProfileFields] = useState<ProfileFieldKey[]>([]);
 
   useEffect(() => {
     if (!config) notFound();
   }, [config]);
+
+  // One-shot fetch of the caller's profile to read `country`. The competition
+  // auth context doesn't carry this field, so we read it directly. Best-effort
+  // — on failure we leave userCountry null and the panel falls back to the
+  // local (IDR) price for everyone.
+  useEffect(() => {
+    let cancelled = false;
+    emcHttp
+      .get<{ country?: string | null }>('/users/me')
+      .then((me) => {
+        if (!cancelled) setUserCountry(typeof me.country === 'string' ? me.country : null);
+      })
+      .catch(() => { /* silent — see comment above */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const refresh = async (compId?: string | null) => {
     try {
@@ -761,15 +858,23 @@ export default function CompetitionDashboardPage() {
   useEffect(() => {
     if (!comp?.id) return;
     emcHttp
-      .get<{ rounds?: Round[] }>(`/competitions/${comp.id}`)
-      .then((d) =>
+      .get<{ rounds?: Round[]; requiredProfileFields?: ProfileFieldKey[] }>(
+        `/competitions/${comp.id}`,
+      )
+      .then((d) => {
         setRounds(
           Array.isArray(d.rounds)
             ? d.rounds.filter((r) => r.isActive !== false)
             : [],
-        ),
-      )
-      .catch(() => setRounds([]));
+        );
+        setRequiredProfileFields(
+          Array.isArray(d.requiredProfileFields) ? d.requiredProfileFields : [],
+        );
+      })
+      .catch(() => {
+        setRounds([]);
+        setRequiredProfileFields([]);
+      });
   }, [comp?.id]);
 
   // Komodo / age-grouped comps — fetch the per-round creature classification
@@ -830,6 +935,15 @@ export default function CompetitionDashboardPage() {
 
   const enrollNow = async () => {
     if (!comp?.id) return;
+    // If the competition declares required profile fields, open the dialog
+    // FIRST so the student reviews every field with their current values
+    // pre-filled — not only the ones currently blank. The dialog's onCompleted
+    // path runs the actual POST. Comps with no required fields fall through
+    // to the direct POST below.
+    if (requiredProfileFields.length > 0) {
+      setProfileGate({ roundId: null, missingFields: requiredProfileFields });
+      return;
+    }
     setEnroll(true);
     setErr(null);
     try {
@@ -838,6 +952,8 @@ export default function CompetitionDashboardPage() {
     } catch (e) {
       const gate = profileGateFrom(e);
       if (gate) {
+        // Defensive fallback — the server may have added a required field
+        // after the page loaded. Re-open with the server-reported subset.
         setProfileGate({ roundId: null, missingFields: gate });
       } else {
         const msg = e instanceof Error ? e.message : '';
@@ -851,6 +967,10 @@ export default function CompetitionDashboardPage() {
 
   const enrollRound = async (roundId: string, meta?: Record<string, unknown>) => {
     if (!comp?.id) return;
+    if (requiredProfileFields.length > 0) {
+      setProfileGate({ roundId, meta, missingFields: requiredProfileFields });
+      return;
+    }
     setRegistering(roundId);
     setErr(null);
     try {
@@ -959,6 +1079,7 @@ export default function CompetitionDashboardPage() {
               wordmark={config.wordmark}
               registering={registering}
               onRegister={enrollRound}
+              userCountry={userCountry}
             />
             <Card className="gap-0 p-7">
               <h2 className="font-serif text-xl font-medium text-foreground">Your exams</h2>

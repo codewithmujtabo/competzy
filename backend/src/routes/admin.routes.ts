@@ -719,6 +719,11 @@ router.get("/registrations/pending", async (req, res) => {
   try {
     const statusFilter = (req.query.status as string) || "pending_review";
     const compIdFilter = req.query.compId as string | undefined;
+    const yearFilter = req.query.year ? Number(req.query.year) : null;
+    const search = ((req.query.search as string) || "").trim();
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+    const offset = (page - 1) * limit;
 
     const where: string[] = [];
     const values: unknown[] = [];
@@ -730,11 +735,40 @@ router.get("/registrations/pending", async (req, res) => {
       values.push(compIdFilter);
       where.push(`r.comp_id = $${values.length}`);
     }
+    if (yearFilter && Number.isFinite(yearFilter)) {
+      values.push(yearFilter);
+      where.push(`EXTRACT(YEAR FROM r.created_at) = $${values.length}`);
+    }
+    if (search) {
+      // Match against student name / email / phone / school + registration number.
+      values.push(`%${search}%`);
+      const idx = values.length;
+      where.push(
+        `(u.full_name ILIKE $${idx} OR u.email ILIKE $${idx} OR u.phone ILIKE $${idx} ` +
+        `OR COALESCE(sc.name, s.school_name) ILIKE $${idx} OR r.registration_number ILIKE $${idx})`,
+      );
+    }
     const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
+    // Total count for pagination — same WHERE + joins.
+    const countResult = await pool.query(
+      `SELECT COUNT(*)::int AS total
+         FROM registrations r
+         JOIN users u ON r.user_id = u.id
+         LEFT JOIN students s ON u.id = s.id
+         LEFT JOIN schools sc ON s.school_id = sc.id
+         JOIN competitions c ON r.comp_id = c.id
+         ${whereClause}`,
+      values,
+    );
+    const total: number = countResult.rows[0]?.total ?? 0;
+
+    values.push(limit);
+    values.push(offset);
     const result = await pool.query(
       `SELECT
         r.id as registration_id,
+        r.registration_number,
         r.status,
         r.created_at as registered_at,
         r.updated_at,
@@ -742,25 +776,35 @@ router.get("/registrations/pending", async (req, res) => {
         u.full_name as student_name,
         u.email as student_email,
         u.phone as student_phone,
+        u.country as student_country,
+        u.city as student_city,
+        u.province as student_province,
         COALESCE(sc.name, s.school_name) AS school_name,
         s.grade,
         s.nisn,
         c.id as competition_id,
         c.name as competition_name,
-        c.fee
+        c.fee,
+        cr.id as round_id,
+        cr.round_name as round_name,
+        cr.fee as round_fee,
+        cr.fee_international as round_fee_international
       FROM registrations r
       JOIN users u ON r.user_id = u.id
       LEFT JOIN students s ON u.id = s.id
       LEFT JOIN schools sc ON s.school_id = sc.id
       JOIN competitions c ON r.comp_id = c.id
+      LEFT JOIN competition_rounds cr ON r.round_id = cr.id
       ${whereClause}
-      ORDER BY r.created_at DESC`,
-      values
+      ORDER BY r.created_at DESC
+      LIMIT $${values.length - 1} OFFSET $${values.length}`,
+      values,
     );
 
     res.json({
       pendingRegistrations: result.rows.map((row) => ({
         registrationId: row.registration_id,
+        registrationNumber: row.registration_number,
         status: row.status,
         registeredAt: row.registered_at,
         updatedAt: row.updated_at,
@@ -769,6 +813,9 @@ router.get("/registrations/pending", async (req, res) => {
           name: row.student_name,
           email: row.student_email,
           phone: row.student_phone,
+          country: row.student_country,
+          city: row.student_city,
+          province: row.student_province,
           school: row.school_name,
           grade: row.grade,
           nisn: row.nisn,
@@ -776,9 +823,20 @@ router.get("/registrations/pending", async (req, res) => {
         competition: {
           id: row.competition_id,
           name: row.competition_name,
-          fee: row.fee,
+          fee: Number(row.round_fee ?? row.fee ?? 0),
+          feeInternational:
+            row.round_fee_international != null ? Number(row.round_fee_international) : null,
         },
+        round: row.round_id
+          ? { id: row.round_id, name: row.round_name }
+          : null,
       })),
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
     });
   } catch (err) {
     console.error("Get pending registrations error:", err);

@@ -321,7 +321,7 @@ router.get("/competitions/:id", async (req: Request, res: Response) => {
     const c = result.rows[0];
     const roundRows = (await pool.query(
       `SELECT id, round_name, round_type, start_date, registration_deadline,
-              exam_date, results_date, fee, location, round_order,
+              exam_date, results_date, fee, fee_international, location, round_order,
               requires_round_id, gating, required_docs,
               round_category, country, exam_mode, qualifying_score, is_active,
               age_cutoff_date
@@ -364,6 +364,8 @@ router.get("/competitions/:id", async (req: Request, res: Response) => {
         examDate: round.exam_date,
         resultsDate: round.results_date,
         fee: round.fee,
+        feeInternational:
+          round.fee_international != null ? Number(round.fee_international) : null,
         location: round.location,
         roundOrder: round.round_order,
         requiresRoundId: round.requires_round_id ?? null,
