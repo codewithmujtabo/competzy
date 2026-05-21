@@ -100,11 +100,14 @@ export function getCompetitionConfig(slug: string): CompetitionPortalConfig {
 
 /**
  * Builds the canonical paths for a competition portal. All competition
- * portals share the unified `/` login.
+ * portals share the unified `/` login — the `?comp=<slug>` query keeps the
+ * login + forgot-password screens branded with this competition, and routes
+ * the student/parent post-login back to this dashboard.
  */
 export function competitionPaths(slug: string) {
+  const q = `?comp=${encodeURIComponent(slug)}`;
   return {
-    login:     '/',
+    login:     `/${q}`,
     register:  `/competitions/${slug}/register`,
     dashboard: `/competitions/${slug}/dashboard`,
     admin:     `/competitions/${slug}/admin`,
@@ -114,5 +117,6 @@ export function competitionPaths(slug: string) {
     materials: `/competitions/${slug}/materials`,
     feedback:  `/competitions/${slug}/feedback`,
     certificate: `/competitions/${slug}/certificates`,
+    forgotPassword: `/forgot-password${q}`,
   };
 }

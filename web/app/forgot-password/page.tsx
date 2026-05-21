@@ -4,20 +4,41 @@
 // Backend always returns 200 (no enumeration), so the success screen never
 // confirms whether the email matched an account.
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Mail } from 'lucide-react';
 import { adminHttp } from '@/lib/api/client';
 import { HubAuthShell } from '@/components/hub-auth-shell';
+import {
+  competitionPaths,
+  competitionRegistry,
+  getCompetitionConfig,
+} from '@/lib/competitions/registry';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+
+function readSlugFromUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+  const raw = new URLSearchParams(window.location.search).get('comp');
+  if (!raw) return null;
+  const slug = raw.trim().toLowerCase();
+  return slug in competitionRegistry ? slug : null;
+}
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [submitting, setSubmit] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
+  const [slug, setSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSlug(readSlugFromUrl());
+  }, []);
+
+  const brand = useMemo(() => (slug ? getCompetitionConfig(slug) : null), [slug]);
+  const signInHref = slug ? competitionPaths(slug).login : '/';
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -42,9 +63,10 @@ export default function ForgotPasswordPage() {
       headlineBottom="password?"
       caption="We’ll get you back in."
       quote="Enter the email you signed up with and we’ll send a link to set a new password."
+      brand={brand}
     >
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
-        Competzy · Password reset
+        {brand ? `${brand.shortName} · Password reset` : 'Competzy · Password reset'}
       </p>
 
       {sent ? (
@@ -69,7 +91,7 @@ export default function ForgotPasswordPage() {
             .
           </p>
           <Button asChild size="lg" className="mt-6 w-full">
-            <Link href="/">
+            <Link href={signInHref}>
               Back to sign in
               <ArrowRight className="size-4" />
             </Link>
@@ -119,7 +141,7 @@ export default function ForgotPasswordPage() {
 
           <p className="mt-5 text-center text-sm text-muted-foreground">
             Remembered it?{' '}
-            <Link href="/" className="font-medium text-primary hover:underline">
+            <Link href={signInHref} className="font-medium text-primary hover:underline">
               Back to sign in
             </Link>
           </p>
