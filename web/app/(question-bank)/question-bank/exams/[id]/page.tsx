@@ -38,11 +38,19 @@ interface LoadedExam {
   startTime: string | null;
   endTime: string | null;
   minutes: number | null;
+  // Per-difficulty target counts — keyed by 'easy' | 'medium' | 'hard'. The
+  // backend stores them as JSONB Record<string, number>; missing keys are
+  // treated as 0. Matches Komodo's exam-blueprint convention.
+  choiceCount: Record<string, number>;
+  shortCount: Record<string, number>;
   correctScore: Record<string, number>;
   wrongScore: Record<string, number>;
   description: string | null;
   questions: ExamQuestion[];
 }
+
+const LEVELS = ['easy', 'medium', 'hard'] as const;
+type Level = (typeof LEVELS)[number];
 
 export default function ExamEditorPage() {
   const router = useRouter();
@@ -68,6 +76,18 @@ export default function ExamEditorPage() {
   const [description, setDescription] = useState('');
   const [correctScore, setCorrectScore] = useState<Record<string, string>>({});
   const [wrongScore, setWrongScore] = useState<Record<string, string>>({});
+  // Per-difficulty target counts. State stored as strings (number inputs);
+  // coerced to numbers when building the payload.
+  const [choiceCount, setChoiceCount] = useState<Record<Level, string>>({
+    easy: '',
+    medium: '',
+    hard: '',
+  });
+  const [shortCount, setShortCount] = useState<Record<Level, string>>({
+    easy: '',
+    medium: '',
+    hard: '',
+  });
   const [savingBlueprint, setSavingBlueprint] = useState(false);
 
   // Question picker state.
@@ -93,6 +113,16 @@ export default function ExamEditorPage() {
     setDescription(e.description ?? '');
     setCorrectScore(Object.fromEntries(Object.entries(e.correctScore).map(([k, v]) => [k, String(v)])));
     setWrongScore(Object.fromEntries(Object.entries(e.wrongScore).map(([k, v]) => [k, String(v)])));
+    setChoiceCount({
+      easy: e.choiceCount?.easy != null ? String(e.choiceCount.easy) : '',
+      medium: e.choiceCount?.medium != null ? String(e.choiceCount.medium) : '',
+      hard: e.choiceCount?.hard != null ? String(e.choiceCount.hard) : '',
+    });
+    setShortCount({
+      easy: e.shortCount?.easy != null ? String(e.shortCount.easy) : '',
+      medium: e.shortCount?.medium != null ? String(e.shortCount.medium) : '',
+      hard: e.shortCount?.hard != null ? String(e.shortCount.hard) : '',
+    });
     setAttached(new Set(e.questions.map((q) => q.id)));
   };
 
@@ -125,6 +155,10 @@ export default function ExamEditorPage() {
       return next;
     });
 
+  const countToNum = (v: string) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
   const buildPayload = () => ({
     compId,
     name: name.trim(),
@@ -140,6 +174,16 @@ export default function ExamEditorPage() {
     description: description.trim() || null,
     correctScore: Object.fromEntries(grades.map((g) => [g, Number(correctScore[g] ?? 0) || 0])),
     wrongScore: Object.fromEntries(grades.map((g) => [g, Number(wrongScore[g] ?? 0) || 0])),
+    choiceCount: {
+      easy: countToNum(choiceCount.easy),
+      medium: countToNum(choiceCount.medium),
+      hard: countToNum(choiceCount.hard),
+    },
+    shortCount: {
+      easy: countToNum(shortCount.easy),
+      medium: countToNum(shortCount.medium),
+      hard: countToNum(shortCount.hard),
+    },
   });
 
   const saveBlueprint = async () => {
@@ -379,6 +423,60 @@ export default function ExamEditorPage() {
           </div>
         </Card>
       )}
+
+      {/* Per-difficulty question count — matches Komodo's blueprint UX. */}
+      <Card className="space-y-3 p-6">
+        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+          Question count per difficulty
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Target number of multiple-choice and short-answer questions at each difficulty
+          level. Used by the question-set picker below as a visual guide — leave a row
+          blank if the level isn’t used.
+        </p>
+        <div className="grid grid-cols-[80px_1fr_1fr] items-end gap-3 text-xs">
+          <span className="font-mono uppercase tracking-wide text-muted-foreground">Level</span>
+          <span className="font-mono uppercase tracking-wide text-muted-foreground">
+            Multiple choice
+          </span>
+          <span className="font-mono uppercase tracking-wide text-muted-foreground">
+            Short answer
+          </span>
+        </div>
+        {LEVELS.map((lvl) => (
+          <div
+            key={lvl}
+            className="grid grid-cols-[80px_1fr_1fr] items-center gap-3"
+          >
+            <Badge variant="outline" className="w-fit justify-center font-mono text-[11px] capitalize">
+              {lvl}
+            </Badge>
+            <Input
+              type="number"
+              min="0"
+              className="h-8 w-24"
+              value={choiceCount[lvl]}
+              onChange={(e) => setChoiceCount((p) => ({ ...p, [lvl]: e.target.value }))}
+              placeholder="0"
+              disabled={!choice}
+            />
+            <Input
+              type="number"
+              min="0"
+              className="h-8 w-24"
+              value={shortCount[lvl]}
+              onChange={(e) => setShortCount((p) => ({ ...p, [lvl]: e.target.value }))}
+              placeholder="0"
+              disabled={!short}
+            />
+          </div>
+        ))}
+        {!choice && !short && (
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            Enable Multiple-choice and/or Short-answer at the top to set counts.
+          </p>
+        )}
+      </Card>
 
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={() => router.push('/question-bank/exams')}>
