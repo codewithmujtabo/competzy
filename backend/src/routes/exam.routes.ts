@@ -22,7 +22,26 @@ const router = Router();
 // Path-scoped (this router is mounted at bare `/api`) so the operator gate does
 // not 403 unrelated fall-through traffic — only `/question-bank/*` is gated.
 router.use("/question-bank", authMiddleware);
-router.use("/question-bank", requireRole("admin", "organizer"));
+
+// Path-prefix role guards mirror the pattern in question-bank.routes.ts:
+//   - question_maker can build exam blueprints (assemble approved questions
+//     into a paper) — the natural next step after authoring questions.
+//   - Everything else under this router (grading / results / medalists /
+//     paper-exams / proctoring) is operations / judging and stays admin +
+//     organizer only.
+// Every matching middleware runs in declaration order; the stricter
+// /grading|/results|... guards 403 a question_maker request even though the
+// /question-bank/exams guard above already passed it (those sub-paths don't
+// share a prefix with /exams).
+router.use(
+  "/question-bank/exams",
+  requireRole("admin", "organizer", "question_maker"),
+);
+router.use("/question-bank/grading", requireRole("admin", "organizer"));
+router.use("/question-bank/results", requireRole("admin", "organizer"));
+router.use("/question-bank/medalists", requireRole("admin", "organizer"));
+router.use("/question-bank/paper-exams", requireRole("admin", "organizer"));
+router.use("/question-bank/proctoring", requireRole("admin", "organizer"));
 
 // `date` is a DATE column — cast it to text here so node-pg returns a plain
 // 'YYYY-MM-DD' string. If left as a DATE, node-pg parses it into a local-

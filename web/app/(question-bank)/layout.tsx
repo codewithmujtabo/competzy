@@ -54,16 +54,18 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
   // Question-makers have no other portal — only this workspace.
   const portalHref = isAdmin ? '/dashboard' : '/organizer-dashboard';
 
-  // Question-makers get only the narrow author surface — taxonomy + questions.
-  // Everything else (review / exams / grading / results / paper / proctoring /
-  // certificates / medalists) is admin+organizer-only on the backend and would
-  // 403 if shown.
+  // Question-makers get the author surface — taxonomy + questions + exam
+  // blueprints (assembling approved questions into a paper is the natural
+  // next step after authoring them). Everything else (review / grading /
+  // results / paper / proctoring / certificates / medalists) is admin +
+  // organizer only on the backend and would 403 if shown.
   const nav: NavSection[] = isQuestionMaker
     ? [
         {
           items: [
             { label: 'Questions', href: '/question-bank/questions', icon: FileText, exact: true },
             { label: 'Taxonomy', href: '/question-bank/taxonomy', icon: FolderTree },
+            { label: 'Exams', href: '/question-bank/exams', icon: ClipboardList },
           ],
         },
       ]
