@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CountrySelect } from '@/components/ui/country-select';
+import { LocationCascade } from '@/components/ui/location-cascade';
 
 // Editable text fields. Photo + student card upload separately; email is
 // read-only. Mirrors the mobile app's student profile form
@@ -22,6 +22,7 @@ interface Form {
   fullName: string;
   phone: string;
   city: string;
+  province: string;
   country: string | null;
   dateOfBirth: string;
   referralSource: string;
@@ -44,11 +45,11 @@ interface Form {
 }
 
 const EMPTY_FORM: Form = {
-  fullName: '', phone: '', city: '', country: null, dateOfBirth: '', referralSource: '',
-  schoolName: '', grade: '', nisn: '', npsn: '', schoolAddress: '', schoolEmail: '',
-  schoolWhatsapp: '', schoolPhone: '', supervisorName: '', supervisorEmail: '',
-  supervisorWhatsapp: '', supervisorPhone: '', parentName: '', parentOccupation: '',
-  parentWhatsapp: '', parentPhone: '',
+  fullName: '', phone: '', city: '', province: '', country: null, dateOfBirth: '',
+  referralSource: '', schoolName: '', grade: '', nisn: '', npsn: '', schoolAddress: '',
+  schoolEmail: '', schoolWhatsapp: '', schoolPhone: '', supervisorName: '',
+  supervisorEmail: '', supervisorWhatsapp: '', supervisorPhone: '', parentName: '',
+  parentOccupation: '', parentWhatsapp: '', parentPhone: '',
 };
 
 // Postgres DATE → an <input type="date"> value. Extract local Y/M/D so it
@@ -112,6 +113,7 @@ export default function AccountProfilePage() {
         fullName: d.fullName ?? '',
         phone: d.phone ?? '',
         city: d.city ?? '',
+        province: d.province ?? '',
         country: d.country ?? null,
         dateOfBirth: toDateInputValue(d.dateOfBirth),
         referralSource: d.referralSource ?? '',
@@ -209,6 +211,7 @@ export default function AccountProfilePage() {
         fullName: form.fullName,
         phone: form.phone,
         city: form.city,
+        province: form.province,
         country: form.country,
         // A DATE column rejects '' — omit an empty value rather than clear it.
         dateOfBirth: form.dateOfBirth || undefined,
@@ -316,19 +319,23 @@ export default function AccountProfilePage() {
             placeholder="08xxx or +628xxx"
           />
           <Field label="Email" value={email} disabled />
-          <Field
-            label="City"
-            value={form.city}
-            onChange={(e) => set('city', e.target.value)}
-            placeholder="Your city"
-          />
-          <div className="space-y-1.5">
-            <Label htmlFor="profile-country">Country</Label>
-            <CountrySelect
-              id="profile-country"
-              value={form.country}
-              onChange={(code) => setForm((f) => ({ ...f, country: code }))}
-              placeholder="Select country"
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>Location</Label>
+            <LocationCascade
+              idCountry="profile-country"
+              idProvince="profile-province"
+              idCity="profile-city"
+              country={form.country}
+              province={form.province || null}
+              city={form.city || null}
+              onChange={({ country, province, city }) =>
+                setForm((f) => ({
+                  ...f,
+                  country,
+                  province: province ?? '',
+                  city: city ?? '',
+                }))
+              }
             />
           </div>
           <div className="space-y-2 sm:col-span-2">

@@ -10,6 +10,7 @@ export interface StudentProfile {
   fullName: string | null;
   phone: string | null;
   city: string | null;
+  province: string | null;
   country: string | null;
   role: string;
   photoUrl: string | null;

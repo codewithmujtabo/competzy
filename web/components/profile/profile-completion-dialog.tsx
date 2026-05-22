@@ -15,8 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { CountrySelect } from '@/components/ui/country-select';
-import { RegionSelect } from '@/components/ui/region-select';
+import { LocationCascade } from '@/components/ui/location-cascade';
 
 /**
  * Field keys the dialog can prompt for. Must match the keys returned in the
@@ -50,7 +49,7 @@ export type ProfileFieldKey =
 interface FieldDef {
   key: ProfileFieldKey;
   label: string;
-  type?: 'text' | 'email' | 'date' | 'tel' | 'country' | 'region';
+  type?: 'text' | 'email' | 'date' | 'tel' | 'location';
   placeholder?: string;
   wide?: boolean;
 }
@@ -59,9 +58,9 @@ const FIELDS: Record<ProfileFieldKey, FieldDef> = {
   fullName:           { key: 'fullName',           label: 'Full name', placeholder: 'Your full name', wide: true },
   email:              { key: 'email',              label: 'Email', type: 'email' },
   phone:              { key: 'phone',              label: 'WhatsApp / Phone', type: 'tel', placeholder: '08xxx or +628xxx' },
-  city:               { key: 'city',               label: 'Province & city', type: 'region', wide: true },
-  province:           { key: 'province',           label: 'Province', placeholder: 'Your province' },
-  country:            { key: 'country',            label: 'Country', type: 'country' },
+  city:               { key: 'city',               label: 'Location', type: 'location', wide: true },
+  province:           { key: 'province',           label: 'Location', type: 'location', wide: true },
+  country:            { key: 'country',            label: 'Location', type: 'location', wide: true },
   dateOfBirth:        { key: 'dateOfBirth',        label: 'Date of birth', type: 'date' },
   supervisorName:     { key: 'supervisorName',     label: 'Teacher / Supervisor name', wide: true },
   supervisorEmail:    { key: 'supervisorEmail',    label: 'Teacher / Supervisor email', type: 'email' },
@@ -112,25 +111,39 @@ export function ProfileCompletionDialog({
   contextLabel,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
-  const [country, setCountry] = useState<string | null>(null);
-  // Region (province + city) is captured together via the cascading picker.
-  // Even when only `city` is in missingFields we keep both so we can persist
-  // the province too — the server stores them as plain TEXT.
-  const [region, setRegion] = useState<{ province: string | null; city: string | null }>({
-    province: null,
-    city: null,
-  });
+  // Country + province + city are captured together via one cascading picker.
+  // Even when only one of the three is in missingFields we render the whole
+  // cascade — selecting a country must come before a province, etc.
+  const [location, setLocation] = useState<{
+    country: string | null;
+    province: string | null;
+    city: string | null;
+  }>({ country: null, province: null, city: null });
   const [saving, setSaving] = useState(false);
 
-  // De-duplicate so that requesting both `city` and `province` doesn't render
-  // the cascading picker twice — the city field already handles both.
+  // Which of the three location fields were originally required (we still
+  // gate Save on those specifically, even though the cascade lets the user
+  // edit the whole triple). Memoised against `missingFields` so the set is
+  // stable across renders.
+  const required = useMemo(() => {
+    const set = { country: false, province: false, city: false };
+    for (const k of missingFields) {
+      if (k === 'country') set.country = true;
+      else if (k === 'province') set.province = true;
+      else if (k === 'city') set.city = true;
+    }
+    return set;
+  }, [missingFields]);
+
+  // Fold any of (country / province / city) in missingFields into ONE
+  // 'location' slot, rendered once. Other keys pass through.
   const renderedKeys = useMemo(() => {
     const out: ProfileFieldKey[] = [];
-    const seenRegion = { current: false };
+    let seenLocation = false;
     for (const k of missingFields) {
-      if (k === 'city' || k === 'province') {
-        if (seenRegion.current) continue;
-        seenRegion.current = true;
+      if (k === 'city' || k === 'province' || k === 'country') {
+        if (seenLocation) continue;
+        seenLocation = true;
         out.push('city');
         continue;
       }
@@ -148,27 +161,23 @@ export function ProfileCompletionDialog({
     if (!open) return;
     let cancelled = false;
     setValues({});
-    setCountry(null);
-    setRegion({ province: null, city: null });
+    setLocation({ country: null, province: null, city: null });
     // Pre-fill with whatever the user already has so they only fill the gaps.
     (async () => {
       try {
         const me = await emcHttp.get<Record<string, string | null>>('/users/me');
         if (cancelled) return;
-        const next: Record<string, string> = {};
-        // Always read province + city together — even if only one is in the
-        // missing set, the picker shows both columns so we should pre-fill
-        // whatever exists.
-        setRegion({
+        // Always read country + province + city together — even if only one is
+        // in the missing set, the cascade renders the whole triple and should
+        // pre-fill whatever exists.
+        setLocation({
+          country: typeof me.country === 'string' ? me.country : null,
           province: typeof me.province === 'string' ? me.province : null,
           city: typeof me.city === 'string' ? me.city : null,
         });
+        const next: Record<string, string> = {};
         for (const k of renderedKeys) {
-          if (k === 'country') {
-            setCountry(typeof me.country === 'string' ? me.country : null);
-            continue;
-          }
-          if (k === 'city' || k === 'province') continue; // handled by region state
+          if (k === 'city' || k === 'province' || k === 'country') continue; // handled by location state
           const raw = me[k];
           if (k === 'dateOfBirth' && raw) {
             const d = new Date(raw);
@@ -199,10 +208,14 @@ export function ProfileCompletionDialog({
   const canSave =
     !saving &&
     fields.every((f) => {
-      if (f.type === 'country') return !!country;
-      if (f.type === 'region') {
-        // Require both province and city when the region picker is shown.
-        return !!region.province?.trim() && !!region.city?.trim();
+      if (f.type === 'location') {
+        // Only gate Save on the location fields that were ORIGINALLY missing,
+        // not the whole triple — picking a country isn't required if the user
+        // was only missing city.
+        if (required.country && !location.country) return false;
+        if (required.province && !location.province?.trim()) return false;
+        if (required.city && !location.city?.trim()) return false;
+        return true;
       }
       return !!(values[f.key] || '').trim();
     });
@@ -212,11 +225,13 @@ export function ProfileCompletionDialog({
     try {
       const payload: Record<string, string | null | undefined> = {};
       for (const f of fields) {
-        if (f.type === 'country') {
-          payload.country = country;
-        } else if (f.type === 'region') {
-          payload.province = (region.province || '').trim() || null;
-          payload.city = (region.city || '').trim() || null;
+        if (f.type === 'location') {
+          // Always persist the whole triple — the cascade is a coupled widget,
+          // so picking a country can clear / change province + city even if
+          // only one of them was originally missing.
+          payload.country = location.country;
+          payload.province = (location.province || '').trim() || null;
+          payload.city = (location.city || '').trim() || null;
         } else if (f.type === 'date') {
           // A DATE column rejects '' — omit empty rather than clear it.
           payload[f.key] = (values[f.key] || '').trim() || undefined;
@@ -252,15 +267,15 @@ export function ProfileCompletionDialog({
           {fields.map((f) => (
             <div key={f.key} className={f.wide ? 'sm:col-span-2 space-y-1.5' : 'space-y-1.5'}>
               <Label htmlFor={`pcd-${f.key}`}>{f.label}</Label>
-              {f.type === 'country' ? (
-                <CountrySelect id={`pcd-${f.key}`} value={country} onChange={setCountry} />
-              ) : f.type === 'region' ? (
-                <RegionSelect
+              {f.type === 'location' ? (
+                <LocationCascade
+                  idCountry={`pcd-${f.key}-country`}
                   idProvince={`pcd-${f.key}-province`}
                   idCity={`pcd-${f.key}-city`}
-                  province={region.province}
-                  city={region.city}
-                  onChange={setRegion}
+                  country={location.country}
+                  province={location.province}
+                  city={location.city}
+                  onChange={setLocation}
                 />
               ) : (
                 <Input
