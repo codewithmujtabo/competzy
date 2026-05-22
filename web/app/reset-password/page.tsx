@@ -10,11 +10,7 @@ import Link from 'next/link';
 import { ArrowRight, Eye, EyeOff, Lock } from 'lucide-react';
 import { adminHttp } from '@/lib/api/client';
 import { HubAuthShell } from '@/components/hub-auth-shell';
-import {
-  competitionPaths,
-  competitionRegistry,
-  getCompetitionConfig,
-} from '@/lib/competitions/registry';
+import { competitionPaths, competitionRegistry } from '@/lib/competitions/registry';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -24,12 +20,13 @@ function ResetPasswordInner() {
   const search = useSearchParams();
   const token = search.get('token') ?? '';
   const rawComp = search.get('comp');
+  // `slug` is kept purely so back-to-signin preserves the `?comp=` param —
+  // post-auth still routes the student/parent back to the right competition.
   const slug = useMemo(() => {
     if (!rawComp) return null;
     const s = rawComp.trim().toLowerCase();
     return s in competitionRegistry ? s : null;
   }, [rawComp]);
-  const brand = useMemo(() => (slug ? getCompetitionConfig(slug) : null), [slug]);
   const signInHref = slug ? competitionPaths(slug).login : '/';
 
   const [password, setPassword] = useState('');
@@ -65,10 +62,9 @@ function ResetPasswordInner() {
       headlineBottom="password."
       caption="Almost there."
       quote="Choose a password at least 8 characters long. We’ll sign you in next."
-      brand={brand}
     >
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
-        {brand ? `${brand.shortName} · Password reset` : 'Competzy · Password reset'}
+        Competzy · Password reset
       </p>
 
       {!token ? (

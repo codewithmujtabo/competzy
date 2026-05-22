@@ -1,16 +1,24 @@
 'use client';
 
-// Brand panel of the split-screen competition auth — the competition's own
-// gradient + wordmark + an animated, cycling motivational tagline. Mirrors the
-// unified login page's brand panel (web/app/page.tsx). Parametrised by the
-// portal config so every competition (EMC / ISPO / OSEBI / …) reuses it with
-// its own brand.
+// The Competzy-branded right panel shared by every public auth surface
+// (the unified login at `/`, the per-competition register page, the
+// forgot/reset password pages via HubAuthShell). Renders only the platform
+// brand — no per-competition wordmark, gradient, or tagline. Competition
+// context (the `?comp=` query / `/competitions/[slug]/...` URL) is preserved
+// elsewhere purely for post-auth redirect routing.
 
 import { useEffect, useState } from 'react';
-import type { CompetitionPortalConfig } from '@/lib/competitions/registry';
 import { cn } from '@/lib/utils';
 
-// Motivational one-liners that cycle on the brand panel. Each is split into a
+const COMPETZY = {
+  shortName: 'CZ',
+  wordmark: 'Competzy Portal',
+  tagline:
+    "Indonesia's unified stage for student competitions — admins, organizers, schools, and students, in one place.",
+  gradient: ['#5627ff', '#3f18cc'] as const,
+};
+
+// Motivational one-liners that cycle on the panel. Each is split into a
 // neutral `lead` and an amber `accent` tail — the accent is the punchy ending.
 const TAGLINES: { lead: string; accent: string }[] = [
   { lead: 'Every champion was once a', accent: 'beginner.' },
@@ -26,8 +34,8 @@ const WORD_SLOTS = Math.max(
   ...TAGLINES.map((t) => t.lead.split(' ').length + t.accent.split(' ').length),
 );
 
-export function BrandPanel({ config }: { config: CompetitionPortalConfig }) {
-  const [from, to] = config.gradient;
+export function CompetzyBrandPanel() {
+  const [from, to] = COMPETZY.gradient;
 
   const [index, setIndex] = useState(0);
   const [shown, setShown] = useState(false);
@@ -82,7 +90,7 @@ export function BrandPanel({ config }: { config: CompetitionPortalConfig }) {
       {/* logo */}
       <div className="relative flex items-center gap-3.5">
         <div className="flex size-12 items-center justify-center rounded-xl border border-white/30 bg-white/15 font-mono text-sm font-semibold tracking-wide backdrop-blur">
-          {config.shortName}
+          {COMPETZY.shortName}
         </div>
         <span className="font-mono text-[11px] uppercase tracking-[0.18em] opacity-80">Competzy</span>
       </div>
@@ -113,8 +121,8 @@ export function BrandPanel({ config }: { config: CompetitionPortalConfig }) {
 
       {/* footer */}
       <div className="relative max-w-sm">
-        <p className="font-medium opacity-95">{config.wordmark}</p>
-        <p className="mt-1 text-sm italic opacity-75">&ldquo;{config.tagline}&rdquo;</p>
+        <p className="font-medium opacity-95">{COMPETZY.wordmark}</p>
+        <p className="mt-1 text-sm italic opacity-75">&ldquo;{COMPETZY.tagline}&rdquo;</p>
         <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.12em] opacity-60">
           © 2026 Competzy
         </p>

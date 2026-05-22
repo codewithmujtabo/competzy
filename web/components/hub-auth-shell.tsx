@@ -1,38 +1,31 @@
 'use client';
 
 // Split-screen shell for the platform auth pages (forgot-password,
-// reset-password). Form on the left, brand panel on the right, with the
-// light/dark toggle. Mirrors the `/` unified login and the per-competition
-// register page so all auth surfaces share one orientation.
-//
-// When a competition slug is in scope (passed via `?comp=` on the URL), the
-// brand panel renders that competition's gradient + shortName + wordmark.
-// Otherwise it falls back to the default violet Competzy brand.
+// reset-password). Form on the left, generic Competzy brand panel on the
+// right, with the light/dark toggle. Mirrors the `/` unified login and the
+// per-competition register page so all auth surfaces share one orientation
+// AND one set of branding — never per-competition.
 
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/lib/theme/context';
-import type { CompetitionPortalConfig } from '@/lib/competitions/registry';
 
 interface HubAuthShellProps {
   headlineTop: string;
   headlineBottom: string;
   caption: string;
   quote: string;
-  brand?: CompetitionPortalConfig | null;
   children: React.ReactNode;
 }
 
-const COMPETZY_DEFAULT = {
+const COMPETZY = {
   shortName: 'CZ',
   gradient: ['#5627ff', '#3f18cc'] as const,
 };
 
-export function HubAuthShell({ headlineTop, headlineBottom, caption, quote, brand, children }: HubAuthShellProps) {
+export function HubAuthShell({ headlineTop, headlineBottom, caption, quote, children }: HubAuthShellProps) {
   const { theme, toggle } = useTheme();
   const isDark = theme === 'dark';
-
-  const shortName = brand?.shortName ?? COMPETZY_DEFAULT.shortName;
-  const [from, to] = brand?.gradient ?? COMPETZY_DEFAULT.gradient;
+  const [from, to] = COMPETZY.gradient;
 
   return (
     <div className="relative grid min-h-screen lg:grid-cols-2">
@@ -62,7 +55,7 @@ export function HubAuthShell({ headlineTop, headlineBottom, caption, quote, bran
         />
         <div className="relative flex items-center gap-3.5">
           <div className="flex size-12 items-center justify-center rounded-xl border border-white/30 bg-white/15 font-mono text-sm font-semibold tracking-wide backdrop-blur">
-            {shortName}
+            {COMPETZY.shortName}
           </div>
           <span className="font-mono text-[11px] uppercase tracking-[0.18em] opacity-80">Competzy</span>
         </div>
