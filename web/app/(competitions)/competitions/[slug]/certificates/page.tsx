@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { ArrowLeft, Award, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Award, CheckCircle2, Download, Loader2, ShieldAlert } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
@@ -105,8 +105,17 @@ export default function CompetitionCertificatesPage() {
                 <div className="mt-2 flex flex-wrap items-center gap-1">
                   <Badge
                     variant="outline"
-                    className={c.revokedAt ? 'text-[10px] text-destructive' : 'text-[10px]'}
+                    className={
+                      c.revokedAt
+                        ? 'gap-1 text-[10px] text-destructive'
+                        : 'gap-1 text-[10px] text-emerald-700 dark:text-emerald-400'
+                    }
                   >
+                    {c.revokedAt ? (
+                      <ShieldAlert className="size-3" aria-hidden="true" />
+                    ) : (
+                      <CheckCircle2 className="size-3" aria-hidden="true" />
+                    )}
                     {c.revokedAt ? 'Revoked' : 'Valid'}
                   </Badge>
                   {c.grade && (

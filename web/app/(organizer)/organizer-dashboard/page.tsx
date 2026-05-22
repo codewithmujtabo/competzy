@@ -124,8 +124,12 @@ export default function OrganizerDashboardPage() {
         {QUICK.map((l) => {
           const Icon = l.icon;
           return (
-            <Link key={l.href} href={l.href} className="group">
-              <Card className="flex-row items-center gap-4 p-5 transition-colors group-hover:border-primary/40 group-hover:bg-accent/40">
+            <Link
+              key={l.href}
+              href={l.href}
+              className="group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/75 focus-visible:ring-offset-2"
+            >
+              <Card className="flex-row items-center gap-4 p-5 transition-colors group-hover:border-primary/40 group-hover:bg-accent/40 group-focus-visible:border-primary/40 group-focus-visible:bg-accent/40">
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Icon className="size-5" />
                 </span>

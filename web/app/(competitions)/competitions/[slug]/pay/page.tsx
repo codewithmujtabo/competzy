@@ -311,9 +311,14 @@ export default function CompetitionPayPage() {
             </div>
 
             {polling ? (
-              <div className="mt-6 rounded-md bg-primary/5 px-4 py-3 text-sm text-primary">
+              <div
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+                className="mt-6 rounded-md bg-primary/5 px-4 py-3 text-sm text-primary"
+              >
                 <p className="flex items-center gap-2">
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                   Waiting for your payment to complete…
                 </p>
                 <p className="mt-1 text-xs text-primary/80">

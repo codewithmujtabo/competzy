@@ -354,8 +354,13 @@ export default function ParticipantsPage() {
             placeholder="Reason for rejection (required)…"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            aria-invalid={reason.trim().length === 0}
+            aria-describedby="reject-reason-hint"
+            className="flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/75 aria-invalid:border-destructive aria-invalid:ring-destructive/20"
           />
+          <p id="reject-reason-hint" className="text-xs text-muted-foreground">
+            The reason will be emailed to the student. Required.
+          </p>
           <DialogFooter>
             <Button
               variant="outline"

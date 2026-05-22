@@ -226,11 +226,11 @@ export default function PaperExamsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
-                  <TableHead className="w-24 truncate">Grade</TableHead>
+                  <TableHead className="w-24">Grade</TableHead>
                   <TableHead>Test Center</TableHead>
-                  <TableHead className="w-28 truncate">Answers</TableHead>
-                  <TableHead className="w-24 truncate">Score</TableHead>
-                  <TableHead className="w-28 text-right truncate">Actions</TableHead>
+                  <TableHead className="w-28">Answers</TableHead>
+                  <TableHead className="w-24">Score</TableHead>
+                  <TableHead className="w-28 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -252,16 +252,25 @@ export default function PaperExamsPage() {
                   paperExams.map((pe) => (
                     <TableRow
                       key={pe.id}
-                      className="cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Open paper exam for ${pe.studentName}`}
+                      className="cursor-pointer focus-visible:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/75"
                       onClick={() => router.push(`/question-bank/paper/${pe.id}`)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          router.push(`/question-bank/paper/${pe.id}`);
+                        }
+                      }}
                     >
-                      <TableCell className="truncate font-medium text-foreground">
+                      <TableCell className="truncate font-medium text-foreground" title={pe.studentName}>
                         {pe.studentName}
                       </TableCell>
                       <TableCell className="font-mono text-[11px] text-muted-foreground">
                         {pe.grade ?? '—'}
                       </TableCell>
-                      <TableCell className="truncate text-sm text-muted-foreground">
+                      <TableCell className="truncate text-sm text-muted-foreground" title={pe.testCenterName ?? ''}>
                         {pe.testCenterName ?? '—'}
                       </TableCell>
                       <TableCell>

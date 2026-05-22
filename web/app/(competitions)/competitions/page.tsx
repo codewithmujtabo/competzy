@@ -191,7 +191,7 @@ function CompetitionCard({
             e.stopPropagation();
             onToggleFav(comp.id);
           }}
-          className="rounded-full p-1 text-muted-foreground transition-colors hover:text-primary"
+          className="rounded-full p-1 text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/75"
         >
           <Heart className={cn('size-5', isFav && 'fill-primary text-primary')} />
         </button>

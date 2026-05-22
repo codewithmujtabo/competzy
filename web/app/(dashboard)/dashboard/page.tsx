@@ -356,11 +356,15 @@ export default function DashboardPage() {
           {QUICK_LINKS.map((l) => {
             const Icon = l.icon;
             return (
-              <Link key={l.href} href={l.href} className="group">
+              <Link
+                key={l.href}
+                href={l.href}
+                className="group rounded-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/75 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
                 <Card
                   className={cn(
                     'relative h-full flex-row items-center gap-4 overflow-hidden border-0 p-5 transition-all duration-300',
-                    'hover:-translate-y-1 hover:shadow-[0_22px_50px_-22px_rgba(75,194,236,0.45)]',
+                    'hover:-translate-y-1 group-focus-visible:-translate-y-1 hover:shadow-[0_22px_50px_-22px_rgba(75,194,236,0.45)]',
                     l.tile.bg,
                     l.tile.ink,
                   )}

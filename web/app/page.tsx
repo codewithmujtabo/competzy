@@ -76,7 +76,6 @@ export default function UnifiedLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
-  const [remember, setRemember] = useState(true);
 
   const [phone, setPhone] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -128,7 +127,7 @@ export default function UnifiedLogin() {
 
   const submitEmail = async (e: FormEvent) => {
     e.preventDefault();
-    if (!emailValid || password.length < 6 || submitting) return;
+    if (!emailValid || password.length < 8 || submitting) return;
     setError('');
     setSubmit(true);
     try {
@@ -242,9 +241,9 @@ export default function UnifiedLogin() {
               <a
                 href="https://competzy.com"
                 aria-label="Back to competzy.com"
-                className="group mb-7 inline-flex items-center gap-3"
+                className="group mb-7 inline-flex items-center gap-3 rounded-lg transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/75 focus-visible:ring-offset-2"
               >
-                <span className="flex size-11 items-center justify-center rounded-xl bg-[#4a148c] font-mono text-sm font-semibold tracking-wide text-white shadow-sm transition-transform group-hover:scale-105">
+                <span className="flex size-11 items-center justify-center rounded-xl bg-[#4a148c] font-mono text-sm font-semibold tracking-wide text-white shadow-sm">
                   CZ
                 </span>
                 <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground transition-colors group-hover:text-foreground">
@@ -338,16 +337,7 @@ export default function UnifiedLogin() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm">
-                    <label className="inline-flex cursor-pointer items-center gap-2 text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        checked={remember}
-                        onChange={(e) => setRemember(e.target.checked)}
-                        className="size-4 accent-primary"
-                      />
-                      Remember me
-                    </label>
+                  <div className="flex items-center justify-end text-sm">
                     <Link href={forgotHref} className="font-medium text-primary hover:underline">
                       Forgot password?
                     </Link>
@@ -357,7 +347,7 @@ export default function UnifiedLogin() {
                     type="submit"
                     size="lg"
                     className="w-full"
-                    disabled={!emailValid || password.length < 6 || submitting}
+                    disabled={!emailValid || password.length < 8 || submitting}
                   >
                     {submitting ? 'Signing in…' : 'Sign in'}
                     {!submitting && <ArrowRight className="size-4" />}
@@ -374,8 +364,9 @@ export default function UnifiedLogin() {
                       <Input
                         id="login-phone"
                         type="tel"
+                        inputMode="tel"
                         className="pl-9"
-                        placeholder="+62…"
+                        placeholder="08xxxxxxxx or +628xxxxxxxx"
                         autoComplete="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
@@ -384,11 +375,16 @@ export default function UnifiedLogin() {
                         aria-invalid={phone.length > 0 && !phoneValid}
                       />
                     </div>
-                    {phone.length > 0 && !phoneValid && (
-                      <p className="mt-1 text-xs text-destructive">
-                        Use the international format, e.g. <code className="font-mono">+628123456789</code>.
+                    {phone.length === 0 ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Use <code className="font-mono">08xxx</code> or <code className="font-mono">+62xxx</code> format.
                       </p>
-                    )}
+                    ) : !phoneValid ? (
+                      <p className="mt-1 text-xs text-destructive">
+                        Enter a valid phone number (e.g. <code className="font-mono">08123456789</code> or{' '}
+                        <code className="font-mono">+628123456789</code>).
+                      </p>
+                    ) : null}
                   </div>
                   <Button type="submit" size="lg" className="w-full" disabled={!phoneValid || submitting}>
                     {submitting ? 'Sending code…' : 'Send code'}

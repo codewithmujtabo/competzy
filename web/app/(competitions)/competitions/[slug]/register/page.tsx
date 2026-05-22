@@ -236,8 +236,9 @@ export default function CompetitionRegisterPage() {
                 <Input
                   id="reg-phone"
                   type="tel"
+                  inputMode="tel"
                   className="pl-9"
-                  placeholder="+62…"
+                  placeholder="08xxxxxxxx or +628xxxxxxxx"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   autoComplete="tel"

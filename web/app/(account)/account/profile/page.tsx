@@ -382,7 +382,7 @@ export default function AccountProfilePage() {
         <h2 className="font-serif text-lg font-medium text-foreground">Profile photo</h2>
         <div className="flex items-center gap-4">
           <Avatar className="size-20">
-            {photoUrl && <AvatarImage src={photoUrl} alt="" />}
+            {photoUrl && <AvatarImage src={photoUrl} alt="Profile photo" />}
             <AvatarFallback className="bg-primary/10 text-xl font-semibold text-primary">
               {initial}
             </AvatarFallback>

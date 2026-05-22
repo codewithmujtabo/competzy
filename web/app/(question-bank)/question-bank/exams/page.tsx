@@ -66,7 +66,15 @@ export default function ExamsListPage() {
   }, [load]);
 
   const remove = async (ex: ExamRow) => {
-    if (!confirm(`Delete exam ${ex.code}? This removes it and its question set.`)) return;
+    if (
+      !confirm(
+        `Delete exam "${ex.code}" — ${ex.name}?\n\n` +
+          `This removes the exam and its question set. Students with attempts ` +
+          `in progress keep their session, but no new attempts can be started.\n\n` +
+          `This cannot be undone.`,
+      )
+    )
+      return;
     setBusy(ex.id);
     try {
       await questionBankHttp.delete(`/question-bank/exams/${ex.id}`);

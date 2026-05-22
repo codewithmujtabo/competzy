@@ -96,6 +96,13 @@ export default function AccountDocumentsPage() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    // Client-side guard before posting — backend also enforces, but failing
+    // early avoids a long upload + cryptic backend error.
+    const MAX_BYTES = 10 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      toast.error(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 10 MB.`);
+      return;
+    }
     setUploading(true);
     try {
       const fd = new FormData();
