@@ -55,6 +55,7 @@ const LIMIT = 15;
 const FORM_DEFAULTS = {
   name: '',
   organizer_name: '',
+  organizer_id: '',
   category: '',
   grade_level: '',
   kind: 'native' as 'native' | 'affiliated',
@@ -66,6 +67,8 @@ const FORM_DEFAULTS = {
   post_payment_redirect_url: '',
   rounds: [] as RoundDraft[],
 };
+
+type OrganizerOption = { id: string; full_name: string; email: string };
 
 function fmtForInput(d?: string) {
   if (!d) return '';
@@ -112,6 +115,14 @@ export default function CompetitionsPage() {
   const [form, setForm] = useState(FORM_DEFAULTS);
   const [flowComp, setFlowComp] = useState<{ id: string; name: string } | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [organizers, setOrganizers] = useState<OrganizerOption[]>([]);
+
+  useEffect(() => {
+    adminHttp
+      .get<{ organizers: OrganizerOption[] }>('/admin/organizers')
+      .then((r) => setOrganizers(r.organizers ?? []))
+      .catch(() => setOrganizers([]));
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -138,7 +149,7 @@ export default function CompetitionsPage() {
 
   const openAdd = () => {
     setEditId(null);
-    setForm({ ...FORM_DEFAULTS });
+    setForm({ ...FORM_DEFAULTS, organizer_id: organizers[0]?.id ?? '' });
     setLogoUrl(null);
     setShowForm(true);
   };
@@ -149,6 +160,7 @@ export default function CompetitionsPage() {
     setForm({
       name: c.name,
       organizer_name: c.organizer_name,
+      organizer_id: c.created_by ?? '',
       category: c.category || '',
       grade_level: c.grade_level || '',
       kind: c.kind === 'affiliated' ? 'affiliated' : 'native',
@@ -171,7 +183,7 @@ export default function CompetitionsPage() {
   };
 
   const save = async () => {
-    if (!form.name || !form.organizer_name) return;
+    if (!form.name || !form.organizer_name || !form.organizer_id) return;
     setSaving(true);
     try {
       const payload = {
@@ -374,7 +386,7 @@ export default function CompetitionsPage() {
               </Select>
             </Field>
 
-            <Field label="Organizer" required className="sm:col-span-4">
+            <Field label="Organizer name" required className="sm:col-span-4">
               <Input
                 value={form.organizer_name}
                 onChange={(e) => setForm((f) => ({ ...f, organizer_name: e.target.value }))}
@@ -387,6 +399,30 @@ export default function CompetitionsPage() {
                 value={form.fee}
                 onChange={(e) => setForm((f) => ({ ...f, fee: e.target.value }))}
               />
+            </Field>
+            <Field label="Owner (organizer account)" required className="sm:col-span-6">
+              <Select
+                value={form.organizer_id || undefined}
+                onValueChange={(v) => setForm((f) => ({ ...f, organizer_id: v }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue
+                    placeholder={
+                      organizers.length === 0 ? 'No organizer accounts found' : 'Select an organizer…'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizers.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.full_name} — {o.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Controls which organizer account can manage this competition in their portal.
+              </p>
             </Field>
             <Field label="Grade level" className="sm:col-span-6">
               <GradeMultiSelect
@@ -485,7 +521,10 @@ export default function CompetitionsPage() {
             <Button variant="outline" onClick={() => setShowForm(false)}>
               Cancel
             </Button>
-            <Button onClick={save} disabled={saving || !form.name || !form.organizer_name}>
+            <Button
+              onClick={save}
+              disabled={saving || !form.name || !form.organizer_name || !form.organizer_id}
+            >
               {saving ? 'Saving…' : editId ? 'Save changes' : 'Create competition'}
             </Button>
           </DialogFooter>
