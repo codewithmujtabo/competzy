@@ -1,12 +1,30 @@
 'use client';
 
+// Multi-language question editor (Komodo-parity).
+//
+// One language is "active" at a time across the whole question — a tab
+// strip at the top of the editor card picks which `content*` column the
+// stem editor, every MC answer's editor, and the SA answer-key input write
+// into. That keeps one TipTap instance per slot (heavy) instead of six
+// per slot, and matches Komodo's authoring UX where the author dwells in
+// one language at a time before switching.
+
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Plus, Send, Trash2 } from 'lucide-react';
+import { ArrowLeft, Copy, Loader2, Plus, Send, Trash2, X } from 'lucide-react';
 import { questionBankHttp } from '@/lib/auth/question-bank-context';
 import { useQuestionBank } from '@/lib/question-bank/context';
+import {
+  LANGS,
+  LANG_COLS,
+  LANG_TO_COL,
+  emptyLangs,
+  readLangs,
+  type LangCol,
+  type LangCode,
+} from '@/lib/question-bank/languages';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 // Dynamic-imported so the ~120 KB TipTap + KaTeX bundle only ships on pages
@@ -30,16 +49,13 @@ const RichTextEditor = dynamic(
   { ssr: false, loading: () => <div className="min-h-[140px] rounded-md border border-input bg-background" /> },
 );
 
-const TEXTAREA_CLS =
-  'flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60';
-
 const NONE = '__none__';
 const LEVELS = ['easy', 'medium', 'hard'];
 const COGNITIVE = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
 const GRADE_OPTIONS = Array.from({ length: 12 }, (_, i) => String(i + 1));
 
-interface Answer {
-  content: string;
+interface McAnswer {
+  contents: Record<LangCol, string>;
   isCorrect: boolean;
 }
 interface TopicTag {
@@ -62,9 +78,23 @@ interface LoadedQuestion {
   cognitive: string | null;
   grades: string[];
   content: string;
+  content2: string;
+  content3: string;
+  content4: string;
+  content5: string;
+  content6: string;
   explanation: string | null;
   isBonus: boolean;
-  answers: { content: string; isCorrect: boolean }[];
+  tags: string[];
+  answers: ({
+    content: string;
+    content2: string;
+    content3: string;
+    content4: string;
+    content5: string;
+    content6: string;
+    isCorrect: boolean;
+  })[];
   topics: { topicId: string; subtopicId: string | null }[];
 }
 
@@ -73,6 +103,10 @@ const STATUS_STYLE: Record<string, string> = {
   submitted: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200',
   approved: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
 };
+
+function newMcAnswer(): McAnswer {
+  return { contents: emptyLangs(), isCorrect: false };
+}
 
 export default function QuestionEditorPage() {
   const router = useRouter();
@@ -86,25 +120,29 @@ export default function QuestionEditorPage() {
 
   // Form state.
   const [type, setType] = useState<'multiple_choice' | 'short_answer'>('multiple_choice');
-  const [content, setContent] = useState('');
+  const [contents, setContents] = useState<Record<LangCol, string>>(emptyLangs);
   const [level, setLevel] = useState(NONE);
   const [cognitive, setCognitive] = useState(NONE);
   const [grades, setGrades] = useState<string[]>([]);
   const [isBonus, setIsBonus] = useState(false);
   const [explanation, setExplanation] = useState('');
-  const [mcAnswers, setMcAnswers] = useState<Answer[]>([
-    { content: '', isCorrect: false },
-    { content: '', isCorrect: false },
-  ]);
-  const [saAnswer, setSaAnswer] = useState('');
-  const [tags, setTags] = useState<TopicTag[]>([]);
+  const [mcAnswers, setMcAnswers] = useState<McAnswer[]>([newMcAnswer(), newMcAnswer()]);
+  const [saAnswers, setSaAnswers] = useState<Record<LangCol, string>>(emptyLangs);
+  const [questionTags, setQuestionTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [topicTags, setTopicTags] = useState<TopicTag[]>([]);
+
+  // Active-language tab — applies to the stem AND every answer cell so the
+  // author dwells in one language at a time. Defaults to English.
+  const [activeLang, setActiveLang] = useState<LangCode>('en');
+  const activeCol = LANG_TO_COL[activeLang];
 
   // Taxonomy (whole competition — used by the tag builder + tag labels).
   const [subjects, setSubjects] = useState<TaxItem[]>([]);
   const [topics, setTopics] = useState<TaxItem[]>([]);
   const [subtopics, setSubtopics] = useState<TaxItem[]>([]);
 
-  // Tag builder.
+  // Topic-tag builder.
   const [tagSubject, setTagSubject] = useState('');
   const [tagTopic, setTagTopic] = useState('');
   const [tagSubtopic, setTagSubtopic] = useState(NONE);
@@ -125,18 +163,24 @@ export default function QuestionEditorPage() {
       .then((q) => {
         setLoaded(q);
         setType(q.type === 'short_answer' ? 'short_answer' : 'multiple_choice');
-        setContent(q.content ?? '');
+        setContents(readLangs(q));
         setLevel(q.level || NONE);
         setCognitive(q.cognitive || NONE);
         setGrades(q.grades ?? []);
         setIsBonus(q.isBonus);
         setExplanation(q.explanation ?? '');
+        setQuestionTags(Array.isArray(q.tags) ? q.tags : []);
         if (q.type === 'short_answer') {
-          setSaAnswer(q.answers[0]?.content ?? '');
+          setSaAnswers(readLangs(q.answers[0] ?? null));
         } else if (q.answers.length > 0) {
-          setMcAnswers(q.answers.map((a) => ({ content: a.content, isCorrect: a.isCorrect })));
+          setMcAnswers(
+            q.answers.map((a) => ({
+              contents: readLangs(a),
+              isCorrect: a.isCorrect,
+            })),
+          );
         }
-        setTags(q.topics.map((t) => ({ topicId: t.topicId, subtopicId: t.subtopicId })));
+        setTopicTags(q.topics.map((t) => ({ topicId: t.topicId, subtopicId: t.subtopicId })));
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoadingQuestion(false));
@@ -173,13 +217,35 @@ export default function QuestionEditorPage() {
   const toggleGrade = (g: string) =>
     setGrades((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
 
-  const addTag = () => {
+  const setStem = (col: LangCol, v: string) =>
+    setContents((prev) => ({ ...prev, [col]: v }));
+
+  const setMcAnswerContent = (i: number, col: LangCol, v: string) =>
+    setMcAnswers((prev) =>
+      prev.map((a, j) => (j === i ? { ...a, contents: { ...a.contents, [col]: v } } : a)),
+    );
+
+  const setSa = (col: LangCol, v: string) =>
+    setSaAnswers((prev) => ({ ...prev, [col]: v }));
+
+  // Copy English content into the currently active non-English tab.
+  const copyEnglishToActive = () => {
+    if (activeCol === 'content') return;
+    setStem(activeCol, contents.content);
+    setMcAnswers((prev) =>
+      prev.map((a) => ({ ...a, contents: { ...a.contents, [activeCol]: a.contents.content } })),
+    );
+    setSaAnswers((prev) => ({ ...prev, [activeCol]: prev.content }));
+    toast.success(`Copied English into ${LANGS.find((l) => l.code === activeLang)?.label}.`);
+  };
+
+  const addTopicTag = () => {
     if (!tagTopic) return;
-    if (tags.some((t) => t.topicId === tagTopic)) {
+    if (topicTags.some((t) => t.topicId === tagTopic)) {
       toast.info('That topic is already tagged.');
       return;
     }
-    setTags((prev) => [
+    setTopicTags((prev) => [
       ...prev,
       { topicId: tagTopic, subtopicId: tagSubtopic === NONE ? null : tagSubtopic },
     ]);
@@ -188,15 +254,25 @@ export default function QuestionEditorPage() {
     setTagSubtopic(NONE);
   };
 
+  const addQuestionTag = (raw: string) => {
+    const t = raw.trim();
+    if (!t) return;
+    setQuestionTags((prev) => (prev.includes(t) ? prev : [...prev, t]));
+    setTagInput('');
+  };
+
+  const removeQuestionTag = (t: string) =>
+    setQuestionTags((prev) => prev.filter((x) => x !== t));
+
   const validate = (): string | null => {
     if (!compId) return 'No competition selected.';
-    if (!content.trim()) return 'The question content is required.';
+    if (!contents.content.trim()) return 'The English question content is required.';
     if (type === 'multiple_choice') {
-      const filled = mcAnswers.filter((a) => a.content.trim());
+      const filled = mcAnswers.filter((a) => a.contents.content.trim());
       if (filled.length < 2) return 'A multiple-choice question needs at least 2 options.';
       if (!filled.some((a) => a.isCorrect)) return 'Mark at least one option as correct.';
-    } else if (!saAnswer.trim()) {
-      return 'The answer key is required.';
+    } else if (!saAnswers.content.trim()) {
+      return 'The English answer key is required.';
     }
     return null;
   };
@@ -204,19 +280,35 @@ export default function QuestionEditorPage() {
   const buildPayload = () => ({
     compId,
     type,
-    content: content.trim(),
+    // Spread all 6 language columns at top level (the backend reads them
+    // via readLangContents).
+    content: contents.content.trim(),
+    content2: contents.content2.trim(),
+    content3: contents.content3.trim(),
+    content4: contents.content4.trim(),
+    content5: contents.content5.trim(),
+    content6: contents.content6.trim(),
     level: level === NONE ? null : level,
     cognitive: cognitive === NONE ? null : cognitive,
     grades,
     isBonus,
     explanation: explanation.trim() || null,
+    tags: questionTags,
     answers:
       type === 'multiple_choice'
         ? mcAnswers
-            .filter((a) => a.content.trim())
-            .map((a) => ({ content: a.content.trim(), isCorrect: a.isCorrect }))
-        : [{ content: saAnswer.trim(), isCorrect: true }],
-    topics: tags,
+            .filter((a) => a.contents.content.trim())
+            .map((a) => ({
+              ...Object.fromEntries(LANG_COLS.map((c) => [c, a.contents[c].trim()])),
+              isCorrect: a.isCorrect,
+            }))
+        : [
+            {
+              ...Object.fromEntries(LANG_COLS.map((c) => [c, saAnswers[c].trim()])),
+              isCorrect: true,
+            },
+          ],
+    topics: topicTags,
   });
 
   const save = async (thenSubmit: boolean) => {
@@ -284,7 +376,7 @@ export default function QuestionEditorPage() {
           title={isNew ? 'New question' : loaded?.code ?? 'Question'}
           subtitle={
             isNew
-              ? 'Author a question, then save it as a draft or submit it for review.'
+              ? 'Author a question in up to 6 languages, then save it as a draft or submit it for review.'
               : 'Edit this draft question.'
           }
           actions={
@@ -311,7 +403,7 @@ export default function QuestionEditorPage() {
       )}
 
       <fieldset disabled={readOnly || saving} className="space-y-6">
-        {/* Type + content */}
+        {/* Type + content (with the 6-language tab strip) */}
         <Card className="space-y-4 p-6">
           <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
             <div>
@@ -338,62 +430,120 @@ export default function QuestionEditorPage() {
               </label>
             </div>
           </div>
+
+          {/* Language tab strip — applies to stem + each MC answer + SA key. */}
+          <div>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <Label className="text-xs text-muted-foreground">Language</Label>
+              {activeLang !== 'en' && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="-mr-2 h-7 text-xs"
+                  onClick={copyEnglishToActive}
+                  title="Copy English content into this tab"
+                >
+                  <Copy className="size-3.5" />
+                  Copy from English
+                </Button>
+              )}
+            </div>
+            <Tabs value={activeLang} onValueChange={(v) => setActiveLang(v as LangCode)}>
+              <TabsList className="w-full flex-wrap justify-start">
+                {LANGS.map((l) => {
+                  const filled = !!contents[l.col]?.trim();
+                  return (
+                    <TabsTrigger
+                      key={l.code}
+                      value={l.code}
+                      className="data-[state=active]:text-foreground"
+                    >
+                      {l.label}
+                      {filled && l.code !== 'en' && (
+                        <span className="ml-1 size-1.5 rounded-full bg-emerald-500" aria-hidden />
+                      )}
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </Tabs>
+          </div>
+
           <div>
             <Label className="mb-1.5 text-xs text-muted-foreground">
-              Question content <span className="text-destructive">*</span>
+              Question content{' '}
+              {activeLang === 'en' && <span className="text-destructive">*</span>}
+              <span className="ml-1 text-muted-foreground/60">
+                ({LANGS.find((l) => l.code === activeLang)?.label})
+              </span>
             </Label>
-            <textarea
-              rows={4}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Type the question…"
-              className={TEXTAREA_CLS}
+            <RichTextEditor
+              value={contents[activeCol]}
+              onChange={(v) => setStem(activeCol, v)}
+              placeholder={
+                activeLang === 'en'
+                  ? 'Type the question — supports inline math via the Σ button.'
+                  : 'Optional translation. Leave empty to fall back to English at exam time.'
+              }
+              minHeight="min-h-[160px]"
             />
           </div>
         </Card>
 
-        {/* Answers */}
+        {/* Answers + Explanation */}
         <Card className="space-y-4 p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-            {type === 'multiple_choice' ? 'Answer options' : 'Answer key'}
+            {type === 'multiple_choice' ? 'Answer options' : 'Answer key'}{' '}
+            <span className="text-muted-foreground/70">
+              · {LANGS.find((l) => l.code === activeLang)?.label}
+            </span>
           </p>
           {type === 'multiple_choice' ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {mcAnswers.map((a, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Input
-                    value={a.content}
-                    placeholder={`Option ${i + 1}`}
-                    onChange={(e) =>
-                      setMcAnswers((prev) =>
-                        prev.map((x, j) => (j === i ? { ...x, content: e.target.value } : x)),
-                      )
+                <div key={i} className="rounded-lg border bg-card p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                      Option {i + 1}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={a.isCorrect}
+                          onChange={(e) =>
+                            setMcAnswers((prev) =>
+                              prev.map((x, j) =>
+                                j === i ? { ...x, isCorrect: e.target.checked } : x,
+                              ),
+                            )
+                          }
+                          className="size-4 accent-primary"
+                        />
+                        Correct
+                      </label>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-7 text-muted-foreground hover:text-destructive"
+                        aria-label="Remove option"
+                        disabled={mcAnswers.length <= 2}
+                        onClick={() => setMcAnswers((prev) => prev.filter((_, j) => j !== i))}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  <RichTextEditor
+                    value={a.contents[activeCol]}
+                    onChange={(v) => setMcAnswerContent(i, activeCol, v)}
+                    placeholder={
+                      activeLang === 'en' ? 'Option text — math allowed.' : 'Optional translation.'
                     }
+                    minHeight="min-h-[60px]"
                   />
-                  <label className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={a.isCorrect}
-                      onChange={(e) =>
-                        setMcAnswers((prev) =>
-                          prev.map((x, j) => (j === i ? { ...x, isCorrect: e.target.checked } : x)),
-                        )
-                      }
-                      className="size-4 accent-primary"
-                    />
-                    Correct
-                  </label>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
-                    aria-label="Remove option"
-                    disabled={mcAnswers.length <= 2}
-                    onClick={() => setMcAnswers((prev) => prev.filter((_, j) => j !== i))}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
                 </div>
               ))}
               <Button
@@ -401,7 +551,7 @@ export default function QuestionEditorPage() {
                 size="sm"
                 variant="outline"
                 disabled={mcAnswers.length >= 8}
-                onClick={() => setMcAnswers((prev) => [...prev, { content: '', isCorrect: false }])}
+                onClick={() => setMcAnswers((prev) => [...prev, newMcAnswer()])}
               >
                 <Plus className="size-4" />
                 Add option
@@ -410,26 +560,74 @@ export default function QuestionEditorPage() {
           ) : (
             <div>
               <Label className="mb-1.5 text-xs text-muted-foreground">
-                Correct answer <span className="text-destructive">*</span>
+                Correct answer{' '}
+                {activeLang === 'en' && <span className="text-destructive">*</span>}
               </Label>
               <Input
-                value={saAnswer}
-                onChange={(e) => setSaAnswer(e.target.value)}
-                placeholder="The expected answer"
+                value={saAnswers[activeCol]}
+                onChange={(e) => setSa(activeCol, e.target.value)}
+                placeholder={
+                  activeLang === 'en' ? 'The expected answer' : 'Optional translation'
+                }
               />
             </div>
           )}
           <div>
             <Label className="mb-1.5 text-xs text-muted-foreground">Explanation</Label>
-            {/* Phase 3 smoke-test of the new TipTap + KaTeX editor. Phase 4
-                rolls it out to the question stem + each MC answer (with the
-                6-language tab strip on top). */}
             <RichTextEditor
               value={explanation}
               onChange={setExplanation}
               placeholder="Optional — shown after the question is answered. Supports inline math via the Σ button."
               minHeight="min-h-[100px]"
             />
+          </div>
+        </Card>
+
+        {/* Tags */}
+        <Card className="space-y-4 p-6">
+          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+            Tags
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Free-text labels for filtering — e.g. <code className="font-mono">geometry</code>,{' '}
+            <code className="font-mono">aops-2018</code>, <code className="font-mono">tricky</code>.
+          </p>
+          {questionTags.length > 0 && (
+            <ul className="flex flex-wrap gap-2">
+              {questionTags.map((t) => (
+                <li
+                  key={t}
+                  className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                >
+                  {t}
+                  <button
+                    type="button"
+                    aria-label={`Remove tag ${t}`}
+                    onClick={() => removeQuestionTag(t)}
+                    className="text-primary/70 hover:text-destructive"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex gap-2">
+            <Input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ',') {
+                  e.preventDefault();
+                  addQuestionTag(tagInput);
+                }
+              }}
+              placeholder="Type a tag and press Enter"
+            />
+            <Button type="button" variant="outline" onClick={() => addQuestionTag(tagInput)}>
+              <Plus className="size-4" />
+              Add
+            </Button>
           </div>
         </Card>
 
@@ -493,14 +691,14 @@ export default function QuestionEditorPage() {
           </div>
         </Card>
 
-        {/* Topic tagging */}
+        {/* Topic tagging (existing taxonomy linker) */}
         <Card className="space-y-4 p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-            Topic tags
+            Topic taxonomy
           </p>
-          {tags.length > 0 && (
+          {topicTags.length > 0 && (
             <ul className="flex flex-wrap gap-2">
-              {tags.map((t) => {
+              {topicTags.map((t) => {
                 const topic = topicById.get(t.topicId);
                 const subject = topic?.parentId ? subjectById.get(topic.parentId) : undefined;
                 const subtopic = t.subtopicId ? subtopicById.get(t.subtopicId) : undefined;
@@ -518,7 +716,9 @@ export default function QuestionEditorPage() {
                       type="button"
                       aria-label="Remove tag"
                       className="text-muted-foreground hover:text-destructive"
-                      onClick={() => setTags((prev) => prev.filter((x) => x.topicId !== t.topicId))}
+                      onClick={() =>
+                        setTopicTags((prev) => prev.filter((x) => x.topicId !== t.topicId))
+                      }
                     >
                       <Trash2 className="size-3.5" />
                     </button>
@@ -578,7 +778,7 @@ export default function QuestionEditorPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button type="button" variant="outline" disabled={!tagTopic} onClick={addTag}>
+            <Button type="button" variant="outline" disabled={!tagTopic} onClick={addTopicTag}>
               <Plus className="size-4" />
               Add
             </Button>
