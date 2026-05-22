@@ -18,11 +18,23 @@ import { applyMedalFromSession } from "../services/round-gating.service";
 //   GET  /exams/available?compId=
 //   POST /exams/:examId/sessions          start / resume an attempt
 //   GET  /sessions/:id                    leak-safe — never serves answer keys
+//   PUT  /sessions/:id/language           one-shot — pick the exam language
 //   PUT  /sessions/:id/periods/:periodId  save one answer
 //   POST /sessions/:id/submit             finish + MC auto-grade
 
 const router = Router();
 router.use(authMiddleware);
+
+// The six languages the question bank supports — must match
+// web/lib/question-bank/languages.ts exactly. Used to validate the
+// `language` argument on session-start + the dedicated language endpoint.
+const SESSION_LANGUAGES = ["en", "id", "ru", "es", "fr", "kk"] as const;
+type SessionLang = (typeof SESSION_LANGUAGES)[number];
+function normalizeLang(raw: unknown): SessionLang | null {
+  if (typeof raw !== "string") return null;
+  const v = raw.trim().toLowerCase();
+  return (SESSION_LANGUAGES as readonly string[]).includes(v) ? (v as SessionLang) : null;
+}
 
 // Webcam snapshots — small JPEGs captured from the browser canvas.
 const webcamUpload = multer({
@@ -222,13 +234,14 @@ router.post("/exams/:examId/sessions", async (req: Request, res: Response) => {
     }
     // Snapshot the question set into `periods` so a later exam edit can't
     // change the student's paper.
+    const startLang = normalizeLang(req.body?.language);
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
       const sess = await client.query(
-        `INSERT INTO sessions (comp_id, user_id, exam_id, grade, started_at)
-         VALUES ($1,$2,$3,$4, now()) RETURNING id`,
-        [exam.comp_id, req.userId, examId, ctx.grade]
+        `INSERT INTO sessions (comp_id, user_id, exam_id, grade, language, started_at)
+         VALUES ($1,$2,$3,$4,$5, now()) RETURNING id`,
+        [exam.comp_id, req.userId, examId, ctx.grade, startLang]
       );
       const sessionId = sess.rows[0].id as string;
       let n = 1;
@@ -255,11 +268,14 @@ router.post("/exams/:examId/sessions", async (req: Request, res: Response) => {
 
 // ── GET /api/sessions/:id ─────────────────────────────────────────────────
 // Leak-safe: never selects answers.is_correct or questions.explanation.
+// Returns all 6 content columns on every question + every option so the
+// client can pickLang(row, sessionLanguage) at render time without an extra
+// round-trip when the student switches language mid-exam.
 router.get("/sessions/:id", async (req: Request, res: Response) => {
   try {
     const id = String(req.params.id);
     const s = await pool.query(
-      `SELECT s.id, s.started_at, s.finished_at, s.total_point,
+      `SELECT s.id, s.started_at, s.finished_at, s.total_point, s.language,
               s.corrects, s.wrongs, s.blanks,
               e.name AS exam_name, e.minutes, e.date::text AS date,
               e.end_time::text AS end_time
@@ -274,7 +290,12 @@ router.get("/sessions/:id", async (req: Request, res: Response) => {
     const sess = s.rows[0];
     const periods = await pool.query(
       `SELECT p.id, p.number, p.type, p.question_id, p.answer_id, p.short_answer,
-              q.content AS question_content
+              q.content    AS q_content,
+              q.content2   AS q_content2,
+              q.content3   AS q_content3,
+              q.content4   AS q_content4,
+              q.content5   AS q_content5,
+              q.content6   AS q_content6
          FROM periods p JOIN questions q ON q.id = p.question_id
         WHERE p.session_id = $1 AND p.deleted_at IS NULL
         ORDER BY p.number ASC`,
@@ -283,17 +304,35 @@ router.get("/sessions/:id", async (req: Request, res: Response) => {
     const choiceQids = [
       ...new Set(periods.rows.filter((p) => p.type === "choice").map((p) => p.question_id)),
     ];
-    const optionsByQ = new Map<string, { id: string; content: string }[]>();
+    type OptRow = {
+      id: string;
+      content: string;
+      content2: string;
+      content3: string;
+      content4: string;
+      content5: string;
+      content6: string;
+    };
+    const optionsByQ = new Map<string, OptRow[]>();
     if (choiceQids.length > 0) {
       const ans = await pool.query(
-        `SELECT id, question_id, content FROM answers
+        `SELECT id, question_id, content, content2, content3, content4, content5, content6
+           FROM answers
           WHERE question_id = ANY($1::uuid[]) AND deleted_at IS NULL
           ORDER BY created_at ASC`,
         [choiceQids]
       );
       for (const a of ans.rows) {
         if (!optionsByQ.has(a.question_id)) optionsByQ.set(a.question_id, []);
-        optionsByQ.get(a.question_id)!.push({ id: a.id, content: a.content ?? "" });
+        optionsByQ.get(a.question_id)!.push({
+          id: a.id,
+          content: a.content ?? "",
+          content2: a.content2 ?? "",
+          content3: a.content3 ?? "",
+          content4: a.content4 ?? "",
+          content5: a.content5 ?? "",
+          content6: a.content6 ?? "",
+        });
       }
     }
     const deadline = sess.started_at
@@ -312,6 +351,9 @@ router.get("/sessions/:id", async (req: Request, res: Response) => {
     res.json({
       id: sess.id,
       examName: sess.exam_name,
+      // Chosen exam language (one of SESSION_LANGUAGES) or null if the
+      // student hasn't picked yet. Clients render via pickLang(row, language).
+      language: sess.language ?? null,
       startedAt: sess.started_at,
       finishedAt: sess.finished_at ?? null,
       deadline: deadline ? deadline.toISOString() : null,
@@ -323,7 +365,17 @@ router.get("/sessions/:id", async (req: Request, res: Response) => {
         id: p.id,
         number: p.number,
         type: p.type,
-        questionContent: p.question_content ?? "",
+        // Multi-language question content — clients pickLang(question, lang).
+        // `content` is English (the fallback when an empty translation is
+        // picked).
+        question: {
+          content: p.q_content ?? "",
+          content2: p.q_content2 ?? "",
+          content3: p.q_content3 ?? "",
+          content4: p.q_content4 ?? "",
+          content5: p.q_content5 ?? "",
+          content6: p.q_content6 ?? "",
+        },
         options: p.type === "choice" ? optionsByQ.get(p.question_id) ?? [] : [],
         answerId: p.answer_id ?? null,
         shortAnswer: p.short_answer ?? null,
@@ -332,6 +384,51 @@ router.get("/sessions/:id", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Get session error:", err);
     res.status(500).json({ message: "Failed to load the session" });
+  }
+});
+
+// ── PUT /api/sessions/:id/language ────────────────────────────────────────
+// One-shot: locks in the exam language for an existing session. Only updates
+// when sessions.language IS NULL — once a student picks, the language is
+// committed for the duration of the attempt (no mid-attempt change yet; v8
+// nice-to-have). The session-start endpoint already accepts language at
+// creation; this is the path for resumed sessions where the picker modal
+// runs after the session row already exists.
+router.put("/sessions/:id/language", async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const lang = normalizeLang(req.body?.language);
+    if (!lang) {
+      res.status(400).json({ message: "Invalid language code" });
+      return;
+    }
+    const r = await pool.query(
+      `UPDATE sessions
+          SET language = $1, updated_at = now()
+        WHERE id = $2 AND user_id = $3 AND deleted_at IS NULL
+          AND language IS NULL
+        RETURNING language`,
+      [lang, id, req.userId]
+    );
+    if (r.rows.length === 0) {
+      // Either the session doesn't exist for this user, or language already
+      // set. Treat both as "no change" — surface the current value.
+      const cur = await pool.query(
+        `SELECT language FROM sessions
+          WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+        [id, req.userId]
+      );
+      if (cur.rows.length === 0) {
+        res.status(404).json({ message: "Session not found" });
+        return;
+      }
+      res.json({ language: cur.rows[0].language });
+      return;
+    }
+    res.json({ language: r.rows[0].language });
+  } catch (err) {
+    console.error("Set session language error:", err);
+    res.status(500).json({ message: "Failed to set the language" });
   }
 });
 
