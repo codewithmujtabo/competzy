@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { ImageIcon, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { marketingHttp } from '@/lib/api/client';
 import { useQuestionBank } from '@/lib/question-bank/context';
-import { useQuestionBankAuth } from '@/lib/auth/question-bank-context';
+import { useAuth } from '@/lib/auth/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -72,7 +72,11 @@ function fmtDate(s: string | null) {
 
 function AnnouncementsPage() {
   const { competitions, loading: compsLoading } = useQuestionBank();
-  const { user } = useQuestionBankAuth();
+  // After the (question-bank) → (dashboard) move (PR #33), this page sits in
+  // the admin route group — read the role from the admin auth context, not
+  // from useQuestionBankAuth (whose provider isn't mounted here, so the
+  // missing-provider error was crashing the whole page).
+  const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
   const [scope, setScope] = useState('');
