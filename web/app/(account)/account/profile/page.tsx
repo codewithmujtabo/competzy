@@ -149,6 +149,12 @@ export default function AccountProfilePage() {
   const cardInputRef = useRef<HTMLInputElement>(null);
 
   const set = (k: keyof Form, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  // Helper for the consolidated "Phone / WhatsApp" inputs — writes the same
+  // value to both the *Whatsapp and *Phone form keys so the load + save
+  // round-trip stays simple (and so the DB row keeps both columns in sync
+  // for any reader that still hits the phone column).
+  const setPair = (whatsappKey: keyof Form, phoneKey: keyof Form, v: string) =>
+    setForm((f) => ({ ...f, [whatsappKey]: v, [phoneKey]: v }));
 
   const load = useCallback(async () => {
     try {
@@ -156,6 +162,12 @@ export default function AccountProfilePage() {
       setEmail(d.email);
       setPhotoUrl(d.photoUrl);
       setStudentCardUrl(d.studentCardUrl);
+      // The DB still has separate WhatsApp + Phone columns for school /
+      // supervisor / parent, but the UI now collapses each pair into one
+      // "Phone / WhatsApp" field. Prefer the WhatsApp column on read; fall
+      // back to the phone column. On save we mirror the same value into
+      // both columns so legacy rows + mobile readers see consistent data.
+      const merge = (wa: string | null, ph: string | null) => (wa ?? ph ?? '');
       setForm({
         fullName: d.fullName ?? '',
         phone: d.phone ?? '',
@@ -170,16 +182,16 @@ export default function AccountProfilePage() {
         npsn: d.npsn ?? '',
         schoolAddress: d.schoolAddress ?? '',
         schoolEmail: d.schoolEmail ?? '',
-        schoolWhatsapp: d.schoolWhatsapp ?? '',
-        schoolPhone: d.schoolPhone ?? '',
+        schoolWhatsapp: merge(d.schoolWhatsapp, d.schoolPhone),
+        schoolPhone: merge(d.schoolWhatsapp, d.schoolPhone),
         supervisorName: d.supervisorName ?? '',
         supervisorEmail: d.supervisorEmail ?? '',
-        supervisorWhatsapp: d.supervisorWhatsapp ?? '',
-        supervisorPhone: d.supervisorPhone ?? '',
+        supervisorWhatsapp: merge(d.supervisorWhatsapp, d.supervisorPhone),
+        supervisorPhone: merge(d.supervisorWhatsapp, d.supervisorPhone),
         parentName: d.parentName ?? '',
         parentOccupation: d.parentOccupation ?? '',
-        parentWhatsapp: d.parentWhatsapp ?? '',
-        parentPhone: d.parentPhone ?? '',
+        parentWhatsapp: merge(d.parentWhatsapp, d.parentPhone),
+        parentPhone: merge(d.parentWhatsapp, d.parentPhone),
       });
       // Split the stored comma string into known categories + free text.
       const stored = (d.interests ?? '')
@@ -208,19 +220,24 @@ export default function AccountProfilePage() {
   // /schools/by-npsn endpoint. Auto-populates schoolName (and address if it's
   // empty, so we never overwrite a manual edit). Debounced 350 ms so the
   // user can finish typing.
+  //
+  // The "last NPSN we resolved" lives in a ref (not state) so it doesn't
+  // re-fire the effect, and the effect's deps stay on `form.npsn` only —
+  // putting `npsnLookup` in deps caused an infinite render loop (every
+  // setNpsnLookup mints a fresh object reference, re-runs the effect,
+  // re-sets state, …).
+  const lastLookedUpNpsn = useRef<string>('');
   useEffect(() => {
     const npsn = form.npsn.trim();
     if (!/^\d{6,12}$/.test(npsn)) {
-      setNpsnLookup({ status: 'idle' });
+      lastLookedUpNpsn.current = '';
+      // Only update state when it isn't already idle — avoids a redundant
+      // re-render with a fresh-but-equal object reference.
+      setNpsnLookup((cur) => (cur.status === 'idle' ? cur : { status: 'idle' }));
       return;
     }
-    // Don't re-hit the API for an NPSN we already resolved.
-    if (
-      (npsnLookup.status === 'found' || npsnLookup.status === 'not-found') &&
-      npsnLookup.npsn === npsn
-    ) {
-      return;
-    }
+    // Skip re-resolving an NPSN we already looked up this session.
+    if (lastLookedUpNpsn.current === npsn) return;
     setNpsnLookup({ status: 'loading' });
     const timer = window.setTimeout(async () => {
       try {
@@ -230,6 +247,7 @@ export default function AccountProfilePage() {
           city: string | null;
           province: string | null;
         }>(`/schools/by-npsn/${encodeURIComponent(npsn)}`);
+        lastLookedUpNpsn.current = npsn;
         setNpsnLookup({ status: 'found', name: r.name, npsn });
         setForm((f) => ({
           ...f,
@@ -239,12 +257,13 @@ export default function AccountProfilePage() {
         }));
       } catch (err) {
         const msg = err instanceof Error ? err.message : '';
+        lastLookedUpNpsn.current = npsn;
         if (/not found|404/i.test(msg)) setNpsnLookup({ status: 'not-found', npsn });
         else setNpsnLookup({ status: 'idle' }); // transient — silent
       }
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [form.npsn, npsnLookup]);
+  }, [form.npsn]);
 
   async function uploadPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -600,14 +619,10 @@ export default function AccountProfilePage() {
           onChange={(e) => set('schoolEmail', e.target.value)}
         />
         <Field
-          label="School WhatsApp"
+          label="School Phone / WhatsApp"
           value={form.schoolWhatsapp}
-          onChange={(e) => set('schoolWhatsapp', e.target.value)}
-        />
-        <Field
-          label="School phone"
-          value={form.schoolPhone}
-          onChange={(e) => set('schoolPhone', e.target.value)}
+          onChange={(e) => setPair('schoolWhatsapp', 'schoolPhone', e.target.value)}
+          placeholder="08xxx or +628xxx"
         />
       </Section>
 
@@ -625,14 +640,10 @@ export default function AccountProfilePage() {
           onChange={(e) => set('supervisorEmail', e.target.value)}
         />
         <Field
-          label="WhatsApp"
+          label="Phone / WhatsApp"
           value={form.supervisorWhatsapp}
-          onChange={(e) => set('supervisorWhatsapp', e.target.value)}
-        />
-        <Field
-          label="Phone"
-          value={form.supervisorPhone}
-          onChange={(e) => set('supervisorPhone', e.target.value)}
+          onChange={(e) => setPair('supervisorWhatsapp', 'supervisorPhone', e.target.value)}
+          placeholder="08xxx or +628xxx"
         />
       </Section>
 
@@ -649,14 +660,10 @@ export default function AccountProfilePage() {
           onChange={(e) => set('parentOccupation', e.target.value)}
         />
         <Field
-          label="WhatsApp"
+          label="Phone / WhatsApp"
           value={form.parentWhatsapp}
-          onChange={(e) => set('parentWhatsapp', e.target.value)}
-        />
-        <Field
-          label="Phone"
-          value={form.parentPhone}
-          onChange={(e) => set('parentPhone', e.target.value)}
+          onChange={(e) => setPair('parentWhatsapp', 'parentPhone', e.target.value)}
+          placeholder="08xxx or +628xxx"
         />
       </Section>
 
