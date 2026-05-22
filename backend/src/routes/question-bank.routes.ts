@@ -69,16 +69,18 @@ async function rowCompIfAccessible(
 }
 
 // ── GET /api/question-bank/competitions ───────────────────────────────────
-// The native competitions whose question bank the caller may manage — every
-// native competition for an admin, only their own for an organizer.
+// The native competitions whose question bank the caller may manage.
+//   - admin           — every native competition
+//   - question_maker  — every native competition (content author)
+//   - organizer       — only the ones they created
 router.get("/question-bank/competitions", async (req: Request, res: Response) => {
   try {
-    const isAdmin = req.userRole === "admin";
+    const scopeToOwn = req.userRole === "organizer";
     const r = await pool.query(
       `SELECT id, name, slug FROM competitions
-        WHERE kind = 'native'${isAdmin ? "" : " AND created_by = $1"}
+        WHERE kind = 'native'${scopeToOwn ? " AND created_by = $1" : ""}
         ORDER BY name ASC`,
-      isAdmin ? [] : [req.userId]
+      scopeToOwn ? [req.userId] : []
     );
     res.json(
       r.rows.map((c) => ({ id: c.id, name: c.name, slug: c.slug ?? null }))
