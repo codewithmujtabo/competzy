@@ -16,6 +16,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { LocationCascade } from '@/components/ui/location-cascade';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 /**
  * Field keys the dialog can prompt for. Must match the keys returned in the
@@ -49,7 +56,7 @@ export type ProfileFieldKey =
 interface FieldDef {
   key: ProfileFieldKey;
   label: string;
-  type?: 'text' | 'email' | 'date' | 'tel' | 'location';
+  type?: 'text' | 'email' | 'date' | 'tel' | 'location' | 'grade';
   placeholder?: string;
   wide?: boolean;
 }
@@ -74,7 +81,7 @@ const FIELDS: Record<ProfileFieldKey, FieldDef> = {
   parentName:         { key: 'parentName',         label: 'Parent name', wide: true },
   parentWhatsapp:     { key: 'parentWhatsapp',     label: 'Parent WhatsApp', type: 'tel' },
   parentPhone:        { key: 'parentPhone',        label: 'Parent phone', type: 'tel' },
-  grade:              { key: 'grade',              label: 'Grade', placeholder: 'e.g. 9' },
+  grade:              { key: 'grade',              label: 'Grade', type: 'grade' },
   nisn:               { key: 'nisn',               label: 'NISN', placeholder: 'National Student Number' },
   npsn:               { key: 'npsn',               label: 'NPSN', placeholder: 'National School Number' },
 };
@@ -277,6 +284,22 @@ export function ProfileCompletionDialog({
                   city={location.city}
                   onChange={setLocation}
                 />
+              ) : f.type === 'grade' ? (
+                <Select
+                  value={values[f.key] || ''}
+                  onValueChange={(v) => set(f.key, v)}
+                >
+                  <SelectTrigger id={`pcd-${f.key}`} className="w-full">
+                    <SelectValue placeholder="Pick a grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
+                      <SelectItem key={g} value={String(g)}>
+                        Grade {g}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               ) : (
                 <Input
                   id={`pcd-${f.key}`}

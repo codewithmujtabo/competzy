@@ -14,6 +14,37 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LocationCascade } from '@/components/ui/location-cascade';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+// Canonical "How did you hear about us?" options. The free-text "Other" path
+// lives below the Select; picking it reveals a follow-up input.
+const REFERRAL_OPTIONS = [
+  'Social media',
+  'Friend or family',
+  'Teacher or school',
+  'Email',
+  'Online search',
+  'Other',
+] as const;
+type ReferralOption = (typeof REFERRAL_OPTIONS)[number];
+
+// Decompose a stored referralSource into (option, customText). Anything that
+// isn't one of the known options falls under "Other" with the free text.
+function parseReferralSource(raw: string): { option: ReferralOption | ''; custom: string } {
+  const t = raw.trim();
+  if (!t) return { option: '', custom: '' };
+  const match = (REFERRAL_OPTIONS as readonly string[]).find(
+    (o) => o.toLowerCase() === t.toLowerCase() && o !== 'Other',
+  );
+  if (match) return { option: match as ReferralOption, custom: '' };
+  return { option: 'Other', custom: t };
+}
 
 // Editable text fields. Photo + student card upload separately; email is
 // read-only. Mirrors the mobile app's student profile form
@@ -98,6 +129,12 @@ export default function AccountProfilePage() {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [otherInterest, setOtherInterest] = useState('');
 
+  // Referral source — split into "the option the user picked" + (optionally)
+  // the free-text fill-in when they picked "Other". Recombined on save into
+  // the single `referralSource` TEXT column on the server.
+  const [referralOption, setReferralOption] = useState<ReferralOption | ''>('');
+  const [referralCustom, setReferralCustom] = useState('');
+
   // School-name auto-fill state, driven by the NPSN field. `npsnLookup`
   // tracks the network state of the most recent /schools/by-npsn lookup so
   // the UI can show "Looking up…" → ✓ Found / ✗ Not found inline.
@@ -152,6 +189,10 @@ export default function AccountProfilePage() {
       const known = INTEREST_CATEGORIES as readonly string[];
       setSelectedInterests(stored.filter((i) => known.includes(i)));
       setOtherInterest(stored.filter((i) => !known.includes(i)).join(', '));
+      // Decompose the stored referral source back into picker + custom.
+      const ref = parseReferralSource(d.referralSource ?? '');
+      setReferralOption(ref.option);
+      setReferralCustom(ref.custom);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load your profile');
     } finally {
@@ -259,6 +300,11 @@ export default function AccountProfilePage() {
     try {
       const interests = [...selectedInterests];
       if (otherInterest.trim()) interests.push(otherInterest.trim());
+      // Recombine referral picker + free-text into the single column.
+      const referralSource =
+        referralOption === 'Other'
+          ? referralCustom.trim()
+          : (referralOption || '').trim();
       await emcHttp.put<{ message: string }>('/users/me', {
         fullName: form.fullName,
         phone: form.phone,
@@ -268,7 +314,7 @@ export default function AccountProfilePage() {
         // A DATE column rejects '' — omit an empty value rather than clear it.
         dateOfBirth: form.dateOfBirth || undefined,
         interests: interests.join(', '),
-        referralSource: form.referralSource,
+        referralSource,
         schoolName: form.schoolName,
         grade: form.grade,
         nisn: form.nisn,
@@ -417,13 +463,34 @@ export default function AccountProfilePage() {
             onChange={(e) => setOtherInterest(e.target.value)}
             placeholder="e.g. Robotics, Gaming"
           />
-          <Field
-            label="How did you hear about us?"
-            wide
-            value={form.referralSource}
-            onChange={(e) => set('referralSource', e.target.value)}
-            placeholder="e.g. Social media, a friend…"
-          />
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label>How did you hear about us?</Label>
+            <Select
+              value={referralOption}
+              onValueChange={(v) => {
+                setReferralOption(v as ReferralOption);
+                if (v !== 'Other') setReferralCustom('');
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Pick an option" />
+              </SelectTrigger>
+              <SelectContent>
+                {REFERRAL_OPTIONS.map((o) => (
+                  <SelectItem key={o} value={o}>
+                    {o}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {referralOption === 'Other' && (
+              <Input
+                value={referralCustom}
+                onChange={(e) => setReferralCustom(e.target.value)}
+                placeholder="Tell us how — e.g. WhatsApp group, school newsletter"
+              />
+            )}
+          </div>
         </div>
       </Card>
 
@@ -470,12 +537,24 @@ export default function AccountProfilePage() {
           onChange={(e) => set('schoolName', e.target.value)}
           placeholder="Your school"
         />
-        <Field
-          label="Grade"
-          value={form.grade}
-          onChange={(e) => set('grade', e.target.value)}
-          placeholder="e.g. 9"
-        />
+        <div className="space-y-1.5">
+          <Label>Grade</Label>
+          <Select
+            value={form.grade || ''}
+            onValueChange={(v) => set('grade', v)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Pick a grade" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
+                <SelectItem key={g} value={String(g)}>
+                  Grade {g}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Field
           label="NISN"
           value={form.nisn}
