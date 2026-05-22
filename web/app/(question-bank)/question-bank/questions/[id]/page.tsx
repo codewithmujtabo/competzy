@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, Loader2, Plus, Send, Trash2 } from 'lucide-react';
@@ -20,6 +21,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+
+// Dynamic-imported so the ~120 KB TipTap + KaTeX bundle only ships on pages
+// that actually mount the editor. SSR off — Tiptap manipulates the DOM and
+// renders nothing useful on the server.
+const RichTextEditor = dynamic(
+  () => import('@/components/editor/rich-text-editor').then((m) => m.RichTextEditor),
+  { ssr: false, loading: () => <div className="min-h-[140px] rounded-md border border-input bg-background" /> },
+);
 
 const TEXTAREA_CLS =
   'flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60';
@@ -412,12 +421,14 @@ export default function QuestionEditorPage() {
           )}
           <div>
             <Label className="mb-1.5 text-xs text-muted-foreground">Explanation</Label>
-            <textarea
-              rows={3}
+            {/* Phase 3 smoke-test of the new TipTap + KaTeX editor. Phase 4
+                rolls it out to the question stem + each MC answer (with the
+                6-language tab strip on top). */}
+            <RichTextEditor
               value={explanation}
-              onChange={(e) => setExplanation(e.target.value)}
-              placeholder="Optional — shown after the question is answered."
-              className={TEXTAREA_CLS}
+              onChange={setExplanation}
+              placeholder="Optional — shown after the question is answered. Supports inline math via the Σ button."
+              minHeight="min-h-[100px]"
             />
           </div>
         </Card>
