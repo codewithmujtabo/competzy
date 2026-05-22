@@ -93,6 +93,22 @@ router.post("/competitions", audit({ action: "admin.competition.create", resourc
     const competitionDate = req.body.competitionDate ?? req.body.competition_date;
     const postPaymentRedirectUrl = req.body.postPaymentRedirectUrl ?? req.body.post_payment_redirect_url;
     const kind: "native" | "affiliated" = req.body.kind === "affiliated" ? "affiliated" : "native";
+    const organizerId: string | undefined = req.body.organizerId ?? req.body.organizer_id;
+
+    // Resolve the row owner: admin must pick an organizer; falls back to the
+    // admin's own user_id when none is supplied (legacy behavior).
+    let ownerUserId: string = req.userId!;
+    if (organizerId) {
+      const ownerCheck = await client.query(
+        "SELECT 1 FROM users WHERE id = $1 AND role = 'organizer' AND deleted_at IS NULL",
+        [organizerId]
+      );
+      if (ownerCheck.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ message: "Invalid organizerId" });
+      }
+      ownerUserId = organizerId;
+    }
 
     // Generate competition ID
     const slug = name
@@ -139,7 +155,7 @@ router.post("/competitions", audit({ action: "admin.competition.create", resourc
         imageUrl,
         rounds?.length || 0,
         participantInstructions || null,
-        req.userId,
+        ownerUserId,
         kind,
         postPaymentRedirectUrl ?? null,
         compSlug,
@@ -200,6 +216,20 @@ router.put("/competitions/:id", audit({ action: "admin.competition.update", reso
     const competitionDate = req.body.competitionDate ?? req.body.competition_date;
     const postPaymentRedirectUrl = req.body.postPaymentRedirectUrl ?? req.body.post_payment_redirect_url;
     const kind: "native" | "affiliated" = req.body.kind === "affiliated" ? "affiliated" : "native";
+    const organizerId: string | undefined = req.body.organizerId ?? req.body.organizer_id;
+
+    // Validate organizerId when supplied so we can reassign ownership. When
+    // omitted the existing created_by is preserved via COALESCE below.
+    if (organizerId) {
+      const ownerCheck = await client.query(
+        "SELECT 1 FROM users WHERE id = $1 AND role = 'organizer' AND deleted_at IS NULL",
+        [organizerId]
+      );
+      if (ownerCheck.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ message: "Invalid organizerId" });
+      }
+    }
 
     // Update competition
     const compResult = await client.query(
@@ -224,8 +254,9 @@ router.put("/competitions/:id", audit({ action: "admin.competition.update", reso
         round_count = $18,
         participant_instructions = $19,
         kind = $20,
-        post_payment_redirect_url = $21
-      WHERE id = $22
+        post_payment_redirect_url = $21,
+        created_by = COALESCE($22, created_by)
+      WHERE id = $23
       RETURNING *`,
       [
         name,
@@ -249,6 +280,7 @@ router.put("/competitions/:id", audit({ action: "admin.competition.update", reso
         participantInstructions || null,
         kind,
         postPaymentRedirectUrl ?? null,
+        organizerId ?? null,
         id,
       ]
     );
@@ -1258,6 +1290,23 @@ router.post("/schools/:id/reject",
     }
   }
 );
+
+// ── GET /api/admin/organizers ─────────────────────────────────────────────
+// Flat live list for the Create/Edit competition dialog's Owner Select.
+router.get("/organizers", async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, full_name, email
+       FROM users
+       WHERE role = 'organizer' AND deleted_at IS NULL
+       ORDER BY full_name ASC`
+    );
+    res.json({ organizers: result.rows });
+  } catch (err) {
+    console.error("Admin organizers list error:", err);
+    res.status(500).json({ message: "Failed to fetch organizers" });
+  }
+});
 
 // ── GET /api/admin/users ──────────────────────────────────────────────────
 router.get("/users", async (req, res) => {
