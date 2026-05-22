@@ -82,12 +82,12 @@ export default function GradingQueuePage() {
           <Table className="w-full table-fixed min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-28">Exam</TableHead>
+                <TableHead className="w-28 truncate">Exam</TableHead>
                 <TableHead>Student</TableHead>
-                <TableHead className="w-24">Grade</TableHead>
-                <TableHead className="w-32">Submitted</TableHead>
-                <TableHead className="w-28">Pending</TableHead>
-                <TableHead className="w-24 text-right">Action</TableHead>
+                <TableHead className="w-24 truncate">Grade</TableHead>
+                <TableHead className="w-32 truncate">Submitted</TableHead>
+                <TableHead className="w-28 truncate">Pending</TableHead>
+                <TableHead className="w-24 text-right truncate">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

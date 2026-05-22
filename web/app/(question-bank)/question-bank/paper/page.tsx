@@ -226,11 +226,11 @@ export default function PaperExamsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
-                  <TableHead className="w-24">Grade</TableHead>
+                  <TableHead className="w-24 truncate">Grade</TableHead>
                   <TableHead>Test Center</TableHead>
-                  <TableHead className="w-28">Answers</TableHead>
-                  <TableHead className="w-24">Score</TableHead>
-                  <TableHead className="w-28 text-right">Actions</TableHead>
+                  <TableHead className="w-28 truncate">Answers</TableHead>
+                  <TableHead className="w-24 truncate">Score</TableHead>
+                  <TableHead className="w-28 text-right truncate">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
