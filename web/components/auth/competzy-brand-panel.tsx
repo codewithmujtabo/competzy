@@ -10,13 +10,7 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
-const COMPETZY = {
-  shortName: 'CZ',
-  wordmark: 'Competzy Portal',
-  tagline:
-    "Indonesia's unified stage for student competitions — admins, organizers, schools, and students, in one place.",
-  gradient: ['#5627ff', '#3f18cc'] as const,
-};
+const GRADIENT = ['#5627ff', '#3f18cc'] as const;
 
 // Motivational one-liners that cycle on the panel. Each is split into a
 // neutral `lead` and an amber `accent` tail — the accent is the punchy ending.
@@ -35,7 +29,7 @@ const WORD_SLOTS = Math.max(
 );
 
 export function CompetzyBrandPanel() {
-  const [from, to] = COMPETZY.gradient;
+  const [from, to] = GRADIENT;
 
   const [index, setIndex] = useState(0);
   const [shown, setShown] = useState(false);
@@ -69,7 +63,7 @@ export function CompetzyBrandPanel() {
 
   return (
     <div
-      className="relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:flex"
+      className="relative hidden flex-col justify-center overflow-hidden p-12 text-white lg:flex"
       style={{ background: `linear-gradient(135deg, ${from} 0%, ${to} 100%)` }}
     >
       {/* grid texture */}
@@ -86,14 +80,6 @@ export function CompetzyBrandPanel() {
         aria-hidden
         className="pointer-events-none absolute -bottom-32 -left-20 size-96 rounded-full bg-amber-300/10 blur-3xl"
       />
-
-      {/* logo */}
-      <div className="relative flex items-center gap-3.5">
-        <div className="flex size-12 items-center justify-center rounded-xl border border-white/30 bg-white/15 font-mono text-sm font-semibold tracking-wide backdrop-blur">
-          {COMPETZY.shortName}
-        </div>
-        <span className="font-mono text-[11px] uppercase tracking-[0.18em] opacity-80">Competzy</span>
-      </div>
 
       {/* rotating hero */}
       <div className="relative">
@@ -117,15 +103,6 @@ export function CompetzyBrandPanel() {
             </span>
           ))}
         </h2>
-      </div>
-
-      {/* footer */}
-      <div className="relative max-w-sm">
-        <p className="font-medium opacity-95">{COMPETZY.wordmark}</p>
-        <p className="mt-1 text-sm italic opacity-75">&ldquo;{COMPETZY.tagline}&rdquo;</p>
-        <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.12em] opacity-60">
-          © 2026 Competzy
-        </p>
       </div>
     </div>
   );

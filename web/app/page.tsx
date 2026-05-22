@@ -238,6 +238,20 @@ export default function UnifiedLogin() {
             </div>
           ) : (
             <>
+              {/* Logo — clickable, doubles as a back link to competzy.com */}
+              <a
+                href="https://competzy.com"
+                aria-label="Back to competzy.com"
+                className="group mb-7 inline-flex items-center gap-3"
+              >
+                <span className="flex size-11 items-center justify-center rounded-xl bg-[#4a148c] font-mono text-sm font-semibold tracking-wide text-white shadow-sm transition-transform group-hover:scale-105">
+                  CZ
+                </span>
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground transition-colors group-hover:text-foreground">
+                  competzy.com
+                </span>
+              </a>
+
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
                 Competzy · Web Portal
               </p>
