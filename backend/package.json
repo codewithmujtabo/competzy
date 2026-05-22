@@ -14,6 +14,7 @@
     "db:seed:competitions": "ts-node src/db/seed-competitions-from-csv.ts",
     "db:create-admin": "ts-node src/db/create-admin.ts",
     "db:create-organizer": "ts-node src/db/create-organizer.ts",
+    "db:create-question-maker": "ts-node src/db/create-question-maker.ts",
     "db:create-teacher": "ts-node src/db/create-teacher.ts",
     "db:create-test-accounts": "ts-node src/db/create-test-accounts.ts",
     "db:seed:emc-demo": "ts-node src/db/seed-emc-demo.ts",

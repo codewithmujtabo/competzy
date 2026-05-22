@@ -49,45 +49,70 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
   if (!user) return null;
 
   const isAdmin = user.role === 'admin';
+  const isQuestionMaker = user.role === 'question_maker';
   // "Back to …" returns the operator to whichever portal they came from.
+  // Question-makers have no other portal — only this workspace.
   const portalHref = isAdmin ? '/dashboard' : '/organizer-dashboard';
 
-  const nav: NavSection[] = [
-    {
-      items: [
-        { label: 'Dashboard', href: '/question-bank', icon: LayoutGrid, exact: true },
-        { label: 'Taxonomy', href: '/question-bank/taxonomy', icon: FolderTree },
-        { label: 'Questions', href: '/question-bank/questions', icon: FileText },
-        { label: 'Review', href: '/question-bank/review', icon: ClipboardCheck },
-        { label: 'Exams', href: '/question-bank/exams', icon: ClipboardList },
-        { label: 'Grading', href: '/question-bank/grading', icon: PenLine },
-        { label: 'Results', href: '/question-bank/results', icon: ListChecks },
-        { label: 'Paper Exams', href: '/question-bank/paper', icon: FileSpreadsheet },
-        { label: 'Proctoring', href: '/question-bank/proctoring', icon: Video },
-        { label: 'Certificates', href: '/question-bank/certificates', icon: Award },
-        { label: 'Medalists', href: '/question-bank/medalists', icon: Medal },
-      ],
-    },
-    {
-      label: 'Portal',
-      items: [
+  // Question-makers get only the narrow author surface — taxonomy + questions.
+  // Everything else (review / exams / grading / results / paper / proctoring /
+  // certificates / medalists) is admin+organizer-only on the backend and would
+  // 403 if shown.
+  const nav: NavSection[] = isQuestionMaker
+    ? [
         {
-          label: isAdmin ? 'Back to Admin' : 'Back to Organizer',
-          href: portalHref,
-          icon: ArrowLeft,
+          items: [
+            { label: 'Questions', href: '/question-bank/questions', icon: FileText, exact: true },
+            { label: 'Taxonomy', href: '/question-bank/taxonomy', icon: FolderTree },
+          ],
         },
-      ],
-    },
-  ];
+      ]
+    : [
+        {
+          items: [
+            { label: 'Dashboard', href: '/question-bank', icon: LayoutGrid, exact: true },
+            { label: 'Taxonomy', href: '/question-bank/taxonomy', icon: FolderTree },
+            { label: 'Questions', href: '/question-bank/questions', icon: FileText },
+            { label: 'Review', href: '/question-bank/review', icon: ClipboardCheck },
+            { label: 'Exams', href: '/question-bank/exams', icon: ClipboardList },
+            { label: 'Grading', href: '/question-bank/grading', icon: PenLine },
+            { label: 'Results', href: '/question-bank/results', icon: ListChecks },
+            { label: 'Paper Exams', href: '/question-bank/paper', icon: FileSpreadsheet },
+            { label: 'Proctoring', href: '/question-bank/proctoring', icon: Video },
+            { label: 'Certificates', href: '/question-bank/certificates', icon: Award },
+            { label: 'Medalists', href: '/question-bank/medalists', icon: Medal },
+          ],
+        },
+        {
+          label: 'Portal',
+          items: [
+            {
+              label: isAdmin ? 'Back to Admin' : 'Back to Organizer',
+              href: portalHref,
+              icon: ArrowLeft,
+            },
+          ],
+        },
+      ];
 
   return (
     <AppShell
-      brand={{ name: 'Competzy', tagline: 'Question Bank', icon: Library }}
+      brand={{
+        name: 'Competzy',
+        tagline: isQuestionMaker ? 'Question Maker' : 'Question Bank',
+        icon: Library,
+      }}
       nav={nav}
       user={{
-        name: user.full_name || (isAdmin ? 'Admin' : 'Organizer'),
+        name:
+          user.full_name ||
+          (isAdmin ? 'Admin' : isQuestionMaker ? 'Question Maker' : 'Organizer'),
         email: user.email,
-        role: isAdmin ? 'Administrator' : 'Organizer',
+        role: isAdmin
+          ? 'Administrator'
+          : isQuestionMaker
+            ? 'Question Maker'
+            : 'Organizer',
       }}
       onSignOut={async () => {
         await logout();

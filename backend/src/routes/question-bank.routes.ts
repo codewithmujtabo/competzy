@@ -20,7 +20,32 @@ const router = Router();
 // fall-through traffic (e.g. the student exam routes) — only `/question-bank/*`
 // requests are gated here.
 router.use("/question-bank", authMiddleware);
-router.use("/question-bank", requireRole("admin", "organizer"));
+
+// Path-scoped role guards. Question-makers can ONLY reach the question-
+// authoring + taxonomy surface (their narrow role). The admin/organizer-
+// only review/exams/grading/etc. surfaces have explicit guards below; any
+// /question-bank path NOT listed here is rejected by the final catch-all.
+const AUTHOR_PATHS = [
+  "/question-bank/competitions",
+  "/question-bank/questions",
+  "/question-bank/subjects",
+  "/question-bank/topics",
+  "/question-bank/subtopics",
+];
+const OPERATOR_PATHS = [
+  "/question-bank/review",
+  "/question-bank/exams",
+  "/question-bank/grading",
+  "/question-bank/results",
+  "/question-bank/paper",
+  "/question-bank/proctoring",
+  "/question-bank/certificates",
+  "/question-bank/medalists",
+];
+const allowAuthor = requireRole("admin", "organizer", "question_maker");
+const allowOperator = requireRole("admin", "organizer");
+AUTHOR_PATHS.forEach((p) => router.use(p, allowAuthor));
+OPERATOR_PATHS.forEach((p) => router.use(p, allowOperator));
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 // `hasCompAccess` (native-competition + ownership gate) lives in
@@ -616,6 +641,9 @@ router.get("/question-bank/questions/:id/proofreads", async (req: Request, res: 
 // POST /api/question-bank/questions/:id/proofreads — record a review pass.
 router.post(
   "/question-bank/questions/:id/proofreads",
+  // Writing a review is an admin+organizer-only action even though the
+  // proofread endpoints live under the author-accessible /questions prefix.
+  allowOperator,
   audit({ action: "question_bank.proofread.create", resourceType: "proofread", resourceIdParam: "id" }),
   async (req: Request, res: Response) => {
     try {
@@ -650,6 +678,7 @@ router.post(
 // PUT /api/question-bank/questions/:id/proofreads/:proofreadId — edit own proofread.
 router.put(
   "/question-bank/questions/:id/proofreads/:proofreadId",
+  allowOperator,
   audit({ action: "question_bank.proofread.update", resourceType: "proofread", resourceIdParam: "proofreadId" }),
   async (req: Request, res: Response) => {
     try {
@@ -728,6 +757,7 @@ router.post(
 // An optional comment is recorded as a proofread sign-off.
 router.post(
   "/question-bank/questions/:id/approve",
+  allowOperator,
   audit({ action: "question_bank.question.approve", resourceType: "question", resourceIdParam: "id" }),
   async (req: Request, res: Response) => {
     const client = await pool.connect();
@@ -780,6 +810,7 @@ router.post(
 // Requires a comment; the comment is recorded as a proofread.
 router.post(
   "/question-bank/questions/:id/send-back",
+  allowOperator,
   audit({ action: "question_bank.question.send_back", resourceType: "question", resourceIdParam: "id" }),
   async (req: Request, res: Response) => {
     const client = await pool.connect();

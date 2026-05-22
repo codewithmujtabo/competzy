@@ -15,6 +15,10 @@ export function destinationFor(role: string): string {
       return '/competitions';
     case 'country_representative':
       return '/rep-portal';
+    case 'question_maker':
+      // Question-makers only see the narrow author workspace; the QB dashboard
+      // route still has the operator-only KPI cards, so land them on Questions.
+      return '/question-bank/questions';
     default:
       return '/dashboard';
   }
