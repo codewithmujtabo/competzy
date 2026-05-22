@@ -436,54 +436,112 @@ router.get("/rep/pay-batch/:id/verify", async (req: Request, res: Response) => {
   }
 });
 
+// Achievement data — current cohort + historical claims for a rep's local
+// round. Shared by both the JSON view endpoint and the PDF export endpoint
+// below so the two can never drift.
+async function repAchievementData(userId: string) {
+  const a = await repAssignment(userId);
+  if (!a) return null;
+  const round = await localRound(a.comp_id, a.country);
+  const meRow = await pool.query("SELECT full_name FROM users WHERE id = $1", [userId]);
+  const repName: string = meRow.rows[0]?.full_name ?? "Country Representative";
+
+  // Current-cohort results — every registration in this local round that
+  // carries a score, ordered medalists first then by score desc.
+  const current = round
+    ? await pool.query(
+        `SELECT u.full_name, r.score, r.is_medalist, r.status
+           FROM registrations r
+           JOIN users u ON u.id = r.user_id AND u.deleted_at IS NULL
+          WHERE r.round_id = $1 AND r.deleted_at IS NULL AND r.score IS NOT NULL
+          ORDER BY r.is_medalist DESC NULLS LAST, r.score DESC NULLS LAST, u.full_name ASC
+          LIMIT 1000`,
+        [round.id],
+      )
+    : { rows: [] as any[] };
+
+  // Historical claims — any prior result the students in this local round
+  // already claimed on Competzy.
+  const historical = round
+    ? await pool.query(
+        `SELECT u.full_name, hp.comp_name, hp.comp_year, hp.result, hp.event_part
+           FROM registrations r
+           JOIN users u ON u.id = r.user_id AND u.deleted_at IS NULL
+           JOIN historical_participants hp ON hp.claimed_by = u.id
+          WHERE r.round_id = $1 AND r.deleted_at IS NULL AND hp.result IS NOT NULL
+          ORDER BY hp.comp_year DESC, u.full_name ASC
+          LIMIT 1000`,
+        [round.id],
+      )
+    : { rows: [] as any[] };
+
+  return { a, round, repName, current, historical };
+}
+
+// ── Rep: GET /api/rep/achievements ────────────────────────────────────────
+// JSON view of the same data the PDF export renders. Powers an in-portal
+// achievements page so a rep can review results in the browser, then choose
+// whether to download the PDF version.
+router.get("/rep/achievements", async (req: Request, res: Response) => {
+  try {
+    const data = await repAchievementData(req.userId!);
+    if (!data) {
+      res.status(404).json({ message: "No representative assignment found." });
+      return;
+    }
+    const { a, round, repName, current, historical } = data;
+    const medalCount = current.rows.filter((r: any) => r.is_medalist === true).length;
+    res.json({
+      country: a.country,
+      competition: { id: a.comp_id, name: a.comp_name },
+      repName,
+      localRound: round
+        ? {
+            id: round.id,
+            name: round.round_name,
+            examMode: round.exam_mode,
+            qualifyingScore: round.qualifying_score,
+            examDate: round.exam_date,
+          }
+        : null,
+      summary: {
+        scored: current.rows.length,
+        medalists: medalCount,
+        historical: historical.rows.length,
+      },
+      currentCohort: current.rows.map((r: any) => ({
+        fullName: r.full_name,
+        score: r.score,
+        isMedalist: r.is_medalist,
+        status: r.status,
+      })),
+      historical: historical.rows.map((r: any) => ({
+        fullName: r.full_name,
+        compName: r.comp_name,
+        compYear: r.comp_year,
+        result: r.result,
+        eventPart: r.event_part,
+      })),
+    });
+  } catch (err) {
+    console.error("Rep achievements error:", err);
+    res.status(500).json({ message: "Failed to load achievements" });
+  }
+});
+
 // ── Rep: GET /api/rep/export/achievement.pdf ──────────────────────────────
 // Achievement PDF parity with /api/{schools,teachers}/export/achievement.pdf,
 // scoped to the rep's country + competition. Two sources: medalists from the
 // local round (current cohort) and historical_participants claimed by students
 // registered for this local round (prior performance).
-router.get("/export/achievement.pdf", async (req: Request, res: Response) => {
+router.get("/rep/export/achievement.pdf", async (req: Request, res: Response) => {
   try {
-    const a = await repAssignment(req.userId!);
-    if (!a) {
+    const data = await repAchievementData(req.userId!);
+    if (!data) {
       res.status(404).json({ message: "No representative assignment found." });
       return;
     }
-    const round = await localRound(a.comp_id, a.country);
-
-    const meRow = await pool.query(
-      "SELECT full_name FROM users WHERE id = $1",
-      [req.userId],
-    );
-    const repName: string = meRow.rows[0]?.full_name ?? "Country Representative";
-
-    // Current-cohort results — every registration in this local round that
-    // carries a score, ordered medalists first then by score desc.
-    const current = round
-      ? await pool.query(
-          `SELECT u.full_name, r.score, r.is_medalist, r.status
-             FROM registrations r
-             JOIN users u ON u.id = r.user_id AND u.deleted_at IS NULL
-            WHERE r.round_id = $1 AND r.deleted_at IS NULL AND r.score IS NOT NULL
-            ORDER BY r.is_medalist DESC NULLS LAST, r.score DESC NULLS LAST, u.full_name ASC
-            LIMIT 1000`,
-          [round.id],
-        )
-      : { rows: [] as any[] };
-
-    // Historical claims — any prior result the students in this local round
-    // already claimed on Competzy.
-    const historical = round
-      ? await pool.query(
-          `SELECT u.full_name, hp.comp_name, hp.comp_year, hp.result, hp.event_part
-             FROM registrations r
-             JOIN users u ON u.id = r.user_id AND u.deleted_at IS NULL
-             JOIN historical_participants hp ON hp.claimed_by = u.id
-            WHERE r.round_id = $1 AND r.deleted_at IS NULL AND hp.result IS NOT NULL
-            ORDER BY hp.comp_year DESC, u.full_name ASC
-            LIMIT 1000`,
-          [round.id],
-        )
-      : { rows: [] as any[] };
+    const { a, round, repName, current, historical } = data;
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(

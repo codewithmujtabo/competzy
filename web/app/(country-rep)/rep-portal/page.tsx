@@ -58,11 +58,10 @@ const QUICK_LINKS: QuickLink[] = [
     icon: CalendarClock,
   },
   {
-    label: 'Achievement PDF',
-    href: '/api/rep/export/achievement.pdf',
-    description: 'Download a country-scoped achievement report.',
+    label: 'Achievements',
+    href: '/rep-portal/achievements',
+    description: 'Review current results and historical records, then download a PDF if you need one.',
     icon: Award,
-    external: true,
   },
 ];
 

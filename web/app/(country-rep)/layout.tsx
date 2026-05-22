@@ -30,14 +30,7 @@ const NAV: NavSection[] = [
   },
   {
     label: 'Reports',
-    items: [
-      {
-        label: 'Achievement PDF',
-        href: '/api/rep/export/achievement.pdf',
-        icon: Award,
-        external: true,
-      },
-    ],
+    items: [{ label: 'Achievements', href: '/rep-portal/achievements', icon: Award }],
   },
 ];
 
