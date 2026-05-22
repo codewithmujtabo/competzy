@@ -263,11 +263,42 @@ for (const t of TAXONOMIES) {
 const QUESTION_TYPES = ["multiple_choice", "short_answer"] as const;
 type QuestionType = (typeof QUESTION_TYPES)[number];
 
+// The six language columns that both `questions` and `answers` carry. Same
+// order as the LANGS array in web/lib/question-bank/languages.ts:
+//   content   → English (required; treated as the fallback in pickLang)
+//   content2  → Bahasa
+//   content3  → Russian
+//   content4  → Spanish
+//   content5  → French
+//   content6  → Kazakh
+const LANG_COLS = [
+  "content",
+  "content2",
+  "content3",
+  "content4",
+  "content5",
+  "content6",
+] as const;
+type LangCol = (typeof LANG_COLS)[number];
+
+// Read every content* string from a free-form body. `content` is required
+// upstream (validated in parseQuestionBody); the rest default to "" so the
+// columns are NULLable-friendly downstream (we trim and store empty strings
+// as null to keep the data sparse).
+function readLangContents(body: any): Record<LangCol, string> {
+  const out = {} as Record<LangCol, string>;
+  for (const col of LANG_COLS) {
+    out[col] = typeof body?.[col] === "string" ? body[col].trim() : "";
+  }
+  return out;
+}
+
 async function loadQuestion(id: string) {
   const q = await pool.query(
     `SELECT q.id, q.comp_id, q.code, q.writer_id, q.approver_id, q.level, q.grades,
-            q.type, q.cognitive, q.approved_at, q.content, q.explanation, q.status,
-            q.is_bonus, q.created_at, q.updated_at,
+            q.type, q.cognitive, q.approved_at,
+            q.content, q.content2, q.content3, q.content4, q.content5, q.content6,
+            q.explanation, q.status, q.is_bonus, q.tags, q.created_at, q.updated_at,
             w.full_name AS writer_name, a.full_name AS approver_name
        FROM questions q
        JOIN users w ON w.id = q.writer_id
@@ -278,7 +309,8 @@ async function loadQuestion(id: string) {
   if (q.rows.length === 0) return null;
   const row = q.rows[0];
   const answers = await pool.query(
-    `SELECT id, content, is_correct FROM answers
+    `SELECT id, content, content2, content3, content4, content5, content6, is_correct
+       FROM answers
       WHERE question_id = $1 AND ${liveFilter()} ORDER BY created_at ASC`,
     [id]
   );
@@ -300,12 +332,27 @@ async function loadQuestion(id: string) {
     cognitive: row.cognitive ?? null,
     grades: Array.isArray(row.grades) ? row.grades : [],
     content: row.content ?? "",
+    content2: row.content2 ?? "",
+    content3: row.content3 ?? "",
+    content4: row.content4 ?? "",
+    content5: row.content5 ?? "",
+    content6: row.content6 ?? "",
     explanation: row.explanation ?? null,
     status: row.status,
     isBonus: row.is_bonus,
+    tags: Array.isArray(row.tags) ? row.tags : [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    answers: answers.rows.map((a) => ({ id: a.id, content: a.content ?? "", isCorrect: a.is_correct })),
+    answers: answers.rows.map((a) => ({
+      id: a.id,
+      content: a.content ?? "",
+      content2: a.content2 ?? "",
+      content3: a.content3 ?? "",
+      content4: a.content4 ?? "",
+      content5: a.content5 ?? "",
+      content6: a.content6 ?? "",
+      isCorrect: a.is_correct,
+    })),
     topics: topics.rows.map((qt) => ({ topicId: qt.topic_id, subtopicId: qt.subtopic_id ?? null })),
   };
 }
@@ -384,15 +431,17 @@ router.get("/question-bank/questions/:id", async (req: Request, res: Response) =
 // Validates + normalises the answers/topics payload for a question.
 function parseQuestionBody(body: any): { error?: string; data?: any } {
   const type: QuestionType = body?.type === "short_answer" ? "short_answer" : "multiple_choice";
-  const content = typeof body?.content === "string" ? body.content.trim() : "";
-  if (!content) return { error: "content is required" };
+  const langs = readLangContents(body); // {content, content2..content6}
+  if (!langs.content) return { error: "content is required" };
 
   const rawAnswers = Array.isArray(body?.answers) ? body.answers : [];
   const answers = rawAnswers
     .map((a: any) => ({
-      content: typeof a?.content === "string" ? a.content.trim() : "",
+      ...readLangContents(a),
       isCorrect: !!a?.isCorrect,
     }))
+    // An answer row only counts if at least the English content is filled —
+    // mirrors the validation on questions.content.
     .filter((a: any) => a.content);
   if (type === "multiple_choice") {
     if (answers.length < 2) return { error: "A multiple-choice question needs at least 2 options" };
@@ -410,15 +459,28 @@ function parseQuestionBody(body: any): { error?: string; data?: any } {
     }))
     .filter((t: any) => t.topicId);
 
+  // Tags: JSONB string[] on questions. Strip non-strings, trim, dedupe.
+  const tags = Array.isArray(body?.tags)
+    ? Array.from(
+        new Set(
+          body.tags
+            .filter((t: unknown): t is string => typeof t === "string")
+            .map((t: string) => t.trim())
+            .filter(Boolean),
+        ),
+      )
+    : [];
+
   return {
     data: {
       type,
-      content,
+      ...langs,
       level: typeof body?.level === "string" ? body.level.trim() || null : null,
       cognitive: typeof body?.cognitive === "string" ? body.cognitive.trim() || null : null,
       grades: Array.isArray(body?.grades) ? body.grades.map(String) : [],
       explanation: typeof body?.explanation === "string" ? body.explanation.trim() || null : null,
       isBonus: !!body?.isBonus,
+      tags,
       answers,
       topics,
     },
@@ -454,17 +516,32 @@ router.post(
 
       const inserted = await client.query(
         `INSERT INTO questions
-           (comp_id, code, writer_id, type, level, cognitive, grades, content, explanation, is_bonus, status)
-         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,'draft')
+           (comp_id, code, writer_id, type, level, cognitive, grades,
+            content, content2, content3, content4, content5, content6,
+            explanation, is_bonus, tags, status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,
+                 $8,$9,$10,$11,$12,$13,
+                 $14,$15,$16::jsonb,'draft')
          RETURNING id`,
-        [compId, code, req.userId, d.type, d.level, d.cognitive, JSON.stringify(d.grades), d.content, d.explanation, d.isBonus]
+        [
+          compId, code, req.userId, d.type, d.level, d.cognitive, JSON.stringify(d.grades),
+          d.content, d.content2 || null, d.content3 || null, d.content4 || null, d.content5 || null, d.content6 || null,
+          d.explanation, d.isBonus, JSON.stringify(d.tags),
+        ]
       );
       const questionId = inserted.rows[0].id as string;
 
       for (const a of d.answers) {
         await client.query(
-          `INSERT INTO answers (comp_id, question_id, content, is_correct) VALUES ($1,$2,$3,$4)`,
-          [compId, questionId, a.content, a.isCorrect]
+          `INSERT INTO answers
+             (comp_id, question_id, content, content2, content3, content4, content5, content6, is_correct)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [
+            compId, questionId,
+            a.content,
+            a.content2 || null, a.content3 || null, a.content4 || null, a.content5 || null, a.content6 || null,
+            a.isCorrect,
+          ]
         );
       }
       for (const t of d.topics) {
@@ -513,18 +590,30 @@ router.put(
       await client.query("BEGIN");
       await client.query(
         `UPDATE questions
-            SET type=$1, level=$2, cognitive=$3, grades=$4::jsonb, content=$5,
-                explanation=$6, is_bonus=$7, updated_at=now()
-          WHERE id=$8`,
-        [d.type, d.level, d.cognitive, JSON.stringify(d.grades), d.content, d.explanation, d.isBonus, id]
+            SET type=$1, level=$2, cognitive=$3, grades=$4::jsonb,
+                content=$5, content2=$6, content3=$7, content4=$8, content5=$9, content6=$10,
+                explanation=$11, is_bonus=$12, tags=$13::jsonb, updated_at=now()
+          WHERE id=$14`,
+        [
+          d.type, d.level, d.cognitive, JSON.stringify(d.grades),
+          d.content, d.content2 || null, d.content3 || null, d.content4 || null, d.content5 || null, d.content6 || null,
+          d.explanation, d.isBonus, JSON.stringify(d.tags), id,
+        ]
       );
       // Replace the child answers + topic tags.
       await client.query("DELETE FROM answers WHERE question_id = $1", [id]);
       await client.query("DELETE FROM question_topics WHERE question_id = $1", [id]);
       for (const a of d.answers) {
         await client.query(
-          `INSERT INTO answers (comp_id, question_id, content, is_correct) VALUES ($1,$2,$3,$4)`,
-          [existing.compId, id, a.content, a.isCorrect]
+          `INSERT INTO answers
+             (comp_id, question_id, content, content2, content3, content4, content5, content6, is_correct)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [
+            existing.compId, id,
+            a.content,
+            a.content2 || null, a.content3 || null, a.content4 || null, a.content5 || null, a.content6 || null,
+            a.isCorrect,
+          ]
         );
       }
       for (const t of d.topics) {
