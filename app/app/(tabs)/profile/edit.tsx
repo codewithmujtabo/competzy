@@ -114,16 +114,25 @@ export default function ProfileEditScreen() {
       setNpsn(u.npsn || "");
       setSchoolAddress(u.schoolAddress || "");
       setSchoolEmail(u.schoolEmail || "");
-      setSchoolWhatsapp(u.schoolWhatsapp || "");
-      setSchoolPhone(u.schoolPhone || "");
+      // The DB still has separate WhatsApp + Phone columns for school /
+      // supervisor / parent, but the UI now collapses each pair into one
+      // "Phone / WhatsApp" field. Prefer WhatsApp on load, fall back to
+      // the phone column. On save we mirror the same value into both so
+      // legacy data + the web profile (which still reads both) stay in
+      // sync — no migration required.
+      const mergedSchool = u.schoolWhatsapp || u.schoolPhone || "";
+      setSchoolWhatsapp(mergedSchool);
+      setSchoolPhone(mergedSchool);
       setSupervisorName(u.supervisorName || "");
       setSupervisorEmail(u.supervisorEmail || "");
-      setSupervisorWhatsapp(u.supervisorWhatsapp || "");
-      setSupervisorPhone(u.supervisorPhone || "");
+      const mergedSupervisor = u.supervisorWhatsapp || u.supervisorPhone || "";
+      setSupervisorWhatsapp(mergedSupervisor);
+      setSupervisorPhone(mergedSupervisor);
       setParentName(u.parentName || "");
       setParentOccupation(u.parentOccupation || "");
-      setParentWhatsapp(u.parentWhatsapp || "");
-      setParentPhone(u.parentPhone || "");
+      const mergedParent = u.parentWhatsapp || u.parentPhone || "";
+      setParentWhatsapp(mergedParent);
+      setParentPhone(mergedParent);
 
       if (u.interests) {
         const parsed = u.interests.split(/[,;]/).map((s: string) => s.trim()).filter(Boolean);
@@ -339,24 +348,39 @@ export default function ProfileEditScreen() {
               <AppInput label="NPSN" placeholder="National School Number" value={npsn} onChangeText={setNpsn} keyboardType="number-pad" />
               <AppInput label="School Address" placeholder="School address" value={schoolAddress} onChangeText={setSchoolAddress} />
               <AppInput label="School Email" placeholder="School email" value={schoolEmail} onChangeText={setSchoolEmail} keyboardType="email-address" />
-              <AppInput label="School WhatsApp" placeholder="School WhatsApp" value={schoolWhatsapp} onChangeText={setSchoolWhatsapp} keyboardType="phone-pad" />
-              <AppInput label="School Phone" placeholder="School phone" value={schoolPhone} onChangeText={setSchoolPhone} keyboardType="phone-pad" />
+              <AppInput
+                label="School Phone / WhatsApp"
+                placeholder="08xxx or +628xxx"
+                value={schoolWhatsapp}
+                onChangeText={(v) => { setSchoolWhatsapp(v); setSchoolPhone(v); }}
+                keyboardType="phone-pad"
+              />
             </View>
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Supervisor / Teacher</Text>
               <AppInput label="Name" placeholder="Supervisor name" value={supervisorName} onChangeText={setSupervisorName} />
               <AppInput label="Email" placeholder="Supervisor email" value={supervisorEmail} onChangeText={setSupervisorEmail} keyboardType="email-address" />
-              <AppInput label="WhatsApp" placeholder="Supervisor WhatsApp" value={supervisorWhatsapp} onChangeText={setSupervisorWhatsapp} keyboardType="phone-pad" />
-              <AppInput label="Phone" placeholder="Supervisor phone" value={supervisorPhone} onChangeText={setSupervisorPhone} keyboardType="phone-pad" />
+              <AppInput
+                label="Phone / WhatsApp"
+                placeholder="08xxx or +628xxx"
+                value={supervisorWhatsapp}
+                onChangeText={(v) => { setSupervisorWhatsapp(v); setSupervisorPhone(v); }}
+                keyboardType="phone-pad"
+              />
             </View>
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Parent / Guardian</Text>
               <AppInput label="Name" placeholder="Parent name" value={parentName} onChangeText={setParentName} />
               <AppInput label="Occupation" placeholder="Parent occupation" value={parentOccupation} onChangeText={setParentOccupation} />
-              <AppInput label="WhatsApp" placeholder="Parent WhatsApp" value={parentWhatsapp} onChangeText={setParentWhatsapp} keyboardType="phone-pad" />
-              <AppInput label="Phone" placeholder="Parent phone" value={parentPhone} onChangeText={setParentPhone} keyboardType="phone-pad" />
+              <AppInput
+                label="Phone / WhatsApp"
+                placeholder="08xxx or +628xxx"
+                value={parentWhatsapp}
+                onChangeText={(v) => { setParentWhatsapp(v); setParentPhone(v); }}
+                keyboardType="phone-pad"
+              />
             </View>
           </>
         )}
