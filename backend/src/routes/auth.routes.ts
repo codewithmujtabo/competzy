@@ -144,7 +144,14 @@ async function fetchUserWithRole(userId: string) {
 // ── POST /api/auth/signup ─────────────────────────────────────────────────
 router.post("/signup", authLimiter, async (req: Request, res: Response) => {
   try {
-    const { email, password, fullName, phone, city, province, role, roleData, consentAccepted } = req.body;
+    const { email, password, fullName, phone, city, province, country, role, roleData, consentAccepted } = req.body;
+
+    // Country is an optional ISO 3166-1 alpha-2 code (e.g. "ID", "MY") — match
+    // the validation PUT /users/me already applies.
+    const normalizedCountry =
+      typeof country === "string" && /^[A-Za-z]{2}$/.test(country.trim())
+        ? country.trim().toUpperCase()
+        : null;
 
     if (!email || !password || !fullName || !role) {
       res.status(400).json({ message: "email, password, fullName, and role are required" });
@@ -176,11 +183,11 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
       await client.query("BEGIN");
 
       const userResult = await client.query(
-        `INSERT INTO users (email, password_hash, full_name, phone, city, province, role, consent_accepted_at, consent_version)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, now(), $8)
+        `INSERT INTO users (email, password_hash, full_name, phone, city, province, country, role, consent_accepted_at, consent_version)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9)
          RETURNING id`,
         // Phone is normalised to the local 0-prefixed format on the way in.
-        [email, passwordHash, fullName, phone ? toLocalPhone(phone) || null : null, city || null, province || null, role, "1.0"]
+        [email, passwordHash, fullName, phone ? toLocalPhone(phone) || null : null, city || null, province || null, normalizedCountry, role, "1.0"]
       );
       const userId = userResult.rows[0].id;
 

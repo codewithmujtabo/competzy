@@ -19,7 +19,7 @@ import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { RegionSelect } from '@/components/ui/region-select';
+import { LocationCascade } from '@/components/ui/location-cascade';
 
 type SignupResponse = { token: string; user: { id: string; role: string } };
 
@@ -43,6 +43,7 @@ export default function CompetitionRegisterPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
+  const [country, setCountry] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState('');
   const [emailTaken, setEmailTaken] = useState(false);
@@ -91,6 +92,7 @@ export default function CompetitionRegisterPage() {
         phone: phone || undefined,
         city: city || undefined,
         province: province || undefined,
+        country: country ?? undefined,
         role: 'student',
         roleData: {},
         consentAccepted: consent,
@@ -281,15 +283,16 @@ export default function CompetitionRegisterPage() {
             </div>
 
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">
-                Province & city (optional)
-              </Label>
-              <RegionSelect
+              <Label className="mb-1.5 text-xs text-muted-foreground">Location (optional)</Label>
+              <LocationCascade
+                idCountry="reg-country"
                 idProvince="reg-prov"
                 idCity="reg-city"
+                country={country}
                 province={province || null}
                 city={city || null}
-                onChange={({ province: p, city: c }) => {
+                onChange={({ country: co, province: p, city: c }) => {
+                  setCountry(co);
                   setProvince(p ?? '');
                   setCity(c ?? '');
                 }}
