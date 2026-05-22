@@ -13,12 +13,28 @@ export interface AvailableExam {
   session: { id: string; state: "in_progress" | "finished" } | null;
 }
 
+// Multi-language content — the question stem and every MC option both carry
+// the 6 columns content..content6. The mobile lib/exam-languages.ts has
+// pickLang() that picks the active language with English fallback.
+export interface LangContent {
+  content: string;
+  content2: string;
+  content3: string;
+  content4: string;
+  content5: string;
+  content6: string;
+}
+
+export interface ExamOption extends LangContent {
+  id: string;
+}
+
 export interface ExamPeriod {
   id: string;
   number: number;
   type: string; // "choice" | "short"
-  questionContent: string;
-  options: { id: string; content: string }[];
+  question: LangContent;
+  options: ExamOption[];
   answerId: string | null;
   shortAnswer: string | null;
 }
@@ -42,6 +58,8 @@ export interface ExamResult {
 export interface ExamSession {
   id: string;
   examName: string;
+  /** ISO 639 code of the language the student picked at start, or null. */
+  language: string | null;
   finishedAt: string | null;
   remainingSeconds: number | null;
   periods: ExamPeriod[];
@@ -56,15 +74,29 @@ export async function getAvailableExams(compId: string): Promise<AvailableExam[]
 }
 
 /** Start (or resume) an attempt — returns the session id. */
-export async function startSession(examId: string): Promise<{ sessionId: string }> {
+export async function startSession(
+  examId: string,
+  language?: string,
+): Promise<{ sessionId: string }> {
   return apiRequest<{ sessionId: string }>(`/exams/${examId}/sessions`, {
     method: "POST",
-    body: {},
+    body: language ? { language } : {},
   });
 }
 
 export async function getSession(sessionId: string): Promise<ExamSession> {
   return apiRequest<ExamSession>(`/sessions/${sessionId}`);
+}
+
+/** One-shot — lock in the student's exam language. Idempotent server-side. */
+export async function setSessionLanguage(
+  sessionId: string,
+  language: string,
+): Promise<{ language: string | null }> {
+  return apiRequest<{ language: string | null }>(
+    `/sessions/${sessionId}/language`,
+    { method: "PUT", body: { language } },
+  );
 }
 
 /** Autosave one answer — `answerId` for MC, `shortAnswer` for short-answer. */

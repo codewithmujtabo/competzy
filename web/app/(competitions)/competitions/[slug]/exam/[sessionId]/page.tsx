@@ -3,27 +3,52 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Camera, CameraOff, Clock, Loader2 } from 'lucide-react';
+import { Camera, CameraOff, Clock, Globe, Loader2 } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
+import { LANGS, pickLang, type LangCode } from '@/lib/question-bank/languages';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 const TEXTAREA_CLS =
   'flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50';
 
+// Multi-language content carries the 6 columns content..content6. pickLang()
+// picks the active language with English fallback when empty.
+interface LangContent {
+  content: string;
+  content2: string;
+  content3: string;
+  content4: string;
+  content5: string;
+  content6: string;
+}
+
+interface Option extends LangContent {
+  id: string;
+}
+
 interface Period {
   id: string;
   number: number;
   type: string;
-  questionContent: string;
-  options: { id: string; content: string }[];
+  question: LangContent;
+  options: Option[];
   answerId: string | null;
   shortAnswer: string | null;
 }
+
 interface SessionData {
   id: string;
   examName: string;
+  language: LangCode | null;
   finishedAt: string | null;
   remainingSeconds: number | null;
   periods: Period[];
@@ -53,6 +78,8 @@ export default function ExamPlayerPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [cameraOn, setCameraOn] = useState<boolean | null>(null);
+  // Language picker — shown once when the session has no language yet.
+  const [langPickerOpen, setLangPickerOpen] = useState(false);
 
   useEffect(() => {
     emcHttp
@@ -70,11 +97,29 @@ export default function ExamPlayerPage() {
             s.periods.filter((p) => p.shortAnswer != null).map((p) => [p.id, p.shortAnswer!]),
           ),
         );
+        // First-time visit: pick a language before reading any question.
+        if (!s.language) setLangPickerOpen(true);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  const chooseLanguage = useCallback(
+    async (code: LangCode) => {
+      try {
+        const r = await emcHttp.put<{ language: LangCode | null }>(
+          `/sessions/${sessionId}/language`,
+          { language: code },
+        );
+        setSession((s) => (s ? { ...s, language: r.language ?? code } : s));
+        setLangPickerOpen(false);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Failed to set the language');
+      }
+    },
+    [sessionId],
+  );
 
   // Draw the current webcam frame to a JPEG and upload it. Best-effort —
   // failures are swallowed so they never disrupt the exam.
@@ -203,6 +248,7 @@ export default function ExamPlayerPage() {
     );
   }
 
+  const lang: LangCode = session.language ?? 'en';
   const answered = session.periods.filter(
     (p) => (p.type === 'short' ? sa[p.id]?.trim() : mc[p.id]),
   ).length;
@@ -214,7 +260,34 @@ export default function ExamPlayerPage() {
       <video ref={videoRef} muted playsInline className="hidden" />
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Sticky bar — exam name + camera + countdown */}
+      {/* One-shot language picker — only when sessions.language is null. */}
+      <Dialog open={langPickerOpen} onOpenChange={(v) => !v && session.language && setLangPickerOpen(false)}>
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Pick your exam language</DialogTitle>
+            <DialogDescription>
+              Choose the language you’d like to take this exam in. Your choice is locked
+              for the duration of the attempt. Questions without a translation in your
+              language fall back to English.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-2 pt-2">
+            {LANGS.map((l) => (
+              <button
+                key={l.code}
+                type="button"
+                onClick={() => void chooseLanguage(l.code)}
+                className="flex items-center justify-center gap-2 rounded-md border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-primary hover:bg-primary/5"
+              >
+                <Globe className="size-4 text-muted-foreground" />
+                {l.label}
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sticky bar — exam name + language + camera + countdown */}
       <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-6 py-3">
           <div className="min-w-0">
@@ -224,6 +297,10 @@ export default function ExamPlayerPage() {
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <span className="flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs text-muted-foreground">
+              <Globe className="size-3.5" />
+              {LANGS.find((l) => l.code === lang)?.label ?? 'English'}
+            </span>
             {cameraOn != null && (
               <span
                 className={cn(
@@ -270,9 +347,13 @@ export default function ExamPlayerPage() {
                 {p.type === 'short' ? 'Short answer' : 'Multiple choice'}
               </span>
             </div>
-            <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-foreground">
-              {p.questionContent}
-            </p>
+            {/* Question stem is operator-authored HTML (TipTap output) — KaTeX
+                math spans render via the katex CSS imported in the root layout.
+                Trusted content; no sanitisation needed at runtime. */}
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none text-[15px] leading-relaxed text-foreground"
+              dangerouslySetInnerHTML={{ __html: pickLang(p.question, lang) }}
+            />
 
             {p.type === 'short' ? (
               <textarea
@@ -289,7 +370,7 @@ export default function ExamPlayerPage() {
                   <li key={o.id}>
                     <label
                       className={cn(
-                        'flex cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors',
+                        'flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2 text-sm transition-colors',
                         mc[p.id] === o.id
                           ? 'border-primary bg-primary/5'
                           : 'bg-card hover:bg-accent',
@@ -298,14 +379,17 @@ export default function ExamPlayerPage() {
                       <input
                         type="radio"
                         name={p.id}
-                        className="size-4 accent-primary"
+                        className="mt-1 size-4 shrink-0 accent-primary"
                         checked={mc[p.id] === o.id}
                         onChange={() => {
                           setMc((prev) => ({ ...prev, [p.id]: o.id }));
                           void saveAnswer(p.id, { answerId: o.id });
                         }}
                       />
-                      <span className="text-foreground">{o.content}</span>
+                      <span
+                        className="prose prose-sm dark:prose-invert max-w-none text-foreground [&_p]:m-0"
+                        dangerouslySetInnerHTML={{ __html: pickLang(o, lang) }}
+                      />
                     </label>
                   </li>
                 ))}

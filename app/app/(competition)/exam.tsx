@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +19,12 @@ import { Button, Card, Pill, ScreenHeader } from "@/components/ui";
 import { Brand, Radius, Spacing, Surface, Text as TextColor, Type } from "@/constants/theme";
 import * as examsService from "@/services/exams.service";
 import type { ExamPeriod } from "@/services/exams.service";
+import {
+  LANGS,
+  htmlToPlainText,
+  pickLang,
+  type LangCode,
+} from "@/lib/exam-languages";
 
 function fmtClock(s: number): string {
   const m = Math.floor(s / 60);
@@ -42,6 +49,11 @@ export default function ExamPlayerScreen() {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const submitted = useRef(false);
+  // Language — locked once the student picks. Defaults to "en" on the wire
+  // until the modal commits a choice (the picker auto-opens on first load
+  // when sessions.language is null).
+  const [langPickerOpen, setLangPickerOpen] = useState(false);
+  const [activeLang, setActiveLang] = useState<LangCode>("en");
 
   useEffect(() => {
     if (!session) return;
@@ -54,7 +66,26 @@ export default function ExamPlayerScreen() {
     setMc(m);
     setSa(s);
     setRemaining(session.remainingSeconds);
+    if (session.language) {
+      setActiveLang(session.language as LangCode);
+    } else {
+      setLangPickerOpen(true);
+    }
   }, [session]);
+
+  const chooseLanguage = useCallback(
+    async (code: LangCode) => {
+      if (!sessionId) return;
+      try {
+        await examsService.setSessionLanguage(sessionId, code);
+        setActiveLang(code);
+        setLangPickerOpen(false);
+      } catch (err: any) {
+        Alert.alert("Could not set language", err?.message || "Please try again.");
+      }
+    },
+    [sessionId],
+  );
 
   // A finished session has no player — bounce to the result.
   useEffect(() => {
@@ -132,6 +163,36 @@ export default function ExamPlayerScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* One-shot language picker — only when sessions.language is null. */}
+      <Modal
+        visible={langPickerOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => session?.language && setLangPickerOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={[Type.h3, { marginBottom: Spacing.xs }]}>Pick your exam language</Text>
+            <Text style={[Type.bodySm, { color: TextColor.secondary, marginBottom: Spacing.lg }]}>
+              Your choice is locked for the duration of the attempt. Questions without
+              a translation in your language fall back to English.
+            </Text>
+            <View style={{ gap: Spacing.sm }}>
+              {LANGS.map((l) => (
+                <Pressable
+                  key={l.code}
+                  onPress={() => void chooseLanguage(l.code)}
+                  style={styles.langOption}
+                >
+                  <Ionicons name="globe-outline" size={18} color={Brand.primary} />
+                  <Text style={[Type.body, { color: TextColor.primary }]}>{l.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <ScreenHeader
         title={session.examName}
         onBack={() => router.back()}
@@ -153,10 +214,17 @@ export default function ExamPlayerScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.langChip}>
+          <Ionicons name="globe-outline" size={14} color={TextColor.tertiary} />
+          <Text style={[Type.caption, { color: TextColor.secondary }]}>
+            {LANGS.find((l) => l.code === activeLang)?.label ?? "English"}
+          </Text>
+        </View>
         {session.periods.map((p) => (
           <QuestionCard
             key={p.id}
             period={p}
+            lang={activeLang}
             selected={mc[p.id] ?? null}
             shortValue={sa[p.id] ?? ""}
             onSelect={(answerId) => saveMc(p.id, answerId)}
@@ -179,6 +247,7 @@ export default function ExamPlayerScreen() {
 
 function QuestionCard({
   period,
+  lang,
   selected,
   shortValue,
   onSelect,
@@ -186,6 +255,7 @@ function QuestionCard({
   onShortBlur,
 }: {
   period: ExamPeriod;
+  lang: LangCode;
   selected: string | null;
   shortValue: string;
   onSelect: (answerId: string) => void;
@@ -193,15 +263,21 @@ function QuestionCard({
   onShortBlur: () => void;
 }) {
   const isMc = period.options && period.options.length > 0;
+  // The operator authors questions as HTML (TipTap output, with KaTeX math
+  // spans on the web). Mobile strips the HTML to plain text — math comes
+  // through as the raw LaTeX source ($x^2$). A future phase can render the
+  // HTML properly with `react-native-render-html` + a math renderer.
+  const stem = htmlToPlainText(pickLang(period.question, lang));
   return (
     <Card variant="playful">
       <Text style={[Type.label, { color: Brand.primary }]}>Question {period.number}</Text>
-      <Text style={[Type.body, { marginTop: Spacing.xs }]}>{period.questionContent}</Text>
+      <Text style={[Type.body, { marginTop: Spacing.xs }]}>{stem}</Text>
 
       {isMc ? (
         <View style={{ marginTop: Spacing.md, gap: Spacing.sm }}>
           {period.options.map((opt) => {
             const on = selected === opt.id;
+            const text = htmlToPlainText(pickLang(opt, lang));
             return (
               <Pressable
                 key={opt.id}
@@ -212,7 +288,7 @@ function QuestionCard({
                   {on ? <View style={styles.radioDot} /> : null}
                 </View>
                 <Text style={[Type.body, { flex: 1 }, on && { color: Brand.primaryDark }]}>
-                  {opt.content}
+                  {text}
                 </Text>
               </Pressable>
             );
@@ -241,6 +317,41 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: Spacing["2xl"],
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: Spacing.xl,
+  },
+  modalCard: {
+    width: "100%",
+    backgroundColor: Surface.card,
+    borderRadius: Radius.xl,
+    padding: Spacing.xl,
+  },
+  langOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Surface.border,
+    backgroundColor: Surface.card,
+  },
+  langChip: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Surface.border,
+    backgroundColor: Surface.card,
   },
   content: {
     paddingHorizontal: Spacing.xl,
