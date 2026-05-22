@@ -192,7 +192,7 @@ export default function RepAchievementsPage() {
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <Table>
+                    <Table className="min-w-[760px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Student</TableHead>
