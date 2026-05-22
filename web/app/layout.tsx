@@ -5,6 +5,9 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 import { ImpersonationBanner } from '@/components/impersonation-banner';
 import './globals.css';
+// KaTeX styles — loaded once at the root so any TipTap math node
+// (Question Bank editor, student exam runner, etc.) renders correctly.
+import 'katex/dist/katex.min.css';
 
 export const metadata: Metadata = {
   title: 'Competzy',
