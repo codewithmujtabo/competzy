@@ -437,7 +437,7 @@ export default function BulkRegistrationPage() {
                 )}
               </div>
               <div className="overflow-x-auto rounded-lg border">
-                <Table>
+                <Table className="min-w-[760px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-10">#</TableHead>

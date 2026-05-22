@@ -86,7 +86,7 @@ export default function RevenuePage() {
           <p className="mt-0.5 text-xs text-muted-foreground">Revenue and its share of your total.</p>
         </div>
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[760px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Competition</TableHead>
