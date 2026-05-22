@@ -1,4 +1,5 @@
 'use client';
+import { QuestionBankProvider } from '@/lib/question-bank/context';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -69,7 +70,7 @@ function fmtDate(s: string | null) {
   return new Date(s).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-export default function AnnouncementsPage() {
+function AnnouncementsPage() {
   const { competitions, loading: compsLoading } = useQuestionBank();
   const { user } = useQuestionBankAuth();
   const isAdmin = user?.role === 'admin';
@@ -431,5 +432,17 @@ export default function AnnouncementsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Mounted under /(dashboard) so the surrounding layout is the admin shell.
+// QuestionBankProvider still wraps the page so the existing competition
+// picker keeps working — moving these pages out of /question-bank doesn't
+// change how they fetch the operator's competitions.
+export default function AnnouncementsPageWithProvider() {
+  return (
+    <QuestionBankProvider>
+      <AnnouncementsPage />
+    </QuestionBankProvider>
   );
 }

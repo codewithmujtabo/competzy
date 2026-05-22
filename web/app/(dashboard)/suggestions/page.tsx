@@ -1,4 +1,5 @@
 'use client';
+import { QuestionBankProvider } from '@/lib/question-bank/context';
 
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -30,7 +31,7 @@ function fmtDate(s: string) {
   });
 }
 
-export default function SuggestionsPage() {
+function SuggestionsPage() {
   const { selectedId, competitions, loading: compsLoading } = useQuestionBank();
   const [rows, setRows] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -147,5 +148,17 @@ export default function SuggestionsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Mounted under /(dashboard) so the surrounding layout is the admin shell.
+// QuestionBankProvider still wraps the page so the existing competition
+// picker keeps working — moving these pages out of /question-bank doesn't
+// change how they fetch the operator's competitions.
+export default function SuggestionsPageWithProvider() {
+  return (
+    <QuestionBankProvider>
+      <SuggestionsPage />
+    </QuestionBankProvider>
   );
 }
