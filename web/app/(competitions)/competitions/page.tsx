@@ -456,12 +456,12 @@ export default function CompetitionCatalogPage() {
 
         {/* Continue where you left off */}
         {isStudent && summary?.continueTask && (
-          <Card className="flex flex-wrap items-center justify-between gap-3 border-primary/30 bg-primary/5 p-5">
-            <div className="flex min-w-0 items-center gap-3">
+          <Card className="flex flex-wrap items-center justify-between gap-3 overflow-hidden border-primary/30 bg-primary/5 p-5">
+            <div className="flex min-w-0 flex-1 basis-[12rem] items-center gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                 {summary.continueTask.type === 'pay' ? <ClipboardCheck className="size-5" /> : <ShieldCheck className="size-5" />}
               </span>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary/80">
                   Continue where you left off
                 </p>
@@ -470,7 +470,7 @@ export default function CompetitionCatalogPage() {
                 </p>
               </div>
             </div>
-            <Button asChild size="sm">
+            <Button asChild size="sm" className="shrink-0">
               <Link
                 href={
                   summary.continueTask.slug
