@@ -222,7 +222,7 @@ export default function PaperExamsPage() {
       ) : (
         <Card className="overflow-hidden p-0">
           <div className="overflow-x-auto">
-            <Table className="w-full table-fixed min-w-[760px]">
+            <Table className="w-full table-fixed min-w-[1024px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
