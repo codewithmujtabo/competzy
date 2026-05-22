@@ -1,4 +1,5 @@
 'use client';
+import { QuestionBankProvider } from '@/lib/question-bank/context';
 
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -55,7 +56,7 @@ function rupiah(n: number) {
   return `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
 }
 
-export default function ReferralsPage() {
+function ReferralsPage() {
   const { selectedId, selected, competitions, loading: compsLoading } = useQuestionBank();
   const [rows, setRows] = useState<Referral[]>([]);
   const [total, setTotal] = useState(0);
@@ -406,5 +407,17 @@ export default function ReferralsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Mounted under /(dashboard) so the surrounding layout is the admin shell.
+// QuestionBankProvider still wraps the page so the existing competition
+// picker keeps working — moving these pages out of /question-bank doesn't
+// change how they fetch the operator's competitions.
+export default function ReferralsPageWithProvider() {
+  return (
+    <QuestionBankProvider>
+      <ReferralsPage />
+    </QuestionBankProvider>
   );
 }

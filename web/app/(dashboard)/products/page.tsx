@@ -1,4 +1,5 @@
 'use client';
+import { QuestionBankProvider } from '@/lib/question-bank/context';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -53,7 +54,7 @@ function rupiah(n: number) {
   return `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
 }
 
-export default function ProductsPage() {
+function ProductsPage() {
   const { selectedId, competitions, loading: compsLoading } = useQuestionBank();
   const [rows, setRows] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
@@ -411,5 +412,17 @@ export default function ProductsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Mounted under /(dashboard) so the surrounding layout is the admin shell.
+// QuestionBankProvider still wraps the page so the existing competition
+// picker keeps working — moving these pages out of /question-bank doesn't
+// change how they fetch the operator's competitions.
+export default function ProductsPageWithProvider() {
+  return (
+    <QuestionBankProvider>
+      <ProductsPage />
+    </QuestionBankProvider>
   );
 }

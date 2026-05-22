@@ -1,4 +1,5 @@
 'use client';
+import { QuestionBankProvider } from '@/lib/question-bank/context';
 
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -91,7 +92,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function OrdersPage() {
+function OrdersPage() {
   const { selectedId, competitions, loading: compsLoading } = useQuestionBank();
   const [rows, setRows] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
@@ -379,5 +380,17 @@ export default function OrdersPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// Mounted under /(dashboard) so the surrounding layout is the admin shell.
+// QuestionBankProvider still wraps the page so the existing competition
+// picker keeps working — moving these pages out of /question-bank doesn't
+// change how they fetch the operator's competitions.
+export default function OrdersPageWithProvider() {
+  return (
+    <QuestionBankProvider>
+      <OrdersPage />
+    </QuestionBankProvider>
   );
 }

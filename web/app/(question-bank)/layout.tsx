@@ -10,19 +10,12 @@ import {
   FileSpreadsheet,
   FileText,
   FolderTree,
-  BookOpen,
   LayoutGrid,
   Library,
   ListChecks,
   Loader2,
   Medal,
-  Megaphone,
-  MessageSquare,
-  Package,
   PenLine,
-  Share2,
-  ShoppingBag,
-  Ticket,
   Video,
 } from 'lucide-react';
 import { QuestionBankAuthProvider, useQuestionBankAuth } from '@/lib/auth/question-bank-context';
@@ -73,23 +66,6 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
         { label: 'Proctoring', href: '/question-bank/proctoring', icon: Video },
         { label: 'Certificates', href: '/question-bank/certificates', icon: Award },
         { label: 'Medalists', href: '/question-bank/medalists', icon: Medal },
-      ],
-    },
-    {
-      label: 'Commerce',
-      items: [
-        { label: 'Products', href: '/question-bank/products', icon: Package },
-        { label: 'Vouchers', href: '/question-bank/vouchers', icon: Ticket },
-        { label: 'Orders', href: '/question-bank/orders', icon: ShoppingBag },
-      ],
-    },
-    {
-      label: 'Marketing',
-      items: [
-        { label: 'Referrals', href: '/question-bank/referrals', icon: Share2 },
-        { label: 'Announcements', href: '/question-bank/announcements', icon: Megaphone },
-        { label: 'Materials', href: '/question-bank/materials', icon: BookOpen },
-        { label: 'Suggestions', href: '/question-bank/suggestions', icon: MessageSquare },
       ],
     },
     {

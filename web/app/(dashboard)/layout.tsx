@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  BookOpen,
   ClipboardList,
   Clock,
   Globe,
@@ -13,7 +14,12 @@ import {
   Loader2,
   MapPin,
   Megaphone,
+  MessageSquare,
+  Package,
   School,
+  Share2,
+  ShoppingBag,
+  Ticket,
   Trophy,
   Users,
 } from 'lucide-react';
@@ -40,6 +46,23 @@ const NAV: NavSection[] = [
       { label: 'Schools', href: '/schools', icon: School },
       { label: 'Country Reps', href: '/country-reps', icon: Globe },
       { label: 'Users', href: '/users', icon: Users },
+    ],
+  },
+  {
+    label: 'Commerce',
+    items: [
+      { label: 'Products', href: '/products', icon: Package },
+      { label: 'Vouchers', href: '/vouchers', icon: Ticket },
+      { label: 'Orders', href: '/orders', icon: ShoppingBag },
+    ],
+  },
+  {
+    label: 'Marketing',
+    items: [
+      { label: 'Referrals', href: '/referrals', icon: Share2 },
+      { label: 'Announcements', href: '/announcements', icon: Megaphone },
+      { label: 'Materials', href: '/materials', icon: BookOpen },
+      { label: 'Suggestions', href: '/suggestions', icon: MessageSquare },
     ],
   },
 ];
