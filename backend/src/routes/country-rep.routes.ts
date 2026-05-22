@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import * as bcrypt from "bcrypt";
 import { randomUUID, randomBytes } from "crypto";
+import PDFDocument from "pdfkit";
 import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
 import { adminOnly } from "../middleware/admin.middleware";
@@ -432,6 +433,168 @@ router.get("/rep/pay-batch/:id/verify", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("Rep pay-batch verify error:", err);
     res.status(500).json({ message: "Failed to verify the payment" });
+  }
+});
+
+// ── Rep: GET /api/rep/export/achievement.pdf ──────────────────────────────
+// Achievement PDF parity with /api/{schools,teachers}/export/achievement.pdf,
+// scoped to the rep's country + competition. Two sources: medalists from the
+// local round (current cohort) and historical_participants claimed by students
+// registered for this local round (prior performance).
+router.get("/export/achievement.pdf", async (req: Request, res: Response) => {
+  try {
+    const a = await repAssignment(req.userId!);
+    if (!a) {
+      res.status(404).json({ message: "No representative assignment found." });
+      return;
+    }
+    const round = await localRound(a.comp_id, a.country);
+
+    const meRow = await pool.query(
+      "SELECT full_name FROM users WHERE id = $1",
+      [req.userId],
+    );
+    const repName: string = meRow.rows[0]?.full_name ?? "Country Representative";
+
+    // Current-cohort results — every registration in this local round that
+    // carries a score, ordered medalists first then by score desc.
+    const current = round
+      ? await pool.query(
+          `SELECT u.full_name, r.score, r.is_medalist, r.status
+             FROM registrations r
+             JOIN users u ON u.id = r.user_id AND u.deleted_at IS NULL
+            WHERE r.round_id = $1 AND r.deleted_at IS NULL AND r.score IS NOT NULL
+            ORDER BY r.is_medalist DESC NULLS LAST, r.score DESC NULLS LAST, u.full_name ASC
+            LIMIT 1000`,
+          [round.id],
+        )
+      : { rows: [] as any[] };
+
+    // Historical claims — any prior result the students in this local round
+    // already claimed on Competzy.
+    const historical = round
+      ? await pool.query(
+          `SELECT u.full_name, hp.comp_name, hp.comp_year, hp.result, hp.event_part
+             FROM registrations r
+             JOIN users u ON u.id = r.user_id AND u.deleted_at IS NULL
+             JOIN historical_participants hp ON hp.claimed_by = u.id
+            WHERE r.round_id = $1 AND r.deleted_at IS NULL AND hp.result IS NOT NULL
+            ORDER BY hp.comp_year DESC, u.full_name ASC
+            LIMIT 1000`,
+          [round.id],
+        )
+      : { rows: [] as any[] };
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="achievement-${a.country.toLowerCase()}-${a.comp_id.toLowerCase()}-${Date.now()}.pdf"`,
+    );
+
+    const doc = new PDFDocument({ margin: 48, size: "A4" });
+    doc.pipe(res);
+
+    doc.fontSize(9).fillColor("#94A3B8").text("COMPETZY", { align: "right" });
+    doc.moveDown(0.6);
+    doc.fontSize(22).fillColor("#0F172A").font("Helvetica-Bold")
+      .text(`${a.comp_name} — ${a.country}`, { align: "left" });
+    doc.fontSize(11).fillColor("#475569").font("Helvetica")
+      .text(`Country Representative · ${repName}`, { align: "left" });
+    doc.moveDown(0.4);
+    doc.fontSize(16).fillColor("#0F172A").font("Helvetica-Bold")
+      .text("Student Achievement Report");
+    doc.fontSize(10).fillColor("#94A3B8").font("Helvetica")
+      .text(
+        `Generated ${new Date().toLocaleDateString("en-GB", {
+          day: "numeric", month: "long", year: "numeric",
+        })}`,
+      );
+    doc.moveDown(1);
+
+    if (!round) {
+      doc.fontSize(12).fillColor("#475569")
+        .text("No local round has been configured yet for your country.");
+      doc.end();
+      return;
+    }
+
+    // Section 1 — current cohort.
+    doc.fontSize(13).fillColor("#0F172A").font("Helvetica-Bold")
+      .text(`${round.round_name} — current cohort`);
+    doc.moveDown(0.4);
+
+    if (current.rows.length === 0) {
+      doc.fontSize(10).fillColor("#475569").font("Helvetica")
+        .text("No scored results yet for the current cohort.");
+    } else {
+      doc.fontSize(10).fillColor("#0F172A").font("Helvetica-Bold");
+      const head1Y = doc.y;
+      doc.text("Student",     48,  head1Y, { width: 240 });
+      doc.text("Score",       300, head1Y, { width: 80  });
+      doc.text("Medal",       388, head1Y, { width: 80  });
+      doc.text("Status",      476, head1Y, { width: 84  });
+      doc.moveTo(48, doc.y + 4).lineTo(560, doc.y + 4)
+        .strokeColor("#CBD5E1").lineWidth(0.5).stroke();
+      doc.moveDown(0.6);
+
+      doc.fontSize(10).font("Helvetica").fillColor("#0F172A");
+      for (const row of current.rows) {
+        const y = doc.y;
+        doc.text(String(row.full_name ?? "—"),       48,  y, { width: 240 });
+        doc.text(row.score != null ? String(row.score) : "—", 300, y, { width: 80 });
+        doc.text(row.is_medalist ? "Medal" : "—",    388, y, { width: 80 });
+        doc.text(String(row.status ?? "—").replace(/_/g, " "), 476, y, { width: 84 });
+        doc.moveDown(0.7);
+        if (doc.y > 760) doc.addPage();
+      }
+    }
+
+    // Section 2 — historical claims.
+    doc.moveDown(1);
+    doc.fontSize(13).fillColor("#0F172A").font("Helvetica-Bold")
+      .text("Prior achievements (historical records)");
+    doc.moveDown(0.4);
+
+    if (historical.rows.length === 0) {
+      doc.fontSize(10).fillColor("#475569").font("Helvetica")
+        .text("None of these students have claimed historical Competzy records.");
+    } else {
+      doc.fontSize(10).fillColor("#0F172A").font("Helvetica-Bold");
+      const head2Y = doc.y;
+      doc.text("Student",     48,  head2Y, { width: 180 });
+      doc.text("Competition", 232, head2Y, { width: 200 });
+      doc.text("Year",        436, head2Y, { width: 40  });
+      doc.text("Result",      480, head2Y, { width: 80  });
+      doc.moveTo(48, doc.y + 4).lineTo(560, doc.y + 4)
+        .strokeColor("#CBD5E1").lineWidth(0.5).stroke();
+      doc.moveDown(0.6);
+
+      doc.fontSize(10).font("Helvetica").fillColor("#0F172A");
+      for (const row of historical.rows) {
+        const y = doc.y;
+        doc.text(String(row.full_name ?? "—"), 48, y, { width: 180 });
+        doc.text(
+          `${row.comp_name ?? "—"}${row.event_part ? ` (${row.event_part})` : ""}`,
+          232, y, { width: 200 },
+        );
+        doc.text(String(row.comp_year ?? "—"), 436, y, { width: 40 });
+        doc.text(String(row.result ?? "—").toUpperCase(), 480, y, { width: 80 });
+        doc.moveDown(0.7);
+        if (doc.y > 760) doc.addPage();
+      }
+    }
+
+    doc.moveDown(1.4);
+    doc.fontSize(8).fillColor("#94A3B8")
+      .text(
+        "This report is generated from competition data registered on Competzy and historical competition records.",
+        { align: "center" },
+      );
+    doc.end();
+  } catch (err) {
+    console.error("Rep achievement PDF error:", err);
+    if (!res.headersSent)
+      res.status(500).json({ message: "Failed to generate achievement PDF" });
   }
 });
 

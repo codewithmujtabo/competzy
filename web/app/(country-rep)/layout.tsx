@@ -2,14 +2,42 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Globe, Loader2, Users } from 'lucide-react';
+import {
+  Award,
+  CalendarClock,
+  ClipboardList,
+  CreditCard,
+  Globe,
+  LayoutGrid,
+  Loader2,
+  Upload,
+  Users,
+} from 'lucide-react';
 
 import { CountryRepAuthProvider, useCountryRepAuth } from '@/lib/auth/country-rep-context';
 import { AppShell, type NavSection } from '@/components/shell/app-shell';
 
 const NAV: NavSection[] = [
   {
-    items: [{ label: 'My Students', href: '/rep-portal', icon: Users, exact: true }],
+    items: [
+      { label: 'Dashboard',         href: '/rep-portal',                   icon: LayoutGrid,    exact: true },
+      { label: 'My Students',       href: '/rep-portal/students',          icon: Users },
+      { label: 'Bulk Registration', href: '/rep-portal/bulk-registration', icon: Upload },
+      { label: 'Bulk Payment',      href: '/rep-portal/bulk-payment',      icon: CreditCard },
+      { label: 'Registrations',     href: '/rep-portal/registrations',     icon: ClipboardList },
+      { label: 'Deadlines',         href: '/rep-portal/deadlines',         icon: CalendarClock },
+    ],
+  },
+  {
+    label: 'Reports',
+    items: [
+      {
+        label: 'Achievement PDF',
+        href: '/api/rep/export/achievement.pdf',
+        icon: Award,
+        external: true,
+      },
+    ],
   },
 ];
 
