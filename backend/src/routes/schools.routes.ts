@@ -219,6 +219,79 @@ router.get("/search", async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /api/schools/by-npsn/:npsn ────────────────────────────────────────
+// Single-school lookup, keyed by NPSN. Powers the profile/register pages'
+// school-name auto-fill: a student types their school's NPSN and the school
+// name + address pops in automatically (the mobile-app behaviour, ported to
+// the web). Returns 404 when no school matches — callers fall back to manual
+// entry.
+//
+// Tries the local DB first (NPSN is UNIQUE so the lookup is O(1)). Falls
+// back to api.co.id when not found locally AND `API_CO_ID_KEY` is set. Same
+// flat response shape regardless of source so the client doesn't have to
+// branch.
+router.get("/by-npsn/:npsn", async (req: Request, res: Response) => {
+  try {
+    const raw = String(req.params.npsn ?? "").trim();
+    // NPSN is an 8-digit Indonesian school identifier. Reject anything that
+    // isn't plausibly one before we hit the DB or the upstream API.
+    if (!/^\d{6,12}$/.test(raw)) {
+      res.status(400).json({ message: "Invalid NPSN" });
+      return;
+    }
+
+    const local = await pool.query(
+      "SELECT npsn, name, address, city, province FROM schools WHERE npsn = $1 LIMIT 1",
+      [raw],
+    );
+    if (local.rows.length > 0) {
+      const s = local.rows[0];
+      res.json({
+        source: "db" as const,
+        npsn: s.npsn,
+        name: s.name,
+        address: s.address,
+        city: s.city,
+        province: s.province,
+      });
+      return;
+    }
+
+    // Optional upstream fallback — same API the school-search endpoint uses.
+    if (env.API_CO_ID_KEY) {
+      try {
+        const params = new URLSearchParams({ npsn: raw, page: "1" });
+        const apiUrl = `https://use.api.co.id/regional/indonesia/schools?${params.toString()}`;
+        const response = await fetch(apiUrl, {
+          headers: { "x-api-co-id": env.API_CO_ID_KEY },
+        });
+        if (response.ok) {
+          const data: any = await response.json();
+          const hit = (data.data ?? [])[0];
+          if (hit) {
+            res.json({
+              source: "api.co.id" as const,
+              npsn: hit.npsn,
+              name: hit.name,
+              address: hit.address,
+              city: hit.regency_name,
+              province: hit.province_name,
+            });
+            return;
+          }
+        }
+      } catch {
+        // upstream is best-effort — fall through to 404
+      }
+    }
+
+    res.status(404).json({ message: "School not found" });
+  } catch (err) {
+    console.error("Schools by-npsn error:", err);
+    res.status(500).json({ message: "Failed to look up school" });
+  }
+});
+
 // ── POST /api/schools ─────────────────────────────────────────────────────
 // Create a new school (admin endpoint - would typically be restricted)
 router.post("/", authMiddleware, async (req: Request, res: Response) => {

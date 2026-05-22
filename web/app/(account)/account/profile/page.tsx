@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Upload } from 'lucide-react';
+import { CheckCircle2, Loader2, Search, Upload } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { INTEREST_CATEGORIES } from '@/lib/constants/interests';
@@ -98,6 +98,16 @@ export default function AccountProfilePage() {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [otherInterest, setOtherInterest] = useState('');
 
+  // School-name auto-fill state, driven by the NPSN field. `npsnLookup`
+  // tracks the network state of the most recent /schools/by-npsn lookup so
+  // the UI can show "Looking up…" → ✓ Found / ✗ Not found inline.
+  type LookupState =
+    | { status: 'idle' }
+    | { status: 'loading' }
+    | { status: 'found'; name: string; npsn: string }
+    | { status: 'not-found'; npsn: string };
+  const [npsnLookup, setNpsnLookup] = useState<LookupState>({ status: 'idle' });
+
   const photoInputRef = useRef<HTMLInputElement>(null);
   const cardInputRef = useRef<HTMLInputElement>(null);
 
@@ -152,6 +162,48 @@ export default function AccountProfilePage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // School-name auto-fill — when NPSN looks plausibly complete, hit the
+  // /schools/by-npsn endpoint. Auto-populates schoolName (and address if it's
+  // empty, so we never overwrite a manual edit). Debounced 350 ms so the
+  // user can finish typing.
+  useEffect(() => {
+    const npsn = form.npsn.trim();
+    if (!/^\d{6,12}$/.test(npsn)) {
+      setNpsnLookup({ status: 'idle' });
+      return;
+    }
+    // Don't re-hit the API for an NPSN we already resolved.
+    if (
+      (npsnLookup.status === 'found' || npsnLookup.status === 'not-found') &&
+      npsnLookup.npsn === npsn
+    ) {
+      return;
+    }
+    setNpsnLookup({ status: 'loading' });
+    const timer = window.setTimeout(async () => {
+      try {
+        const r = await emcHttp.get<{
+          name: string;
+          address: string | null;
+          city: string | null;
+          province: string | null;
+        }>(`/schools/by-npsn/${encodeURIComponent(npsn)}`);
+        setNpsnLookup({ status: 'found', name: r.name, npsn });
+        setForm((f) => ({
+          ...f,
+          schoolName: r.name,
+          // Only overwrite an empty school address — never clobber a manual edit.
+          schoolAddress: f.schoolAddress?.trim() ? f.schoolAddress : r.address ?? '',
+        }));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : '';
+        if (/not found|404/i.test(msg)) setNpsnLookup({ status: 'not-found', npsn });
+        else setNpsnLookup({ status: 'idle' }); // transient — silent
+      }
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [form.npsn, npsnLookup]);
 
   async function uploadPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -430,12 +482,32 @@ export default function AccountProfilePage() {
           onChange={(e) => set('nisn', e.target.value)}
           placeholder="National Student Number"
         />
-        <Field
-          label="NPSN"
-          value={form.npsn}
-          onChange={(e) => set('npsn', e.target.value)}
-          placeholder="National School Number"
-        />
+        <div className="space-y-1.5">
+          <Label>NPSN</Label>
+          <Input
+            value={form.npsn}
+            onChange={(e) => set('npsn', e.target.value.replace(/\D/g, ''))}
+            placeholder="National School Number"
+            inputMode="numeric"
+          />
+          {npsnLookup.status === 'loading' && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Search className="size-3 animate-pulse" />
+              Looking up school…
+            </p>
+          )}
+          {npsnLookup.status === 'found' && (
+            <p className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="size-3" />
+              Found: <span className="font-medium">{npsnLookup.name}</span>
+            </p>
+          )}
+          {npsnLookup.status === 'not-found' && (
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              No school matches that NPSN — type the school name manually.
+            </p>
+          )}
+        </div>
         <Field
           label="School address"
           wide
