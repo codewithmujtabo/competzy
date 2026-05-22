@@ -194,13 +194,13 @@ export default function QuestionsListPage() {
           <Table className="w-full table-fixed min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-20">Code</TableHead>
+                <TableHead className="w-20 truncate">Code</TableHead>
                 <TableHead>Question</TableHead>
-                <TableHead className="w-28">Type</TableHead>
-                <TableHead className="w-24">Grades</TableHead>
-                <TableHead className="w-24">Status</TableHead>
-                <TableHead className="w-36">Writer</TableHead>
-                <TableHead className="w-24 text-right">Actions</TableHead>
+                <TableHead className="w-28 truncate">Type</TableHead>
+                <TableHead className="w-24 truncate">Grades</TableHead>
+                <TableHead className="w-24 truncate">Status</TableHead>
+                <TableHead className="w-36 truncate">Writer</TableHead>
+                <TableHead className="w-24 text-right truncate">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

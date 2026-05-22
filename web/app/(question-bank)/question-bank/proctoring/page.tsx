@@ -111,10 +111,10 @@ export default function ProctoringPage() {
               <TableRow>
                 <TableHead>Student</TableHead>
                 <TableHead>Exam</TableHead>
-                <TableHead className="w-40">Started</TableHead>
-                <TableHead className="w-28">Camera</TableHead>
-                <TableHead className="w-24">Snapshots</TableHead>
-                <TableHead className="w-24 text-right">Action</TableHead>
+                <TableHead className="w-40 truncate">Started</TableHead>
+                <TableHead className="w-28 truncate">Camera</TableHead>
+                <TableHead className="w-24 truncate">Snapshots</TableHead>
+                <TableHead className="w-24 text-right truncate">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
