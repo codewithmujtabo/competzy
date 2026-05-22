@@ -12,10 +12,16 @@ interface ChartCardProps {
   bodyClassName?: string;
 }
 
-/** A titled card wrapper for charts and list panels. */
+/** A titled card wrapper for charts and list panels.
+ *
+ * `overflow-hidden` on the outer Card prevents recharts' ResponsiveContainer
+ * from pushing the card beyond its grid column on narrow viewports — recharts
+ * occasionally over-measures during hydration, which used to make the chart
+ * spill past the right edge of the viewport on mobile.
+ */
 export function ChartCard({ title, description, action, children, className, bodyClassName }: ChartCardProps) {
   return (
-    <Card className={cn('gap-0 p-0', className)}>
+    <Card className={cn('gap-0 overflow-hidden p-0', className)}>
       <div className="flex items-start justify-between gap-3 border-b px-5 py-4">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-foreground">{title}</h3>
@@ -23,7 +29,7 @@ export function ChartCard({ title, description, action, children, className, bod
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
-      <div className={cn('px-5 py-4', bodyClassName)}>{children}</div>
+      <div className={cn('min-w-0 px-5 py-4', bodyClassName)}>{children}</div>
     </Card>
   );
 }

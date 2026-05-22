@@ -159,7 +159,7 @@ export default function UsersPage() {
 
       <Card className="overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <Table className="min-w-[760px]">
+          <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>

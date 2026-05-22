@@ -310,7 +310,7 @@ export default function RepBulkRegistrationPage() {
                       )}
                     </div>
                     <div className="overflow-x-auto rounded-lg border">
-                      <Table className="min-w-[760px]">
+                      <Table className="min-w-[1024px]">
                         <TableHeader>
                           <TableRow>
                             <TableHead className="w-10">#</TableHead>
