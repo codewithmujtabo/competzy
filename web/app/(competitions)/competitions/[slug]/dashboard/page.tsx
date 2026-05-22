@@ -563,7 +563,11 @@ function RoundsPanel({
   };
 
   return (
-    <Card className="gap-0 p-7">
+    // overflow-hidden + min-w-0 — the rounds-card grid items can default to
+    // min-width:auto in CSS grid, which lets long titles or the offline-payment
+    // paragraph push the whole row past the viewport on mobile. Containing it
+    // here keeps the panel inside its column.
+    <Card className="gap-0 overflow-hidden p-5 sm:p-7">
       <h2 className="font-serif text-xl font-medium text-foreground">Competition rounds</h2>
       <p className="mt-1 mb-5 text-sm text-muted-foreground">
         Register and pay for each round of {wordmark} you want to enter.
@@ -595,7 +599,10 @@ function RoundsPanel({
           return (
             <li
               key={round.id}
-              className="flex h-full flex-col gap-3 rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
+              // min-w-0 + overflow-hidden — without these, grid items default
+              // to min-width:auto and a long round title (or the offline-
+              // payment paragraph) pushes the card past its grid column.
+              className="flex h-full min-w-0 flex-col gap-3 overflow-hidden rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
             >
               {/* Header — title, category chip, status pill. */}
               <div className="flex items-start justify-between gap-3">
@@ -650,7 +657,7 @@ function RoundsPanel({
                       // path yet — they settle the USD fee with the organizer
                       // offline. Show a clear instruction instead of the
                       // Midtrans-driven Pay button.
-                      <p className="text-xs text-muted-foreground">
+                      <p className="break-words text-xs text-muted-foreground">
                         International payment is offline for now. Contact the organizer to settle your{' '}
                         {round.feeInternational != null ? usd(round.feeInternational) : 'round'} fee.
                       </p>
