@@ -214,12 +214,12 @@ async function main(): Promise<void> {
     // Always backfill is_international + image/logo URLs onto an existing row
     // too — production may carry a Komodo created without these columns set
     // (the original seed predated the international filter + image polish).
+    // `competitions` has no updated_at column, so we skip the timestamp.
     await client.query(
       `UPDATE competitions
           SET is_international = true,
               image_url = COALESCE(image_url, $2),
-              logo_url  = COALESCE(logo_url, $3),
-              updated_at = now()
+              logo_url  = COALESCE(logo_url, $3)
         WHERE id = $1`,
       [
         compId,
