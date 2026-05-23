@@ -817,7 +817,12 @@ export default function CompetitionDashboardPage() {
   const config = getCompetitionConfig(slug);
 
   const { user } = useCompetitionAuth();
-  const { comp } = usePortalComp(slug);
+  // `compError` surfaces a clear failure when the competition can't be
+  // resolved — e.g. the row was filtered out by the international-only
+  // catalog gate, or doesn't exist. Without this the dashboard hung on
+  // "Loading your registration…" forever because the downstream fetches
+  // never fired (they're gated on `comp?.id`).
+  const { comp, loading: compLoading, error: compError } = usePortalComp(slug);
 
   const [regs, setRegs] = useState<RegistrationRow[] | null>(null);
   const [progress, setProgress] = useState<FlowProgress | null>(null);
@@ -1062,16 +1067,23 @@ export default function CompetitionDashboardPage() {
   const hasFlow = !!progress && progress.steps.length > 0;
   const fallbackCopy = reg ? STATUS_COPY[reg.status] : null;
 
+  // International students (country != ID) only see this one competition —
+  // the "All competitions" back link is dead navigation for them.
+  const isInternationalUser =
+    !!userCountry && userCountry.toUpperCase() !== 'ID';
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-10">
         <header className="space-y-3">
-          <Link
-            href="/competitions"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" />
-            All competitions
-          </Link>
+          {!isInternationalUser && (
+            <Link
+              href="/competitions"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="size-4" />
+              All competitions
+            </Link>
+          )}
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
               {config.shortName} 2026
@@ -1088,7 +1100,25 @@ export default function CompetitionDashboardPage() {
           </div>
         )}
 
-        {!regs || rounds === null ? (
+        {/* If the competition itself failed to resolve, surface a clear error
+            instead of the loading card. Without this the dashboard hangs
+            forever when the catalog filter drops the comp (e.g. an
+            international student visiting a competition that wasn't flagged
+            is_international=true). */}
+        {compError || (!compLoading && !comp?.id) ? (
+          <Card className="items-center gap-3 p-10 text-center">
+            <p className="text-sm font-medium text-foreground">
+              This competition isn’t available to your account.
+            </p>
+            <p className="max-w-md text-sm text-muted-foreground">
+              {compError ??
+                'Check the catalog for competitions you can register for. If you think this is a mistake, contact the organizer.'}
+            </p>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/competitions">Browse competitions</Link>
+            </Button>
+          </Card>
+        ) : !regs || rounds === null ? (
           <Card className="items-center gap-3 p-10 text-center">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
             <p className="text-sm text-muted-foreground">Loading your registration…</p>
