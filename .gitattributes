@@ -1,0 +1,8 @@
+# Auto-generated knowledge-graph artifacts (large HTML + JSON dumps).
+# Excluded from GitHub Linguist's Languages stats so the repo reflects
+# actual source code (TypeScript) instead of the 3 MB graph viewer.
+graphify-out/** linguist-generated=true
+
+# Auto-generated graph diagrams checked into PR descriptions.
+# (no-op if not present — leave the entry for future)
+**/*.generated.* linguist-generated=true
