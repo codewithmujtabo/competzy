@@ -45,15 +45,14 @@ export default function CompetitionPayPage() {
   const [err, setErr] = useState<string | null>(null);
   // The specific registration to pay (a round registration), from ?registrationId=.
   const [targetRegId, setTargetRegId] = useState<string | null>(null);
-  // Provider override from ?provider= ('midtrans' | 'stripe'). Default falls
-  // back to Midtrans for Indonesian students; international students get Stripe
-  // when the round carries a `feeInternational` and the dashboard's pay button
-  // appended ?provider=stripe.
-  const [provider, setProvider] = useState<'midtrans' | 'stripe'>('midtrans');
   // round id → { fee, feeInternational, name } for a multi-round competition.
   const [roundInfo, setRoundInfo] = useState<
     Record<string, { fee: number; feeInternational: number | null; name: string }>
   >({});
+  // USD → IDR rate served by GET /competitions/:id. Mirrors backend env so an
+  // international student's "Rp X (~$Y USD)" label matches what Midtrans charges.
+  const [usdRate, setUsdRate] = useState<number>(16000);
+  const [userCountry, setUserCountry] = useState<string | null>(null);
 
   // Voucher.
   const [code, setCode] = useState('');
@@ -73,8 +72,14 @@ export default function CompetitionPayPage() {
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     setTargetRegId(p.get('registrationId'));
-    const prov = p.get('provider');
-    if (prov === 'stripe' || prov === 'midtrans') setProvider(prov);
+  }, []);
+
+  // Load the caller's country to decide local vs international display.
+  useEffect(() => {
+    emcHttp
+      .get<{ country: string | null }>('/users/me')
+      .then((me) => setUserCountry(me.country ?? null))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -85,6 +90,7 @@ export default function CompetitionPayPage() {
       .catch((e) => setErr(e instanceof Error ? e.message : 'Failed to load registration'));
     emcHttp
       .get<{
+        usdToIdrRate?: number;
         rounds?: {
           id: string;
           fee: number;
@@ -93,6 +99,7 @@ export default function CompetitionPayPage() {
         }[];
       }>(`/competitions/${comp.id}`)
       .then((d) => {
+        if (d.usdToIdrRate && Number.isFinite(d.usdToIdrRate)) setUsdRate(Number(d.usdToIdrRate));
         const m: Record<string, { fee: number; feeInternational: number | null; name: string }> = {};
         for (const r of d.rounds ?? []) {
           m[r.id] = {
@@ -163,25 +170,6 @@ export default function CompetitionPayPage() {
     setPaying(true);
     setErr(null);
     try {
-      if (provider === 'stripe') {
-        // Stripe Checkout — server creates a Session and returns its hosted
-        // URL. Vouchers don't apply to USD international payments yet so we
-        // skip the voucherCode body field for this branch.
-        const res = await emcHttp.post<{ checkoutUrl: string | null }>(
-          '/payments/stripe',
-          { registrationId: reg.id },
-        );
-        if (!res.checkoutUrl) {
-          setErr('Could not start payment — please try again.');
-          return;
-        }
-        // Stripe Checkout owns the next page — the success_url + cancel_url
-        // bring the student back to the dashboard, which polls /verify to
-        // finalise the registration even if our webhook is still in flight.
-        window.location.assign(res.checkoutUrl);
-        return;
-      }
-
       const appliedCode = voucher?.valid ? code.trim() : undefined;
       const res = await emcHttp.post<{
         covered?: boolean;
@@ -218,23 +206,22 @@ export default function CompetitionPayPage() {
 
   if (!config) return null;
 
-  // Stripe = USD international fee on the round; Midtrans = IDR comp/round fee.
-  // The voucher flow only feeds the Midtrans path today, so display also keys
-  // off the chosen provider.
+  // International student on a round with a USD price → charge the IDR
+  // equivalent via Midtrans (their card issuer handles local conversion at
+  // point of sale). Indonesian students see the round's IDR fee directly.
+  const isIntl = !!userCountry && userCountry.toUpperCase() !== 'ID';
+  const usdPrice = round?.feeInternational ?? null;
   const baseFee =
-    provider === 'stripe'
-      ? (round?.feeInternational ?? 0)
+    isIntl && usdPrice != null && usdPrice > 0
+      ? Math.round(usdPrice * usdRate)
       : (round ? round.fee : comp?.fee ?? 0);
-  const fee = provider === 'stripe' ? baseFee : voucher?.originalFee ?? baseFee;
+  const fee = voucher?.originalFee ?? baseFee;
   const payable = reg && !NON_PAYABLE.includes(reg.status);
-  const amountDue =
-    provider === 'stripe'
-      ? baseFee
-      : voucher?.valid
-        ? voucher.discountedFee ?? fee
-        : fee;
-  const formatAmount = (n: number) =>
-    provider === 'stripe' ? `$${Number.isInteger(n) ? n.toString() : n.toFixed(2)} USD` : rupiah(n);
+  const amountDue = voucher?.valid ? (voucher.discountedFee ?? fee) : fee;
+  const usdEquivalent = isIntl && usdPrice != null && usdPrice > 0 ? usdPrice : null;
+  // Always rupiah (Midtrans charges in IDR). For international students, the
+  // call sites pair this with a "(~$X USD)" suffix.
+  const formatAmount = (n: number) => rupiah(n);
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -383,8 +370,8 @@ export default function CompetitionPayPage() {
               <Button className="mt-6 w-full" size="lg" onClick={pay} disabled={paying}>
                 {paying
                   ? 'Starting payment…'
-                  : provider === 'stripe'
-                    ? `Pay ${formatAmount(amountDue)} via Stripe`
+                  : usdEquivalent != null
+                    ? `Pay ${formatAmount(amountDue)} (~$${usdEquivalent} USD)`
                     : `Pay ${formatAmount(amountDue)}`}
               </Button>
             )}

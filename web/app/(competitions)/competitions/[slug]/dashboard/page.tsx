@@ -597,10 +597,12 @@ function RoundsPanel({
                 year: 'numeric',
               })
             : null;
-          // International students with a USD price + a configured Stripe
-          // endpoint get the new Pay-via-Stripe path; the dashboard still
-          // ships the offline copy when no international fee is set.
-          const stripeEligible = intl && (round.feeInternational ?? 0) > 0;
+          // International students pay the round's USD price via the same
+          // Midtrans flow — Stripe isn't onboardable for an Indonesian
+          // merchant, so the charge is in IDR (their card issuer handles the
+          // local-currency conversion at point of sale). When no USD price is
+          // configured for the round we keep the offline-organizer copy.
+          const intlEligible = intl && (round.feeInternational ?? 0) > 0;
 
           return (
             <li
@@ -668,10 +670,10 @@ function RoundsPanel({
 
                 {reg ? (
                   reg.status === 'pending_payment' ? (
-                    stripeEligible ? (
+                    intlEligible ? (
                       <Button size="sm" asChild className="w-full sm:w-auto">
-                        <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}&provider=stripe`}>
-                          Pay {usd(round.feeInternational ?? 0)} via Stripe
+                        <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
+                          Pay {usd(round.feeInternational ?? 0)} (IDR-equivalent)
                         </Link>
                       </Button>
                     ) : intl ? (

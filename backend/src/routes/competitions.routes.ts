@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { pool } from "../config/database";
+import { env } from "../config/env";
 import { authMiddleware } from "../middleware/auth";
 import { verifyToken } from "../services/auth.service";
 import * as recommendationsService from "../services/recommendations.service";
@@ -226,6 +227,11 @@ router.get("/:id", async (req: Request, res: Response) => {
       kind: c.kind ?? "native",
       registrationStatus: c.registration_status,
       isInternational: c.is_international,
+      // USD → IDR rate the backend uses when charging an international student
+      // (Stripe isn't onboardable for an Indonesian merchant). Frontends use
+      // this to render "Rp X (~$Y USD)" labels so the student sees the same
+      // number Midtrans will show in the Snap popup.
+      usdToIdrRate: env.USD_TO_IDR_RATE,
       imageUrl: c.image_url,
       logoUrl: c.logo_url ?? null,
       websiteUrl: c.website_url,
