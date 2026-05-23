@@ -101,6 +101,11 @@ export default function PayScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { refreshRegistrations } = useUser();
+  // International students go through the SAME Midtrans Snap flow — the
+  // backend charges fee_international × USD_TO_IDR_RATE (IDR), and the
+  // student's card issuer handles the local-currency conversion at point of
+  // sale. Stripe isn't onboardable for an Indonesian merchant, so there's no
+  // per-country branch on the mobile side.
 
   const [paymentState, setPaymentState] = useState<PaymentState>("selecting");
   const [loadingMessage, setLoadingMessage] = useState("Preparing payment...");

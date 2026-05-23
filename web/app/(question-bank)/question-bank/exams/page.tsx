@@ -28,6 +28,8 @@ interface ExamRow {
   grades: string[];
   minutes: number | null;
   questionCount: number;
+  /** Optional binding — null when the exam isn't tied to a specific round. */
+  roundName: string | null;
 }
 
 function fmtDate(s: string | null) {
@@ -124,6 +126,7 @@ export default function ExamsListPage() {
               <TableRow>
                 <TableHead className="w-28">Code</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead className="w-40">Round</TableHead>
                 <TableHead className="w-32">Date</TableHead>
                 <TableHead className="w-28">Grades</TableHead>
                 <TableHead className="w-24">Questions</TableHead>
@@ -135,7 +138,7 @@ export default function ExamsListPage() {
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={8}>
                       <Skeleton className="h-9 w-full" />
                     </TableCell>
                   </TableRow>
@@ -157,6 +160,9 @@ export default function ExamsListPage() {
                       {ex.code}
                     </TableCell>
                     <TableCell className="truncate font-medium text-foreground">{ex.name}</TableCell>
+                    <TableCell className="truncate text-[12px] text-muted-foreground">
+                      {ex.roundName ?? <span className="italic">No round</span>}
+                    </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
                       {fmtDate(ex.date)}
                     </TableCell>

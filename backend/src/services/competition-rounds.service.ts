@@ -44,6 +44,11 @@ export interface RoundInput {
    * can shift across rounds. ISO 'YYYY-MM-DD'. Null for grade-based comps.
    */
   ageCutoffDate?: string | null;
+  /**
+   * Long-form round details rendered in the student rounds list. Optional —
+   * a null value renders no description paragraph.
+   */
+  description?: string | null;
 }
 
 /**
@@ -86,8 +91,8 @@ export async function replaceRounds(
          registration_deadline, exam_date, results_date,
          fee, fee_international, location, round_order, required_docs, gating,
          round_category, country, exam_mode, qualifying_score, is_active,
-         age_cutoff_date
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+         age_cutoff_date, description
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
        RETURNING id`,
       [
         compId,
@@ -112,6 +117,7 @@ export async function replaceRounds(
         r.qualifyingScore ?? null,
         r.isActive !== false,
         r.ageCutoffDate || null,
+        r.description || null,
       ],
     );
     ids.push(inserted.rows[0].id as string);

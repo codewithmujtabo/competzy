@@ -42,6 +42,12 @@ const GRADE_LEVEL = Array.from({ length: 12 }, (_, i) => i + 1).join(",");
 // Fast Track and the Global Round ship inactive (hidden from students) so an
 // operator stages them on in due course; dates are a relative timeline an
 // operator can adjust in the admin competition form.
+// The age-cutoff date applied to every round — Komodo classifies students by
+// age at this date into the five creature brackets (Gecko → Dragon). The
+// per-round override lets a future season nudge it; today every Komodo round
+// shares the same cutoff.
+const AGE_CUTOFF = "2026-09-19";
+
 const ROUNDS: RoundInput[] = [
   {
     roundName: "Online Round 1",
@@ -54,6 +60,10 @@ const ROUNDS: RoundInput[] = [
     registrationDeadline: ymd(-5),
     isActive: true,
     gatingMode: "open",
+    ageCutoffDate: AGE_CUTOFF,
+    description:
+      "First of three online qualification rounds. 60-minute multiple-choice paper, " +
+      "scored automatically. Earn a medal to unlock the Bali Global Round.",
   },
   {
     roundName: "Online Round 2",
@@ -66,6 +76,10 @@ const ROUNDS: RoundInput[] = [
     registrationDeadline: ymd(25),
     isActive: true,
     gatingMode: "open",
+    ageCutoffDate: AGE_CUTOFF,
+    description:
+      "Second qualification round. Independent of Round 1 — a student can join " +
+      "any combination of online rounds.",
   },
   {
     roundName: "Online Round 3",
@@ -78,6 +92,10 @@ const ROUNDS: RoundInput[] = [
     registrationDeadline: ymd(55),
     isActive: true,
     gatingMode: "open",
+    ageCutoffDate: AGE_CUTOFF,
+    description:
+      "Final qualification round — the last chance to earn a medal before the " +
+      "Bali Global Round closes its qualifying gate.",
   },
   {
     roundName: "Fast Track",
@@ -90,6 +108,10 @@ const ROUNDS: RoundInput[] = [
     registrationDeadline: ymd(85),
     isActive: false, // staged off — an operator turns it on once the online rounds close
     gatingMode: "unqualified",
+    ageCutoffDate: AGE_CUTOFF,
+    description:
+      "Catch-up round for students who haven't yet earned a medal in the three " +
+      "online rounds. Same scoring; passing here also unlocks the Bali Global Round.",
   },
   {
     roundName: "Local Round — Malaysia",
@@ -104,6 +126,11 @@ const ROUNDS: RoundInput[] = [
     registrationDeadline: ymd(35),
     isActive: true,
     gatingMode: "open",
+    ageCutoffDate: AGE_CUTOFF,
+    description:
+      "Offline paper exam held in Malaysia, organised by the country representative. " +
+      "Open to Malaysian students only — additional country local rounds appear " +
+      "automatically as each representative is appointed.",
   },
   {
     roundName: "Bali Global Round",
@@ -116,6 +143,10 @@ const ROUNDS: RoundInput[] = [
     registrationDeadline: ymd(115),
     isActive: false, // staged off — an operator opens it once the earlier rounds finish
     gatingMode: "qualified",
+    ageCutoffDate: AGE_CUTOFF,
+    description:
+      "The Grand Final — an in-person event in Bali for every medalist from the " +
+      "online + fast-track + local rounds. Includes day-trip and 3-day packages.",
   },
 ];
 
@@ -152,8 +183,10 @@ async function main(): Promise<void> {
         `INSERT INTO competitions
            (id, name, organizer_name, category, grade_level, fee, quota,
             reg_open_date, reg_close_date, competition_date, required_docs,
-            description, slug, kind, registration_status, created_by)
-         VALUES ($1,$2,$3,$4,$5,$6,500,$7,$8,$9,'{}',$10,$11,'native','On Going',$12)`,
+            description, slug, kind, registration_status, is_international,
+            image_url, logo_url, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,500,$7,$8,$9,'{}',$10,$11,'native','On Going',
+                 true,$12,$13,$14)`,
         [
           COMP_ID,
           "Komodo — International Math Competition",
@@ -167,12 +200,33 @@ async function main(): Promise<void> {
           "The Komodo International Math Competition — a global mathematics challenge " +
             "with three online qualification rounds leading to the Grand Final in Bali, Indonesia.",
           COMP_SLUG,
+          // Hero + logo URLs — public assets hosted on the competzy.com landing
+          // site. Operators can swap these via the admin competition form.
+          "https://competzy.com/images/Komodo/hero.webp",
+          "https://competzy.com/images/Komodo/logo.webp",
           createdBy,
         ],
       );
       compId = COMP_ID;
       console.log(`Komodo created (id=${compId}).`);
     }
+
+    // Always backfill is_international + image/logo URLs onto an existing row
+    // too — production may carry a Komodo created without these columns set
+    // (the original seed predated the international filter + image polish).
+    await client.query(
+      `UPDATE competitions
+          SET is_international = true,
+              image_url = COALESCE(image_url, $2),
+              logo_url  = COALESCE(logo_url, $3),
+              updated_at = now()
+        WHERE id = $1`,
+      [
+        compId,
+        "https://competzy.com/images/Komodo/hero.webp",
+        "https://competzy.com/images/Komodo/logo.webp",
+      ],
+    );
 
     // Backfill the 6-step native flow if it's missing. seedDefaultFlow inserts
     // unconditionally — guard with a count so it stays a no-op when present.

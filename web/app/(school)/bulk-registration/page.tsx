@@ -83,17 +83,24 @@ export default function BulkRegistrationPage() {
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Manual-entry mode — Step 2's alternative to CSV upload. Starts with 10
-  // empty rows so the operator sees an inviting grid the moment they switch.
-  const [mode, setMode] = useState<'csv' | 'manual'>('csv');
+  // Manual-entry mode — the default tab for small batches; CSV stays available
+  // for big imports. Starts with 10 empty rows so the operator sees an inviting
+  // grid the moment they land on Step 2.
+  const [mode, setMode] = useState<'csv' | 'manual'>('manual');
   const [manualRows, setManualRows] = useState<ManualRow[]>(() =>
     Array.from({ length: 10 }, () => ({
       fullName: '',
       email: '',
       phone: '',
+      dateOfBirth: '',
+      schoolName: '',
+      country: '',
+      province: '',
+      city: '',
+      supervisorName: '',
+      supervisorEmail: '',
       nisn: '',
       grade: '',
-      schoolName: '',
     })),
   );
 
@@ -372,8 +379,8 @@ export default function BulkRegistrationPage() {
 
           <Tabs value={mode} onValueChange={(v) => setMode(v as 'csv' | 'manual')}>
             <TabsList className="grid w-full grid-cols-2 sm:w-fit">
-              <TabsTrigger value="csv">Upload CSV</TabsTrigger>
               <TabsTrigger value="manual">Enter manually</TabsTrigger>
+              <TabsTrigger value="csv">Upload CSV</TabsTrigger>
             </TabsList>
 
             <TabsContent value="csv" className="mt-4 space-y-4">

@@ -12,6 +12,22 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+// Minimal shape of a competition round (from GET /api/competitions/:id),
+// scoped to the fields the round-picker needs.
+interface CompRound {
+  id: string;
+  roundName: string;
+  roundCategory?: string;
+  isActive?: boolean;
+}
 
 const TEXTAREA_CLS =
   'flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-60';
@@ -28,6 +44,8 @@ interface ExamQuestion {
 interface LoadedExam {
   id: string;
   compId: string;
+  roundId: string | null;
+  roundName: string | null;
   name: string;
   code: string;
   year: number | null;
@@ -65,6 +83,11 @@ export default function ExamEditorPage() {
   // Blueprint form state.
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  // Optional round binding — `none` means the exam isn't tied to a specific
+  // round. The student-side exam lookup uses this to scope which exam shows
+  // for which paid round.
+  const [roundId, setRoundId] = useState<string>('none');
+  const [compRounds, setCompRounds] = useState<CompRound[]>([]);
   const [year, setYear] = useState('');
   const [date, setDate] = useState('');
   const [grades, setGrades] = useState<string[]>([]);
@@ -102,6 +125,7 @@ export default function ExamEditorPage() {
     setExam(e);
     setName(e.name);
     setCode(e.code);
+    setRoundId(e.roundId ?? 'none');
     setYear(e.year != null ? String(e.year) : '');
     setDate(e.date ? e.date.slice(0, 10) : '');
     setGrades(e.grades);
@@ -146,6 +170,18 @@ export default function ExamEditorPage() {
       .catch(() => setPool([]));
   }, [compId]);
 
+  // Load the competition's rounds for the round-picker Select. The endpoint
+  // returns the rounds inline on the competition payload — we hit /question-
+  // bank/competitions (the operator-scoped list) to discover the round set
+  // for the comp the workspace is currently scoped to.
+  useEffect(() => {
+    if (!compId) return;
+    questionBankHttp
+      .get<{ id: string; rounds?: CompRound[] }>(`/competitions/${encodeURIComponent(compId)}`)
+      .then((c) => setCompRounds(Array.isArray(c.rounds) ? c.rounds : []))
+      .catch(() => setCompRounds([]));
+  }, [compId]);
+
   const toggleGrade = (g: string) =>
     setGrades((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
   const toggleAttached = (qid: string) =>
@@ -161,6 +197,8 @@ export default function ExamEditorPage() {
   };
   const buildPayload = () => ({
     compId,
+    // 'none' sentinel maps to a null binding — the exam isn't tied to a round.
+    roundId: roundId && roundId !== 'none' ? roundId : null,
     name: name.trim(),
     code: code.trim(),
     year: year.trim() ? Number(year) : null,
@@ -308,6 +346,31 @@ export default function ExamEditorPage() {
               onChange={(e) => setYear(e.target.value)}
               placeholder="2026"
             />
+          </div>
+          <div className="sm:col-span-2">
+            <Label className="mb-1.5 text-xs text-muted-foreground">
+              Round binding
+            </Label>
+            <Select value={roundId} onValueChange={setRoundId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Not tied to a round" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Not tied to a round</SelectItem>
+                {compRounds.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.roundName}
+                    {r.roundCategory ? ` · ${r.roundCategory}` : ''}
+                    {r.isActive === false ? ' · inactive' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              When set, only students who registered + paid for this round see
+              the exam. Leave on &ldquo;Not tied to a round&rdquo; for single-round
+              competitions.
+            </p>
           </div>
           <div>
             <Label className="mb-1.5 text-xs text-muted-foreground">Exam date</Label>

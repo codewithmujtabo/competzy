@@ -33,6 +33,12 @@ export const env = {
   MIDTRANS_SERVER_KEY: process.env.MIDTRANS_SERVER_KEY || "",
   MIDTRANS_CLIENT_KEY: process.env.MIDTRANS_CLIENT_KEY || "",
   MIDTRANS_IS_PRODUCTION: process.env.MIDTRANS_IS_PRODUCTION === "true",
+  // USD → IDR display + charge rate for international students. Stripe isn't
+  // available to Indonesian merchants, so non-ID callers pay the USD price
+  // converted to IDR via Midtrans (their card issuer handles the local-currency
+  // conversion at point of sale). Operator updates this monthly — defaults to
+  // a reasonable mid-2026 mid-market rate.
+  USD_TO_IDR_RATE: parseFloat(process.env.USD_TO_IDR_RATE || "16000"),
   API_CO_ID_KEY: process.env.API_CO_ID_KEY || "",
   // MinIO / S3-compatible object storage (optional — falls back to local disk when absent)
   MINIO_ENDPOINT: process.env.MINIO_ENDPOINT || "",       // e.g. http://localhost:9000

@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { LocationCascade } from '@/components/ui/location-cascade';
+import { CountrySelect } from '@/components/ui/country-select';
 import {
   Select,
   SelectContent,
@@ -56,7 +56,7 @@ export type ProfileFieldKey =
 interface FieldDef {
   key: ProfileFieldKey;
   label: string;
-  type?: 'text' | 'email' | 'date' | 'tel' | 'location' | 'grade';
+  type?: 'text' | 'email' | 'date' | 'tel' | 'grade';
   placeholder?: string;
   wide?: boolean;
 }
@@ -65,11 +65,11 @@ const FIELDS: Record<ProfileFieldKey, FieldDef> = {
   fullName:           { key: 'fullName',           label: 'Full name', placeholder: 'Your full name', wide: true },
   email:              { key: 'email',              label: 'Email', type: 'email' },
   phone:              { key: 'phone',              label: 'WhatsApp / Phone', type: 'tel', placeholder: '08xxx or +628xxx' },
-  city:               { key: 'city',               label: 'Location', type: 'location', wide: true },
-  province:           { key: 'province',           label: 'Location', type: 'location', wide: true },
-  country:            { key: 'country',            label: 'Location', type: 'location', wide: true },
+  city:               { key: 'city',               label: 'City', placeholder: 'e.g. Jakarta' },
+  province:           { key: 'province',           label: 'Province', placeholder: 'e.g. DKI Jakarta' },
+  country:            { key: 'country',            label: 'Country' },
   dateOfBirth:        { key: 'dateOfBirth',        label: 'Date of birth', type: 'date' },
-  supervisorName:     { key: 'supervisorName',     label: 'Teacher / Supervisor name', wide: true },
+  supervisorName:     { key: 'supervisorName',     label: 'Teacher / Supervisor name' },
   supervisorEmail:    { key: 'supervisorEmail',    label: 'Teacher / Supervisor email', type: 'email' },
   supervisorWhatsapp: { key: 'supervisorWhatsapp', label: 'Teacher / Supervisor WhatsApp', type: 'tel' },
   supervisorPhone:    { key: 'supervisorPhone',    label: 'Teacher / Supervisor phone', type: 'tel' },
@@ -86,12 +86,39 @@ const FIELDS: Record<ProfileFieldKey, FieldDef> = {
   npsn:               { key: 'npsn',               label: 'NPSN', placeholder: 'National School Number' },
 };
 
+// Always-rendered field order, applied to both the Required and Optional
+// sections — the canonical "Confirm your details" layout the operator asked
+// for. The dialog walks this list once for required, once for optional.
+const FIELD_ORDER: ProfileFieldKey[] = [
+  'fullName',
+  'email',
+  'phone',
+  'dateOfBirth',
+  'schoolName',
+  'country',
+  'province',
+  'city',
+  'supervisorName',
+  'supervisorEmail',
+];
+
+// Fields that always render as OPTIONAL, even when the competition's
+// `required_profile_fields` doesn't list them. Province + city + teacher
+// info should always be editable from this dialog because the student may
+// want to update them at registration time.
+const ALWAYS_OPTIONAL: ProfileFieldKey[] = [
+  'province',
+  'city',
+  'supervisorName',
+  'supervisorEmail',
+];
+
 interface Props {
   /** True when the dialog should be visible. */
   open: boolean;
   /** Called whenever the dialog wants to close (cancel button, Esc, overlay click). */
   onCancel: () => void;
-  /** Field keys the user is missing. The dialog renders only these. */
+  /** Field keys the user is missing — these become the Required section. */
   missingFields: ProfileFieldKey[];
   /** Called after the missing fields are saved successfully — the caller retries the registration. */
   onCompleted: () => void;
@@ -100,15 +127,11 @@ interface Props {
 }
 
 /**
- * Dialog that prompts the student to fill any missing mandatory profile fields
- * before a competition registration can proceed. Driven entirely by the
- * `missingFields` array — renders one input per key. On submit it PUTs the
- * filled values to `/users/me` and signals success via `onCompleted` so the
- * caller can retry the registration POST.
- *
- * Fetches `GET /users/me` on open to pre-fill anything the user has typed
- * partially (e.g. they have an email but no country yet — the email input
- * starts populated).
+ * Two-section profile completion dialog. The Required section above gates
+ * Save (it's what the server returned as 409 PROFILE_INCOMPLETE); the
+ * Optional section below carries fields the student can fill at their own
+ * pace (province / city / teacher info). Province + city are always rendered
+ * here as a top-up channel — the registration form itself only asks Country.
  */
 export function ProfileCompletionDialog({
   open,
@@ -118,73 +141,33 @@ export function ProfileCompletionDialog({
   contextLabel,
 }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
-  // Country + province + city are captured together via one cascading picker.
-  // Even when only one of the three is in missingFields we render the whole
-  // cascade — selecting a country must come before a province, etc.
-  const [location, setLocation] = useState<{
-    country: string | null;
-    province: string | null;
-    city: string | null;
-  }>({ country: null, province: null, city: null });
+  const [country, setCountry] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Which of the three location fields were originally required (we still
-  // gate Save on those specifically, even though the cascade lets the user
-  // edit the whole triple). Memoised against `missingFields` so the set is
-  // stable across renders.
-  const required = useMemo(() => {
-    const set = { country: false, province: false, city: false };
-    for (const k of missingFields) {
-      if (k === 'country') set.country = true;
-      else if (k === 'province') set.province = true;
-      else if (k === 'city') set.city = true;
-    }
-    return set;
+  // Split the rendered field list into Required (in missingFields) +
+  // Optional (everything else from FIELD_ORDER that should always show).
+  const { required, optional } = useMemo(() => {
+    const reqSet = new Set(missingFields);
+    const requiredKeys = FIELD_ORDER.filter((k) => reqSet.has(k));
+    const optionalKeys = FIELD_ORDER.filter(
+      (k) => !reqSet.has(k) && ALWAYS_OPTIONAL.includes(k),
+    );
+    return { required: requiredKeys, optional: optionalKeys };
   }, [missingFields]);
-
-  // Fold any of (country / province / city) in missingFields into ONE
-  // 'location' slot, rendered once. Other keys pass through.
-  const renderedKeys = useMemo(() => {
-    const out: ProfileFieldKey[] = [];
-    let seenLocation = false;
-    for (const k of missingFields) {
-      if (k === 'city' || k === 'province' || k === 'country') {
-        if (seenLocation) continue;
-        seenLocation = true;
-        out.push('city');
-        continue;
-      }
-      out.push(k);
-    }
-    return out;
-  }, [missingFields]);
-
-  const fields = useMemo(
-    () => renderedKeys.map((k) => FIELDS[k]).filter(Boolean),
-    [renderedKeys],
-  );
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     setValues({});
-    setLocation({ country: null, province: null, city: null });
-    // Pre-fill with whatever the user already has so they only fill the gaps.
+    setCountry(null);
     (async () => {
       try {
         const me = await emcHttp.get<Record<string, string | null>>('/users/me');
         if (cancelled) return;
-        // Always read country + province + city together — even if only one is
-        // in the missing set, the cascade renders the whole triple and should
-        // pre-fill whatever exists.
-        setLocation({
-          country: typeof me.country === 'string' ? me.country : null,
-          province: typeof me.province === 'string' ? me.province : null,
-          city: typeof me.city === 'string' ? me.city : null,
-        });
+        setCountry(typeof me.country === 'string' ? me.country : null);
         const next: Record<string, string> = {};
-        for (const k of renderedKeys) {
-          if (k === 'city' || k === 'province' || k === 'country') continue; // handled by location state
+        for (const k of FIELD_ORDER) {
+          if (k === 'country') continue; // separate state
           const raw = me[k];
           if (k === 'dateOfBirth' && raw) {
             const d = new Date(raw);
@@ -199,51 +182,41 @@ export function ProfileCompletionDialog({
         }
         setValues(next);
       } catch {
-        // Pre-fill is best-effort; the user can still type into empty fields.
+        // Pre-fill is best-effort.
       }
     })();
     return () => { cancelled = true; };
-  }, [open, missingFields, renderedKeys]);
+  }, [open]);
 
   function set(k: ProfileFieldKey, v: string) {
     setValues((cur) => ({ ...cur, [k]: v }));
   }
 
-  // The dialog only allows Save when every prompted field carries a value —
-  // they're all mandatory, by definition (this dialog only shows because the
-  // server already returned them as missing).
+  // Save is gated only on the REQUIRED fields. Optional ones can stay blank.
   const canSave =
     !saving &&
-    fields.every((f) => {
-      if (f.type === 'location') {
-        // Only gate Save on the location fields that were ORIGINALLY missing,
-        // not the whole triple — picking a country isn't required if the user
-        // was only missing city.
-        if (required.country && !location.country) return false;
-        if (required.province && !location.province?.trim()) return false;
-        if (required.city && !location.city?.trim()) return false;
-        return true;
-      }
-      return !!(values[f.key] || '').trim();
+    required.every((k) => {
+      if (k === 'country') return !!country;
+      return !!(values[k] || '').trim();
     });
 
   async function handleSave() {
     setSaving(true);
     try {
       const payload: Record<string, string | null | undefined> = {};
-      for (const f of fields) {
-        if (f.type === 'location') {
-          // Always persist the whole triple — the cascade is a coupled widget,
-          // so picking a country can clear / change province + city even if
-          // only one of them was originally missing.
-          payload.country = location.country;
-          payload.province = (location.province || '').trim() || null;
-          payload.city = (location.city || '').trim() || null;
-        } else if (f.type === 'date') {
-          // A DATE column rejects '' — omit empty rather than clear it.
-          payload[f.key] = (values[f.key] || '').trim() || undefined;
+      // Walk both groups — anything the user typed gets sent. Empty strings
+      // clear the column (PUT /users/me treats '' as a delete).
+      for (const k of [...required, ...optional]) {
+        if (k === 'country') {
+          payload.country = country;
+          continue;
+        }
+        const f = FIELDS[k];
+        if (f.type === 'date') {
+          // A DATE column rejects '' — omit empty rather than clear.
+          payload[k] = (values[k] || '').trim() || undefined;
         } else {
-          payload[f.key] = (values[f.key] || '').trim();
+          payload[k] = (values[k] || '').trim();
         }
       }
       await emcHttp.put<{ message: string }>('/users/me', payload);
@@ -256,6 +229,47 @@ export function ProfileCompletionDialog({
     }
   }
 
+  function renderField(k: ProfileFieldKey) {
+    const f = FIELDS[k];
+    if (k === 'country') {
+      return (
+        <div key={k} className={f.wide ? 'sm:col-span-2 space-y-1.5' : 'space-y-1.5'}>
+          <Label htmlFor={`pcd-${k}`}>{f.label}</Label>
+          <CountrySelect id={`pcd-${k}`} value={country} onChange={setCountry} />
+        </div>
+      );
+    }
+    if (f.type === 'grade') {
+      return (
+        <div key={k} className={f.wide ? 'sm:col-span-2 space-y-1.5' : 'space-y-1.5'}>
+          <Label htmlFor={`pcd-${k}`}>{f.label}</Label>
+          <Select value={values[k] || ''} onValueChange={(v) => set(k, v)}>
+            <SelectTrigger id={`pcd-${k}`} className="w-full">
+              <SelectValue placeholder="Pick a grade" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
+                <SelectItem key={g} value={String(g)}>Grade {g}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    return (
+      <div key={k} className={f.wide ? 'sm:col-span-2 space-y-1.5' : 'space-y-1.5'}>
+        <Label htmlFor={`pcd-${k}`}>{f.label}</Label>
+        <Input
+          id={`pcd-${k}`}
+          type={f.type ?? 'text'}
+          placeholder={f.placeholder}
+          value={values[k] ?? ''}
+          onChange={(e) => set(k, e.target.value)}
+        />
+      </div>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onCancel(); }}>
       <DialogContent className="sm:max-w-xl">
@@ -263,55 +277,30 @@ export function ProfileCompletionDialog({
           <DialogTitle>Confirm your details</DialogTitle>
           <DialogDescription>
             {contextLabel ? (
-              <>Review the details below for <span className="font-medium text-foreground">{contextLabel}</span>. We&apos;ve pre-filled everything from your profile — edit anything that needs fixing, then continue to payment.</>
+              <>Review the details below for <span className="font-medium text-foreground">{contextLabel}</span>. We&apos;ve pre-filled everything from your profile — fields marked Required must be filled before payment; optional fields can be added later.</>
             ) : (
-              <>Review the details below before registering. We&apos;ve pre-filled everything from your profile — edit anything that needs fixing, then continue to payment.</>
+              <>Review the details below before registering. Fields marked Required must be filled before payment; optional fields can be added later.</>
             )}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {fields.map((f) => (
-            <div key={f.key} className={f.wide ? 'sm:col-span-2 space-y-1.5' : 'space-y-1.5'}>
-              <Label htmlFor={`pcd-${f.key}`}>{f.label}</Label>
-              {f.type === 'location' ? (
-                <LocationCascade
-                  idCountry={`pcd-${f.key}-country`}
-                  idProvince={`pcd-${f.key}-province`}
-                  idCity={`pcd-${f.key}-city`}
-                  country={location.country}
-                  province={location.province}
-                  city={location.city}
-                  onChange={setLocation}
-                />
-              ) : f.type === 'grade' ? (
-                <Select
-                  value={values[f.key] || ''}
-                  onValueChange={(v) => set(f.key, v)}
-                >
-                  <SelectTrigger id={`pcd-${f.key}`} className="w-full">
-                    <SelectValue placeholder="Pick a grade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
-                      <SelectItem key={g} value={String(g)}>
-                        Grade {g}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  id={`pcd-${f.key}`}
-                  type={f.type ?? 'text'}
-                  placeholder={f.placeholder}
-                  value={values[f.key] ?? ''}
-                  onChange={(e) => set(f.key, e.target.value)}
-                />
-              )}
-            </div>
-          ))}
-        </div>
+        {required.length > 0 && (
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground">
+              Required
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">{required.map(renderField)}</div>
+          </section>
+        )}
+
+        {optional.length > 0 && (
+          <section className="space-y-2 border-t pt-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Optional
+            </h3>
+            <div className="grid gap-4 sm:grid-cols-2">{optional.map(renderField)}</div>
+          </section>
+        )}
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>

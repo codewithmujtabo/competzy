@@ -36,16 +36,59 @@ async function repAssignment(userId: string) {
 }
 
 // The local round a representative manages — the competition's `local` round
-// for their country.
+// for their country. May not exist (Komodo doesn't always have a local round
+// for every country); callers must tolerate null.
 async function localRound(compId: string, country: string) {
   const r = await pool.query(
     `SELECT id, round_name, fee, exam_mode, qualifying_score, exam_date::text AS exam_date
        FROM competition_rounds
       WHERE comp_id = $1 AND round_category = 'local' AND country = $2
+        AND deleted_at IS NULL
       ORDER BY round_order ASC LIMIT 1`,
     [compId, country],
   );
   return r.rows[0] ?? null;
+}
+
+// Every round a representative may operate on: all of the competition's online
+// / fast-track / global rounds plus the local round that matches the rep's
+// country. A `local` round bound to a different country stays hidden — only
+// that country's rep manages it.
+async function repRounds(compId: string, country: string) {
+  const r = await pool.query(
+    `SELECT id, round_name, round_category, country, is_active,
+            fee, exam_mode, qualifying_score, exam_date::text AS exam_date,
+            round_order
+       FROM competition_rounds
+      WHERE comp_id = $1
+        AND deleted_at IS NULL
+        AND (round_category <> 'local' OR country = $2)
+      ORDER BY round_order ASC`,
+    [compId, country],
+  );
+  return r.rows;
+}
+
+// Resolve a round the rep wants to operate on. If `roundId` is provided, it
+// must be in the rep's accessible set. Otherwise fall back to the local round.
+// Returns the round row or null when nothing is accessible.
+async function resolveRepRound(
+  compId: string,
+  country: string,
+  roundId: string | null,
+) {
+  if (roundId) {
+    const r = await pool.query(
+      `SELECT id, round_name, round_category, country, is_active,
+              fee, exam_mode, qualifying_score, exam_date::text AS exam_date
+         FROM competition_rounds
+        WHERE id = $1 AND comp_id = $2 AND deleted_at IS NULL
+          AND (round_category <> 'local' OR country = $3)`,
+      [roundId, compId, country],
+    );
+    return r.rows[0] ?? null;
+  }
+  return localRound(compId, country);
 }
 
 // ── Admin: GET /api/country-representatives ───────────────────────────────
@@ -142,8 +185,13 @@ router.delete(
 );
 
 // ── Rep: GET /api/rep/context ─────────────────────────────────────────────
-// The representative's assignment, their local round, and the students they
-// have registered for it.
+// The representative's assignment, the local round (when present), every
+// accessible round, and the student roster for the selected round.
+//
+// Query: ?roundId=<roundId> — selects the round to load students for. When
+// omitted, defaults to the local round (legacy behaviour); when there is no
+// local round either, students is an empty array and the UI prompts the rep
+// to pick a round from the list.
 router.get("/rep/context", async (req: Request, res: Response) => {
   try {
     const a = await repAssignment(req.userId!);
@@ -151,9 +199,22 @@ router.get("/rep/context", async (req: Request, res: Response) => {
       res.status(404).json({ message: "No representative assignment found." });
       return;
     }
-    const round = await localRound(a.comp_id, a.country);
+    const rounds = await repRounds(a.comp_id, a.country);
+    const local = rounds.find((r) => r.round_category === "local") ?? null;
+    const requestedRoundId =
+      typeof req.query.roundId === "string" && req.query.roundId.trim()
+        ? req.query.roundId.trim()
+        : null;
+    // The selected round must be in the rep's accessible set — bouncing an
+    // unknown id back to local keeps a stale URL from leaking another country's
+    // local-round data.
+    const selected =
+      (requestedRoundId && rounds.find((r) => r.id === requestedRoundId)) ||
+      local ||
+      null;
+
     let students: any[] = [];
-    if (round) {
+    if (selected) {
       const s = await pool.query(
         `SELECT r.id AS registration_id, r.status, r.score, r.is_medalist,
                 u.id AS user_id, u.full_name, u.email, st.grade
@@ -162,7 +223,7 @@ router.get("/rep/context", async (req: Request, res: Response) => {
            LEFT JOIN students st ON st.id = u.id
           WHERE r.round_id = $1 AND r.deleted_at IS NULL
           ORDER BY u.full_name ASC`,
-        [round.id],
+        [selected.id],
       );
       students = s.rows.map((x) => ({
         registrationId: x.registration_id,
@@ -175,19 +236,28 @@ router.get("/rep/context", async (req: Request, res: Response) => {
         grade: x.grade,
       }));
     }
+
+    const toRoundView = (r: any) => ({
+      id: r.id,
+      name: r.round_name,
+      category: r.round_category,
+      country: r.country ?? null,
+      isActive: r.is_active !== false,
+      fee: Number(r.fee) || 0,
+      examMode: r.exam_mode,
+      qualifyingScore: r.qualifying_score,
+      examDate: r.exam_date,
+    });
+
     res.json({
       country: a.country,
       competition: { id: a.comp_id, name: a.comp_name },
-      localRound: round
-        ? {
-            id: round.id,
-            name: round.round_name,
-            fee: Number(round.fee) || 0,
-            examMode: round.exam_mode,
-            qualifyingScore: round.qualifying_score,
-            examDate: round.exam_date,
-          }
-        : null,
+      rounds: rounds.map(toRoundView),
+      // localRound + selectedRound expose the same shape — old clients keep
+      // working on `localRound`, new clients read `selectedRound` to honour
+      // the ?roundId query param.
+      localRound: local ? toRoundView(local) : null,
+      selectedRound: selected ? toRoundView(selected) : null,
       students,
     });
   } catch (err) {
@@ -197,8 +267,12 @@ router.get("/rep/context", async (req: Request, res: Response) => {
 });
 
 // ── Rep: POST /api/rep/students ───────────────────────────────────────────
-// Bulk-register students for the representative's local round. Body:
-// { students: [{ fullName, email, grade? }] }.
+// Bulk-register students for one round of the rep's competition. Body:
+// { roundId?: string, students: [{ fullName, email, grade? }] }.
+// roundId is optional — when omitted, falls back to the rep's local round.
+// When neither is available, returns 400 with a "pick a round" prompt rather
+// than failing silently. Picking a round bound to a different country is
+// rejected as 400 (the round isn't in the rep's accessible set).
 router.post("/rep/students", async (req: Request, res: Response) => {
   const client = await pool.connect();
   try {
@@ -207,9 +281,17 @@ router.post("/rep/students", async (req: Request, res: Response) => {
       res.status(404).json({ message: "No representative assignment found." });
       return;
     }
-    const round = await localRound(a.comp_id, a.country);
+    const requestedRoundId =
+      typeof req.body?.roundId === "string" && req.body.roundId.trim()
+        ? req.body.roundId.trim()
+        : null;
+    const round = await resolveRepRound(a.comp_id, a.country, requestedRoundId);
     if (!round) {
-      res.status(400).json({ message: "Your local round has not been set up yet." });
+      res.status(400).json({
+        message: requestedRoundId
+          ? "That round is not available to you."
+          : "Please pick a round to register these students for.",
+      });
       return;
     }
     const rows = Array.isArray(req.body?.students) ? req.body.students : [];
@@ -290,9 +372,17 @@ router.post("/rep/import-scores", async (req: Request, res: Response) => {
       res.status(404).json({ message: "No representative assignment found." });
       return;
     }
-    const round = await localRound(a.comp_id, a.country);
+    const requestedRoundId =
+      typeof req.body?.roundId === "string" && req.body.roundId.trim()
+        ? req.body.roundId.trim()
+        : null;
+    const round = await resolveRepRound(a.comp_id, a.country, requestedRoundId);
     if (!round) {
-      res.status(400).json({ message: "Your local round has not been set up yet." });
+      res.status(400).json({
+        message: requestedRoundId
+          ? "That round is not available to you."
+          : "Please pick a round to import scores for.",
+      });
       return;
     }
     const rows = Array.isArray(req.body?.scores) ? req.body.scores : [];
@@ -339,9 +429,17 @@ router.post("/rep/pay-batch", async (req: Request, res: Response) => {
       res.status(404).json({ message: "No representative assignment found." });
       return;
     }
-    const round = await localRound(a.comp_id, a.country);
+    const requestedRoundId =
+      typeof req.body?.roundId === "string" && req.body.roundId.trim()
+        ? req.body.roundId.trim()
+        : null;
+    const round = await resolveRepRound(a.comp_id, a.country, requestedRoundId);
     if (!round) {
-      res.status(400).json({ message: "Your local round has not been set up yet." });
+      res.status(400).json({
+        message: requestedRoundId
+          ? "That round is not available to you."
+          : "Please pick a round to pay for.",
+      });
       return;
     }
     const fee = Number(round.fee) || 0;

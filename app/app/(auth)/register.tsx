@@ -1,9 +1,6 @@
 import { AppInput } from "@/components/common/AppInput";
-import { AppAutocomplete } from "@/components/common/AppAutocomplete";
 import { Button, Card, Pill, ScreenHeader } from "@/components/ui";
 import * as authService from "@/services/auth.service";
-import * as regionsService from "@/services/regions.service";
-import * as schoolsService from "@/services/schools.service";
 import {
   Brand,
   Radius,
@@ -101,14 +98,12 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [province, setProvince] = useState("");
-  const [provinceCode, setProvinceCode] = useState("");
-  const [city, setCity] = useState("");
-  const [regencyCode, setRegencyCode] = useState("");
+  // Country at registration is the only location field — province/city moved
+  // to the profile editor. ISO 3166-1 alpha-2 code (e.g. "ID", "MY").
+  const [country, setCountry] = useState("");
 
   const [school, setSchool] = useState("");
   const [schoolNpsn, setSchoolNpsn] = useState("");
-  const [schoolAddress, setSchoolAddress] = useState("");
   const [grade, setGrade] = useState<Grade>("7");
   const [childName, setChildName] = useState("");
   const [childSchool, setChildSchool] = useState("");
@@ -118,17 +113,6 @@ export default function RegisterScreen() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [provincesList, setProvincesList] = useState<regionsService.Province[]>([]);
-  const [citiesList, setCitiesList] = useState<regionsService.Regency[]>([]);
-
-  useEffect(() => {
-    regionsService.getProvinces().then(setProvincesList).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (!provinceCode) return setCitiesList([]);
-    regionsService.getRegencies(provinceCode).then(setCitiesList).catch(() => {});
-  }, [provinceCode]);
 
   const validateDetails = () => {
     const e: Record<string, string> = {};
@@ -140,8 +124,8 @@ export default function RegisterScreen() {
     else if (password.length < 6) e.password = "Minimum 6 characters";
     if (!phone.trim()) e.phone = "Phone number is required";
     else if (phone.replace(/\D/g, "").length < 9) e.phone = "Enter a valid phone number";
-    if (!province.trim()) e.province = "Province is required";
-    if (!city.trim()) e.city = "City/Regency is required";
+    if (!country.trim()) e.country = "Country is required";
+    else if (!/^[A-Za-z]{2}$/.test(country.trim())) e.country = "Enter a 2-letter country code (e.g. ID, MY)";
     if (role === "student") {
       if (!school.trim()) e.school = "School is required";
       if (!grade) e.grade = "Pick a grade";
@@ -165,7 +149,7 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       let roleData: any = {};
-      if (role === "student") roleData = { school: school.trim(), grade, npsn: schoolNpsn || null, schoolAddress: schoolAddress || null };
+      if (role === "student") roleData = { school: school.trim(), grade, npsn: schoolNpsn || null };
       else if (role === "parent") roleData = { childName: childName.trim(), childSchool: childSchool.trim(), childGrade };
       else if (role === "teacher") roleData = { school: teacherSchool.trim(), subject: subject.trim() };
 
@@ -174,8 +158,7 @@ export default function RegisterScreen() {
         password: password.trim(),
         fullName: name.trim(),
         phone: phone.trim(),
-        city: city.trim(),
-        province: province.trim(),
+        country: country.trim().toUpperCase(),
         role,
         roleData,
         consentAccepted: true,
@@ -383,50 +366,18 @@ export default function RegisterScreen() {
               keyboardType="phone-pad"
               error={errors.phone}
             />
-            <AppAutocomplete
-              label="Province"
-              placeholder="Pick a province"
-              value={province}
-              onChangeText={setProvince}
-              onSelect={(item) => {
-                setProvince(item.name);
-                setProvinceCode(item.id);
-                setCity("");
-                setRegencyCode("");
-              }}
-              fetchSuggestions={async (q) => {
-                const list = !q?.trim()
-                  ? provincesList.slice(0, 20)
-                  : provincesList.filter((p) => p.name.toLowerCase().includes(q.toLowerCase())).slice(0, 10);
-                return list.map((p) => ({ id: p.code, name: p.name }));
-              }}
-              error={errors.province}
-              minSearchLength={0}
-              allowCustom={false}
+            <AppInput
+              label="Country"
+              placeholder="2-letter code, e.g. ID, MY, SG"
+              value={country}
+              onChangeText={(t) => setCountry(t.toUpperCase())}
               autoCapitalize="characters"
+              maxLength={2}
+              error={errors.country}
             />
-            <AppAutocomplete
-              label="City / Regency"
-              placeholder={provinceCode ? "Pick city/regency" : "Pick province first"}
-              value={city}
-              onChangeText={setCity}
-              onSelect={(item) => {
-                setCity(item.name);
-                setRegencyCode(item.id);
-              }}
-              fetchSuggestions={async (q) => {
-                if (!provinceCode) return [];
-                const list = !q?.trim()
-                  ? citiesList.slice(0, 20)
-                  : citiesList.filter((r) => r.name.toLowerCase().includes(q.toLowerCase())).slice(0, 10);
-                return list.map((r) => ({ id: r.code, name: r.name }));
-              }}
-              error={errors.city}
-              minSearchLength={0}
-              allowCustom={false}
-              editable={!!provinceCode}
-              autoCapitalize="characters"
-            />
+            <Text style={{ color: TextColor.tertiary, fontSize: 12 }}>
+              You can add your province and city later from your profile.
+            </Text>
           </View>
         </Card>
 
@@ -434,49 +385,24 @@ export default function RegisterScreen() {
           <Card style={{ marginTop: Spacing.lg }}>
             <Text style={Type.label}>STUDENT INFO</Text>
             <View style={{ gap: Spacing.md, marginTop: Spacing.md }}>
-              <AppAutocomplete
-                label="NPSN / School Name"
-                placeholder={regencyCode ? "Search school" : "Pick city first"}
+              <AppInput
+                label="School Name"
+                placeholder="e.g. SMA Negeri 1 Jakarta"
                 value={school}
                 onChangeText={setSchool}
-                onSelect={(item) => {
-                  setSchool(item.name);
-                  setSchoolNpsn(item.metadata?.npsn || "");
-                  setSchoolAddress(item.metadata?.address || "");
-                }}
-                fetchSuggestions={async (q) => {
-                  if (!regencyCode) return [];
-                  const txt = q.trim();
-                  if (!txt) {
-                    const schools = await schoolsService.searchSchools({ regencyCode, grade, page: 1 });
-                    return schools.slice(0, 20).map((s) => ({
-                      id: s.npsn || s.id,
-                      name: `${s.npsn ? `${s.npsn} - ` : ""}${s.name}`,
-                      metadata: { npsn: s.npsn, address: s.address },
-                    }));
-                  }
-                  if (txt.length < 3) return [];
-                  const isNpsn = /^\d{5,}$/.test(txt);
-                  const schools = await schoolsService.searchSchools(
-                    isNpsn ? { npsn: txt } : { name: txt, regencyCode, grade }
-                  );
-                  return schools.map((s) => ({
-                    id: s.npsn || s.id,
-                    name: `${s.npsn ? `${s.npsn} - ` : ""}${s.name}`,
-                    metadata: { npsn: s.npsn, address: s.address },
-                  }));
-                }}
                 error={errors.school}
-                minSearchLength={3}
-                debounceMs={500}
-                allowCustom
-                customLabel="My school is not listed — enter manually"
-                editable={!!regencyCode}
                 autoCapitalize="characters"
+              />
+              <AppInput
+                label="NPSN (optional)"
+                placeholder="Indonesian-school 8-digit code, leave blank if unknown"
+                value={schoolNpsn}
+                onChangeText={setSchoolNpsn}
+                keyboardType="number-pad"
               />
               {schoolNpsn ? (
                 <View style={{ alignSelf: "flex-start" }}>
-                  <Pill label={`✓ NPSN ${schoolNpsn}`} tone="info" />
+                  <Pill label={`NPSN ${schoolNpsn}`} tone="info" />
                 </View>
               ) : null}
               <View>
@@ -492,26 +418,12 @@ export default function RegisterScreen() {
             <Text style={Type.label}>CHILD INFO</Text>
             <View style={{ gap: Spacing.md, marginTop: Spacing.md }}>
               <AppInput label="Child Name" placeholder="e.g. Jane Doe" value={childName} onChangeText={setChildName} error={errors.childName} />
-              <AppAutocomplete
+              <AppInput
                 label="Child School"
-                placeholder={regencyCode ? "Search child school" : "Pick city first"}
+                placeholder="e.g. SMP Negeri 5 Bandung"
                 value={childSchool}
                 onChangeText={setChildSchool}
-                onSelect={(item) => setChildSchool(item.name)}
-                fetchSuggestions={async (q) => {
-                  if (!regencyCode) return [];
-                  const txt = q.trim();
-                  if (txt.length < 3) return [];
-                  const isNpsn = /^\d{5,}$/.test(txt);
-                  const schools = await schoolsService.searchSchools(isNpsn ? { npsn: txt } : { name: txt, regencyCode });
-                  return schools.map((s) => ({ id: s.npsn || s.id, name: `${s.npsn ? `${s.npsn} - ` : ""}${s.name}` }));
-                }}
                 error={errors.childSchool}
-                minSearchLength={3}
-                debounceMs={500}
-                allowCustom
-                customLabel="Not listed — enter manually"
-                editable={!!regencyCode}
                 autoCapitalize="characters"
               />
               <View>
@@ -526,26 +438,12 @@ export default function RegisterScreen() {
           <Card style={{ marginTop: Spacing.lg }}>
             <Text style={Type.label}>TEACHING INFO</Text>
             <View style={{ gap: Spacing.md, marginTop: Spacing.md }}>
-              <AppAutocomplete
+              <AppInput
                 label="School"
-                placeholder={regencyCode ? "Search school" : "Pick city first"}
+                placeholder="e.g. SMA Negeri 1 Jakarta"
                 value={teacherSchool}
                 onChangeText={setTeacherSchool}
-                onSelect={(item) => setTeacherSchool(item.name)}
-                fetchSuggestions={async (q) => {
-                  if (!regencyCode) return [];
-                  const txt = q.trim();
-                  if (txt.length < 3) return [];
-                  const isNpsn = /^\d{5,}$/.test(txt);
-                  const schools = await schoolsService.searchSchools(isNpsn ? { npsn: txt } : { name: txt, regencyCode });
-                  return schools.map((s) => ({ id: s.npsn || s.id, name: `${s.npsn ? `${s.npsn} - ` : ""}${s.name}` }));
-                }}
                 error={errors.teacherSchool}
-                minSearchLength={3}
-                debounceMs={500}
-                allowCustom
-                customLabel="Not listed — enter manually"
-                editable={!!regencyCode}
                 autoCapitalize="characters"
               />
               <AppInput label="Subject" placeholder="e.g. Matematika" value={subject} onChangeText={setSubject} error={errors.subject} />

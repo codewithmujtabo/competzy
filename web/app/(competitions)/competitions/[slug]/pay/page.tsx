@@ -45,8 +45,14 @@ export default function CompetitionPayPage() {
   const [err, setErr] = useState<string | null>(null);
   // The specific registration to pay (a round registration), from ?registrationId=.
   const [targetRegId, setTargetRegId] = useState<string | null>(null);
-  // round id → { fee, name } for a multi-round competition.
-  const [roundInfo, setRoundInfo] = useState<Record<string, { fee: number; name: string }>>({});
+  // round id → { fee, feeInternational, name } for a multi-round competition.
+  const [roundInfo, setRoundInfo] = useState<
+    Record<string, { fee: number; feeInternational: number | null; name: string }>
+  >({});
+  // USD → IDR rate served by GET /competitions/:id. Mirrors backend env so an
+  // international student's "Rp X (~$Y USD)" label matches what Midtrans charges.
+  const [usdRate, setUsdRate] = useState<number>(16000);
+  const [userCountry, setUserCountry] = useState<string | null>(null);
 
   // Voucher.
   const [code, setCode] = useState('');
@@ -68,6 +74,14 @@ export default function CompetitionPayPage() {
     setTargetRegId(p.get('registrationId'));
   }, []);
 
+  // Load the caller's country to decide local vs international display.
+  useEffect(() => {
+    emcHttp
+      .get<{ country: string | null }>('/users/me')
+      .then((me) => setUserCountry(me.country ?? null))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!comp?.id) return;
     emcHttp
@@ -75,13 +89,25 @@ export default function CompetitionPayPage() {
       .then(setRegs)
       .catch((e) => setErr(e instanceof Error ? e.message : 'Failed to load registration'));
     emcHttp
-      .get<{ rounds?: { id: string; fee: number; roundName: string }[] }>(
-        `/competitions/${comp.id}`,
-      )
+      .get<{
+        usdToIdrRate?: number;
+        rounds?: {
+          id: string;
+          fee: number;
+          feeInternational: number | null;
+          roundName: string;
+        }[];
+      }>(`/competitions/${comp.id}`)
       .then((d) => {
-        const m: Record<string, { fee: number; name: string }> = {};
+        if (d.usdToIdrRate && Number.isFinite(d.usdToIdrRate)) setUsdRate(Number(d.usdToIdrRate));
+        const m: Record<string, { fee: number; feeInternational: number | null; name: string }> = {};
         for (const r of d.rounds ?? []) {
-          m[r.id] = { fee: Number(r.fee) || 0, name: r.roundName };
+          m[r.id] = {
+            fee: Number(r.fee) || 0,
+            feeInternational:
+              r.feeInternational != null ? Number(r.feeInternational) : null,
+            name: r.roundName,
+          };
         }
         setRoundInfo(m);
       })
@@ -180,10 +206,22 @@ export default function CompetitionPayPage() {
 
   if (!config) return null;
 
-  const baseFee = round ? round.fee : comp?.fee ?? 0;
+  // International student on a round with a USD price → charge the IDR
+  // equivalent via Midtrans (their card issuer handles local conversion at
+  // point of sale). Indonesian students see the round's IDR fee directly.
+  const isIntl = !!userCountry && userCountry.toUpperCase() !== 'ID';
+  const usdPrice = round?.feeInternational ?? null;
+  const baseFee =
+    isIntl && usdPrice != null && usdPrice > 0
+      ? Math.round(usdPrice * usdRate)
+      : (round ? round.fee : comp?.fee ?? 0);
   const fee = voucher?.originalFee ?? baseFee;
   const payable = reg && !NON_PAYABLE.includes(reg.status);
   const amountDue = voucher?.valid ? (voucher.discountedFee ?? fee) : fee;
+  const usdEquivalent = isIntl && usdPrice != null && usdPrice > 0 ? usdPrice : null;
+  // Always rupiah (Midtrans charges in IDR). For international students, the
+  // call sites pair this with a "(~$X USD)" suffix.
+  const formatAmount = (n: number) => rupiah(n);
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -296,17 +334,17 @@ export default function CompetitionPayPage() {
             <div className="mt-6 space-y-1.5 border-t pt-5 text-sm">
               <div className="flex justify-between text-muted-foreground">
                 <span>Registration fee</span>
-                <span className={voucher?.valid ? 'line-through' : ''}>{rupiah(fee)}</span>
+                <span className={voucher?.valid ? 'line-through' : ''}>{formatAmount(fee)}</span>
               </div>
               {voucher?.valid && (
                 <div className="flex justify-between text-emerald-700 dark:text-emerald-300">
                   <span>Voucher discount</span>
-                  <span>− {rupiah(fee - amountDue)}</span>
+                  <span>− {formatAmount(fee - amountDue)}</span>
                 </div>
               )}
               <div className="flex justify-between pt-1.5 text-base font-semibold text-foreground">
                 <span>Amount due</span>
-                <span>{rupiah(amountDue)}</span>
+                <span>{formatAmount(amountDue)}</span>
               </div>
             </div>
 
@@ -330,7 +368,11 @@ export default function CompetitionPayPage() {
               </div>
             ) : (
               <Button className="mt-6 w-full" size="lg" onClick={pay} disabled={paying}>
-                {paying ? 'Starting payment…' : `Pay ${rupiah(amountDue)}`}
+                {paying
+                  ? 'Starting payment…'
+                  : usdEquivalent != null
+                    ? `Pay ${formatAmount(amountDue)} (~$${usdEquivalent} USD)`
+                    : `Pay ${formatAmount(amountDue)}`}
               </Button>
             )}
           </Card>

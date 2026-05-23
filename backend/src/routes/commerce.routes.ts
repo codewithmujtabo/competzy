@@ -317,6 +317,7 @@ function mapVoucherGroup(r: any) {
     price: r.price != null ? Number(r.price) : 0,
     discounted: r.discounted != null ? Number(r.discounted) : 0,
     isActive: r.is_active,
+    country: r.country ?? null,
     voucherCount: r.voucher_count != null ? Number(r.voucher_count) : 0,
     usedCount: r.used_count != null ? Number(r.used_count) : 0,
     createdAt: r.created_at,
@@ -343,7 +344,7 @@ router.get("/commerce/voucher-groups", async (req: Request, res: Response) => {
     }
     const r = await pool.query(
       `SELECT vg.id, vg.comp_id, vg.name, vg.code, vg.usable_count, vg.price,
-              vg.discounted, vg.is_active, vg.created_at,
+              vg.discounted, vg.is_active, vg.country, vg.created_at,
               COUNT(v.id)::int AS voucher_count,
               COUNT(v.id) FILTER (WHERE v.used > 0)::int AS used_count
          FROM voucher_groups vg
@@ -369,7 +370,7 @@ router.get("/commerce/voucher-groups/:id/vouchers", async (req: Request, res: Re
       return;
     }
     const r = await pool.query(
-      `SELECT v.id, v.code, v.npsn, v.used, v.max, v.created_at, u.email AS claimer_email
+      `SELECT v.id, v.code, v.npsn, v.country, v.used, v.max, v.created_at, u.email AS claimer_email
          FROM vouchers v
          LEFT JOIN users u ON u.id = v.user_id
         WHERE v.group_id = $1 AND v.deleted_at IS NULL
@@ -381,6 +382,7 @@ router.get("/commerce/voucher-groups/:id/vouchers", async (req: Request, res: Re
         id: v.id,
         code: v.code,
         npsn: v.npsn ?? null,
+        country: v.country ?? null,
         used: v.used,
         max: v.max,
         claimerEmail: v.claimer_email ?? null,
@@ -419,6 +421,22 @@ router.post(
       const discounted = Number(req.body?.discounted);
       const price = Number(req.body?.price);
       const npsn = trim(req.body?.npsn);
+      // Optional country scope (Komodo's "one voucher batch for Malaysia"). When
+      // set, the redemption check rejects students whose users.country differs.
+      // Validated as a 2-letter ISO code so a typo doesn't silently block every
+      // redemption. NPSN + country are mutually exclusive scopes — accept both
+      // shapes but never enforce two scopes at once (country wins).
+      const rawCountry = trim(req.body?.country);
+      const country =
+        rawCountry && /^[A-Za-z]{2}$/.test(rawCountry) ? rawCountry.toUpperCase() : null;
+      if (rawCountry && !country) {
+        res.status(400).json({ message: "country must be an ISO 3166-1 alpha-2 code (e.g. 'MY')" });
+        return;
+      }
+      // Code mode — 'distinct' (legacy default, N rows with random-suffix codes
+      // for per-seat distribution) or 'shared' (1 row, max=N, one code that the
+      // organiser shares with the cohort — used for country-wide promos).
+      const mode = req.body?.mode === "shared" ? "shared" : "distinct";
 
       await client.query("BEGIN");
       const count = await client.query(
@@ -427,35 +445,50 @@ router.post(
       );
       const code = trim(req.body?.code) || `VG-${String(count.rows[0].n + 1).padStart(3, "0")}`;
       const groupRow = await client.query(
-        `INSERT INTO voucher_groups (comp_id, name, code, usable_count, price, discounted, is_active)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)
-         RETURNING id, comp_id, name, code, usable_count, price, discounted, is_active, created_at`,
+        `INSERT INTO voucher_groups (comp_id, name, code, usable_count, price, discounted, is_active, country)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         RETURNING id, comp_id, name, code, usable_count, price, discounted, is_active, country, created_at`,
         [
           compId, name, code, usableCount,
           Number.isFinite(price) && price >= 0 ? price : 0,
           Number.isFinite(discounted) && discounted >= 0 ? discounted : 0,
           req.body?.isActive !== false,
+          country,
         ]
       );
       const group = groupRow.rows[0];
 
-      // Mint the codes — `{GROUP}-{rand}`, unique within the batch.
-      const seen = new Set<string>();
-      const codes: string[] = [];
-      while (codes.length < usableCount) {
-        const c = `${code}-${randomCode(6)}`;
-        if (seen.has(c)) continue;
-        seen.add(c);
-        codes.push(c);
+      // Mint the codes.
+      // - 'shared': one row, code = the batch's own code, max = usableCount.
+      // - 'distinct': N rows, codes `{GROUP}-{rand}`, max = 1 each.
+      // Either way the same (comp_id, group_id, country) tuple is written.
+      let codesMinted: number;
+      if (mode === "shared") {
+        await client.query(
+          `INSERT INTO vouchers (comp_id, group_id, code, npsn, country, used, max)
+           VALUES ($1, $2, $3, $4, $5, 0, $6)`,
+          [compId, group.id, code, npsn, country, usableCount]
+        );
+        codesMinted = 1;
+      } else {
+        const seen = new Set<string>();
+        const codes: string[] = [];
+        while (codes.length < usableCount) {
+          const c = `${code}-${randomCode(6)}`;
+          if (seen.has(c)) continue;
+          seen.add(c);
+          codes.push(c);
+        }
+        const values = codes.map((_, i) => `($1, $2, $${i + 5}, $3, $4, 0, 1)`).join(",");
+        await client.query(
+          `INSERT INTO vouchers (comp_id, group_id, code, npsn, country, used, max) VALUES ${values}`,
+          [compId, group.id, npsn, country, ...codes]
+        );
+        codesMinted = codes.length;
       }
-      const values = codes.map((_, i) => `($1, $2, $${i + 4}, $3, 0, 1)`).join(",");
-      await client.query(
-        `INSERT INTO vouchers (comp_id, group_id, code, npsn, used, max) VALUES ${values}`,
-        [compId, group.id, npsn, ...codes]
-      );
       await client.query("COMMIT");
       res.status(201).json(
-        mapVoucherGroup({ ...group, voucher_count: codes.length, used_count: 0 })
+        mapVoucherGroup({ ...group, voucher_count: codesMinted, used_count: 0 })
       );
     } catch (err: any) {
       await client.query("ROLLBACK").catch(() => {});

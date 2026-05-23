@@ -11,8 +11,7 @@ export async function signup(params: {
   password: string;
   fullName: string;
   phone: string;
-  city: string;
-  province?: string;
+  country?: string;                     // ISO 3166-1 alpha-2 (e.g. "ID", "MY")
   role: string;
   roleData: any;
   consentAccepted: boolean;

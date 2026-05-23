@@ -68,6 +68,10 @@ interface CatalogCompetition {
   gradeLevel: string | null;
   regCloseDate: string | null;
   competitionDate: string | null;
+  /** Backend already filters non-international visitors out of this list (see
+   *  competitions.routes.ts callerCountry()); the flag is surfaced here so the
+   *  card can show an "International" badge for clarity. */
+  isInternational?: boolean;
 }
 
 interface DashboardSummary {
@@ -199,6 +203,11 @@ function CompetitionCard({
       <h2 className="mt-4 font-serif text-lg font-medium leading-snug text-foreground">{comp.name}</h2>
       <p className="mt-1 text-sm text-muted-foreground">{comp.organizerName}</p>
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {comp.isInternational && (
+          <Badge className="font-normal bg-sky-100 text-sky-800 hover:bg-sky-100 dark:bg-sky-950 dark:text-sky-200">
+            International
+          </Badge>
+        )}
         {comp.category && (
           <Badge variant="secondary" className="font-normal">{comp.category}</Badge>
         )}

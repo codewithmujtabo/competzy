@@ -159,12 +159,28 @@ export default function CompetitionRoundsScreen() {
               new Date(round.registrationDeadline).getTime() < Date.now();
             return (
               <Card key={round.id} variant="playful">
+                {/* Title row — full name (no truncate) + category chip. */}
                 <View style={{ flexDirection: "row", alignItems: "flex-start", gap: Spacing.sm }}>
                   <Text style={[Type.h3, { flex: 1 }]}>
                     {round.roundName || `Round ${i + 1}`}
                   </Text>
                   {cat ? <Pill label={cat} tone="brand" size="sm" /> : null}
                 </View>
+
+                {/* Description — when the operator typed one in the rounds
+                    builder, render it as a paragraph below the title. */}
+                {round.description ? (
+                  <Text
+                    style={[
+                      Type.bodySm,
+                      { color: TextColor.secondary, marginTop: Spacing.sm },
+                    ]}
+                  >
+                    {round.description}
+                  </Text>
+                ) : null}
+
+                {/* Metadata line — mode, exam date, fee. */}
                 <Text
                   style={[Type.bodySm, { color: TextColor.secondary, marginTop: Spacing.xs }]}
                 >
@@ -173,7 +189,8 @@ export default function CompetitionRoundsScreen() {
                   {` · ${rupiah(round.fee)}`}
                 </Text>
 
-                <View style={{ marginTop: Spacing.md }}>
+                {/* Action row — status pill + CTA stacked at the bottom. */}
+                <View style={{ marginTop: Spacing.md, alignItems: "flex-end", gap: Spacing.xs }}>
                   {reg ? (
                     reg.status === "pending_payment" ? (
                       <Button

@@ -8,6 +8,13 @@ import { schoolAdminOnly } from "../middleware/school-admin.middleware";
 import { createSnapToken, getTransactionStatus } from "../services/midtrans.service";
 import * as pushService from "../services/push.service";
 
+// True iff the caller's stored country is anything other than Indonesia.
+// Empty / null country is treated as local (the historical default).
+function isInternationalCountry(country: string | null | undefined): boolean {
+  if (!country) return false;
+  return country.toUpperCase() !== "ID";
+}
+
 const router = Router();
 
 // ── T20: Parent ownership check ───────────────────────────────────────────────
@@ -40,16 +47,19 @@ interface RegContext {
   compId: string;
   fee: number;
   studentNpsn: string | null;
+  studentCountry: string | null;
 }
 
 async function loadRegContext(registrationId: string): Promise<RegContext | null> {
   // students.id == users.id (1:1); students.npsn is the NPSN the student
-  // registered with — what a school-locked voucher is matched against.
+  // registered with (school-locked voucher key); users.country is the ISO
+  // alpha-2 code (country-locked voucher key — e.g. Komodo's per-country promos).
   const r = await pool.query(
-    `SELECT r.comp_id, c.fee, s.npsn AS student_npsn
+    `SELECT r.comp_id, c.fee, s.npsn AS student_npsn, u.country AS student_country
        FROM registrations r
        JOIN competitions c ON c.id = r.comp_id
        LEFT JOIN students s ON s.id = r.user_id
+       LEFT JOIN users u ON u.id = r.user_id
       WHERE r.id = $1`,
     [registrationId]
   );
@@ -58,6 +68,7 @@ async function loadRegContext(registrationId: string): Promise<RegContext | null
     compId: r.rows[0].comp_id,
     fee: Number(r.rows[0].fee) || 0,
     studentNpsn: r.rows[0].student_npsn ?? null,
+    studentCountry: r.rows[0].student_country ?? null,
   };
 }
 
@@ -70,10 +81,11 @@ interface VoucherCheck {
 async function checkVoucher(
   compId: string,
   code: string,
-  studentNpsn: string | null
+  studentNpsn: string | null,
+  studentCountry: string | null,
 ): Promise<VoucherCheck> {
   const r = await pool.query(
-    `SELECT v.npsn, v.used, v.max, vg.discounted, vg.is_active
+    `SELECT v.npsn, v.country, v.used, v.max, vg.discounted, vg.is_active
        FROM vouchers v
        JOIN voucher_groups vg ON vg.id = v.group_id
       WHERE v.comp_id = $1 AND v.code = $2
@@ -93,6 +105,11 @@ async function checkVoucher(
   }
   if (v.npsn && v.npsn !== studentNpsn) {
     return { valid: false, message: "This voucher is reserved for a different school." };
+  }
+  // Country-locked voucher (Komodo's "Malaysia-only" batches). Compare uppercase
+  // for safety in case the student's stored value drifts in case.
+  if (v.country && (studentCountry ?? "").toUpperCase() !== String(v.country).toUpperCase()) {
+    return { valid: false, message: "This voucher is reserved for a different country." };
   }
   return { valid: true, discountedFee: Number(v.discounted) || 0 };
 }
@@ -372,7 +389,12 @@ router.post("/snap", async (req: Request, res: Response) => {
       return;
     }
 
-    // Load registration + competition + student user
+    // Load registration + competition + student user. The round's
+    // `fee_international` (USD) is converted to IDR via USD_TO_IDR_RATE for
+    // international callers — Stripe isn't onboardable for an Indonesian
+    // merchant, so non-ID students pay the converted IDR amount via the same
+    // Midtrans Snap flow (their card issuer handles local-currency conversion
+    // at point of sale).
     const result = await pool.query(
       `SELECT
          r.id          AS reg_id,
@@ -381,8 +403,10 @@ router.post("/snap", async (req: Request, res: Response) => {
          r.voucher_code AS persisted_voucher_code,
          c.name        AS competition_name,
          COALESCE(cr.fee, c.fee) AS fee,
+         cr.fee_international AS fee_intl_usd,
          u.full_name,
          u.email,
+         u.country     AS student_country,
          s.npsn        AS student_npsn
        FROM registrations r
        JOIN competitions c ON c.id = r.comp_id
@@ -399,6 +423,17 @@ router.post("/snap", async (req: Request, res: Response) => {
     }
 
     const row = result.rows[0];
+
+    // For an international student on a round with a configured USD price,
+    // swap the IDR base fee for the USD-converted IDR amount before anything
+    // else looks at row.fee. Vouchers + the zero-fee check then apply against
+    // whichever currency-equivalent amount is actually being charged.
+    const intl = isInternationalCountry(row.student_country);
+    const usdPrice = row.fee_intl_usd != null ? Number(row.fee_intl_usd) : null;
+    if (intl && usdPrice != null && usdPrice > 0) {
+      // Round to whole rupiah — Midtrans rejects fractional IDR amounts.
+      row.fee = Math.round(usdPrice * env.USD_TO_IDR_RATE);
+    }
 
     if (row.fee === 0) {
       res.status(400).json({ message: "This competition is free — no payment required" });
@@ -420,7 +455,12 @@ router.post("/snap", async (req: Request, res: Response) => {
     let chargeAmount: number = row.fee;
 
     if (effectiveVoucher) {
-      const check = await checkVoucher(row.comp_id, effectiveVoucher, row.student_npsn);
+      const check = await checkVoucher(
+        row.comp_id,
+        effectiveVoucher,
+        row.student_npsn,
+        row.student_country,
+      );
       if (!check.valid) {
         res.status(400).json({ message: check.message ?? "Invalid voucher code." });
         return;
@@ -530,7 +570,12 @@ router.post("/voucher/validate", async (req: Request, res: Response) => {
       res.status(404).json({ message: "Registration not found" });
       return;
     }
-    const check = await checkVoucher(ctx.compId, code.trim(), ctx.studentNpsn);
+    const check = await checkVoucher(
+      ctx.compId,
+      code.trim(),
+      ctx.studentNpsn,
+      ctx.studentCountry,
+    );
     res.json({
       valid: check.valid,
       message: check.message ?? null,
@@ -567,7 +612,7 @@ router.put("/registration/:id/voucher", async (req: Request, res: Response) => {
       res.json({ voucherCode: null, originalFee: ctx.fee, discountedFee: null });
       return;
     }
-    const check = await checkVoucher(ctx.compId, code, ctx.studentNpsn);
+    const check = await checkVoucher(ctx.compId, code, ctx.studentNpsn, ctx.studentCountry);
     if (!check.valid) {
       res.status(400).json({ message: check.message ?? "Invalid voucher code." });
       return;
@@ -603,8 +648,8 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
 
     // Look up payment record
     const payRow = await pool.query(
-      `SELECT p.id AS payment_id, p.order_id, r.status as reg_status,
-              r.comp_id, r.voucher_code, r.referral_code
+      `SELECT p.id AS payment_id, p.order_id,
+              r.status as reg_status, r.comp_id, r.voucher_code, r.referral_code
        FROM payments p
        JOIN registrations r ON r.id = p.registration_id
        WHERE p.registration_id = $1
@@ -627,19 +672,18 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
       return;
     }
 
-    // Ask Midtrans for the real transaction status
-    let txStatus: string;
+    // Ask Midtrans for the real transaction status. International students go
+    // through the same Snap flow (in IDR-equivalent of the USD price), so this
+    // single branch handles both audiences.
+    let isSettled = false;
     try {
-      txStatus = await getTransactionStatus(order_id);
+      const txStatus = await getTransactionStatus(order_id);
+      isSettled = txStatus === "settlement" || txStatus === "capture";
     } catch {
-      // Midtrans returns 404 if transaction doesn't exist yet — not an error
+      // Midtrans 404 on a still-pending transaction is normal — not an error.
       res.json({ status: reg_status });
       return;
     }
-
-    const isSettled =
-      txStatus === "settlement" ||
-      txStatus === "capture";
 
     if (isSettled) {
       // Update DB to match Midtrans — same logic as webhook
