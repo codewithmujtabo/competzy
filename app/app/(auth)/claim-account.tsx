@@ -59,7 +59,6 @@ export default function ClaimAccountScreen() {
         password,
         fullName: fullName.trim(),
         phone: params.phone,
-        city: "",
         role: "student",
         roleData: {},
         consentAccepted: true,

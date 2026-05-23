@@ -19,7 +19,7 @@ import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { LocationCascade } from '@/components/ui/location-cascade';
+import { CountrySelect } from '@/components/ui/country-select';
 
 type SignupResponse = { token: string; user: { id: string; role: string } };
 
@@ -41,9 +41,9 @@ export default function CompetitionRegisterPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
-  const [city, setCity] = useState('');
-  const [province, setProvince] = useState('');
   const [country, setCountry] = useState<string | null>(null);
+  // Province + city moved into the profile editor — registration only asks for
+  // country (it gates international catalog visibility + voucher scoping).
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState('');
   const [emailTaken, setEmailTaken] = useState(false);
@@ -90,8 +90,6 @@ export default function CompetitionRegisterPage() {
         password,
         fullName,
         phone: phone || undefined,
-        city: city || undefined,
-        province: province || undefined,
         country: country ?? undefined,
         role: 'student',
         roleData: {},
@@ -284,20 +282,13 @@ export default function CompetitionRegisterPage() {
             </div>
 
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Location (optional)</Label>
-              <LocationCascade
-                idCountry="reg-country"
-                idProvince="reg-prov"
-                idCity="reg-city"
-                country={country}
-                province={province || null}
-                city={city || null}
-                onChange={({ country: co, province: p, city: c }) => {
-                  setCountry(co);
-                  setProvince(p ?? '');
-                  setCity(c ?? '');
-                }}
-              />
+              <Label htmlFor="reg-country" className="mb-1.5 text-xs text-muted-foreground">
+                Country
+              </Label>
+              <CountrySelect id="reg-country" value={country} onChange={setCountry} />
+              <p className="mt-1 text-xs text-muted-foreground">
+                You can add your province and city later from your profile.
+              </p>
             </div>
 
             <label className="flex items-start gap-2.5 text-sm text-muted-foreground">

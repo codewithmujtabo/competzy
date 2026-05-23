@@ -6,8 +6,14 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 /**
- * Inline / Excel-paste student entry grid for bulk-registration. Six columns:
- *   Full name *, Email *, WhatsApp, NISN, Grade, School name
+ * Inline / Excel-paste student entry grid for bulk-registration. The column
+ * set mirrors the per-student "Confirm your details" profile dialog so an
+ * operator pasting from Excel can fill the same shape a student would type
+ * one-by-one:
+ *   Full name *, Email *, WhatsApp/Phone, Date of birth, School name,
+ *   Country, Province, City, Teacher name, Teacher email.
+ * NISN + Grade are kept as Indonesian-school extras (optional everywhere).
+ *
  * Starts with 10 empty rows; the operator can add or trash rows. Each cell is
  * a plain text input. The kicker: pasting multi-cell content from Excel /
  * Google Sheets into ANY cell parses the clipboard text (TSV or CSV) and
@@ -23,34 +29,68 @@ export interface ManualRow {
   fullName: string;
   email: string;
   phone: string;
+  dateOfBirth: string;
+  schoolName: string;
+  country: string;
+  province: string;
+  city: string;
+  supervisorName: string;
+  supervisorEmail: string;
+  // Indonesian-school extras — kept on the row so the backend processor can
+  // honour them when present, but never required (international rows skip them).
   nisn: string;
   grade: string;
-  schoolName: string;
 }
 
 const EMPTY_ROW: ManualRow = {
   fullName: '',
   email: '',
   phone: '',
+  dateOfBirth: '',
+  schoolName: '',
+  country: '',
+  province: '',
+  city: '',
+  supervisorName: '',
+  supervisorEmail: '',
   nisn: '',
   grade: '',
-  schoolName: '',
 };
 
 const COLUMNS: Array<{ key: keyof ManualRow; label: string; required?: boolean; placeholder?: string }> = [
-  { key: 'fullName',   label: 'Full name',  required: true,  placeholder: 'Jane Doe' },
-  { key: 'email',      label: 'Email',      required: true,  placeholder: 'jane@example.com' },
-  { key: 'phone',      label: 'WhatsApp',                    placeholder: '08xxx' },
-  { key: 'nisn',       label: 'NISN',                        placeholder: 'optional' },
-  { key: 'grade',      label: 'Grade',                       placeholder: 'e.g. 9' },
-  { key: 'schoolName', label: 'School name',                 placeholder: 'optional' },
+  { key: 'fullName',        label: 'Full name',        required: true,  placeholder: 'Jane Doe' },
+  { key: 'email',           label: 'Email',            required: true,  placeholder: 'jane@example.com' },
+  { key: 'phone',           label: 'WhatsApp / Phone',                  placeholder: '08xxx or +628xxx' },
+  { key: 'dateOfBirth',     label: 'Date of birth',                     placeholder: 'YYYY-MM-DD' },
+  { key: 'schoolName',      label: 'School name',                       placeholder: 'optional' },
+  { key: 'country',         label: 'Country',                           placeholder: 'ID, MY…' },
+  { key: 'province',        label: 'Province',                          placeholder: 'optional' },
+  { key: 'city',            label: 'City',                              placeholder: 'optional' },
+  { key: 'supervisorName',  label: 'Teacher name',                      placeholder: 'optional' },
+  { key: 'supervisorEmail', label: 'Teacher email',                     placeholder: 'optional' },
+  { key: 'nisn',            label: 'NISN',                              placeholder: 'ID-school only' },
+  { key: 'grade',           label: 'Grade',                             placeholder: 'e.g. 9' },
 ];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function isRowEmpty(r: ManualRow): boolean {
-  return !r.fullName.trim() && !r.email.trim() && !r.phone.trim() && !r.nisn.trim()
-    && !r.grade.trim() && !r.schoolName.trim();
+  // A row counts as empty when every column the operator could've filled is
+  // blank. New columns are folded in so empty grids don't suddenly look used.
+  return (
+    !r.fullName.trim() &&
+    !r.email.trim() &&
+    !r.phone.trim() &&
+    !r.dateOfBirth.trim() &&
+    !r.schoolName.trim() &&
+    !r.country.trim() &&
+    !r.province.trim() &&
+    !r.city.trim() &&
+    !r.supervisorName.trim() &&
+    !r.supervisorEmail.trim() &&
+    !r.nisn.trim() &&
+    !r.grade.trim()
+  );
 }
 
 export function isValidRow(r: ManualRow): boolean {

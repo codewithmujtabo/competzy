@@ -70,7 +70,7 @@ export default function RepBulkRegistrationPage() {
   const { ctx, loading, refresh } = useRepContext();
   const round = ctx?.localRound;
 
-  const [mode, setMode] = useState<'csv' | 'manual'>('csv');
+  const [mode, setMode] = useState<'csv' | 'manual'>('manual');
 
   // CSV state
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -79,14 +79,22 @@ export default function RepBulkRegistrationPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Manual state — start with 10 empty rows so the grid looks inviting.
+  // Column shape mirrors the shared ManualRow type (includes the country +
+  // teacher fields Komodo international students need at registration time).
   const [manualRows, setManualRows] = useState<ManualRow[]>(() =>
     Array.from({ length: 10 }, () => ({
       fullName: '',
       email: '',
       phone: '',
+      dateOfBirth: '',
+      schoolName: '',
+      country: '',
+      province: '',
+      city: '',
+      supervisorName: '',
+      supervisorEmail: '',
       nisn: '',
       grade: '',
-      schoolName: '',
     })),
   );
 
@@ -241,8 +249,8 @@ export default function RepBulkRegistrationPage() {
           <Card className="gap-4 p-5">
             <Tabs value={mode} onValueChange={(v) => setMode(v as 'csv' | 'manual')}>
               <TabsList className="grid w-full grid-cols-2 sm:w-fit">
-                <TabsTrigger value="csv">Upload CSV</TabsTrigger>
                 <TabsTrigger value="manual">Enter manually</TabsTrigger>
+                <TabsTrigger value="csv">Upload CSV</TabsTrigger>
               </TabsList>
 
               {/* CSV mode */}

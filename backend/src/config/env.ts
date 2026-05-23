@@ -33,6 +33,13 @@ export const env = {
   MIDTRANS_SERVER_KEY: process.env.MIDTRANS_SERVER_KEY || "",
   MIDTRANS_CLIENT_KEY: process.env.MIDTRANS_CLIENT_KEY || "",
   MIDTRANS_IS_PRODUCTION: process.env.MIDTRANS_IS_PRODUCTION === "true",
+  // Stripe (international USD checkout for non-Indonesia students). Optional —
+  // when unset, the new /api/payments/stripe endpoint replies 503 and the web
+  // dashboard falls back to the "contact organizer" copy. Production must set
+  // all three on the backend service.
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
+  STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY || "",
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
   API_CO_ID_KEY: process.env.API_CO_ID_KEY || "",
   // MinIO / S3-compatible object storage (optional — falls back to local disk when absent)
   MINIO_ENDPOINT: process.env.MINIO_ENDPOINT || "",       // e.g. http://localhost:9000

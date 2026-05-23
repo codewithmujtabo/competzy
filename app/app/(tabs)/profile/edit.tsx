@@ -67,6 +67,11 @@ export default function ProfileEditScreen() {
   const [phone, setPhone] = useState((user as any)?.phone || "");
   const [email] = useState((user as any)?.email || "");
   const [city, setCity] = useState((user as any)?.city || "");
+  const [province, setProvince] = useState((user as any)?.province || "");
+  // Country is ISO 3166-1 alpha-2 (e.g. "ID", "MY") — same shape /users/me
+  // returns and PUT /users/me expects. Drives the international-only catalog
+  // filter (see backend competitions.routes.ts) + Komodo profile gate.
+  const [country, setCountry] = useState((user as any)?.country || "");
   const [photoUrl, setPhotoUrl] = useState((user as any)?.photoUrl || (user as any)?.avatarUrl || null);
 
   // Student-only fields
@@ -103,6 +108,8 @@ export default function ProfileEditScreen() {
     setFullName(u.fullName || u.name || "");
     setPhone(u.phone || "");
     setCity(u.city || "");
+    setProvince(u.province || "");
+    setCountry(u.country || "");
     setPhotoUrl(u.photoUrl || u.avatarUrl || null);
 
     if (role === "student") {
@@ -200,7 +207,13 @@ export default function ProfileEditScreen() {
     }
     setSaving(true);
     try {
-      const payload: Record<string, any> = { fullName, phone, city };
+      const payload: Record<string, any> = {
+        fullName,
+        phone,
+        city,
+        province: province || undefined,
+        country: country ? country.toUpperCase() : undefined,
+      };
 
       if (role === "student") {
         const allInterests = [...selectedInterests];
@@ -294,7 +307,9 @@ export default function ProfileEditScreen() {
               <AppInput label="Date of Birth" placeholder="DD/MM/YYYY" value={dateOfBirth} onChangeText={setDateOfBirth} keyboardType="numbers-and-punctuation" />
               <AppInput label="WhatsApp / Phone" placeholder="08xxx or +628xxx" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
               <AppInput label="Email" placeholder="email@example.com" value={email} editable={false} />
-              <AppInput label="City" placeholder="Your city" value={city} onChangeText={setCity} />
+              <AppInput label="Country" placeholder="2-letter code, e.g. ID, MY" value={country} onChangeText={(t) => setCountry(t.toUpperCase())} autoCapitalize="characters" maxLength={2} />
+              <AppInput label="Province" placeholder="Your province (optional)" value={province} onChangeText={setProvince} />
+              <AppInput label="City" placeholder="Your city (optional)" value={city} onChangeText={setCity} />
               <View>
                 <Text style={styles.inputLabel}>Interests</Text>
                 <View style={styles.interestChips}>
@@ -393,7 +408,9 @@ export default function ProfileEditScreen() {
               <AppInput label="Full Name" placeholder="Enter your full name" value={fullName} onChangeText={setFullName} />
               <AppInput label="WhatsApp / Phone" placeholder="08xxx or +628xxx" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
               <AppInput label="Email" placeholder="email@example.com" value={email} editable={false} />
-              <AppInput label="City" placeholder="Your city" value={city} onChangeText={setCity} />
+              <AppInput label="Country" placeholder="2-letter code, e.g. ID, MY" value={country} onChangeText={(t) => setCountry(t.toUpperCase())} autoCapitalize="characters" maxLength={2} />
+              <AppInput label="Province" placeholder="Your province (optional)" value={province} onChangeText={setProvince} />
+              <AppInput label="City" placeholder="Your city (optional)" value={city} onChangeText={setCity} />
             </View>
 
             <View style={styles.section}>
@@ -412,7 +429,9 @@ export default function ProfileEditScreen() {
             <AppInput label="Full Name" placeholder="Enter your full name" value={fullName} onChangeText={setFullName} />
             <AppInput label="WhatsApp / Phone" placeholder="08xxx or +628xxx" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             <AppInput label="Email" placeholder="email@example.com" value={email} editable={false} />
-            <AppInput label="City" placeholder="Your city" value={city} onChangeText={setCity} />
+            <AppInput label="Country" placeholder="2-letter code, e.g. ID, MY" value={country} onChangeText={(t) => setCountry(t.toUpperCase())} autoCapitalize="characters" maxLength={2} />
+            <AppInput label="Province" placeholder="Your province (optional)" value={province} onChangeText={setProvince} />
+            <AppInput label="City" placeholder="Your city (optional)" value={city} onChangeText={setCity} />
           </View>
         )}
 

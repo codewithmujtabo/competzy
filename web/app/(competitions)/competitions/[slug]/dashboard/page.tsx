@@ -339,11 +339,13 @@ interface Round {
   examDate: string | null;
   registrationDeadline: string | null;
   fee: number;
-  /** Optional international price in USD — display-only, no online payment yet. */
+  /** Optional international price in USD — Stripe-eligible when set + > 0. */
   feeInternational: number | null;
   location: string | null;
   gating: { mode?: string; rule?: string; requiresRoundId?: string } | null;
   isActive: boolean;
+  /** Long-form round details the operator types into the rounds builder. */
+  description: string | null;
 }
 
 function usd(n: number): string {
@@ -572,10 +574,10 @@ function RoundsPanel({
       <p className="mt-1 mb-5 text-sm text-muted-foreground">
         Register and pay for each round of {wordmark} you want to enter.
       </p>
-      {/* Catalog-style grid — 1 column on phones, 2 on tablets, 3 on desktops.
-          Each card is a fixed-height tile so the CTA always sits at the
-          bottom edge regardless of how long the metadata line is. */}
-      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {/* Vertical list — one full-width row per round so the round name never
+          truncates and there's room for the description, gating notes, and
+          a stacked status + CTA column on the right edge. */}
+      <ul className="space-y-3">
         {rounds.map((round, i) => {
           const reg = byRound.get(round.id);
           const state = roundState(round, reg, regs, rounds);
@@ -595,96 +597,111 @@ function RoundsPanel({
                 year: 'numeric',
               })
             : null;
+          // International students with a USD price + a configured Stripe
+          // endpoint get the new Pay-via-Stripe path; the dashboard still
+          // ships the offline copy when no international fee is set.
+          const stripeEligible = intl && (round.feeInternational ?? 0) > 0;
 
           return (
             <li
               key={round.id}
-              // min-w-0 + overflow-hidden — without these, grid items default
-              // to min-width:auto and a long round title (or the offline-
-              // payment paragraph) pushes the card past its grid column.
-              className="flex h-full min-w-0 flex-col gap-3 overflow-hidden rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
+              className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md sm:flex-row sm:items-start sm:gap-6"
             >
-              {/* Header — title, category chip, status pill. */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-foreground">
+              {/* LEFT — title, badges, full description, metadata. */}
+              <div className="min-w-0 flex-1 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-base font-semibold text-foreground">
                     {round.roundName || `Round ${i + 1}`}
-                  </p>
+                  </h4>
                   {categoryLabel && (
-                    <span className="mt-1.5 inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
                       {categoryLabel}
                     </span>
                   )}
+                  {round.location && (
+                    <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+                      {round.location}
+                    </span>
+                  )}
                 </div>
+
+                {round.description && (
+                  <p className="whitespace-pre-line text-sm text-muted-foreground">
+                    {round.description}
+                  </p>
+                )}
+
+                <dl className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                  <div className="flex gap-1.5">
+                    <dt className="font-mono uppercase tracking-wide text-[10px]">Mode</dt>
+                    <dd className="text-foreground">{round.roundType}</dd>
+                  </div>
+                  {examDate && (
+                    <div className="flex gap-1.5">
+                      <dt className="font-mono uppercase tracking-wide text-[10px]">Exam</dt>
+                      <dd className="text-foreground">{examDate}</dd>
+                    </div>
+                  )}
+                  {deadline && !reg && state.kind !== 'missed' && (
+                    <div className="flex gap-1.5">
+                      <dt className="font-mono uppercase tracking-wide text-[10px]">Closes</dt>
+                      <dd className="text-foreground">{deadline}</dd>
+                    </div>
+                  )}
+                  <div className="flex gap-1.5">
+                    <dt className="font-mono uppercase tracking-wide text-[10px]">Fee</dt>
+                    <dd className="text-foreground">{price ?? 'Free'}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              {/* RIGHT — status pill + CTA, stacked. Fixed-ish width so the
+                  buttons line up vertically across the list. */}
+              <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-56 sm:items-end">
                 {reg ? (
                   <StatusPill status={reg.status} />
                 ) : state.kind === 'missed' ? (
-                  <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <span className="self-start rounded-full bg-muted px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground sm:self-end">
                     Missed
                   </span>
                 ) : null}
-              </div>
 
-              {/* Metadata — one row per fact so the card breathes. */}
-              <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
-                <dt className="font-mono uppercase tracking-wide text-[10px]">Mode</dt>
-                <dd className="text-foreground">
-                  {round.roundType}
-                  {round.location ? ` · ${round.location}` : ''}
-                </dd>
-                {examDate && (
-                  <>
-                    <dt className="font-mono uppercase tracking-wide text-[10px]">Exam</dt>
-                    <dd className="text-foreground">{examDate}</dd>
-                  </>
-                )}
-                {deadline && !reg && state.kind !== 'missed' && (
-                  <>
-                    <dt className="font-mono uppercase tracking-wide text-[10px]">Closes</dt>
-                    <dd className="text-foreground">{deadline}</dd>
-                  </>
-                )}
-                <dt className="font-mono uppercase tracking-wide text-[10px]">Fee</dt>
-                <dd className="text-foreground">{price ?? 'Free'}</dd>
-              </dl>
-
-              {/* CTA — pinned to the bottom of the card via mt-auto. */}
-              <div className="mt-auto pt-2">
                 {reg ? (
                   reg.status === 'pending_payment' ? (
-                    intl ? (
-                      // International students don't have a live online-payment
-                      // path yet — they settle the USD fee with the organizer
-                      // offline. Show a clear instruction instead of the
-                      // Midtrans-driven Pay button.
+                    stripeEligible ? (
+                      <Button size="sm" asChild className="w-full sm:w-auto">
+                        <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}&provider=stripe`}>
+                          Pay {usd(round.feeInternational ?? 0)} via Stripe
+                        </Link>
+                      </Button>
+                    ) : intl ? (
                       <p className="break-words text-xs text-muted-foreground">
                         International payment is offline for now. Contact the organizer to settle your{' '}
                         {round.feeInternational != null ? usd(round.feeInternational) : 'round'} fee.
                       </p>
                     ) : (
-                      <Button size="sm" asChild className="w-full">
+                      <Button size="sm" asChild className="w-full sm:w-auto">
                         <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
                           Pay round fee
                         </Link>
                       </Button>
                     )
                   ) : (
-                    <p className="text-xs text-muted-foreground">
-                      {STATUS_COPY[reg.status]?.body ??
-                        `Status: ${reg.status.replace(/_/g, ' ')}`}
+                    <p className="text-xs text-muted-foreground sm:text-right">
+                      {STATUS_COPY[reg.status]?.body ?? `Status: ${reg.status.replace(/_/g, ' ')}`}
                     </p>
                   )
                 ) : state.kind === 'missed' ? (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground sm:text-right">
                     You didn’t register before this round closed.
                   </p>
                 ) : state.kind === 'locked' ? (
-                  <p className="text-xs text-muted-foreground">{state.note}</p>
+                  <p className="text-xs text-muted-foreground sm:text-right">{state.note}</p>
                 ) : (
                   <Button
                     size="sm"
                     disabled={registering === round.id}
-                    className="w-full"
+                    className="w-full sm:w-auto"
                     onClick={() =>
                       round.roundCategory === 'global'
                         ? setGlobalRound(round)

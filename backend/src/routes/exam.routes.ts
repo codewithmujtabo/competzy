@@ -47,7 +47,7 @@ router.use("/question-bank/proctoring", requireRole("admin", "organizer"));
 // 'YYYY-MM-DD' string. If left as a DATE, node-pg parses it into a local-
 // midnight JS Date and res.json() serialises that to UTC, rolling the calendar
 // date back a day on any UTC+ server (the exam-date "save reverts" bug).
-const EXAM_COLS = `id, comp_id, name, code, year,
+const EXAM_COLS = `id, comp_id, round_id, name, code, year,
   to_char(date, 'YYYY-MM-DD') AS date, grades, choice, short,
   choice_count, short_count, start_time, end_time, minutes, correct_score,
   wrong_score, description, created_at, updated_at`;
@@ -68,6 +68,8 @@ function mapExamRow(r: any) {
   return {
     id: r.id,
     compId: r.comp_id,
+    roundId: r.round_id ?? null,
+    roundName: r.round_name ?? null,         // LEFT JOIN supplies this on list+detail
     name: r.name,
     code: r.code,
     year: r.year ?? null,
@@ -132,6 +134,7 @@ function parseExamBody(body: any): { error?: string; data?: any } {
     data: {
       name,
       code,
+      roundId: str(body?.roundId),         // optional — binds the exam to a round
       year: num(body?.year),
       date: str(body?.date), // 'YYYY-MM-DD'
       grades: Array.isArray(body?.grades) ? body.grades.map(String) : [],
@@ -149,6 +152,17 @@ function parseExamBody(body: any): { error?: string; data?: any } {
   };
 }
 
+// Ensure a round_id (if provided) belongs to the given competition. Returns
+// true when null/undefined (no binding) or when the round genuinely belongs.
+async function roundBelongsToComp(roundId: string | null, compId: string): Promise<boolean> {
+  if (!roundId) return true;
+  const r = await pool.query(
+    "SELECT 1 FROM competition_rounds WHERE id = $1 AND comp_id = $2 AND deleted_at IS NULL",
+    [roundId, compId]
+  );
+  return r.rows.length > 0;
+}
+
 // ── GET /api/question-bank/exams?compId= ──────────────────────────────────
 router.get("/question-bank/exams", async (req: Request, res: Response) => {
   try {
@@ -159,10 +173,12 @@ router.get("/question-bank/exams", async (req: Request, res: Response) => {
     }
     const r = await pool.query(
       `SELECT ${EXAM_COLS},
+              cr.name AS round_name,
               (SELECT COUNT(*)::int FROM exam_question eq WHERE eq.exam_id = exams.id) AS question_count
          FROM exams
-        WHERE ${compFilter()} AND ${liveFilter()}
-        ORDER BY created_at DESC`,
+         LEFT JOIN competition_rounds cr ON cr.id = exams.round_id
+        WHERE ${compFilter("exams")} AND ${liveFilter("exams")}
+        ORDER BY exams.created_at DESC`,
       [compId]
     );
     res.json(r.rows.map((row) => ({ ...mapExamRow(row), questionCount: row.question_count })));
@@ -180,7 +196,13 @@ router.get("/question-bank/exams/:id", async (req: Request, res: Response) => {
       res.status(404).json({ message: "Exam not found" });
       return;
     }
-    const ex = await pool.query(`SELECT ${EXAM_COLS} FROM exams WHERE id = $1`, [id]);
+    const ex = await pool.query(
+      `SELECT ${EXAM_COLS}, cr.name AS round_name
+         FROM exams
+         LEFT JOIN competition_rounds cr ON cr.id = exams.round_id
+        WHERE exams.id = $1`,
+      [id]
+    );
     res.json({ ...mapExamRow(ex.rows[0]), questions: await loadExamQuestions(id) });
   } catch (err) {
     console.error("Get exam error:", err);
@@ -205,14 +227,18 @@ router.post(
         return;
       }
       const d = parsed.data;
+      if (!(await roundBelongsToComp(d.roundId, compId))) {
+        res.status(400).json({ message: "roundId does not belong to this competition" });
+        return;
+      }
       const inserted = await pool.query(
         `INSERT INTO exams
-           (comp_id, name, code, year, date, grades, choice, short, choice_count,
+           (comp_id, round_id, name, code, year, date, grades, choice, short, choice_count,
             short_count, start_time, end_time, minutes, correct_score, wrong_score, description)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9::jsonb,$10::jsonb,$11,$12,$13,$14::jsonb,$15::jsonb,$16)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15::jsonb,$16::jsonb,$17)
          RETURNING ${EXAM_COLS}`,
         [
-          compId, d.name, d.code, d.year, d.date, JSON.stringify(d.grades),
+          compId, d.roundId, d.name, d.code, d.year, d.date, JSON.stringify(d.grades),
           d.choice, d.short, JSON.stringify(d.choiceCount), JSON.stringify(d.shortCount),
           d.startTime, d.endTime, d.minutes, JSON.stringify(d.correctScore),
           JSON.stringify(d.wrongScore), d.description,
@@ -237,7 +263,8 @@ router.put(
   async (req: Request, res: Response) => {
     try {
       const id = String(req.params.id);
-      if (!(await examCompIfAccessible(req, id))) {
+      const compId = await examCompIfAccessible(req, id);
+      if (!compId) {
         res.status(404).json({ message: "Exam not found" });
         return;
       }
@@ -247,15 +274,19 @@ router.put(
         return;
       }
       const d = parsed.data;
+      if (!(await roundBelongsToComp(d.roundId, compId))) {
+        res.status(400).json({ message: "roundId does not belong to this competition" });
+        return;
+      }
       const updated = await pool.query(
         `UPDATE exams SET
-           name=$1, code=$2, year=$3, date=$4, grades=$5::jsonb, choice=$6, short=$7,
-           choice_count=$8::jsonb, short_count=$9::jsonb, start_time=$10, end_time=$11,
-           minutes=$12, correct_score=$13::jsonb, wrong_score=$14::jsonb, description=$15,
+           round_id=$1, name=$2, code=$3, year=$4, date=$5, grades=$6::jsonb, choice=$7, short=$8,
+           choice_count=$9::jsonb, short_count=$10::jsonb, start_time=$11, end_time=$12,
+           minutes=$13, correct_score=$14::jsonb, wrong_score=$15::jsonb, description=$16,
            updated_at=now()
-         WHERE id=$16 RETURNING ${EXAM_COLS}`,
+         WHERE id=$17 RETURNING ${EXAM_COLS}`,
         [
-          d.name, d.code, d.year, d.date, JSON.stringify(d.grades), d.choice, d.short,
+          d.roundId, d.name, d.code, d.year, d.date, JSON.stringify(d.grades), d.choice, d.short,
           JSON.stringify(d.choiceCount), JSON.stringify(d.shortCount), d.startTime,
           d.endTime, d.minutes, JSON.stringify(d.correctScore), JSON.stringify(d.wrongScore),
           d.description, id,

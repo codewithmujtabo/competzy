@@ -13,6 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CountrySelect } from '@/components/ui/country-select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -53,12 +61,28 @@ interface Voucher {
   createdAt: string;
 }
 
-const CREATE_DEFAULTS = {
+type Scope = 'none' | 'school' | 'country';
+type Mode = 'distinct' | 'shared';
+
+const CREATE_DEFAULTS: {
+  name: string;
+  discounted: string;
+  price: string;
+  usableCount: string;
+  npsn: string;
+  country: string | null;
+  scope: Scope;
+  mode: Mode;
+  isActive: boolean;
+} = {
   name: '',
   discounted: '',
   price: '',
   usableCount: '20',
   npsn: '',
+  country: null,
+  scope: 'none',
+  mode: 'distinct',
   isActive: true,
 };
 
@@ -118,6 +142,10 @@ function VouchersPage() {
       price: String(g.price),
       usableCount: String(g.usableCount),
       npsn: '',
+      country: null,
+      // Scope + mode + npsn are immutable post-mint — read-only on edit.
+      scope: 'none',
+      mode: 'distinct',
       isActive: g.isActive,
     });
     setOpen(true);
@@ -143,10 +171,19 @@ function VouchersPage() {
           discounted: Number(form.discounted) || 0,
           price: Number(form.price) || 0,
           usableCount: count,
-          npsn: form.npsn.trim() || null,
+          // Either-or scoping. Country wins server-side when both arrive.
+          npsn: form.scope === 'school' && form.npsn.trim() ? form.npsn.trim() : null,
+          country: form.scope === 'country' ? form.country : null,
+          // Distinct → N rows with random-suffix codes; shared → 1 row, max=N,
+          // one code the operator shares with the cohort.
+          mode: form.mode,
           isActive: form.isActive,
         });
-        toast.success(`Voucher group created — ${g.voucherCount} codes minted.`);
+        toast.success(
+          form.mode === 'shared'
+            ? `Voucher group created — 1 shared code with ${g.usableCount} uses.`
+            : `Voucher group created — ${g.voucherCount} codes minted.`,
+        );
       }
       setOpen(false);
       load();
@@ -355,35 +392,98 @@ function VouchersPage() {
               </div>
             </div>
             {!editing && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label className="mb-1.5 text-xs text-muted-foreground">
-                    Number of codes <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={1000}
-                    value={form.usableCount}
-                    onChange={(e) => setForm((f) => ({ ...f, usableCount: e.target.value }))}
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground">1–1000, minted immediately.</p>
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label className="mb-1.5 text-xs text-muted-foreground">
+                      Number of seats <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={1000}
+                      value={form.usableCount}
+                      onChange={(e) => setForm((f) => ({ ...f, usableCount: e.target.value }))}
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      1–1000 — total redemptions allowed across all codes minted.
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="mb-1.5 text-xs text-muted-foreground">Code mode</Label>
+                    <Select
+                      value={form.mode}
+                      onValueChange={(v) =>
+                        setForm((f) => ({ ...f, mode: v as Mode }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="distinct">
+                          Distinct codes — one per seat
+                        </SelectItem>
+                        <SelectItem value="shared">
+                          Shared code — one code, N uses
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {form.mode === 'shared'
+                        ? 'Mints one code the cohort shares (Komodo-per-country style).'
+                        : `Mints ${form.usableCount || 0} unique codes for per-seat distribution.`}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <Label className="mb-1.5 text-xs text-muted-foreground">
-                    School NPSN{' '}
-                    <span className="font-normal text-muted-foreground/70">— optional</span>
-                  </Label>
-                  <Input
-                    value={form.npsn}
-                    onChange={(e) => setForm((f) => ({ ...f, npsn: e.target.value }))}
-                    placeholder="20100001"
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Locks the codes to one school.
-                  </p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label className="mb-1.5 text-xs text-muted-foreground">Scope</Label>
+                    <Select
+                      value={form.scope}
+                      onValueChange={(v) =>
+                        setForm((f) => ({ ...f, scope: v as Scope }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No scope — any registrant</SelectItem>
+                        <SelectItem value="school">School (NPSN)</SelectItem>
+                        <SelectItem value="country">Country</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Restricts which registrants can redeem the code at pay-time.
+                    </p>
+                  </div>
+                  {form.scope === 'school' && (
+                    <div>
+                      <Label className="mb-1.5 text-xs text-muted-foreground">
+                        School NPSN <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        value={form.npsn}
+                        onChange={(e) => setForm((f) => ({ ...f, npsn: e.target.value }))}
+                        placeholder="20100001"
+                      />
+                    </div>
+                  )}
+                  {form.scope === 'country' && (
+                    <div>
+                      <Label className="mb-1.5 text-xs text-muted-foreground">
+                        Country <span className="text-destructive">*</span>
+                      </Label>
+                      <CountrySelect
+                        value={form.country}
+                        onChange={(c) => setForm((f) => ({ ...f, country: c }))}
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
+              </>
             )}
             <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
               <input

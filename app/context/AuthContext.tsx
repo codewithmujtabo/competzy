@@ -185,8 +185,7 @@ export function AuthProvider({
     password: string;
     fullName: string;
     phone: string;
-    province?: string;
-    city: string;
+    country?: string;                       // ISO 3166-1 alpha-2
     role: string;
     roleData: any;
     consentAccepted: boolean;

@@ -45,8 +45,15 @@ export default function CompetitionPayPage() {
   const [err, setErr] = useState<string | null>(null);
   // The specific registration to pay (a round registration), from ?registrationId=.
   const [targetRegId, setTargetRegId] = useState<string | null>(null);
-  // round id → { fee, name } for a multi-round competition.
-  const [roundInfo, setRoundInfo] = useState<Record<string, { fee: number; name: string }>>({});
+  // Provider override from ?provider= ('midtrans' | 'stripe'). Default falls
+  // back to Midtrans for Indonesian students; international students get Stripe
+  // when the round carries a `feeInternational` and the dashboard's pay button
+  // appended ?provider=stripe.
+  const [provider, setProvider] = useState<'midtrans' | 'stripe'>('midtrans');
+  // round id → { fee, feeInternational, name } for a multi-round competition.
+  const [roundInfo, setRoundInfo] = useState<
+    Record<string, { fee: number; feeInternational: number | null; name: string }>
+  >({});
 
   // Voucher.
   const [code, setCode] = useState('');
@@ -66,6 +73,8 @@ export default function CompetitionPayPage() {
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     setTargetRegId(p.get('registrationId'));
+    const prov = p.get('provider');
+    if (prov === 'stripe' || prov === 'midtrans') setProvider(prov);
   }, []);
 
   useEffect(() => {
@@ -75,13 +84,23 @@ export default function CompetitionPayPage() {
       .then(setRegs)
       .catch((e) => setErr(e instanceof Error ? e.message : 'Failed to load registration'));
     emcHttp
-      .get<{ rounds?: { id: string; fee: number; roundName: string }[] }>(
-        `/competitions/${comp.id}`,
-      )
+      .get<{
+        rounds?: {
+          id: string;
+          fee: number;
+          feeInternational: number | null;
+          roundName: string;
+        }[];
+      }>(`/competitions/${comp.id}`)
       .then((d) => {
-        const m: Record<string, { fee: number; name: string }> = {};
+        const m: Record<string, { fee: number; feeInternational: number | null; name: string }> = {};
         for (const r of d.rounds ?? []) {
-          m[r.id] = { fee: Number(r.fee) || 0, name: r.roundName };
+          m[r.id] = {
+            fee: Number(r.fee) || 0,
+            feeInternational:
+              r.feeInternational != null ? Number(r.feeInternational) : null,
+            name: r.roundName,
+          };
         }
         setRoundInfo(m);
       })
@@ -144,6 +163,25 @@ export default function CompetitionPayPage() {
     setPaying(true);
     setErr(null);
     try {
+      if (provider === 'stripe') {
+        // Stripe Checkout — server creates a Session and returns its hosted
+        // URL. Vouchers don't apply to USD international payments yet so we
+        // skip the voucherCode body field for this branch.
+        const res = await emcHttp.post<{ checkoutUrl: string | null }>(
+          '/payments/stripe',
+          { registrationId: reg.id },
+        );
+        if (!res.checkoutUrl) {
+          setErr('Could not start payment — please try again.');
+          return;
+        }
+        // Stripe Checkout owns the next page — the success_url + cancel_url
+        // bring the student back to the dashboard, which polls /verify to
+        // finalise the registration even if our webhook is still in flight.
+        window.location.assign(res.checkoutUrl);
+        return;
+      }
+
       const appliedCode = voucher?.valid ? code.trim() : undefined;
       const res = await emcHttp.post<{
         covered?: boolean;
@@ -180,10 +218,23 @@ export default function CompetitionPayPage() {
 
   if (!config) return null;
 
-  const baseFee = round ? round.fee : comp?.fee ?? 0;
-  const fee = voucher?.originalFee ?? baseFee;
+  // Stripe = USD international fee on the round; Midtrans = IDR comp/round fee.
+  // The voucher flow only feeds the Midtrans path today, so display also keys
+  // off the chosen provider.
+  const baseFee =
+    provider === 'stripe'
+      ? (round?.feeInternational ?? 0)
+      : (round ? round.fee : comp?.fee ?? 0);
+  const fee = provider === 'stripe' ? baseFee : voucher?.originalFee ?? baseFee;
   const payable = reg && !NON_PAYABLE.includes(reg.status);
-  const amountDue = voucher?.valid ? (voucher.discountedFee ?? fee) : fee;
+  const amountDue =
+    provider === 'stripe'
+      ? baseFee
+      : voucher?.valid
+        ? voucher.discountedFee ?? fee
+        : fee;
+  const formatAmount = (n: number) =>
+    provider === 'stripe' ? `$${Number.isInteger(n) ? n.toString() : n.toFixed(2)} USD` : rupiah(n);
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -296,17 +347,17 @@ export default function CompetitionPayPage() {
             <div className="mt-6 space-y-1.5 border-t pt-5 text-sm">
               <div className="flex justify-between text-muted-foreground">
                 <span>Registration fee</span>
-                <span className={voucher?.valid ? 'line-through' : ''}>{rupiah(fee)}</span>
+                <span className={voucher?.valid ? 'line-through' : ''}>{formatAmount(fee)}</span>
               </div>
               {voucher?.valid && (
                 <div className="flex justify-between text-emerald-700 dark:text-emerald-300">
                   <span>Voucher discount</span>
-                  <span>− {rupiah(fee - amountDue)}</span>
+                  <span>− {formatAmount(fee - amountDue)}</span>
                 </div>
               )}
               <div className="flex justify-between pt-1.5 text-base font-semibold text-foreground">
                 <span>Amount due</span>
-                <span>{rupiah(amountDue)}</span>
+                <span>{formatAmount(amountDue)}</span>
               </div>
             </div>
 
@@ -330,7 +381,11 @@ export default function CompetitionPayPage() {
               </div>
             ) : (
               <Button className="mt-6 w-full" size="lg" onClick={pay} disabled={paying}>
-                {paying ? 'Starting payment…' : `Pay ${rupiah(amountDue)}`}
+                {paying
+                  ? 'Starting payment…'
+                  : provider === 'stripe'
+                    ? `Pay ${formatAmount(amountDue)} via Stripe`
+                    : `Pay ${formatAmount(amountDue)}`}
               </Button>
             )}
           </Card>

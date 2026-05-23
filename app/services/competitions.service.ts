@@ -31,10 +31,13 @@ export interface Competition {
     examDate?: string | null;
     resultsDate?: string | null;
     fee: number;
+    feeInternational?: number | null;
     location?: string | null;
     examMode?: string;
     roundOrder?: number;
     isActive?: boolean;
+    /** Long-form round details — rendered as a paragraph in the rounds list. */
+    description?: string | null;
   }>;
   createdAt: string;
 }

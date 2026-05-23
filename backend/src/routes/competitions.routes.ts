@@ -1,9 +1,34 @@
 import { Router, Request, Response } from "express";
 import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
+import { verifyToken } from "../services/auth.service";
 import * as recommendationsService from "../services/recommendations.service";
 import * as pushService from "../services/push.service";
 import { classifyCreature } from "../services/komodo-creature.service";
+
+// Best-effort caller country — returns the ISO country code on `users.country`
+// if a valid session is attached to the request, else null. Never throws,
+// because the catalog endpoint is reachable anonymously.
+async function callerCountry(req: Request): Promise<string | null> {
+  try {
+    let token: string | null = null;
+    const header = req.headers.authorization;
+    if (header && header.startsWith("Bearer ")) token = header.slice(7);
+    else if ((req as any).cookies?.competzy_token) token = (req as any).cookies.competzy_token;
+    if (!token) return null;
+
+    const payload = verifyToken(token);
+    if (!payload) return null;
+
+    const r = await pool.query(
+      "SELECT country FROM users WHERE id = $1 AND deleted_at IS NULL",
+      [payload.sub]
+    );
+    return (r.rows[0]?.country ?? null) || null;
+  } catch {
+    return null;
+  }
+}
 
 const router = Router();
 
@@ -77,6 +102,16 @@ router.get("/", async (req: Request, res: Response) => {
     if (slug) {
       conditions.push(`slug = $${idx++}`);
       values.push(slug);
+    }
+
+    // International-only filter: an authenticated caller whose `users.country`
+    // is set to anything other than Indonesia (`ID`) sees only competitions
+    // flagged `is_international = true`. Anonymous + ID + null-country callers
+    // see everything (the previous behaviour). This is the server-side hook
+    // both web + mobile catalogs inherit.
+    const country = await callerCountry(req);
+    if (country && country.toUpperCase() !== "ID") {
+      conditions.push(`is_international = true`);
     }
 
     if (conditions.length > 0) {
@@ -157,7 +192,8 @@ router.get("/:id", async (req: Request, res: Response) => {
               exam_mode,
               qualifying_score,
               is_active,
-              age_cutoff_date
+              age_cutoff_date,
+              description
             FROM competition_rounds
             WHERE comp_id = $1
             ORDER BY round_order ASC, created_at ASC`,
@@ -216,6 +252,7 @@ router.get("/:id", async (req: Request, res: Response) => {
         qualifyingScore: round.qualifying_score ?? null,
         isActive: round.is_active !== false,
         ageCutoffDate: round.age_cutoff_date ?? null,
+        description: round.description ?? null,
       })),
       createdAt: c.created_at,
     });

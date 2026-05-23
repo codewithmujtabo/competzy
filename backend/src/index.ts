@@ -17,7 +17,7 @@ import usersRoutes from "./routes/users.routes";
 import registrationsRoutes from "./routes/registrations.routes";
 import documentsRoutes from "./routes/documents.routes";
 import competitionsRoutes from "./routes/competitions.routes";
-import paymentsRoutes from "./routes/payments.routes";
+import paymentsRoutes, { handleStripeWebhook } from "./routes/payments.routes";
 import notificationsRoutes from "./routes/notifications.routes";
 import parentsRoutes from "./routes/parents.routes";
 import bulkRegistrationRoutes from "./routes/bulk-registration.routes";
@@ -72,6 +72,17 @@ app.use(
   })
 );
 app.use(cookieParser());
+
+// Stripe webhook MUST receive the raw body — the signature is computed over
+// the exact bytes Stripe sent, not JSON-roundtripped. Register this route
+// BEFORE `express.json()` so it never sees the parsed body. All other routes
+// continue to get JSON parsing.
+app.post(
+  "/api/payments/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  handleStripeWebhook,
+);
+
 app.use(express.json());
 
 // Serve uploaded files — /uploads/<userId>/<filename>

@@ -100,7 +100,11 @@ export default function PayScreen() {
   const { registrationId } = useLocalSearchParams<{ registrationId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { refreshRegistrations } = useUser();
+  const { refreshRegistrations, user } = useUser();
+  // International students get the Stripe USD path (when the round has a
+  // configured fee_international); local + missing-country callers fall through
+  // to the existing IDR Midtrans Snap flow.
+  const useStripe = !!((user as any)?.country) && String((user as any).country).toUpperCase() !== "ID";
 
   const [paymentState, setPaymentState] = useState<PaymentState>("selecting");
   const [loadingMessage, setLoadingMessage] = useState("Preparing payment...");
@@ -156,28 +160,43 @@ export default function PayScreen() {
     try {
       setLoadingMessage("Preparing payment...");
       setPaymentState("loading");
-      const appliedVoucher = voucher?.valid ? voucherInput.trim() : undefined;
-      const snap = await paymentsService.createSnapToken(
-        registrationId,
-        payerKind,
-        appliedVoucher
-      );
 
-      // A voucher that fully covers the fee settles server-side — no Midtrans.
-      if (snap.covered) {
-        await refreshRegistrations();
-        setPaymentState("success");
-        return;
-      }
-      if (!snap.redirectUrl) {
-        setErrorDetail("Could not start the payment. Please try again.");
-        setPaymentState("error");
-        return;
+      // Stripe path — international students. Vouchers don't apply to the USD
+      // flow yet; the existing voucher UI stays for the Midtrans path.
+      let redirectUrl: string | undefined;
+      if (useStripe) {
+        const session = await paymentsService.createStripeSession(registrationId, payerKind);
+        if (!session.checkoutUrl) {
+          setErrorDetail("Could not start payment. Please try again.");
+          setPaymentState("error");
+          return;
+        }
+        redirectUrl = session.checkoutUrl;
+      } else {
+        const appliedVoucher = voucher?.valid ? voucherInput.trim() : undefined;
+        const snap = await paymentsService.createSnapToken(
+          registrationId,
+          payerKind,
+          appliedVoucher
+        );
+
+        // A voucher that fully covers the fee settles server-side — no Midtrans.
+        if (snap.covered) {
+          await refreshRegistrations();
+          setPaymentState("success");
+          return;
+        }
+        if (!snap.redirectUrl) {
+          setErrorDetail("Could not start the payment. Please try again.");
+          setPaymentState("error");
+          return;
+        }
+        redirectUrl = snap.redirectUrl;
       }
 
       setPaymentState("opening");
       WebBrowser.dismissAuthSession();
-      const result = await WebBrowser.openAuthSessionAsync(snap.redirectUrl, "competzy://");
+      const result = await WebBrowser.openAuthSessionAsync(redirectUrl, "competzy://");
 
       setLoadingMessage("Verifying payment status...");
       setPaymentState("loading");
@@ -212,7 +231,7 @@ export default function PayScreen() {
       setErrorDetail(err?.message || "");
       setPaymentState("error");
     }
-  }, [registrationId, refreshRegistrations, pollVerify, payerKind, voucher, voucherInput]);
+  }, [registrationId, refreshRegistrations, pollVerify, payerKind, voucher, voucherInput, useStripe]);
 
   // ─── Selecting payer ───────────────────────────────────────────────────────
   if (paymentState === "selecting") {

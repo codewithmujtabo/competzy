@@ -130,6 +130,9 @@ const CompetitionCard = memo(function CompetitionCard({
         </View>
 
         <View style={styles.metaRow}>
+          {item.isInternational ? (
+            <Pill label="International" tone="info" size="sm" />
+          ) : null}
           <Pill
             label={cats.length > 1 ? `${firstCat} +${cats.length - 1}` : firstCat}
             tone="neutral"

@@ -1,16 +1,16 @@
-# Graph Report - competzy  (2026-05-21)
+# Graph Report - competzy  (2026-05-23)
 
 ## Corpus Check
-- 408 files · ~3,495,980 words
+- 425 files · ~3,515,607 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3267 nodes · 7180 edges · 260 communities (139 shown, 121 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 83 edges (avg confidence: 0.8)
+- 3441 nodes · 8424 edges · 269 communities (148 shown, 121 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 87 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `66c246e4`
+- Built from commit: `394a2140`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -127,6 +127,7 @@
 - [[_COMMUNITY_Cluster 109|Cluster 109]]
 - [[_COMMUNITY_Cluster 110|Cluster 110]]
 - [[_COMMUNITY_Cluster 111|Cluster 111]]
+- [[_COMMUNITY_Cluster 112|Cluster 112]]
 - [[_COMMUNITY_Cluster 113|Cluster 113]]
 - [[_COMMUNITY_Cluster 114|Cluster 114]]
 - [[_COMMUNITY_Cluster 115|Cluster 115]]
@@ -137,7 +138,6 @@
 - [[_COMMUNITY_Cluster 120|Cluster 120]]
 - [[_COMMUNITY_Cluster 121|Cluster 121]]
 - [[_COMMUNITY_Cluster 122|Cluster 122]]
-- [[_COMMUNITY_Cluster 123|Cluster 123]]
 - [[_COMMUNITY_Cluster 124|Cluster 124]]
 - [[_COMMUNITY_Cluster 125|Cluster 125]]
 - [[_COMMUNITY_Cluster 126|Cluster 126]]
@@ -145,21 +145,21 @@
 - [[_COMMUNITY_Cluster 128|Cluster 128]]
 - [[_COMMUNITY_Cluster 129|Cluster 129]]
 - [[_COMMUNITY_Cluster 130|Cluster 130]]
+- [[_COMMUNITY_Cluster 131|Cluster 131]]
+- [[_COMMUNITY_Cluster 132|Cluster 132]]
+- [[_COMMUNITY_Cluster 133|Cluster 133]]
+- [[_COMMUNITY_Cluster 134|Cluster 134]]
+- [[_COMMUNITY_Cluster 135|Cluster 135]]
+- [[_COMMUNITY_Cluster 136|Cluster 136]]
 - [[_COMMUNITY_Cluster 137|Cluster 137]]
-- [[_COMMUNITY_Cluster 141|Cluster 141]]
-- [[_COMMUNITY_Cluster 142|Cluster 142]]
-- [[_COMMUNITY_Cluster 143|Cluster 143]]
-- [[_COMMUNITY_Cluster 144|Cluster 144]]
-- [[_COMMUNITY_Cluster 145|Cluster 145]]
+- [[_COMMUNITY_Cluster 138|Cluster 138]]
+- [[_COMMUNITY_Cluster 139|Cluster 139]]
+- [[_COMMUNITY_Cluster 146|Cluster 146]]
 - [[_COMMUNITY_Cluster 150|Cluster 150]]
 - [[_COMMUNITY_Cluster 151|Cluster 151]]
 - [[_COMMUNITY_Cluster 152|Cluster 152]]
 - [[_COMMUNITY_Cluster 153|Cluster 153]]
 - [[_COMMUNITY_Cluster 154|Cluster 154]]
-- [[_COMMUNITY_Cluster 155|Cluster 155]]
-- [[_COMMUNITY_Cluster 156|Cluster 156]]
-- [[_COMMUNITY_Cluster 157|Cluster 157]]
-- [[_COMMUNITY_Cluster 158|Cluster 158]]
 - [[_COMMUNITY_Cluster 159|Cluster 159]]
 - [[_COMMUNITY_Cluster 160|Cluster 160]]
 - [[_COMMUNITY_Cluster 161|Cluster 161]]
@@ -261,30 +261,39 @@
 - [[_COMMUNITY_Community 257|Community 257]]
 - [[_COMMUNITY_Community 258|Community 258]]
 - [[_COMMUNITY_Community 259|Community 259]]
+- [[_COMMUNITY_Community 260|Community 260]]
+- [[_COMMUNITY_Community 261|Community 261]]
+- [[_COMMUNITY_Community 262|Community 262]]
+- [[_COMMUNITY_Community 263|Community 263]]
+- [[_COMMUNITY_Community 264|Community 264]]
+- [[_COMMUNITY_Community 265|Community 265]]
+- [[_COMMUNITY_Community 266|Community 266]]
+- [[_COMMUNITY_Community 267|Community 267]]
+- [[_COMMUNITY_Community 268|Community 268]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `cn()` - 161 edges
-2. `Button()` - 89 edges
-3. `Card()` - 87 edges
-4. `apiRequest()` - 83 edges
-5. `PageHeader()` - 65 edges
-6. `Brand` - 63 edges
-7. `Badge()` - 59 edges
-8. `Sprint Plan (Full Roadmap)` - 58 edges
-9. `Surface` - 53 edges
-10. `Text` - 53 edges
+1. `cn()` - 180 edges
+2. `Button()` - 121 edges
+3. `Card()` - 117 edges
+4. `PageHeader()` - 95 edges
+5. `Badge()` - 86 edges
+6. `apiRequest()` - 85 edges
+7. `Skeleton()` - 78 edges
+8. `useQuestionBank()` - 67 edges
+9. `Input()` - 64 edges
+10. `Brand` - 63 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Competzy Project Brief` --conceptually_related_to--> `Beyond Classroom Brainstorming PDF`  [INFERRED]
   CLAUDE.md → app/Beyond Classroom.pdf
-- `Sidebar()` --calls--> `useAuth()`  [INFERRED]
-  web/components/Sidebar.tsx → app/context/AuthContext.tsx
 - `CompetitionRegisterPage()` --calls--> `City`  [INFERRED]
   web/app/(competitions)/competitions/[slug]/register/page.tsx → app/services/location.service.ts
 - `Self-hosted PostgreSQL Only Rule` --conceptually_related_to--> `Legacy Supabase Schema (DATABASE_SETUP.sql)`  [INFERRED]
   CLAUDE.md → app/DATABASE_SETUP.sql
 - `Person-KID Identifier (KX-2026-NNNNNNN)` --implements--> `Master User ID for 50k Member Unification`  [INFERRED]
   CLAUDE.md → app/Beyond Classroom.pdf
+- `School Self-Signup + Verification Flow (Sprint 16)` --conceptually_related_to--> `SchoolDashboardScreen (students/registrations/analytics tabs)`  [INFERRED]
+  CLAUDE.md → app/school-dashboard.tsx
 
 ## Hyperedges (group relationships)
 - **Auth screens share role-based router pattern** — login_onsuccess, register_handlecreateaccount, claim_account_handleclaim [INFERRED 0.85]
@@ -323,147 +332,147 @@
 - **Cookie-auth context trio (admin/organizer/school)** — web_lib_auth_context, web_lib_auth_organizer_context, web_lib_auth_school_context [INFERRED]
 - **adminHttp + organizerHttp aliases over single fetch wrapper** — web_lib_api_client, web_lib_api_index, web_lib_auth_context, web_lib_auth_organizer_context [INFERRED]
 
-## Communities (260 total, 121 thin omitted)
+## Communities (269 total, 121 thin omitted)
 
 ### Community 0 - "Admin Mobile Screens"
 Cohesion: 0.04
-Nodes (63): AnnouncementsPage(), DEFAULTS, CATEGORIES, CompetitionFormProps, DEFAULTS, STATUSES, CHECK_TYPE_LABEL, CHECK_TYPE_OPTIONS (+55 more)
+Nodes (51): BulkJob, styles, Registration, School, Student, styles, styles, AuthTab (+43 more)
 
 ### Community 1 - "School Auth Context"
-Cohesion: 0.05
-Nodes (51): ExamPlayerScreen(), fmtClock(), ExamResultScreen(), styles, sum(), styles, Radius, Spacing (+43 more)
+Cohesion: 0.04
+Nodes (66): apiRequest(), HttpError, RequestOptions, AuthResponse, getMe(), sendOtp(), sendPhoneOtp(), Certificate (+58 more)
 
 ### Community 2 - "Mobile API Service Layer"
-Cohesion: 0.07
-Nodes (48): marketingHttp, { Provider, useHook }, ExamRow, ExamsListPage(), GradingQueuePage(), QueueRow, ExamEditorPage(), ExamQuestion (+40 more)
+Cohesion: 0.04
+Nodes (77): useIsMobile(), ReviewQuestionPage(), cn(), Cell(), StatusBadge(), SchoolPendingPage(), ExamPlayerPage(), fmt() (+69 more)
 
 ### Community 3 - "Web Admin Layout"
-Cohesion: 0.06
-Nodes (41): FILTERS, { Provider, useHook }, SchoolContext, SchoolCtx, schoolFetch(), schoolHttp, useSchool(), BulkRegistrationPage() (+33 more)
+Cohesion: 0.04
+Nodes (59): Db, upsertSchoolFromNpsn(), authLimiter, bulkUploadLimiter, otpSendLimiter, otpVerifyLimiter, passwordResetLimiter, pinVerifyLimiter (+51 more)
 
 ### Community 4 - "Database Columns & Keys"
-Cohesion: 0.05
-Nodes (54): authLimiter, bulkUploadLimiter, otpSendLimiter, otpVerifyLimiter, passwordResetLimiter, pinVerifyLimiter, code, e164 (+46 more)
+Cohesion: 0.09
+Nodes (38): AchievementPayload, CurrentRow, HistoricalRow, schoolHttp, ExamRow, fmtDate(), GradingQueuePage(), QueueRow (+30 more)
 
 ### Community 5 - "Backend DB Bootstrap"
-Cohesion: 0.07
-Nodes (45): commerceHttp, Certificate, CertificatesPage(), ListResponse, CompOption, CountryRepsPage(), FORM_DEFAULTS, Rep (+37 more)
+Cohesion: 0.05
+Nodes (37): CompetitionDetailPage(), formatDate(), formatPrice(), Row(), STATUS_PILL, styles, CategoryAccent, CategoryBg (+29 more)
 
 ### Community 6 - "Admin / Audit Middleware"
-Cohesion: 0.06
-Nodes (43): competitionsApi, Catalog, CATEGORIES, CATS, CompetitionsPage(), FavRow, Field(), FILTERS (+35 more)
+Cohesion: 0.05
+Nodes (40): pool, ACCOUNTS, createTestAccounts(), main(), normalizePhone(), authMiddleware(), Request, { compId, rows } (+32 more)
 
 ### Community 7 - "Web Auth Contexts"
 Cohesion: 0.05
-Nodes (53): apiRequest(), createOrder(), CreateOrderBody, getMyOrders(), getOrder(), getStorefrontProducts(), OrderItem, payOrder() (+45 more)
+Nodes (42): { Provider, useHook }, SchoolContext, SchoolCtx, schoolFetch(), useSchool(), COLUMNS, EMPTY_ROW, isRowEmpty() (+34 more)
 
 ### Community 8 - "Auth & Competitions Routes"
-Cohesion: 0.09
-Nodes (42): CompetitionAdminLayout(), CompetitionAdminPage(), EmcAdminPage(), PendingRow, StatusFilter, Announcement, AnnouncementCard(), CompetitionAnnouncementsPage() (+34 more)
-
-### Community 9 - "Cron & Background Jobs"
-Cohesion: 0.06
-Nodes (36): CompetitionDetailPage(), formatDate(), formatPrice(), Row(), STATUS_PILL, styles, CategoryAccent, CategoryBg (+28 more)
-
-### Community 10 - "Web API Client"
-Cohesion: 0.05
-Nodes (48): env, adminOrSchoolAdmin(), errorHandler(), HttpError, schoolAdminOnly(), teacherOrSchoolAdmin(), teacherOrAdminOnly(), next (+40 more)
-
-### Community 11 - "Auth & Twilio OTP"
 Cohesion: 0.04
 Nodes (57): SPRINT 0 — Quick Wins ✅ COMPLETE, SPRINT 10 — Mobile Bug Fixes (May 6, 2026 Session 2) ✅ COMPLETE, SPRINT 11 — Bug Fixes (May 6, 2026 Session 3) ✅ COMPLETE, SPRINT 12 — Rebrand Kompetix → Competzy (May 8, 2026 Session 4) ✅ COMPLETE, SPRINT 13 — Production Infra Templates (May 9, 2026 Session 5) ✅ LOCAL ARTIFACTS DONE, SPRINT 14 — Compliance & Security Hardening (May 8–9, 2026 Sessions 4–5) ✅ COMPLETE, SPRINT 15 — Launch 1 Polish (May 8, 2026 Session 4) ✅ COMPLETE, SPRINT 16 — School Portal Soft Launch (May 9, 2026 Session 5) ✅ COMPLETE (+49 more)
 
-### Community 12 - "Mobile Theme System"
+### Community 9 - "Cron & Background Jobs"
+Cohesion: 0.11
+Nodes (37): ExamsListPage(), MedalistsPage(), ExamLite, PaperExam, PaperExamsPage(), Student, TestCenter, CompetitionPicker() (+29 more)
+
+### Community 10 - "Web API Client"
 Cohesion: 0.05
-Nodes (34): pool, ACCOUNTS, createTestAccounts(), main(), normalizePhone(), authMiddleware(), Request, cached (+26 more)
+Nodes (35): organizerHttp, organizerCompetitionsApi, CATEGORIES, CompetitionForm(), CompetitionFormProps, CompetitionFormValues, DEFAULTS, STATUSES (+27 more)
+
+### Community 11 - "Auth & Twilio OTP"
+Cohesion: 0.07
+Nodes (32): ExamResultScreen(), styles, sum(), styles, Brand, Radius, Spacing, ExamSection (+24 more)
+
+### Community 12 - "Mobile Theme System"
+Cohesion: 0.07
+Nodes (41): compFilter(), liveFilter(), SOFT_DELETE_TABLES, softDelete(), CHECK_TYPES, CheckType, compId, FlowStep (+33 more)
 
 ### Community 13 - "Mobile App Bootstrap"
-Cohesion: 0.04
-Nodes (45): compFilter(), liveFilter(), SOFT_DELETE_TABLES, base, byId, codes, compId, discounted (+37 more)
+Cohesion: 0.07
+Nodes (28): NAV, AuthContext, AuthCtx, { Provider, useHook }, useAuth(), { Provider, useHook }, createRoleAuth(), Http (+20 more)
 
 ### Community 14 - "Registrations Routes"
-Cohesion: 0.06
-Nodes (43): useIsMobile(), AppShellProps, AppShellUser, NavItem, Separator(), Sheet(), SheetContent(), SheetDescription() (+35 more)
-
-### Community 15 - "Parent Routes & Email"
-Cohesion: 0.06
-Nodes (30): BulkJob, styles, Registration, School, Student, styles, HapticTab(), NotificationTabIcon() (+22 more)
-
-### Community 16 - "Web UI Components"
 Cohesion: 0.09
 Nodes (49): Root Layout, Sidebar component, ThemeToggle, web/components/ui, UiPrimitives, Admin Competitions Page, Admin Dashboard Page (KPI), Dashboard Layout (auth guard) (+41 more)
 
+### Community 15 - "Parent Routes & Email"
+Cohesion: 0.1
+Nodes (27): http, req(), token(), authApi, notificationsApi, organizerAuthApi, organizerProfileApi, organizerRegistrationsApi (+19 more)
+
+### Community 16 - "Web UI Components"
+Cohesion: 0.15
+Nodes (26): Announcement, AnnouncementsPage(), AnnouncementsPageWithProvider(), DEFAULTS, fmtDate(), marketingHttp, Doc, DOC_TYPES (+18 more)
+
 ### Community 17 - "Concept / Rationale Nodes"
-Cohesion: 0.06
-Nodes (29): COLUMNS, EMPTY_ROW, isRowEmpty(), isValidRow(), ManualEntryGrid(), ManualRow, Props, BatchResult (+21 more)
-
-### Community 18 - "Mobile Doc & User Services"
-Cohesion: 0.05
-Nodes (28): styles, AuthTab, styles, ALL_GRADES, Grade, GRADES, Role, ROLES (+20 more)
-
-### Community 19 - "Web Competitions Page"
 Cohesion: 0.07
 Nodes (48): invitations.verification_pin, payments.order_id, payments.snap_token, registrations.profile_snapshot, registrations.registration_number, schools.npsn, students.nisn, users.phone (partial unique idx) (+40 more)
 
+### Community 18 - "Mobile Doc & User Services"
+Cohesion: 0.08
+Nodes (39): GRADE_LEVEL, main(), ROUNDS, ymd(), ALL_GRADES, CompSpec, main(), mc() (+31 more)
+
+### Community 19 - "Web Competitions Page"
+Cohesion: 0.13
+Nodes (28): CompetitionAdminLayout(), CompetitionAdminPage(), FILTERS, PendingRow, StatusFilter, AnnouncementCard(), CompetitionAnnouncementsPage(), emcHttp (+20 more)
+
 ### Community 20 - "Admin Routes (Backend)"
-Cohesion: 0.06
-Nodes (36): GradeMultiSelect(), GradeMultiSelectProps, GRADES, ReviewQuestionPage(), cn(), Cell(), StatusBadge(), ExamPlayerPage() (+28 more)
-
-### Community 21 - "Legacy Vite/Express Stack"
-Cohesion: 0.06
-Nodes (28): HttpError, CreatureInfo, CreatureKey, CREATURES, AccessInfo, AffiliatedCredential, AvailableExam, CATEGORY_LABEL (+20 more)
-
-### Community 22 - "Web API Index"
-Cohesion: 0.07
-Nodes (27): navTheme, queryClient, RootLayout(), AppUser, GradeLevel, MOCK_USER, UserRole, AuthContext (+19 more)
-
-### Community 23 - "Teacher Mobile Flow"
 Cohesion: 0.05
 Nodes (42): API Endpoints Summary, Backend Files (13 created/modified), Bulk Registration ✅, Bulk Registration (`/api/bulk-registration`), code:csv (full_name,email,phone,nisn,grade,competition_id), code:sql (id UUID PRIMARY KEY), code:sql (id UUID PRIMARY KEY), code:sql (id UUID PRIMARY KEY) (+34 more)
 
-### Community 24 - "Payments Backend"
-Cohesion: 0.09
-Nodes (39): announcement(), area(), demoCertificate(), exam(), localToday(), main(), material(), product() (+31 more)
+### Community 21 - "Legacy Vite/Express Stack"
+Cohesion: 0.07
+Nodes (28): navTheme, queryClient, HapticTab(), NotificationTabIcon(), NotificationTabIconProps, styles, AppUser, GradeLevel (+20 more)
 
-### Community 25 - "Document Vault Flow"
+### Community 22 - "Web API Index"
+Cohesion: 0.11
+Nodes (27): CHECK_TYPE_LABEL, CHECK_TYPE_OPTIONS, CheckType, FlowStep, FORM_DEFAULTS, CompRound, Entry, Mark (+19 more)
+
+### Community 23 - "Teacher Mobile Flow"
 Cohesion: 0.06
 Nodes (42): admin.middleware.ts, adminOnly, adminOrSchoolAdmin, admin.routes.ts, audit_log table, audit.ts, REDACT_KEYS, autoLinkHistoricalRecords (+34 more)
+
+### Community 24 - "Payments Backend"
+Cohesion: 0.08
+Nodes (33): env, errorHandler(), HttpError, mapProduct(), base, docType, ext, router (+25 more)
+
+### Community 25 - "Document Vault Flow"
+Cohesion: 0.08
+Nodes (30): adminOnly(), audit(), AuditOptions, REDACT_KEYS, requireRole(), doc, email, fullName (+22 more)
 
 ### Community 26 - "Documents Backend"
 Cohesion: 0.06
 Nodes (37): 📋 API Contract (for Teammate), code:block1 (competzy/), code:bash (# Start web in dev mode), Competitions in the Database, Competzy — Project Plan & Status, Competzy — Project Plan & Task Board, 🔴 CRITICAL — Must finish before Phase 1 (July 10), 🔴 CRITICAL — Must finish before Phase 1 (July 10) (+29 more)
 
 ### Community 27 - "Parent Linking Flow"
+Cohesion: 0.06
+Nodes (33): certCompIfAccessible(), productCompIfAccessible(), voucherGroupCompIfAccessible(), ansByQ, byNumber, chosen, CLEARED_REG, compId (+25 more)
+
+### Community 28 - "Organizer Competition Forms"
 Cohesion: 0.05
 Nodes (37): 1. Enhanced Profile Management, 2. Payment Flow (from previous session), 3. File Upload Pipeline (from previous session), Backend, Backend API, code:bash (# On macOS:), code:block2 (EXPO_PUBLIC_API_URL=http://YOUR_NEW_IP:3000/api), code:bash (npm start) (+29 more)
 
-### Community 28 - "Organizer Competition Forms"
-Cohesion: 0.08
-Nodes (28): softDelete(), adminOnly(), audit(), AuditOptions, REDACT_KEYS, requireRole(), email, fullName (+20 more)
-
 ### Community 29 - "School Admin Routes"
-Cohesion: 0.08
-Nodes (29): router, token, category, conditions, params, router, search, total (+21 more)
+Cohesion: 0.07
+Nodes (23): HttpError, CreatureInfo, CreatureKey, CREATURES, AccessInfo, AffiliatedCredential, AvailableExam, CATEGORY_LABEL (+15 more)
 
 ### Community 30 - "Analytics & Competition Detail"
 Cohesion: 0.09
-Nodes (23): adminHttp, certificatesHttp, countryRepHttp, httpFormData(), httpReq(), makeHttp(), questionBankHttp, schoolFetch() (+15 more)
+Nodes (24): StorefrontOrder, Access, Competition, GRADES, QuestionMaker, ExamResultPage(), Section, SessionResult (+16 more)
 
 ### Community 31 - "Auth Login & Profile Setup"
-Cohesion: 0.11
-Nodes (31): GRADE_LEVEL, main(), ROUNDS, ymd(), ALL_GRADES, CompSpec, main(), mc() (+23 more)
+Cohesion: 0.08
+Nodes (29): router, token, category, conditions, params, router, search, total (+21 more)
 
 ### Community 32 - "Web Auth API"
-Cohesion: 0.08
-Nodes (29): main(), byExam, choiceQids, CLEARED, compId, deadline, examId, id (+21 more)
+Cohesion: 0.06
+Nodes (32): base, byId, codes, compId, discounted, id, imageUpload, { limit, offset, page } (+24 more)
 
 ### Community 33 - "Express Bootstrap & Errors"
-Cohesion: 0.06
-Nodes (31): certCompIfAccessible(), productCompIfAccessible(), voucherGroupCompIfAccessible(), ansByQ, byNumber, chosen, CLEARED_REG, compId (+23 more)
+Cohesion: 0.08
+Nodes (28): main(), byExam, choiceQids, CLEARED, compId, deadline, examId, id (+20 more)
 
 ### Community 34 - "k6 Load Test"
-Cohesion: 0.13
-Nodes (21): BrandPanel(), TAGLINES, WORD_SLOTS, ArrowRightIcon(), base, EyeIcon(), EyeOffIcon(), LockIcon() (+13 more)
+Cohesion: 0.09
+Nodes (19): Catalog, FavRow, Registration, STATUS_LABEL, HistoricalRecord, Competition, Registration, STATUS_CLS (+11 more)
 
 ### Community 35 - "Mobile Admin Service"
 Cohesion: 0.06
@@ -471,379 +480,415 @@ Nodes (34): Current Task Status (as of May 13, 2026 — Session 10), EMC Port (b
 
 ### Community 36 - "Mobile Tabs Misc"
 Cohesion: 0.07
-Nodes (24): CHECK_TYPES, CheckType, compId, FlowStep, router, sets, steps, values (+16 more)
+Nodes (19): NAV, Sidebar(), useAuth(), Dashboard(), DashboardPage(), fmtRp(), Kpi, LINKS (+11 more)
 
 ### Community 37 - "Competitions CSV Seeder"
+Cohesion: 0.15
+Nodes (25): CATEGORY_LABEL, CompetitionRoundsScreen(), fmtDate(), Round, rupiah(), statusLabel(), statusTone(), styles (+17 more)
+
+### Community 38 - "Audit & Organizer Middleware"
 Cohesion: 0.06
 Nodes (31): 📋 API Contract (for Teammate), Backend must also be running:, Check web/.env.local — BACKEND_URL should point to backend port, Competitions in the Database, 🔴 CRITICAL — Must finish before Phase 1 (July 10), 🔴 CRITICAL — Must finish before Phase 1 (July 10), Current Backend API Routes, Database Tables (current) (+23 more)
 
-### Community 38 - "Audit & Organizer Middleware"
-Cohesion: 0.08
-Nodes (27): compId, id, label, { limit, offset, page }, mapCertificate(), pageParams(), params, publicView() (+19 more)
-
 ### Community 39 - "Competitions Routes & Recs"
+Cohesion: 0.08
+Nodes (26): compId, id, label, { limit, offset, page }, mapCertificate(), pageParams(), params, publicView() (+18 more)
+
+### Community 40 - "Beyond Classroom PDF"
+Cohesion: 0.09
+Nodes (28): actorRole, amountUsd, appBase, coveredOrderId, creditReferralPaid(), expectedSig, handleStripeWebhook(), linkedIds (+20 more)
+
+### Community 41 - "Themed Components & Hooks"
 Cohesion: 0.07
 Nodes (26): compIdFilter, conditions, csv, csvRows, data, headers, limit, logoUpload (+18 more)
 
-### Community 40 - "Beyond Classroom PDF"
+### Community 42 - "Mobile API Plumbing"
 Cohesion: 0.07
 Nodes (29): Backend (`.env`), code:block1 (EXPO_PUBLIC_API_URL=http://<your-ip>:3000/api), code:block2 (SENTRY_DSN=), Environment Variables Added, Frontend (`.env.local`), Key Decisions Made, New Files, Sprint 1 — Delivery Summary (+21 more)
 
-### Community 41 - "Themed Components & Hooks"
+### Community 43 - "Auth Register Screen"
 Cohesion: 0.09
 Nodes (17): styles, CheckoutState, IoniconName, ORDER_PAID, STATE_CONTENT, styles, cap(), fmtDate() (+9 more)
 
-### Community 42 - "Mobile API Plumbing"
-Cohesion: 0.09
-Nodes (17): useAuth(), Dashboard(), DashboardPage(), fmtRp(), Kpi, LINKS, QUICK_LINKS, QuickLink (+9 more)
+### Community 44 - "CLAUDE.md Concepts"
+Cohesion: 0.08
+Nodes (22): description, end, ics, profileSnapshot, registrations, router, start, summary (+14 more)
 
-### Community 43 - "Auth Register Screen"
+### Community 45 - "Historical Phone Login"
+Cohesion: 0.13
+Nodes (27): announcement(), area(), demoCertificate(), exam(), localToday(), main(), material(), product() (+19 more)
+
+### Community 46 - "Push Notifications"
+Cohesion: 0.11
+Nodes (17): Notif, NotifResponse, TYPE_ICON, CURRENT_YEAR, formatFee(), RegistrationsPage(), STATUS_CLS, STATUS_STYLE (+9 more)
+
+### Community 47 - "Admin API Methods"
+Cohesion: 0.21
+Nodes (19): commerceHttp, fmtDate(), Order, OrderItem, OrdersPage(), OrdersPageWithProvider(), rupiah(), STATUS_STYLE (+11 more)
+
+### Community 48 - "Profile Completion"
+Cohesion: 0.17
+Nodes (19): INTEREST_CATEGORIES, InterestCategory, ExamEditorPage(), ExamQuestion, Level, LoadedExam, AccountProfilePage(), EMPTY_FORM (+11 more)
+
+### Community 49 - "Mobile Registrations Service"
 Cohesion: 0.1
 Nodes (24): announcementRecipients(), announcementScopeIfAccessible(), assetUpload, bonus, code, compId, content, custom (+16 more)
 
-### Community 44 - "CLAUDE.md Concepts"
-Cohesion: 0.12
-Nodes (12): NAV, useAuth(), CountryRepLayout(), NAV, RepShell(), DashboardLayout(), NAV, QuestionBankProvider() (+4 more)
+### Community 50 - "Mobile Auth Service"
+Cohesion: 0.11
+Nodes (20): BY_CODE, COUNTRIES, Country, countryByCode(), PRIORITY, PRIORITY_CODES, REST, getProvinces() (+12 more)
 
-### Community 45 - "Historical Phone Login"
-Cohesion: 0.17
-Nodes (18): CATEGORY_LABEL, CompetitionRoundsScreen(), fmtDate(), Round, rupiah(), statusLabel(), statusTone(), styles (+10 more)
+### Community 51 - "Reset Project Script"
+Cohesion: 0.11
+Nodes (17): CompetitionStudent, DashboardSummary, Deadline, getDashboardSummary(), getMyCompetitions(), getMyStudents(), getUpcomingDeadlines(), linkStudent() (+9 more)
 
-### Community 46 - "Push Notifications"
-Cohesion: 0.1
-Nodes (13): AnnouncementCard(), fmtDate(), styles, styles, WINDOW_NOTE, styles, styles, AvailableExam (+5 more)
-
-### Community 47 - "Admin API Methods"
+### Community 52 - "Mobile Payments Service"
 Cohesion: 0.2
-Nodes (16): authApi, notificationsApi, organizerAuthApi, organizerProfileApi, organizerRegistrationsApi, organizerRevenueApi, registrationsApi, schoolsApi (+8 more)
+Nodes (21): COGNITIVE, GRADE_OPTIONS, LEVELS, LoadedQuestion, McAnswer, newMcAnswer(), QuestionEditorPage(), RichTextEditor (+13 more)
 
-### Community 48 - "Profile Completion"
+### Community 53 - "Profile Edit & Interests"
+Cohesion: 0.13
+Nodes (21): RepBulkPaymentPage(), RepBulkRegistrationPage(), daysUntil(), fmtDate(), RepDeadlinesPage(), RepContext, RepLocalRound, RepStudent (+13 more)
+
+### Community 54 - "Competition Detail Mobile"
+Cohesion: 0.14
+Nodes (16): certificatesHttp, countryRepHttp, httpFormData(), httpReq(), makeHttp(), questionBankHttp, schoolFetch(), schoolHttp (+8 more)
+
+### Community 55 - "Cluster 55"
 Cohesion: 0.12
 Nodes (17): OrganizerContext, OrganizerCtx, OrganizerProvider(), { Provider, useHook }, useOrganizer(), Activity, Competition, fmtRp() (+9 more)
 
-### Community 49 - "Mobile Registrations Service"
+### Community 56 - "Cluster 56"
 Cohesion: 0.08
 Nodes (23): 1. Run Database Migrations, 2. Restart Backend, 3. Verify Cron Jobs, Analytics Events, API Endpoints, Bonus: Interest Picker UI, code:bash (psql $DATABASE_URL -f backend/migrations/1744700000000_creat), code:block2 ([Cron] Scheduled notification sender job scheduled (every 5 ) (+15 more)
 
-### Community 50 - "Mobile Auth Service"
-Cohesion: 0.14
-Nodes (14): competitionRegistry, COMPETZY_DEFAULT, HubAuthShell(), HubAuthShellProps, NAV, Sidebar(), ThemeToggle(), ForgotPasswordPage() (+6 more)
+### Community 57 - "Cluster 57"
+Cohesion: 0.09
+Nodes (16): ALL_GRADES, Grade, GRADES, Role, ROLES, SD, SMA, SMP (+8 more)
 
-### Community 51 - "Reset Project Script"
+### Community 58 - "Cluster 58"
 Cohesion: 0.09
 Nodes (22): 0. Prasyarat, 1. Buat Project di Coolify, 2. Provision PostgreSQL, 3. Provision MinIO, 4. Deploy Backend (Express), 5. Deploy Web (Next.js), 6. Konfigurasi nginx host + SSL, 7. Verifikasi end-to-end (+14 more)
 
-### Community 52 - "Mobile Payments Service"
-Cohesion: 0.11
-Nodes (13): organizerHttp, organizerCompetitionsApi, CompetitionForm(), CompetitionFormValues, roundsToDrafts(), Competition, CompetitionDetailPage(), fmtDate() (+5 more)
-
-### Community 53 - "Profile Edit & Interests"
+### Community 59 - "Cluster 59"
 Cohesion: 0.17
 Nodes (21): Vite Legacy index.html, Legacy Admin DB Pool, Legacy Admin API Server, Legacy Auth Middleware, Legacy Auth Routes, Legacy Competitions Routes, Legacy Notifications Routes, Legacy Schools Routes (+13 more)
 
-### Community 54 - "Competition Detail Mobile"
-Cohesion: 0.12
-Nodes (12): INTEREST_CATEGORIES, InterestCategory, EMPTY_FORM, Field(), Form, StudentProfile, Avatar(), AvatarBadge() (+4 more)
+### Community 60 - "Cluster 60"
+Cohesion: 0.1
+Nodes (19): adminOrSchoolAdmin(), schoolAdminOnly(), teacherOrSchoolAdmin(), teacherOrAdminOnly(), next, allRows, conditions, countParams (+11 more)
 
-### Community 55 - "Cluster 55"
-Cohesion: 0.13
-Nodes (14): CompetitionStudent, DashboardSummary, Deadline, getDashboardSummary(), getMyStudents(), getUpcomingDeadlines(), linkStudent(), MyCompetition (+6 more)
-
-### Community 56 - "Cluster 56"
+### Community 61 - "Cluster 61"
 Cohesion: 0.15
 Nodes (16): approveRegistration(), CompetitionFormData, CompetitionRound, createCompetition(), deleteCompetition(), exportRegistrationsCSV(), getAuthHeaders(), getCompetitionRegistrations() (+8 more)
 
-### Community 57 - "Cluster 57"
+### Community 62 - "Cluster 62"
 Cohesion: 0.1
 Nodes (21): 4-Tab Information Architecture (D3), Bulk CSV Registration (S11), UU PDP Consent Screen at Signup, Twilio Dev OTP Bypass (000000), Dual Auth (phone OTP + email), Closed Eduversal Organizer Ecosystem (D2), In-App Notification Inbox, Midtrans Payment Pipeline (+13 more)
 
-### Community 58 - "Cluster 58"
-Cohesion: 0.18
-Nodes (8): PageHeader(), Pager(), Spinner(), Toast(), CATS, EMPTY_FORM, ROLE_CLS, ROLES
-
-### Community 59 - "Cluster 59"
-Cohesion: 0.11
-Nodes (15): ADMIN_QUICK, ADMIN_QUICK_LINKS, QuickLink, SchoolDashboard(), SchoolInfo, Stats, TEACHER_QUICK, TEACHER_QUICK_LINKS (+7 more)
-
-### Community 60 - "Cluster 60"
-Cohesion: 0.11
-Nodes (18): 📚 API Endpoints (Express.js Backend), 🔐 Authentication, 🏆 Beyond Classroom - K-12 Competition Hub for Indonesia, 📝 Competition Registration (4-Step Modal), 🤝 Contributing, 📝 Database Schema, � Design Tokens, 👨‍💻 Developer (+10 more)
-
-### Community 61 - "Cluster 61"
-Cohesion: 0.11
-Nodes (18): API Endpoints Added, Backend Verification:, Database Changes, Expo Go Limitations, Files Added, Frontend Verification (Development Build):, Frontend Verification (Expo Go):, Notification Types & Deep Linking (+10 more)
-
-### Community 62 - "Cluster 62"
-Cohesion: 0.11
-Nodes (18): Audit Log (Sprint 14), Authentication, Bulk Registration, Database, File Storage, File Storage (Sprint 14 — signed URLs), Historical Data (IMPORTED ✅), Important Codebase Context (+10 more)
-
 ### Community 63 - "Cluster 63"
-Cohesion: 0.13
-Nodes (9): DOC_TYPES, Document, IoniconName, styles, formatDateForDisplay(), ProfileEditScreen(), styles, Props (+1 more)
+Cohesion: 0.27
+Nodes (13): ArrowRightIcon(), base, EyeIcon(), EyeOffIcon(), LockIcon(), MailIcon(), MapPinIcon(), PhoneIcon() (+5 more)
 
 ### Community 64 - "Cluster 64"
 Cohesion: 0.11
-Nodes (17): Context, Cost / Operational Notes For 50K-User Goal, Critical Thinking — Where I Disagree With Current Direction, Decisions Locked In, Decisions Still Open (working assumption noted), KompetiApp — Sprint 1 Plan & Critical Roadmap, Sprint 1 Verification (end-to-end smoke test), Sprint 1 — "VPS, real data, real persistence, dual auth, payment foundation, 4-tab IA" (~3 weeks, 19 tasks) (+9 more)
+Nodes (18): 📚 API Endpoints (Express.js Backend), 🔐 Authentication, 🏆 Beyond Classroom - K-12 Competition Hub for Indonesia, 📝 Competition Registration (4-Step Modal), 🤝 Contributing, 📝 Database Schema, � Design Tokens, 👨‍💻 Developer (+10 more)
 
 ### Community 65 - "Cluster 65"
+Cohesion: 0.11
+Nodes (18): API Endpoints Added, Backend Verification:, Database Changes, Expo Go Limitations, Files Added, Frontend Verification (Development Build):, Frontend Verification (Expo Go):, Notification Types & Deep Linking (+10 more)
+
+### Community 66 - "Cluster 66"
+Cohesion: 0.16
+Nodes (13): competitionsApi, CATEGORIES, CATS, CompetitionsPage(), Field(), FILTERS, fmtForInput(), FORM_DEFAULTS (+5 more)
+
+### Community 67 - "Cluster 67"
+Cohesion: 0.19
+Nodes (12): adminHttp, BrandPanel(), COMPETZY_BRAND, defaultCompetition, destinationFor(), goTo(), Mode, TAGLINES (+4 more)
+
+### Community 68 - "Cluster 68"
+Cohesion: 0.11
+Nodes (18): Audit Log (Sprint 14), Authentication, Bulk Registration, Database, File Storage, File Storage (Sprint 14 — signed URLs), Historical Data (IMPORTED ✅), Important Codebase Context (+10 more)
+
+### Community 69 - "Cluster 69"
+Cohesion: 0.11
+Nodes (17): Context, Cost / Operational Notes For 50K-User Goal, Critical Thinking — Where I Disagree With Current Direction, Decisions Locked In, Decisions Still Open (working assumption noted), KompetiApp — Sprint 1 Plan & Critical Roadmap, Sprint 1 Verification (end-to-end smoke test), Sprint 1 — "VPS, real data, real persistence, dual auth, payment foundation, 4-tab IA" (~3 weeks, 19 tasks) (+9 more)
+
+### Community 70 - "Cluster 70"
 Cohesion: 0.16
 Nodes (12): styles, acceptInvitation(), approveLink(), DebugInvitation, getDebugInvitations(), getMyChildren(), getPendingInvitations(), inviteParent() (+4 more)
 
-### Community 66 - "Cluster 66"
-Cohesion: 0.21
-Nodes (15): backfillCertificates(), BestAttempt, CLEARED, DB, issueCertificateIfEligible(), IssueResult, makeVerificationCode(), initializeCronJobs() (+7 more)
+### Community 71 - "Cluster 71"
+Cohesion: 0.25
+Nodes (13): ImageButton(), LinkButton(), MathButton(), Props, RichTextEditor(), ToolbarButton(), Popover(), PopoverAnchor() (+5 more)
 
-### Community 67 - "Cluster 67"
+### Community 72 - "Cluster 72"
+Cohesion: 0.18
+Nodes (6): EmcAdminPage(), { Provider, useHook }, EMC, EmcDashboardPage(), RegistrationRow, STATUS_COPY
+
+### Community 73 - "Cluster 73"
+Cohesion: 0.16
+Nodes (9): AnnouncementCard(), fmtDate(), styles, styles, Announcement, getAnnouncements(), getMaterials(), Material (+1 more)
+
+### Community 74 - "Cluster 74"
+Cohesion: 0.17
+Nodes (11): COMPETZY, COMPETZY_DEFAULT, HubAuthShell(), HubAuthShellProps, ThemeToggle(), ForgotPasswordPage(), ResetPasswordInner(), Theme (+3 more)
+
+### Community 75 - "Cluster 75"
 Cohesion: 0.13
 Nodes (14): auth, compsRes, compsTime, errors, headers, meRes, meTime, options (+6 more)
 
-### Community 68 - "Cluster 68"
+### Community 76 - "Cluster 76"
 Cohesion: 0.13
 Nodes (14): "API is down" / 502 from nginx, Audit log queries (forensics), code:bash (ssh competzy@<vps-ip>), code:sql (UPDATE users SET deleted_at = NULL WHERE email = '...';), code:sql (-- Recent admin actions), code:bash (git log --oneline -10           # find last good SHA), Competzy Runbook, Contact (+6 more)
 
-### Community 69 - "Cluster 69"
-Cohesion: 0.25
-Nodes (10): BrandPanel(), COMPETZY_BRAND, defaultCompetition, destinationFor(), goTo(), Mode, TAGLINES, UnifiedLogin() (+2 more)
+### Community 77 - "Cluster 77"
+Cohesion: 0.13
+Nodes (15): AdminReviewsScreen (legacy payment proof approval), PendingReviewCard (approve/reject + open proof URL), Audit Log Append-only Pattern, Competzy Project Brief, httpOnly Cookie Auth Migration (Sprint 14), Midtrans Webhook Idempotency, Monorepo Structure (app/web/backend), No ORM (Raw SQL via node-pg) Rule (+7 more)
 
-### Community 70 - "Cluster 70"
+### Community 78 - "Cluster 78"
 Cohesion: 0.25
 Nodes (13): clearCompetitions(), Competition, CompetitionDescription, CompetitionRound, generateCompId(), insertCompetitions(), isValidStatus(), main() (+5 more)
 
-### Community 71 - "Cluster 71"
-Cohesion: 0.15
-Nodes (12): Db, upsertSchoolFromNpsn(), ext, fields, photoUpload, roleData, router, sFields (+4 more)
+### Community 79 - "Cluster 79"
+Cohesion: 0.16
+Nodes (10): fmt(), fmtRp(), Revenue(), RevenueData, RevenuePage(), ACCENT, ALIASES, CanonicalAccent (+2 more)
 
-### Community 72 - "Cluster 72"
-Cohesion: 0.2
-Nodes (14): admin.service, AdminStudentsScreen, Analytics Wrapper, auth.login, auth.logout, auth.signup, auth.verifyOtp, auth.verifyPhoneOtp (+6 more)
+### Community 80 - "Cluster 80"
+Cohesion: 0.23
+Nodes (10): initializeCronJobs(), scheduleBulkJobProcessor(), scheduleCertificateBackfill(), scheduleCompetitionDayReminders(), scheduleDeadlineReminders(), scheduleDeadlineUrgencyReminders(), scheduleNotificationSender(), scheduleRetentionEnforcement() (+2 more)
 
-### Community 73 - "Cluster 73"
+### Community 81 - "Cluster 81"
+Cohesion: 0.23
+Nodes (10): metadata, RootLayout(), AuthProvider(), ImpersonationBanner(), ThemeProvider(), Toaster(), Tooltip(), TooltipContent() (+2 more)
+
+### Community 82 - "Cluster 82"
 Cohesion: 0.15
 Nodes (14): scheduleRetentionEnforcement, cron.service.ts, pm2.config.js, PROJECT_PLAN.md, RUNBOOK.md, Rationale: signed URLs always, recommendations.service.ts, Runbook: API down/502 (+6 more)
 
-### Community 74 - "Cluster 74"
+### Community 83 - "Cluster 83"
+Cohesion: 0.2
+Nodes (14): admin.service, AdminStudentsScreen, Analytics Wrapper, auth.login, auth.logout, auth.signup, auth.verifyOtp, auth.verifyPhoneOtp (+6 more)
+
+### Community 84 - "Cluster 84"
+Cohesion: 0.24
+Nodes (11): ExamPlayerScreen(), fmtClock(), QuestionCard(), styles, htmlToPlainText(), LANG_TO_COL, LangCode, LangCol (+3 more)
+
+### Community 85 - "Cluster 85"
 Cohesion: 0.15
 Nodes (8): brandColors, chartColors, ColorRow, radii, statusColors, surfaceColors, TypeRow, typeScale
 
-### Community 75 - "Cluster 75"
+### Community 86 - "Cluster 86"
 Cohesion: 0.15
 Nodes (12): code:block1 (competzy/), code:bash (# From each subdirectory:), code:block3 (BACKEND_URL=http://localhost:3000), code:block4 (EXPO_PUBLIC_API_URL=http://<MAC_LAN_IP>:3000/api), Competzy — Claude Project Brief, Deployment, How to Run, Known Issues / Quirks (+4 more)
 
-### Community 76 - "Cluster 76"
-Cohesion: 0.18
-Nodes (5): CertificateCard(), fmtDate(), styles, Certificate, getMine()
-
-### Community 77 - "Cluster 77"
+### Community 87 - "Cluster 87"
 Cohesion: 0.15
 Nodes (13): Three-phase Roadmap (Foundation/Conversion/Ecosystem), 5 Core Jobs-to-be-Done (Discover/Decide/Register/Prepare/Result), Beyond Classroom Brainstorming PDF, Competition Operating System Positioning, Lifecycle-based Cross-sell Framework, EMC (Eduversal Math Competition), ISPO (Indonesia Science Project Olympiad), Komodo Math Competition (+5 more)
 
-### Community 78 - "Cluster 78"
+### Community 88 - "Cluster 88"
 Cohesion: 0.17
 Nodes (13): expo-notifications (external), k6-registration.js, loadtest README, Midtrans webhook handler, Push Notification Service, Rationale: webhook idempotency, GET /:id/calendar.ics, GET /:id/completeness (+5 more)
 
-### Community 79 - "Cluster 79"
-Cohesion: 0.17
-Nodes (12): Audit Log Append-only Pattern, Competzy Project Brief, httpOnly Cookie Auth Migration (Sprint 14), Midtrans Webhook Idempotency, Monorepo Structure (app/web/backend), No ORM (Raw SQL via node-pg) Rule, School Self-Signup + Verification Flow (Sprint 16), Self-hosted PostgreSQL Only Rule (+4 more)
-
-### Community 80 - "Cluster 80"
-Cohesion: 0.2
-Nodes (12): 50k Legacy ETL Migration with Dedup Strategy, ClaimAccountScreen (historical match flow), handleClaim (signup pre-filled from historical), Historical Phone Login Smart-Claim Flow (T26), handleEmailLogin, handleSendPhoneOtp, handleVerifyPhoneOtp, LoginScreen (email/phone tabs) (+4 more)
-
-### Community 81 - "Cluster 81"
+### Community 89 - "Cluster 89"
 Cohesion: 0.17
 Nodes (12): admin.approveRegistration, admin.createCompetition, admin.deleteCompetition, admin.exportRegistrationsCSV, admin.getAuthHeaders, admin.getCompetitionRegistrations, admin.getCompetitions, admin.getPendingReviews (+4 more)
 
-### Community 82 - "Cluster 82"
+### Community 90 - "Cluster 90"
 Cohesion: 0.18
 Nodes (12): AppAutocomplete, AppInput, config/api (API_BASE_URL), document.service, DocumentVaultScreen, historical.service, ProfileCompletionScreen, ProfileEditScreen (+4 more)
 
-### Community 83 - "Cluster 83"
+### Community 91 - "Cluster 91"
 Cohesion: 0.33
 Nodes (12): ChildrenScreen, LinkParentScreen, Parent-Student PIN Invitation Flow, parents.service, Role-Based Tab Redirect Pattern, HomeIndex, TeacherActionsScreen, TeacherCompetitionsScreen (+4 more)
 
-### Community 84 - "Cluster 84"
+### Community 92 - "Cluster 92"
 Cohesion: 0.27
 Nodes (7): styles, ThemedText(), ThemedTextProps, ThemedView(), ThemedViewProps, useColorScheme(), useThemeColor()
 
-### Community 85 - "Cluster 85"
-Cohesion: 0.25
-Nodes (9): getProvinces(), getRegencies(), Province, regenciesCache, regenciesPromise, Regency, Props, ProvincePopover() (+1 more)
+### Community 93 - "Cluster 93"
+Cohesion: 0.18
+Nodes (7): ACTIONABLE, ACTIONABLE_STATUSES, Competition, Credential, Registration, STATUS_CLS, STATUS_STYLE
 
-### Community 86 - "Cluster 86"
+### Community 94 - "Cluster 94"
 Cohesion: 0.2
 Nodes (8): CatalogCompetition, CompetitionCard(), CompetitionCatalogPage(), DashboardSummary, fmtDate(), KpiTile(), MeProfile, STUDENT_NAV
 
-### Community 87 - "Cluster 87"
-Cohesion: 0.24
-Nodes (9): BY_CODE, COUNTRIES, Country, countryByCode(), PRIORITY, PRIORITY_CODES, REST, CountrySelect() (+1 more)
-
-### Community 88 - "Cluster 88"
-Cohesion: 0.2
-Nodes (8): organizerOnly(), csvRows, csvUpload, headers, imageUpload, router, slug, ts
-
-### Community 89 - "Cluster 89"
+### Community 95 - "Cluster 95"
 Cohesion: 0.2
 Nodes (11): config/api API_BASE_URL, favorites.service, IconSymbol, MyCompetitionsScreen, MyRegistrationDetailsScreen, NotificationTabIcon, NotificationsScreen, notifications.service (+3 more)
 
-### Community 90 - "Cluster 90"
-Cohesion: 0.27
-Nodes (7): subjectColorFor(), CompetitionMark, Props, pickLetter(), Props, SubjectCircle, SubjectCircleImpl()
+### Community 96 - "Cluster 96"
+Cohesion: 0.2
+Nodes (4): IoniconName, styles, TYPE_EMOJI, TYPE_ICON
 
-### Community 91 - "Cluster 91"
+### Community 97 - "Cluster 97"
+Cohesion: 0.33
+Nodes (7): CompetitionCheckoutPage(), rupiah(), CartItem, useCart(), CompetitionStorePage(), rupiah(), StoreProduct
+
+### Community 98 - "Cluster 98"
+Cohesion: 0.31
+Nodes (7): BrandPanel(), TAGLINES, WORD_SLOTS, Props, CompetitionPortalConfig, CompetitionPortalConfig, defaultPortalConfig()
+
+### Community 99 - "Cluster 99"
 Cohesion: 0.2
 Nodes (10): Auth Service (Mobile), bulk-processor.service.ts, scheduleBulkJobProcessor, email.service.ts, Rationale: hard-match dedup, Expo reset-project Script, GET /export/achievement.pdf, schools.routes.ts (+2 more)
 
-### Community 92 - "Cluster 92"
-Cohesion: 0.22
-Nodes (7): exampleDirPath, fs, oldDirs, path, readline, rl, root
-
-### Community 93 - "Cluster 93"
+### Community 100 - "Cluster 100"
 Cohesion: 0.25
 Nodes (8): IoniconName, PAYER_OPTIONS, PayerKind, PaymentState, PayScreen(), rupiah(), STATE_CONTENT, styles
 
-### Community 94 - "Cluster 94"
+### Community 101 - "Cluster 101"
 Cohesion: 0.28
 Nodes (7): cap(), fmtDate(), OrderCard(), PillTone, STATUS_TONE, styles, Order
 
-### Community 95 - "Cluster 95"
+### Community 102 - "Cluster 102"
+Cohesion: 0.22
+Nodes (7): exampleDirPath, fs, oldDirs, path, readline, rl, root
+
+### Community 103 - "Cluster 103"
 Cohesion: 0.22
 Nodes (9): App won't reload after changes, Build fails on iOS Simulator, code:bash (# Clear cache and reinstall), code:bash (# Ensure iOS Simulator is running), code:bash (# Press 's' in terminal to send QR code again), code:bash (# If port 8081 is in use, specify a different one), "Module not found" errors, Port already in use (+1 more)
 
-### Community 97 - "Cluster 97"
-Cohesion: 0.29
-Nodes (7): ageOn(), Bracket, BRACKETS, classifyCreature(), Creature, CreatureKey, CREATURES
-
-### Community 98 - "Cluster 98"
+### Community 104 - "Cluster 104"
 Cohesion: 0.29
 Nodes (8): code:block5 (T5 (reg_number) ──────────► T16 (mobile shows it)), code:block6 (T5 (reg_number) ──────────► T16 (mobile shows it)), Current Task Status (as of May 13, 2026 — Session 9), Current Task Status (as of May 9, 2026 — Session 5), Dependency Map, EMC Port (begins 2026-05-13) — Wave 1 PLANNED, not yet executed, Manual rollout still required (Sprint 13/17 — needs your access), Manual rollout still required (Sprint 13/17 — needs your access)
 
-### Community 99 - "Cluster 99"
+### Community 105 - "Cluster 105"
+Cohesion: 0.25
+Nodes (7): Adding a new TipTap extension, code:tsx (import dynamic from 'next/dynamic';), Read-only mode, Rich-text editor (`rich-text-editor.tsx`), Usage, What you get, Where KaTeX styles come from
+
+### Community 106 - "Cluster 106"
 Cohesion: 0.25
 Nodes (7): After running, code:bash (brew install k6), code:bash (# Local backend), Load Tests, Running, Setup, Targets (Launch 1, July 1, 2026)
 
-### Community 100 - "Cluster 100"
-Cohesion: 0.25
-Nodes (8): midtrans.service.ts, payments.routes.ts, POST /school-batch, POST /api/payments/snap, GET /verify/:registrationId, Rationale: school-named Midtrans receipt, Rationale: verify endpoint, Runbook: Payments not settling
+### Community 107 - "Cluster 107"
+Cohesion: 0.29
+Nodes (7): ageOn(), Bracket, BRACKETS, classifyCreature(), Creature, CreatureKey, CREATURES
 
-### Community 101 - "Cluster 101"
+### Community 108 - "Cluster 108"
+Cohesion: 0.32
+Nodes (8): handleEmailLogin, handleSendPhoneOtp, handleVerifyPhoneOtp, LoginScreen (email/phone tabs), onSuccess role-based router (admin/teacher/parent/school_admin/student), handleCreateAccount (signup w/ consent), RegisterScreen (3-step: role/details/consent), validateDetails (role-aware validation)
+
+### Community 109 - "Cluster 109"
 Cohesion: 0.25
 Nodes (8): @react-native-async-storage/async-storage (external), emsifa Indonesia regions API (external), clearCitiesCache, fetchIndonesianCities, Location Service (cities), regions.getProvinces, regions.getRegencies, Regions Service (provinces/regencies)
 
-### Community 102 - "Cluster 102"
+### Community 110 - "Cluster 110"
+Cohesion: 0.25
+Nodes (8): midtrans.service.ts, payments.routes.ts, POST /school-batch, POST /api/payments/snap, GET /verify/:registrationId, Rationale: school-named Midtrans receipt, Rationale: verify endpoint, Runbook: Payments not settling
+
+### Community 111 - "Cluster 111"
 Cohesion: 0.38
 Nodes (5): CompetitionLandingPage(), fmtDate(), LandingCompetition, RegistrationRow, rupiah()
 
-### Community 103 - "Cluster 103"
-Cohesion: 0.43
-Nodes (5): SchoolProvider(), ADMIN_NAV, SchoolLayout(), SchoolLayoutInner(), TEACHER_NAV
-
-### Community 104 - "Cluster 104"
+### Community 112 - "Cluster 112"
 Cohesion: 0.29
 Nodes (6): Sheet: Competitions, Sheet: Parents, Sheet: Schools, Sheet: Students, Sheet: Summary, Sheet: Supervisors
 
-### Community 105 - "Cluster 105"
+### Community 113 - "Cluster 113"
 Cohesion: 0.29
 Nodes (7): **Backend Setup**, code:bash (# 1. Set up PostgreSQL database), code:bash (# 1. Install dependencies), 🛠️ Development Environment, **Mobile App Setup**, **Recommended**, **Required**
 
-### Community 106 - "Cluster 106"
+### Community 114 - "Cluster 114"
+Cohesion: 0.33
+Nodes (3): styles, WINDOW_NOTE, AvailableExam
+
+### Community 115 - "Cluster 115"
 Cohesion: 0.33
 Nodes (3): Province, regenciesCache, Regency
 
-### Community 108 - "Cluster 108"
+### Community 117 - "Cluster 117"
+Cohesion: 0.33
+Nodes (5): COMPETZY, CompetzyBrandPanel(), GRADIENT, TAGLINES, WORD_SLOTS
+
+### Community 119 - "Cluster 119"
 Cohesion: 0.33
 Nodes (6): Current Task Status (as of May 19, 2026 — Session 13), Deployment record — 2026-05-18 evening (Phase 1 LIVE) ✅, Deployment record — 2026-05-19 (Sprint 33 + My Account suite + phone normalization) ✅, EMC Port (begins 2026-05-13) — Waves 1–13 ✅ COMPLETE · EMC port complete (Wave 14 found unnecessary), Manual rollout still required (Coolify deployment — 2026-05-18 refresh), Repository state (2026-05-17)
 
-### Community 109 - "Cluster 109"
-Cohesion: 0.33
-Nodes (5): Province, provinces, regencies, Regency, router
-
-### Community 110 - "Cluster 110"
+### Community 120 - "Cluster 120"
 Cohesion: 0.33
 Nodes (6): **After Login: Profile Setup**, **Step 1: Role Selection**, **Step 2: Phone + OTP**, **Step 3: Complete Details**, **Step 4: Account Created**, 📱 User Registration Flow
 
-### Community 111 - "Cluster 111"
+### Community 121 - "Cluster 121"
 Cohesion: 0.4
 Nodes (6): PaymentLayout (Stack), Parent-Payer Attribution (payer_kind/payer_user_id), Sandbox Payment Verify Polling Fallback, PayScreen (Midtrans Snap + payer attribution), pollVerify (6x retry against /payments/verify), startPayment (snap token + WebBrowser openAuthSession)
 
-### Community 113 - "Cluster 113"
+### Community 122 - "Cluster 122"
 Cohesion: 0.5
-Nodes (4): ExamResultPage(), Section, SessionResult, sum()
+Nodes (3): CertificateCard(), fmtDate(), styles
 
-### Community 114 - "Cluster 114"
+### Community 124 - "Cluster 124"
 Cohesion: 0.4
 Nodes (5): 🔐 Authentication, **Login**, Mode 1: Password Login, Mode 2: OTP Login, **Signup (Registration)**
 
-### Community 115 - "Cluster 115"
+### Community 125 - "Cluster 125"
 Cohesion: 0.4
 Nodes (5): OnboardingScreen (3-slide carousel), TabLayout (role-gated tabs), Teacher-Student Roster Scoping (T29), App Entry Index (DEV_BYPASS_AUTH redirect), Review Notes (grade auto-update, teacher bulk register)
 
-### Community 116 - "Cluster 116"
+### Community 126 - "Cluster 126"
 Cohesion: 0.5
 Nodes (5): ThemedText, ThemedView, useColorScheme (native), useColorScheme (web), useThemeColor hook
 
-### Community 118 - "Cluster 118"
-Cohesion: 0.67
-Nodes (3): http, req(), token()
-
-### Community 120 - "Cluster 120"
+### Community 129 - "Cluster 129"
 Cohesion: 0.5
 Nodes (3): Answer, Q: Why does AuthUser bridge Web API Index, Web Auth API, School Auth Context, Web API Client, and Web Auth Contexts?, Source Nodes
 
-### Community 121 - "Cluster 121"
+### Community 130 - "Cluster 130"
 Cohesion: 0.5
 Nodes (4): **Organizer Web Portal**, **School Admin Dashboard**, 📱 Screen Inventory, **Student Mobile App**
 
-### Community 122 - "Cluster 122"
+### Community 131 - "Cluster 131"
 Cohesion: 0.5
 Nodes (4): 📊 Engagement Features, **Personalized Discovery**, **Smart Notifications**, **Weekly Digest** (v2)
 
-### Community 123 - "Cluster 123"
+### Community 132 - "Cluster 132"
 Cohesion: 0.5
 Nodes (4): **In-App Notifications**, 🔔 Notification Strategy, **Push Notifications** (Firebase Cloud Messaging), **WhatsApp** (WhatsApp Business API)
 
-### Community 124 - "Cluster 124"
+### Community 133 - "Cluster 133"
+Cohesion: 0.5
+Nodes (4): 50k Legacy ETL Migration with Dedup Strategy, ClaimAccountScreen (historical match flow), handleClaim (signup pre-filled from historical), Historical Phone Login Smart-Claim Flow (T26)
+
+### Community 134 - "Cluster 134"
 Cohesion: 0.67
 Nodes (4): BulkRegistrationScreen (CSV upload + polling), fetchJobStatus (poll /bulk-registration/jobs/:id), handleUpload (multipart CSV POST), Bulk CSV Hard-match Dedup
 
-### Community 126 - "Cluster 126"
-Cohesion: 0.67
-Nodes (3): � Core Features (v1), **Discovery**, **Registration (4-Step Modal)**
-
-### Community 127 - "Cluster 127"
-Cohesion: 0.67
-Nodes (3): Current Implementation Status ✅, 📝 Development Notes, Future Enhancements 🚀
-
-### Community 128 - "Cluster 128"
+### Community 136 - "Cluster 136"
 Cohesion: 0.67
 Nodes (3): 🚀 Roadmap, **v1 (Current)** ✅, **v2** 🎯
 
-### Community 129 - "Cluster 129"
+### Community 137 - "Cluster 137"
 Cohesion: 0.67
-Nodes (3): AdminReviewsScreen (legacy payment proof approval), PendingReviewCard (approve/reject + open proof URL), Admin Registration Approval Flow (T28)
+Nodes (3): Current Implementation Status ✅, 📝 Development Notes, Future Enhancements 🚀
 
-### Community 130 - "Cluster 130"
+### Community 138 - "Cluster 138"
+Cohesion: 0.67
+Nodes (3): � Core Features (v1), **Discovery**, **Registration (4-Step Modal)**
+
+### Community 139 - "Cluster 139"
 Cohesion: 0.67
 Nodes (3): AdminCompetitionFormScreen (create/edit competition + rounds), AdminCompetitionRegistrationsScreen (CSV export via Sharing), AdminCompetitionsScreen (legacy mobile admin)
 
 ## Knowledge Gaps
-- **1285 isolated node(s):** `{ defineConfig }`, `expoConfig`, `BulkJob`, `styles`, `queryClient` (+1280 more)
+- **1283 isolated node(s):** `{ defineConfig }`, `expoConfig`, `BulkJob`, `styles`, `queryClient` (+1278 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **121 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Button()` connect `Concept / Rationale Nodes` to `Admin Mobile Screens`, `School Auth Context`, `Mobile API Service Layer`, `Web Admin Layout`, `Backend DB Bootstrap`, `Admin / Audit Middleware`, `Auth & Competitions Routes`, `Registrations Routes`, `Admin Routes (Backend)`, `Legacy Vite/Express Stack`, `k6 Load Test`, `Mobile Auth Service`, `Mobile Payments Service`, `Competition Detail Mobile`, `Cluster 69`, `Cluster 74`, `Cluster 86`, `Cluster 102`, `Cluster 113`?**
-  _High betweenness centrality (0.073) - this node is a cross-community bridge._
-- **Why does `Card()` connect `Mobile API Service Layer` to `Admin Mobile Screens`, `School Auth Context`, `Web Admin Layout`, `Backend DB Bootstrap`, `Admin / Audit Middleware`, `Cluster 102`, `Auth & Competitions Routes`, `Mobile API Plumbing`, `Cluster 74`, `Profile Completion`, `Concept / Rationale Nodes`, `Cluster 113`, `Mobile Payments Service`, `Legacy Vite/Express Stack`, `Competition Detail Mobile`, `Cluster 86`, `Admin Routes (Backend)`, `Cluster 59`?**
+- **Why does `Button()` connect `Analytics & Competition Detail` to `Mobile API Service Layer`, `Database Columns & Keys`, `Web Auth Contexts`, `Cron & Background Jobs`, `Web API Client`, `Auth & Twilio OTP`, `Web UI Components`, `Web Competitions Page`, `Web API Index`, `School Admin Routes`, `k6 Load Test`, `Push Notifications`, `Admin API Methods`, `Profile Completion`, `Mobile Payments Service`, `Profile Edit & Interests`, `Competition Detail Mobile`, `Cluster 63`, `Cluster 66`, `Cluster 67`, `Cluster 71`, `Cluster 85`, `Cluster 93`, `Cluster 94`, `Cluster 97`, `Cluster 111`, `Cluster 116`?**
+  _High betweenness centrality (0.092) - this node is a cross-community bridge._
+- **Why does `Card()` connect `Cron & Background Jobs` to `Mobile API Service Layer`, `Database Columns & Keys`, `Web Auth Contexts`, `Web API Client`, `Auth & Twilio OTP`, `Web UI Components`, `Web Competitions Page`, `Web API Index`, `School Admin Routes`, `Analytics & Competition Detail`, `k6 Load Test`, `Mobile Tabs Misc`, `Push Notifications`, `Admin API Methods`, `Profile Completion`, `Mobile Payments Service`, `Profile Edit & Interests`, `Competition Detail Mobile`, `Cluster 55`, `Cluster 66`, `Cluster 79`, `Cluster 85`, `Cluster 93`, `Cluster 94`, `Cluster 97`, `Cluster 111`, `Cluster 116`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **Why does `Brand` connect `Auth & Twilio OTP` to `Admin Mobile Screens`, `Cluster 96`, `Cluster 100`, `Cluster 101`, `Competitions CSV Seeder`, `Backend DB Bootstrap`, `Cluster 70`, `Cluster 73`, `Auth Register Screen`, `Cluster 114`, `Reset Project Script`, `Cluster 84`, `Legacy Vite/Express Stack`, `Cluster 57`, `Cluster 122`, `Cluster 61`?**
   _High betweenness centrality (0.035) - this node is a cross-community bridge._
-- **Why does `cn()` connect `Admin Routes (Backend)` to `Admin Mobile Screens`, `Mobile API Service Layer`, `Web Admin Layout`, `k6 Load Test`, `Cluster 69`, `Backend DB Bootstrap`, `Admin / Audit Middleware`, `Mobile API Plumbing`, `CLAUDE.md Concepts`, `Registrations Routes`, `Profile Completion`, `Concept / Rationale Nodes`, `Mobile Payments Service`, `Cluster 85`, `Competition Detail Mobile`, `Cluster 86`, `Cluster 87`, `Cluster 59`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
 - **What connects `{ defineConfig }`, `expoConfig`, `BulkJob` to the rest of the system?**
-  _1285 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1283 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Admin Mobile Screens` be split into smaller, more focused modules?**
   _Cohesion score 0.04 - nodes in this community are weakly interconnected._
 - **Should `School Auth Context` be split into smaller, more focused modules?**
-  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04 - nodes in this community are weakly interconnected._
 - **Should `Mobile API Service Layer` be split into smaller, more focused modules?**
-  _Cohesion score 0.07 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04 - nodes in this community are weakly interconnected._

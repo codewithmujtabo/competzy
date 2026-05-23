@@ -6,6 +6,11 @@ import { env } from "../config/env";
 import { authMiddleware } from "../middleware/auth";
 import { schoolAdminOnly } from "../middleware/school-admin.middleware";
 import { createSnapToken, getTransactionStatus } from "../services/midtrans.service";
+import {
+  createStripeCheckoutSession,
+  getCheckoutSessionStatus,
+  isStripeConfigured,
+} from "../services/stripe.service";
 import * as pushService from "../services/push.service";
 
 const router = Router();
@@ -40,16 +45,19 @@ interface RegContext {
   compId: string;
   fee: number;
   studentNpsn: string | null;
+  studentCountry: string | null;
 }
 
 async function loadRegContext(registrationId: string): Promise<RegContext | null> {
   // students.id == users.id (1:1); students.npsn is the NPSN the student
-  // registered with — what a school-locked voucher is matched against.
+  // registered with (school-locked voucher key); users.country is the ISO
+  // alpha-2 code (country-locked voucher key — e.g. Komodo's per-country promos).
   const r = await pool.query(
-    `SELECT r.comp_id, c.fee, s.npsn AS student_npsn
+    `SELECT r.comp_id, c.fee, s.npsn AS student_npsn, u.country AS student_country
        FROM registrations r
        JOIN competitions c ON c.id = r.comp_id
        LEFT JOIN students s ON s.id = r.user_id
+       LEFT JOIN users u ON u.id = r.user_id
       WHERE r.id = $1`,
     [registrationId]
   );
@@ -58,6 +66,7 @@ async function loadRegContext(registrationId: string): Promise<RegContext | null
     compId: r.rows[0].comp_id,
     fee: Number(r.rows[0].fee) || 0,
     studentNpsn: r.rows[0].student_npsn ?? null,
+    studentCountry: r.rows[0].student_country ?? null,
   };
 }
 
@@ -70,10 +79,11 @@ interface VoucherCheck {
 async function checkVoucher(
   compId: string,
   code: string,
-  studentNpsn: string | null
+  studentNpsn: string | null,
+  studentCountry: string | null,
 ): Promise<VoucherCheck> {
   const r = await pool.query(
-    `SELECT v.npsn, v.used, v.max, vg.discounted, vg.is_active
+    `SELECT v.npsn, v.country, v.used, v.max, vg.discounted, vg.is_active
        FROM vouchers v
        JOIN voucher_groups vg ON vg.id = v.group_id
       WHERE v.comp_id = $1 AND v.code = $2
@@ -93,6 +103,11 @@ async function checkVoucher(
   }
   if (v.npsn && v.npsn !== studentNpsn) {
     return { valid: false, message: "This voucher is reserved for a different school." };
+  }
+  // Country-locked voucher (Komodo's "Malaysia-only" batches). Compare uppercase
+  // for safety in case the student's stored value drifts in case.
+  if (v.country && (studentCountry ?? "").toUpperCase() !== String(v.country).toUpperCase()) {
+    return { valid: false, message: "This voucher is reserved for a different country." };
   }
   return { valid: true, discountedFee: Number(v.discounted) || 0 };
 }
@@ -383,6 +398,7 @@ router.post("/snap", async (req: Request, res: Response) => {
          COALESCE(cr.fee, c.fee) AS fee,
          u.full_name,
          u.email,
+         u.country     AS student_country,
          s.npsn        AS student_npsn
        FROM registrations r
        JOIN competitions c ON c.id = r.comp_id
@@ -420,7 +436,12 @@ router.post("/snap", async (req: Request, res: Response) => {
     let chargeAmount: number = row.fee;
 
     if (effectiveVoucher) {
-      const check = await checkVoucher(row.comp_id, effectiveVoucher, row.student_npsn);
+      const check = await checkVoucher(
+        row.comp_id,
+        effectiveVoucher,
+        row.student_npsn,
+        row.student_country,
+      );
       if (!check.valid) {
         res.status(400).json({ message: check.message ?? "Invalid voucher code." });
         return;
@@ -511,6 +532,148 @@ router.post("/snap", async (req: Request, res: Response) => {
 });
 
 
+// ── POST /api/payments/stripe ────────────────────────────────────────────────
+// Mirror of /snap for the international USD path. Charges the round's
+// `fee_international` (set per round on `competition_rounds`), creates a
+// Stripe Checkout Session, and returns the hosted-page URL. The web pay page
+// + the mobile pay screen redirect the browser/WebView to that URL.
+router.post("/stripe", async (req: Request, res: Response) => {
+  try {
+    if (!isStripeConfigured()) {
+      res.status(503).json({
+        message:
+          "Stripe is not configured on the server. Please contact the organizer to settle this payment offline.",
+      });
+      return;
+    }
+    const { registrationId, payerKind, payerUserId } = req.body as {
+      registrationId?: string;
+      payerKind?: "self" | "parent" | "school" | "sponsor";
+      payerUserId?: string;
+    };
+    if (!registrationId) {
+      res.status(400).json({ message: "registrationId is required" });
+      return;
+    }
+    const resolvedPayerKind: "self" | "parent" | "school" | "sponsor" =
+      payerKind && ["self", "parent", "school", "sponsor"].includes(payerKind)
+        ? payerKind
+        : "self";
+    const resolvedPayerUserId = payerUserId ?? req.userId ?? null;
+
+    if (!(await canAccessRegistration(req.userId!, registrationId))) {
+      res.status(404).json({ message: "Registration not found" });
+      return;
+    }
+
+    // Pull the international fee off the round (rounds carry the per-round
+    // override; we don't fall through to the comp-level fee because that is
+    // Indonesian Rupiah by design — an international charge MUST come from
+    // `competition_rounds.fee_international`).
+    const result = await pool.query(
+      `SELECT r.status      AS reg_status,
+              r.comp_id     AS comp_id,
+              c.name        AS competition_name,
+              cr.fee_international AS fee_usd,
+              u.full_name,
+              u.email
+         FROM registrations r
+         JOIN competitions c ON c.id = r.comp_id
+         LEFT JOIN competition_rounds cr ON cr.id = r.round_id
+         JOIN users u ON u.id = r.user_id
+        WHERE r.id = $1`,
+      [registrationId],
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: "Registration not found" });
+      return;
+    }
+    const row = result.rows[0];
+
+    if (["pending_review", "approved", "completed", "paid"].includes(row.reg_status)) {
+      res.status(400).json({ message: "This registration has already been paid or finalized" });
+      return;
+    }
+    const amountUsd = Number(row.fee_usd);
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+      res.status(400).json({
+        message:
+          "This round has no international fee configured. Please contact the organizer.",
+      });
+      return;
+    }
+
+    // Re-use a pending Stripe session for the same amount — protects against
+    // students who click pay twice in a row creating two checkout sessions.
+    const existing = await pool.query(
+      `SELECT id, snap_token AS session_id, order_id
+         FROM payments
+        WHERE registration_id = $1
+          AND provider = 'stripe'
+          AND payment_status = 'pending'
+          AND snap_token IS NOT NULL
+        ORDER BY created_at DESC
+        LIMIT 1`,
+      [registrationId],
+    );
+    if (existing.rows.length > 0) {
+      // Stripe sessions stay valid for 24h — re-render the URL from the live API.
+      try {
+        const status = await getCheckoutSessionStatus(existing.rows[0].session_id);
+        if (status === "paid") {
+          // The session settled — let the verify path catch it on the next poll.
+          res.json({ checkoutUrl: null, paymentId: existing.rows[0].id, status });
+          return;
+        }
+      } catch {
+        /* fall through to a fresh session */
+      }
+    }
+
+    const orderId = `STRIPE-${registrationId}-${Date.now()}`.slice(0, 50);
+    const appBase = env.APP_URL.replace(/\/+$/, "");
+    const session = await createStripeCheckoutSession({
+      orderId,
+      amountUsd,
+      customerName: row.full_name,
+      customerEmail: row.email,
+      competitionName: row.competition_name,
+      // Stripe redirects back here on success/cancel. The dashboard polls
+      // /payments/verify after landing, which finalises the registration even
+      // if the webhook is still in flight.
+      successUrl: `${appBase}/competitions?paid=1&registrationId=${encodeURIComponent(registrationId)}`,
+      cancelUrl: `${appBase}/competitions?paid=0&registrationId=${encodeURIComponent(registrationId)}`,
+    });
+
+    const ins = await pool.query(
+      `INSERT INTO payments
+         (registration_id, user_id, amount, payment_status, snap_token, order_id,
+          payer_user_id, payer_kind, provider, currency)
+       VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7, 'stripe', 'USD')
+       RETURNING id`,
+      [
+        registrationId,
+        req.userId,
+        Math.round(amountUsd * 100), // store as cents so amount stays integer
+        session.sessionId,           // snap_token column doubles as Stripe session id
+        orderId,
+        resolvedPayerUserId,
+        resolvedPayerKind,
+      ],
+    );
+    res.status(201).json({
+      checkoutUrl: session.checkoutUrl,
+      paymentId: ins.rows[0].id,
+      orderId,
+      sessionId: session.sessionId,
+    });
+  } catch (err: any) {
+    console.error("Create stripe session error:", err);
+    res.status(500).json({ message: err.message || "Failed to create payment" });
+  }
+});
+
+
 // ── POST /api/payments/voucher/validate ──────────────────────────────────────
 // Live-checks a registration-fee voucher code. No mutation — the web pay page
 // calls this to preview the discounted fee before checkout.
@@ -530,7 +693,12 @@ router.post("/voucher/validate", async (req: Request, res: Response) => {
       res.status(404).json({ message: "Registration not found" });
       return;
     }
-    const check = await checkVoucher(ctx.compId, code.trim(), ctx.studentNpsn);
+    const check = await checkVoucher(
+      ctx.compId,
+      code.trim(),
+      ctx.studentNpsn,
+      ctx.studentCountry,
+    );
     res.json({
       valid: check.valid,
       message: check.message ?? null,
@@ -567,7 +735,7 @@ router.put("/registration/:id/voucher", async (req: Request, res: Response) => {
       res.json({ voucherCode: null, originalFee: ctx.fee, discountedFee: null });
       return;
     }
-    const check = await checkVoucher(ctx.compId, code, ctx.studentNpsn);
+    const check = await checkVoucher(ctx.compId, code, ctx.studentNpsn, ctx.studentCountry);
     if (!check.valid) {
       res.status(400).json({ message: check.message ?? "Invalid voucher code." });
       return;
@@ -603,8 +771,8 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
 
     // Look up payment record
     const payRow = await pool.query(
-      `SELECT p.id AS payment_id, p.order_id, r.status as reg_status,
-              r.comp_id, r.voucher_code, r.referral_code
+      `SELECT p.id AS payment_id, p.order_id, p.provider, p.snap_token,
+              r.status as reg_status, r.comp_id, r.voucher_code, r.referral_code
        FROM payments p
        JOIN registrations r ON r.id = p.registration_id
        WHERE p.registration_id = $1
@@ -618,7 +786,7 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
       return;
     }
 
-    const { payment_id, order_id, reg_status, comp_id, voucher_code, referral_code } =
+    const { payment_id, order_id, provider, snap_token, reg_status, comp_id, voucher_code, referral_code } =
       payRow.rows[0];
 
     // If already in post-payment state, nothing to do
@@ -627,19 +795,23 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
       return;
     }
 
-    // Ask Midtrans for the real transaction status
-    let txStatus: string;
+    // Ask the right gateway for the real transaction status. snap_token holds
+    // the Midtrans Snap token for Midtrans payments and the Stripe Checkout
+    // Session id for Stripe payments — same column, different vocabulary.
+    let isSettled = false;
     try {
-      txStatus = await getTransactionStatus(order_id);
+      if (provider === "stripe") {
+        const stripeStatus = await getCheckoutSessionStatus(snap_token);
+        isSettled = stripeStatus === "paid" || stripeStatus === "no_payment_required";
+      } else {
+        const txStatus = await getTransactionStatus(order_id);
+        isSettled = txStatus === "settlement" || txStatus === "capture";
+      }
     } catch {
-      // Midtrans returns 404 if transaction doesn't exist yet — not an error
+      // Gateway 404 on a still-pending session/transaction is normal — not an error.
       res.json({ status: reg_status });
       return;
     }
-
-    const isSettled =
-      txStatus === "settlement" ||
-      txStatus === "capture";
 
     if (isSettled) {
       // Update DB to match Midtrans — same logic as webhook
@@ -896,5 +1068,115 @@ router.post(
     }
   }
 );
+
+// ── POST /api/payments/stripe/webhook ────────────────────────────────────────
+// Exported separately because Stripe needs the raw request body to verify the
+// signature — `index.ts` mounts it before `express.json()` with
+// `express.raw({ type: "application/json" })`.
+//
+// Mirror of the Midtrans webhook above: signature verify → dedupe via
+// payment_webhook_events → on settle, flip the registration to pending_review,
+// then idempotently redeem the voucher + credit the referral. The two webhooks
+// MUST share the dedupe table so a payment that somehow fires twice (Stripe
+// retry + manual replay) doesn't double-credit.
+export async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
+  const signature = req.headers["stripe-signature"];
+  if (!signature || Array.isArray(signature)) {
+    res.status(400).send("Missing stripe-signature header");
+    return;
+  }
+  // express.raw leaves req.body as a Buffer.
+  const raw = (req as any).body as Buffer;
+  let event: any;
+  try {
+    // Lazy import keeps the Stripe SDK out of the module's top-level import
+    // graph for callers that don't touch payments.
+    const { constructWebhookEvent } = await import("../services/stripe.service");
+    event = constructWebhookEvent(raw, signature);
+  } catch (err: any) {
+    console.warn("Stripe webhook: signature verify failed —", err?.message);
+    res.status(400).send(`Webhook signature error: ${err?.message ?? "invalid"}`);
+    return;
+  }
+
+  // Idempotency dedupe — same table + same shape as the Midtrans webhook.
+  // `signature_key` carries Stripe's event id (`evt_...`), guaranteed unique
+  // per event delivery.
+  const dedup = await pool.query(
+    `INSERT INTO payment_webhook_events
+       (provider, order_id, signature_key, transaction_status, raw_payload)
+     VALUES ('stripe', $1, $2, $3, $4)
+     ON CONFLICT (provider, order_id, signature_key) DO NOTHING
+     RETURNING id`,
+    [
+      event?.data?.object?.metadata?.orderId ?? event?.id,
+      event?.id,
+      event?.type ?? null,
+      event,
+    ],
+  );
+  if (dedup.rows.length === 0) {
+    res.json({ received: true, duplicate: true });
+    return;
+  }
+
+  // We only act on a completed checkout — other events (created, expired,
+  // refunded) are stored for audit but don't transition the registration.
+  if (event.type !== "checkout.session.completed") {
+    res.json({ received: true });
+    return;
+  }
+
+  const session = event.data.object;
+  const orderId: string | undefined =
+    session?.metadata?.orderId ?? session?.client_reference_id;
+  if (!orderId) {
+    console.warn("Stripe webhook: settle event without orderId");
+    res.json({ received: true });
+    return;
+  }
+
+  // Find the payment row + its registration. The webhook race against the
+  // verify-poll path is fine because the UPDATE further below is gated on the
+  // registration not already being post-payment.
+  const payRow = await pool.query(
+    `SELECT p.id AS payment_id, p.registration_id, r.comp_id, r.voucher_code, r.referral_code
+       FROM payments p
+       JOIN registrations r ON r.id = p.registration_id
+      WHERE p.order_id = $1 AND p.provider = 'stripe'
+      LIMIT 1`,
+    [orderId],
+  );
+  if (payRow.rows.length === 0) {
+    console.warn(`Stripe webhook: no payment found for order ${orderId}`);
+    res.json({ received: true });
+    return;
+  }
+  const { payment_id, registration_id, comp_id, voucher_code, referral_code } = payRow.rows[0];
+
+  await pool.query(
+    `UPDATE payments SET payment_status = 'settlement', payment_method = 'stripe',
+            updated_at = now()
+      WHERE id = $1`,
+    [payment_id],
+  );
+  const settled = await pool.query(
+    `UPDATE registrations SET status = 'pending_review', updated_at = now()
+       WHERE id = $1
+         AND status NOT IN ('pending_review','approved','paid','completed')
+     RETURNING id`,
+    [registration_id],
+  );
+  if ((settled.rowCount ?? 0) > 0) {
+    if (voucher_code && comp_id) {
+      await redeemVoucher(comp_id, voucher_code, payment_id);
+    }
+    if (referral_code && comp_id) {
+      await creditReferralPaid(comp_id, referral_code);
+    }
+  }
+  console.log(`Stripe webhook: settled registration ${registration_id} (order ${orderId})`);
+  res.json({ received: true });
+}
 
 export default router;

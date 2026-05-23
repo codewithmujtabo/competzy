@@ -35,6 +35,30 @@ export async function createSnapToken(
   });
 }
 
+export interface StripeSessionResponse {
+  checkoutUrl: string | null;
+  paymentId?: string;
+  orderId?: string;
+  sessionId?: string;
+  status?: string;
+}
+
+/**
+ * Mint a Stripe Checkout Session for an international student's USD round
+ * payment. Returns the hosted-page URL — the caller opens it via
+ * `WebBrowser.openAuthSessionAsync` and then polls `verifyPayment` to detect
+ * settlement (the existing verify endpoint already handles both providers).
+ */
+export async function createStripeSession(
+  registrationId: string,
+  payerKind: PayerKind = "self",
+): Promise<StripeSessionResponse> {
+  return apiRequest<StripeSessionResponse>("/payments/stripe", {
+    method: "POST",
+    body: { registrationId, payerKind },
+  });
+}
+
 export interface VoucherValidation {
   valid: boolean;
   message: string | null;

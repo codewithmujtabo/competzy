@@ -134,6 +134,7 @@ async function fetchUserWithRole(userId: string) {
     fullName: user.full_name,
     phone: user.phone,
     city: user.city,
+    country: user.country,    // ISO 3166-1 alpha-2 — drives international-only catalog filter
     role: user.role,
     photoUrl: user.photo_url,
     createdAt: user.created_at,
