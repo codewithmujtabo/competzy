@@ -168,7 +168,13 @@ router.put("/me", async (req: Request, res: Response) => {
 
         if (schoolName !== undefined) { sFields.push(`school_name = $${sIdx++}`); sValues.push(schoolName); }
         if (grade !== undefined) { sFields.push(`grade = $${sIdx++}`); sValues.push(grade); }
-        if (nisn !== undefined) { sFields.push(`nisn = $${sIdx++}`); sValues.push(nisn); }
+        if (nisn !== undefined) {
+          // Coerce empty string → NULL so the partial-unique index
+          // `idx_students_nisn ... WHERE nisn IS NOT NULL` doesn't trip
+          // when a student clears the field (was hitting 23505 in prod).
+          sFields.push(`nisn = $${sIdx++}`);
+          sValues.push(nisn === "" ? null : nisn);
+        }
         if (dateOfBirth !== undefined) { sFields.push(`date_of_birth = $${sIdx++}`); sValues.push(dateOfBirth); }
         if (interests !== undefined) { sFields.push(`interests = $${sIdx++}`); sValues.push(interests); }
         if (referralSource !== undefined) { sFields.push(`referral_source = $${sIdx++}`); sValues.push(referralSource); }
