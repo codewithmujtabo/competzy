@@ -44,6 +44,14 @@ import fs from "fs";
 
 const app = express();
 
+// Trust the immediate reverse proxy (production: host nginx → container).
+// Required for `express-rate-limit` v7+ to accept X-Forwarded-For as the
+// real client IP — without this, the library throws
+// `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` on every login/OTP/auth request
+// and the rate-limited endpoints return 500. Value `1` = trust one hop.
+// In dev there's no proxy, so this is a no-op.
+app.set("trust proxy", 1);
+
 // CORS: allow credentials so the web frontend can send the auth cookie.
 // Origin list reads CORS_ORIGINS (comma-separated) from env, falls back to
 // localhost dev hosts. In non-prod we also accept any http://localhost:<port>
