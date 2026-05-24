@@ -43,17 +43,19 @@ async function localRound(compId: string, country: string) {
     `SELECT id, round_name, fee, exam_mode, qualifying_score, exam_date::text AS exam_date
        FROM competition_rounds
       WHERE comp_id = $1 AND round_category = 'local' AND country = $2
-        AND deleted_at IS NULL
+        AND is_active = true
       ORDER BY round_order ASC LIMIT 1`,
     [compId, country],
   );
   return r.rows[0] ?? null;
 }
 
-// Every round a representative may operate on: all of the competition's online
-// / fast-track / global rounds plus the local round that matches the rep's
-// country. A `local` round bound to a different country stays hidden — only
-// that country's rep manages it.
+// Every round a representative may operate on: every ACTIVE online /
+// fast-track / global round in the competition plus the rep's own country's
+// local round (also only when active). A round the operator hasn't turned on
+// is invisible to students — so it's invisible to the rep too. A `local`
+// round bound to a different country stays hidden regardless: only that
+// country's rep manages it.
 async function repRounds(compId: string, country: string) {
   const r = await pool.query(
     `SELECT id, round_name, round_category, country, is_active,
@@ -61,7 +63,7 @@ async function repRounds(compId: string, country: string) {
             round_order
        FROM competition_rounds
       WHERE comp_id = $1
-        AND deleted_at IS NULL
+        AND is_active = true
         AND (round_category <> 'local' OR country = $2)
       ORDER BY round_order ASC`,
     [compId, country],
@@ -82,7 +84,8 @@ async function resolveRepRound(
       `SELECT id, round_name, round_category, country, is_active,
               fee, exam_mode, qualifying_score, exam_date::text AS exam_date
          FROM competition_rounds
-        WHERE id = $1 AND comp_id = $2 AND deleted_at IS NULL
+        WHERE id = $1 AND comp_id = $2
+          AND is_active = true
           AND (round_category <> 'local' OR country = $3)`,
       [roundId, compId, country],
     );
@@ -534,13 +537,14 @@ router.get("/rep/pay-batch/:id/verify", async (req: Request, res: Response) => {
   }
 });
 
-// Achievement data — current cohort + historical claims for a rep's local
+// Achievement data — current cohort + historical claims for a rep's selected
 // round. Shared by both the JSON view endpoint and the PDF export endpoint
-// below so the two can never drift.
-async function repAchievementData(userId: string) {
+// below so the two can never drift. `roundId` defaults to the local round when
+// not provided, preserving the original behaviour.
+async function repAchievementData(userId: string, roundId: string | null = null) {
   const a = await repAssignment(userId);
   if (!a) return null;
-  const round = await localRound(a.comp_id, a.country);
+  const round = await resolveRepRound(a.comp_id, a.country, roundId);
   const meRow = await pool.query("SELECT full_name FROM users WHERE id = $1", [userId]);
   const repName: string = meRow.rows[0]?.full_name ?? "Country Representative";
 
@@ -582,26 +586,37 @@ async function repAchievementData(userId: string) {
 // whether to download the PDF version.
 router.get("/rep/achievements", async (req: Request, res: Response) => {
   try {
-    const data = await repAchievementData(req.userId!);
+    const requestedRoundId =
+      typeof req.query.roundId === "string" && req.query.roundId.trim()
+        ? req.query.roundId.trim()
+        : null;
+    const data = await repAchievementData(req.userId!, requestedRoundId);
     if (!data) {
       res.status(404).json({ message: "No representative assignment found." });
       return;
     }
     const { a, round, repName, current, historical } = data;
     const medalCount = current.rows.filter((r: any) => r.is_medalist === true).length;
+    const roundPayload = round
+      ? {
+          id: round.id,
+          name: round.round_name,
+          category: round.round_category ?? null,
+          country: round.country ?? null,
+          examMode: round.exam_mode,
+          qualifyingScore: round.qualifying_score,
+          examDate: round.exam_date,
+        }
+      : null;
     res.json({
       country: a.country,
       competition: { id: a.comp_id, name: a.comp_name },
       repName,
-      localRound: round
-        ? {
-            id: round.id,
-            name: round.round_name,
-            examMode: round.exam_mode,
-            qualifyingScore: round.qualifying_score,
-            examDate: round.exam_date,
-          }
-        : null,
+      // Renamed from `localRound` — the rep can now pick any accessible round.
+      // `localRound` kept as alias for one release so the PDF/older clients
+      // don't break mid-migration.
+      selectedRound: roundPayload,
+      localRound: roundPayload,
       summary: {
         scored: current.rows.length,
         medalists: medalCount,
@@ -634,7 +649,11 @@ router.get("/rep/achievements", async (req: Request, res: Response) => {
 // registered for this local round (prior performance).
 router.get("/rep/export/achievement.pdf", async (req: Request, res: Response) => {
   try {
-    const data = await repAchievementData(req.userId!);
+    const requestedRoundId =
+      typeof req.query.roundId === "string" && req.query.roundId.trim()
+        ? req.query.roundId.trim()
+        : null;
+    const data = await repAchievementData(req.userId!, requestedRoundId);
     if (!data) {
       res.status(404).json({ message: "No representative assignment found." });
       return;

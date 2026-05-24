@@ -47,10 +47,14 @@ router.use("/question-bank/proctoring", requireRole("admin", "organizer"));
 // 'YYYY-MM-DD' string. If left as a DATE, node-pg parses it into a local-
 // midnight JS Date and res.json() serialises that to UTC, rolling the calendar
 // date back a day on any UTC+ server (the exam-date "save reverts" bug).
-const EXAM_COLS = `id, comp_id, round_id, name, code, year,
-  to_char(date, 'YYYY-MM-DD') AS date, grades, choice, short,
-  choice_count, short_count, start_time, end_time, minutes, correct_score,
-  wrong_score, description, created_at, updated_at`;
+// Fully qualified with `exams.` so the LEFT JOIN to competition_rounds doesn't
+// collide on the shared columns (`id`, `comp_id`, `name`, `description`,
+// `created_at`, `updated_at`). Valid in RETURNING too (Postgres allows
+// `RETURNING <target_table>.<col>`).
+const EXAM_COLS = `exams.id, exams.comp_id, exams.round_id, exams.name, exams.code, exams.year,
+  to_char(exams.date, 'YYYY-MM-DD') AS date, exams.grades, exams.choice, exams.short,
+  exams.choice_count, exams.short_count, exams.start_time, exams.end_time, exams.minutes, exams.correct_score,
+  exams.wrong_score, exams.description, exams.created_at, exams.updated_at`;
 
 // Resolve an exam's comp_id, then access-check. Returns the comp_id, or null if
 // the exam is missing / soft-deleted / not in an accessible competition.
@@ -157,7 +161,7 @@ function parseExamBody(body: any): { error?: string; data?: any } {
 async function roundBelongsToComp(roundId: string | null, compId: string): Promise<boolean> {
   if (!roundId) return true;
   const r = await pool.query(
-    "SELECT 1 FROM competition_rounds WHERE id = $1 AND comp_id = $2 AND deleted_at IS NULL",
+    "SELECT 1 FROM competition_rounds WHERE id = $1 AND comp_id = $2",
     [roundId, compId]
   );
   return r.rows.length > 0;
@@ -173,7 +177,7 @@ router.get("/question-bank/exams", async (req: Request, res: Response) => {
     }
     const r = await pool.query(
       `SELECT ${EXAM_COLS},
-              cr.name AS round_name,
+              cr.round_name AS round_name,
               (SELECT COUNT(*)::int FROM exam_question eq WHERE eq.exam_id = exams.id) AS question_count
          FROM exams
          LEFT JOIN competition_rounds cr ON cr.id = exams.round_id
@@ -197,7 +201,7 @@ router.get("/question-bank/exams/:id", async (req: Request, res: Response) => {
       return;
     }
     const ex = await pool.query(
-      `SELECT ${EXAM_COLS}, cr.name AS round_name
+      `SELECT ${EXAM_COLS}, cr.round_name AS round_name
          FROM exams
          LEFT JOIN competition_rounds cr ON cr.id = exams.round_id
         WHERE exams.id = $1`,

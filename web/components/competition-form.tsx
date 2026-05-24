@@ -241,7 +241,10 @@ export function CompetitionForm({ initial, submitLabel, cancelHref, onSubmit }: 
 
       <Section title="Registration & pricing">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Registration fee (IDR)" hint="0 for a free competition">
+          <Field
+            label="Base registration fee (IDR)"
+            hint="Fallback only — used when the competition has no rounds, or when a round leaves its own fee blank. Per-round fees override this. Set to 0 for a free competition."
+          >
             <Input
               type="number"
               value={form.fee}

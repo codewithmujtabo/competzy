@@ -21,6 +21,7 @@ import {
 import { cn } from '@/lib/utils';
 import { countryRepHttp } from '@/lib/api/client';
 import { rupiah, useRepContext } from '@/hooks/use-rep-context';
+import { RoundPicker, roundCategoryLabel, useRep } from '@/lib/rep/context';
 import {
   ManualEntryGrid,
   isValidRow,
@@ -68,7 +69,9 @@ function csvRowToPayload(row: CsvRow): RepRegisterPayload {
 
 export default function RepBulkRegistrationPage() {
   const { ctx, loading, refresh } = useRepContext();
-  const round = ctx?.localRound;
+  const { ctx: full, selectedRoundId } = useRep();
+  const round = ctx?.selectedRound;
+  const fullRound = full?.selectedRound ?? null;
 
   const [mode, setMode] = useState<'csv' | 'manual'>('manual');
 
@@ -134,6 +137,7 @@ export default function RepBulkRegistrationPage() {
     try {
       const res = await countryRepHttp.post<RepRegisterResult>('/rep/students', {
         students,
+        roundId: selectedRoundId || undefined,
       });
       setResult(res);
       toast.success(
@@ -181,7 +185,7 @@ export default function RepBulkRegistrationPage() {
       <PageHeader
         eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : 'Country Representative'}
         title="Bulk Registration"
-        subtitle="Register many students for the local round from a CSV file or by pasting from a spreadsheet."
+        subtitle="Register many students for the selected round from a CSV file or by pasting from a spreadsheet."
         actions={
           <Button asChild variant="outline">
             <Link href="/rep-portal/students">
@@ -192,6 +196,8 @@ export default function RepBulkRegistrationPage() {
         }
       />
 
+      <RoundPicker />
+
       {loading ? (
         <Card className="p-6">
           <Skeleton className="h-40 w-full" />
@@ -199,11 +205,10 @@ export default function RepBulkRegistrationPage() {
       ) : !round ? (
         <Card className="p-10 text-center">
           <p className="text-sm font-medium text-foreground">
-            Your local round hasn’t been set up yet
+            Pick a round to register into
           </p>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            An organizer needs to create a local round for {ctx?.country ?? 'your country'} before
-            you can register students.
+            Use the round picker above to choose which round these students should join.
           </p>
         </Card>
       ) : (
@@ -211,7 +216,8 @@ export default function RepBulkRegistrationPage() {
           {/* Round summary */}
           <Card className="gap-0 p-5">
             <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-primary">
-              Registering into
+              Registering into · {roundCategoryLabel(fullRound?.category ?? null)}
+              {fullRound?.category === 'local' && fullRound?.country ? ` · ${fullRound.country}` : ''}
             </p>
             <p className="mt-1 font-serif text-lg font-medium text-foreground">{round.name}</p>
             <p className="mt-1 text-xs text-muted-foreground">

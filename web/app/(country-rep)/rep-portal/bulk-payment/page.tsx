@@ -19,10 +19,13 @@ import {
 } from '@/components/ui/table';
 import { countryRepHttp } from '@/lib/api/client';
 import { rupiah, useRepContext } from '@/hooks/use-rep-context';
+import { RoundPicker, roundCategoryLabel, useRep } from '@/lib/rep/context';
 
 export default function RepBulkPaymentPage() {
   const { ctx, loading, refresh } = useRepContext();
-  const round = ctx?.localRound;
+  const { ctx: full, selectedRoundId } = useRep();
+  const round = ctx?.selectedRound;
+  const fullRound = full?.selectedRound ?? null;
   const unpaid = (ctx?.students ?? []).filter((s) => s.status === 'pending_payment');
 
   const [paying, setPaying] = useState(false);
@@ -39,7 +42,7 @@ export default function RepBulkPaymentPage() {
     try {
       const res = await countryRepHttp.post<{ batchId: string; redirectUrl?: string }>(
         '/rep/pay-batch',
-        {},
+        { roundId: selectedRoundId || undefined },
       );
       if (res.redirectUrl) window.open(res.redirectUrl, '_blank', 'noopener');
       let tries = 0;
@@ -79,8 +82,10 @@ export default function RepBulkPaymentPage() {
       <PageHeader
         eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : 'Country Representative'}
         title="Bulk Payment"
-        subtitle="Settle one Midtrans transaction for every unpaid student in your local round."
+        subtitle="Settle one Midtrans transaction for every unpaid student in the selected round."
       />
+
+      <RoundPicker />
 
       {loading ? (
         <Card className="p-6">
@@ -89,10 +94,10 @@ export default function RepBulkPaymentPage() {
       ) : !round ? (
         <Card className="p-10 text-center">
           <p className="text-sm font-medium text-foreground">
-            Your local round hasn’t been set up yet
+            Pick a round to settle payments for
           </p>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Bulk payment unlocks once a local round exists for {ctx?.country ?? 'your country'}.
+            Use the round picker above to choose which round you want to pay for.
           </p>
         </Card>
       ) : fee === 0 ? (
@@ -108,7 +113,7 @@ export default function RepBulkPaymentPage() {
           <CheckCircle2 className="mx-auto size-7 text-emerald-600" />
           <p className="mt-3 text-sm font-medium text-foreground">All students paid for</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Nothing outstanding in this local round.
+            Nothing outstanding in {roundCategoryLabel(fullRound?.category ?? null).toLowerCase()} round “{round.name}”.
           </p>
           <Button asChild className="mt-4" variant="outline">
             <Link href="/rep-portal/students">View My Students</Link>

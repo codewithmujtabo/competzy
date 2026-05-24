@@ -17,6 +17,7 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { rupiah, useRepContext } from '@/hooks/use-rep-context';
+import { RoundPicker, roundCategoryLabel, useRep } from '@/lib/rep/context';
 
 interface QuickLink {
   label: string;
@@ -30,7 +31,7 @@ const QUICK_LINKS: QuickLink[] = [
   {
     label: 'My Students',
     href: '/rep-portal/students',
-    description: 'Review the roster for the local round.',
+    description: 'Review the roster for the selected round.',
     icon: Users,
   },
   {
@@ -67,7 +68,10 @@ const QUICK_LINKS: QuickLink[] = [
 
 export default function RepDashboardPage() {
   const { ctx, loading } = useRepContext();
-  const round = ctx?.localRound;
+  const { ctx: full } = useRep();
+  const round = ctx?.selectedRound;
+  const fullRound = full?.selectedRound ?? null;
+  const accessibleCount = full?.rounds.length ?? 0;
 
   const students = ctx?.students ?? [];
   const total = students.length;
@@ -81,21 +85,32 @@ export default function RepDashboardPage() {
       <PageHeader
         eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : 'Country Representative'}
         title="Dashboard"
-        subtitle="Manage your country's students for the local round — register, pay, score, and report."
+        subtitle="Manage your country's students across every round you have access to — your local round plus Komodo's online and global rounds. Pick a round below to switch the rest of the page."
       />
+
+      <RoundPicker />
 
       {loading ? (
         <Card className="p-6">
           <Skeleton className="h-40 w-full" />
         </Card>
+      ) : accessibleCount === 0 ? (
+        <Card className="p-10 text-center">
+          <p className="text-sm font-medium text-foreground">
+            No rounds are available yet
+          </p>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            An organizer needs to publish a round for {ctx?.country ?? 'your country'} before
+            you can start using this portal.
+          </p>
+        </Card>
       ) : !round ? (
         <Card className="p-10 text-center">
           <p className="text-sm font-medium text-foreground">
-            Your local round hasn’t been set up yet
+            Pick a round to get started
           </p>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            An organizer needs to create a local round for {ctx?.country ?? 'your country'} before
-            you can start using this portal.
+            Use the round picker above to choose which round you want to manage.
           </p>
         </Card>
       ) : (
@@ -103,7 +118,8 @@ export default function RepDashboardPage() {
           {/* Round summary */}
           <Card className="gap-0 p-6">
             <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-primary">
-              Local round
+              {roundCategoryLabel(fullRound?.category ?? null)}
+              {fullRound?.category === 'local' && fullRound?.country ? ` · ${fullRound.country}` : ''}
             </p>
             <h2 className="mt-1 font-serif text-xl font-medium text-foreground">{round.name}</h2>
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-sm text-muted-foreground">

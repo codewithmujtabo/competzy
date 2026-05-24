@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { rupiah, useRepContext } from '@/hooks/use-rep-context';
+import { RoundPicker } from '@/lib/rep/context';
 
 function daysUntil(dateStr: string | null): number | null {
   if (!dateStr) return null;
@@ -27,7 +28,7 @@ function fmtDate(dateStr: string | null): string {
 
 export default function RepDeadlinesPage() {
   const { ctx, loading } = useRepContext();
-  const round = ctx?.localRound;
+  const round = ctx?.selectedRound;
   const students = ctx?.students ?? [];
 
   const pendingPayment = students.filter((s) => s.status === 'pending_payment').length;
@@ -44,8 +45,10 @@ export default function RepDeadlinesPage() {
       <PageHeader
         eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : 'Country Representative'}
         title="Deadlines"
-        subtitle="Key dates and outstanding action items for your local round."
+        subtitle="Key dates and outstanding action items for the selected round."
       />
+
+      <RoundPicker />
 
       {loading ? (
         <Card className="p-6">
@@ -54,11 +57,10 @@ export default function RepDeadlinesPage() {
       ) : !round ? (
         <Card className="p-10 text-center">
           <p className="text-sm font-medium text-foreground">
-            Your local round hasn’t been set up yet
+            Pick a round to view deadlines
           </p>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Deadlines appear here once an organizer creates a local round for{' '}
-            {ctx?.country ?? 'your country'}.
+            Use the round picker above to choose which round's schedule to see.
           </p>
         </Card>
       ) : (

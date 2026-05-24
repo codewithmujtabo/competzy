@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 
 import { CountryRepAuthProvider, useCountryRepAuth } from '@/lib/auth/country-rep-context';
+import { RepProvider } from '@/lib/rep/context';
 import { AppShell, type NavSection } from '@/components/shell/app-shell';
 
 const NAV: NavSection[] = [
@@ -65,7 +66,7 @@ function RepShell({ children }: { children: ReactNode }) {
         router.replace('/');
       }}
     >
-      {children}
+      <RepProvider>{children}</RepProvider>
     </AppShell>
   );
 }

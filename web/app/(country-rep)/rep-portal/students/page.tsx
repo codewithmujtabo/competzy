@@ -18,9 +18,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { rupiah, useRepContext } from '@/hooks/use-rep-context';
+import { RoundPicker, roundCategoryLabel, useRep } from '@/lib/rep/context';
 
 export default function RepStudentsPage() {
   const { ctx, loading } = useRepContext();
+  const { ctx: full } = useRep();
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
@@ -34,14 +36,15 @@ export default function RepStudentsPage() {
     );
   }, [ctx?.students, search]);
 
-  const round = ctx?.localRound;
+  const round = ctx?.selectedRound;
+  const fullRound = full?.selectedRound ?? null;
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-6 p-6 lg:p-8">
       <PageHeader
         eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : 'Country Representative'}
         title="My Students"
-        subtitle="The students you've registered for the local round."
+        subtitle="The students you've registered for the selected round."
         actions={
           round ? (
             <Button asChild>
@@ -54,6 +57,8 @@ export default function RepStudentsPage() {
         }
       />
 
+      <RoundPicker />
+
       {loading ? (
         <Card className="p-6">
           <Skeleton className="h-40 w-full" />
@@ -61,11 +66,10 @@ export default function RepStudentsPage() {
       ) : !round ? (
         <Card className="p-10 text-center">
           <p className="text-sm font-medium text-foreground">
-            Your local round hasn’t been set up yet
+            Pick a round to get started
           </p>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            An organizer needs to create a local round for {ctx?.country ?? 'your country'} before
-            you can register students.
+            Use the round picker above to choose which round you want to manage.
           </p>
         </Card>
       ) : (
@@ -73,7 +77,8 @@ export default function RepStudentsPage() {
           {/* Round summary */}
           <Card className="gap-0 p-6">
             <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-primary">
-              Local round
+              {roundCategoryLabel(fullRound?.category ?? null)}
+              {fullRound?.category === 'local' && fullRound?.country ? ` · ${fullRound.country}` : ''}
             </p>
             <h2 className="mt-1 font-serif text-xl font-medium text-foreground">{round.name}</h2>
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-sm text-muted-foreground">

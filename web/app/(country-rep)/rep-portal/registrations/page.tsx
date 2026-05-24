@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useRepContext, type RepStudent } from '@/hooks/use-rep-context';
+import { RoundPicker } from '@/lib/rep/context';
 
 type StatusFilter = 'all' | 'pending_payment' | 'pending_review' | 'paid' | 'rejected';
 
@@ -77,21 +78,22 @@ export default function RepRegistrationsPage() {
       <PageHeader
         eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : 'Country Representative'}
         title="Registrations"
-        subtitle="Track every registration for the local round by status."
+        subtitle="Track every registration for the selected round by status."
       />
+
+      <RoundPicker />
 
       {loading ? (
         <Card className="p-6">
           <Skeleton className="h-40 w-full" />
         </Card>
-      ) : !ctx?.localRound ? (
+      ) : !ctx?.selectedRound ? (
         <Card className="p-10 text-center">
           <p className="text-sm font-medium text-foreground">
-            Your local round hasn’t been set up yet
+            Pick a round to view registrations
           </p>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Registrations will appear here once a local round exists for{' '}
-            {ctx?.country ?? 'your country'}.
+            Use the round picker above to choose which round's registrations to see.
           </p>
         </Card>
       ) : (

@@ -86,11 +86,13 @@ function Field({
   required,
   children,
   className,
+  hint,
 }: {
   label: string;
   required?: boolean;
   children: React.ReactNode;
   className?: string;
+  hint?: string;
 }) {
   return (
     <div className={className}>
@@ -99,6 +101,7 @@ function Field({
         {required && <span className="text-destructive"> *</span>}
       </Label>
       {children}
+      {hint && <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -393,7 +396,11 @@ export default function CompetitionsPage() {
                 placeholder="EMC Organizer"
               />
             </Field>
-            <Field label="Fee (IDR)" className="sm:col-span-2">
+            <Field
+              label="Base fee (IDR)"
+              className="sm:col-span-2"
+              hint="Fallback only — used when no rounds exist or a round leaves its fee blank. Per-round fees override this."
+            >
               <Input
                 type="number"
                 value={form.fee}

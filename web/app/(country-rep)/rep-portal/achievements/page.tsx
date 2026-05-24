@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { countryRepHttp } from '@/lib/api/client';
+import { RoundPicker, useRep } from '@/lib/rep/context';
 
 interface CurrentRow {
   fullName: string;
@@ -37,27 +38,36 @@ interface AchievementPayload {
   country: string;
   competition: { id: string; name: string };
   repName: string;
-  localRound: {
-    id: string;
-    name: string;
-    examMode: string;
-    qualifyingScore: number | null;
-    examDate: string | null;
-  } | null;
+  /** Renamed to `selectedRound` server-side — `localRound` is a back-compat
+   *  alias that the backend still emits. Always read `selectedRound` here. */
+  selectedRound:
+    | {
+        id: string;
+        name: string;
+        category: string | null;
+        country: string | null;
+        examMode: string;
+        qualifyingScore: number | null;
+        examDate: string | null;
+      }
+    | null;
   summary: { scored: number; medalists: number; historical: number };
   currentCohort: CurrentRow[];
   historical: HistoricalRow[];
 }
 
 export default function RepAchievementsPage() {
+  const { selectedRoundId } = useRep();
   const [data, setData] = useState<AchievementPayload | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
+    setLoading(true);
     (async () => {
       try {
-        const r = await countryRepHttp.get<AchievementPayload>('/rep/achievements');
+        const qs = selectedRoundId ? `?roundId=${encodeURIComponent(selectedRoundId)}` : '';
+        const r = await countryRepHttp.get<AchievementPayload>(`/rep/achievements${qs}`);
         if (alive) setData(r);
       } catch (e) {
         if (alive) toast.error(e instanceof Error ? e.message : 'Failed to load achievements');
@@ -68,9 +78,12 @@ export default function RepAchievementsPage() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [selectedRoundId]);
 
-  const round = data?.localRound;
+  const round = data?.selectedRound;
+  const pdfHref = selectedRoundId
+    ? `/api/rep/export/achievement.pdf?roundId=${encodeURIComponent(selectedRoundId)}`
+    : '/api/rep/export/achievement.pdf';
   const empty =
     !loading &&
     data &&
@@ -82,11 +95,11 @@ export default function RepAchievementsPage() {
       <PageHeader
         eyebrow={data ? `${data.competition.name} · ${data.country}` : 'Country Representative'}
         title="Achievements"
-        subtitle="Current-cohort results and historical Competzy records for the students in your local round."
+        subtitle="Current-cohort results and historical Competzy records for the students in the selected round."
         actions={
           data ? (
             <Button asChild>
-              <a href="/api/rep/export/achievement.pdf" download>
+              <a href={pdfHref} download>
                 <Download className="size-4" />
                 Download PDF
               </a>
@@ -95,6 +108,8 @@ export default function RepAchievementsPage() {
         }
       />
 
+      <RoundPicker />
+
       {loading ? (
         <Card className="p-6">
           <Skeleton className="h-40 w-full" />
@@ -102,11 +117,10 @@ export default function RepAchievementsPage() {
       ) : !round ? (
         <Card className="p-10 text-center">
           <p className="text-sm font-medium text-foreground">
-            Your local round hasn’t been set up yet
+            Pick a round to view achievements
           </p>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Achievements appear here once an organizer creates a local round for{' '}
-            {data?.country ?? 'your country'}.
+            Use the round picker above to choose which round's results to see.
           </p>
         </Card>
       ) : (
