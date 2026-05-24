@@ -18,15 +18,28 @@ import { CountryRepAuthProvider, useCountryRepAuth } from '@/lib/auth/country-re
 import { RepProvider } from '@/lib/rep/context';
 import { AppShell, type NavSection } from '@/components/shell/app-shell';
 
+// Rep nav mirrors the school-admin shape (Dashboard → My Roster →
+// Track → Reports) since the workflow is identical, just scoped to a
+// country instead of a school.
 const NAV: NavSection[] = [
   {
     items: [
-      { label: 'Dashboard',         href: '/rep-portal',                   icon: LayoutGrid,    exact: true },
-      { label: 'My Students',       href: '/rep-portal/students',          icon: Users },
+      { label: 'Dashboard', href: '/rep-portal', icon: LayoutGrid, exact: true },
+    ],
+  },
+  {
+    label: 'My Roster',
+    items: [
+      { label: 'My Students', href: '/rep-portal/students', icon: Users },
       { label: 'Bulk Registration', href: '/rep-portal/bulk-registration', icon: Upload },
-      { label: 'Bulk Payment',      href: '/rep-portal/bulk-payment',      icon: CreditCard },
-      { label: 'Registrations',     href: '/rep-portal/registrations',     icon: ClipboardList },
-      { label: 'Deadlines',         href: '/rep-portal/deadlines',         icon: CalendarClock },
+      { label: 'Bulk Payment', href: '/rep-portal/bulk-payment', icon: CreditCard },
+    ],
+  },
+  {
+    label: 'Track',
+    items: [
+      { label: 'Registrations', href: '/rep-portal/registrations', icon: ClipboardList },
+      { label: 'Deadlines', href: '/rep-portal/deadlines', icon: CalendarClock },
     ],
   },
   {

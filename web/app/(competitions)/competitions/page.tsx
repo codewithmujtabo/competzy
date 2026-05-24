@@ -37,25 +37,27 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AppShell, type NavSection } from '@/components/shell/app-shell';
 
-// Sidebar nav shared with the (account) layout — keeps the My Account links
-// + a Browse → All competitions item that points back to this catalog. The
-// duplication is intentional: the catalog is in the (competitions) route
-// group so it can stay reachable without the account guard, but students
+// Sidebar nav shared with the (account) layout — Browse FIRST (this
+// catalog IS the student/parent home) and My Account below. Duplication
+// is intentional: the catalog is in the (competitions) route group so
+// it stays reachable without the account guard, but students/parents
 // land here and benefit from the same workspace shell.
 const STUDENT_NAV: NavSection[] = [
   {
     items: [
-      { label: 'Profile', href: '/account/profile', icon: User },
-      { label: 'Documents', href: '/account/documents', icon: FileText },
-      { label: 'Notifications', href: '/account/notifications', icon: Bell },
-      { label: 'My Competitions', href: '/account/competitions', icon: Trophy },
-      { label: 'Records', href: '/account/records', icon: History },
-      { label: 'Family', href: '/account/family', icon: Users },
+      { label: 'All Competitions', href: '/competitions', icon: LayoutGrid },
     ],
   },
   {
-    label: 'Browse',
-    items: [{ label: 'All competitions', href: '/competitions', icon: LayoutGrid }],
+    label: 'My Account',
+    items: [
+      { label: 'Profile', href: '/account/profile', icon: User },
+      { label: 'My Competitions', href: '/account/competitions', icon: Trophy },
+      { label: 'Documents', href: '/account/documents', icon: FileText },
+      { label: 'Records', href: '/account/records', icon: History },
+      { label: 'Family', href: '/account/family', icon: Users },
+      { label: 'Notifications', href: '/account/notifications', icon: Bell },
+    ],
   },
 ];
 
@@ -604,39 +606,24 @@ export default function CompetitionCatalogPage() {
     </div>
   );
 
-  // Students see the shared My Account sidebar around the dashboard, matching
-  // the (account)/* pages and the per-competition portal. Parents (also
-  // allowed in the catalog) get a lightweight header — the My Account links
-  // are student-specific so we don't show them here.
-  if (isStudent) {
-    return (
-      <AppShell
-        brand={{ name: 'Competzy', tagline: 'My Account', icon: Trophy }}
-        nav={STUDENT_NAV}
-        notificationsHref="/account/notifications"
-        user={{
-          name: user.fullName || user.full_name || 'Student',
-          email: user.email,
-          role: 'Participant',
-        }}
-        onSignOut={signOut}
-      >
-        {interior}
-      </AppShell>
-    );
-  }
-
+  // Both students and parents see the shared sidebar shell — they're both
+  // catalog browsers + may have linked competitions/records. The user
+  // dropdown in the top bar carries Profile + Sign out for either role.
+  const isParent = user.role === 'parent';
   return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="mx-auto max-w-6xl space-y-7 p-6 lg:p-10">
-        <header className="flex items-start justify-between gap-4">
-          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">Competzy</p>
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            Sign out
-          </Button>
-        </header>
-        {interior}
-      </div>
-    </div>
+    <AppShell
+      brand={{ name: 'Competzy', tagline: 'My Account', icon: Trophy }}
+      nav={STUDENT_NAV}
+      notificationsHref="/account/notifications"
+      profileHref="/account/profile"
+      user={{
+        name: user.fullName || user.full_name || (isParent ? 'Parent' : 'Student'),
+        email: user.email,
+        role: isParent ? 'Parent' : 'Participant',
+      }}
+      onSignOut={signOut}
+    >
+      {interior}
+    </AppShell>
   );
 }

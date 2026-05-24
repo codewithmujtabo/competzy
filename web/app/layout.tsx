@@ -3,7 +3,6 @@ import { AuthProvider } from '@/lib/auth/context';
 import { ThemeProvider } from '@/lib/theme/context';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
-import { ImpersonationBanner } from '@/components/impersonation-banner';
 import './globals.css';
 // KaTeX styles — loaded once at the root so any TipTap math node
 // (Question Bank editor, student exam runner, etc.) renders correctly.
@@ -33,7 +32,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ThemeProvider>
-          <ImpersonationBanner />
           <AuthProvider>
             <TooltipProvider delayDuration={200}>
               {children}

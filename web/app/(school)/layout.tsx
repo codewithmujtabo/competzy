@@ -17,14 +17,27 @@ import {
 import { SchoolProvider, useSchool } from '@/lib/auth/school-context';
 import { AppShell, type NavSection } from '@/components/shell/app-shell';
 
+// School Admin: dashboard up top, then the two daily loops — Students
+// (roster + bulk register/pay) and Registrations (status tracking) — then
+// Reports.
 const ADMIN_NAV: NavSection[] = [
   {
     items: [
       { label: 'Dashboard', href: '/school-dashboard', icon: LayoutGrid, exact: true },
+    ],
+  },
+  {
+    label: 'Students',
+    items: [
       { label: 'Student Roster', href: '/school-students', icon: Users },
       { label: 'Bulk Registration', href: '/bulk-registration', icon: Upload },
       { label: 'Bulk Payment', href: '/bulk-payment', icon: CreditCard },
-      { label: 'Registrations', href: '/school-registrations', icon: ClipboardList },
+    ],
+  },
+  {
+    label: 'Registrations',
+    items: [
+      { label: 'All Registrations', href: '/school-registrations', icon: ClipboardList },
     ],
   },
   {
@@ -41,16 +54,27 @@ const ADMIN_NAV: NavSection[] = [
 ];
 
 // Teacher nav mirrors the dashboard quick-actions (Phase 4 added Bulk
-// Registration / Bulk Payment / Achievement PDF) so every action surfaced on
-// /school-dashboard is reachable from the left sidebar too.
+// Registration / Bulk Payment / Achievement PDF) so every action surfaced
+// on /school-dashboard is reachable from the left sidebar too. Grouped
+// the same way as School Admin for muscle-memory consistency.
 const TEACHER_NAV: NavSection[] = [
   {
     items: [
       { label: 'Dashboard', href: '/school-dashboard', icon: LayoutGrid, exact: true },
+    ],
+  },
+  {
+    label: 'My Roster',
+    items: [
       { label: 'My Students', href: '/school-my-students', icon: Users },
       { label: 'My Competitions', href: '/school-my-competitions', icon: Trophy },
       { label: 'Bulk Registration', href: '/bulk-registration', icon: Upload },
       { label: 'Bulk Payment', href: '/bulk-payment', icon: CreditCard },
+    ],
+  },
+  {
+    label: 'Track',
+    items: [
       { label: 'Registrations', href: '/school-registrations', icon: ClipboardList },
       { label: 'Deadlines', href: '/school-deadline', icon: CalendarClock },
     ],

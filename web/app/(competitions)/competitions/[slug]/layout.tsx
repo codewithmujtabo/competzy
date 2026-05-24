@@ -83,6 +83,7 @@ function ShelledCompetition({ slug, children }: { slug: string; children: ReactN
       brand={{ name: config.shortName, tagline: config.wordmark, icon: Trophy }}
       nav={nav}
       notificationsHref="/account/notifications"
+      profileHref="/account/profile"
       user={{
         name: user.fullName || user.full_name || 'Student',
         email: user.email,

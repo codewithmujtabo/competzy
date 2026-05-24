@@ -2,18 +2,26 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { GraduationCap, LayoutGrid, Library, Loader2, Trophy, Users, Wallet } from 'lucide-react';
+import { GraduationCap, LayoutGrid, Library, Loader2, Trophy, Users } from 'lucide-react';
 import { OrganizerProvider, useOrganizer } from '@/lib/auth/organizer-context';
 import { AppShell, type NavSection } from '@/components/shell/app-shell';
 
+// Organizers spend their day in three loops: see what's happening
+// (dashboard), curate competitions + their question bank (content), and
+// triage participant approvals (people). Revenue analytics moved to the
+// admin portal — organizers care about it via the dashboard KPIs only.
 const NAV: NavSection[] = [
   {
     items: [
       { label: 'Dashboard', href: '/organizer-dashboard', icon: LayoutGrid, exact: true },
-      { label: 'Competitions', href: '/organizer-competitions', icon: Trophy },
-      { label: 'Question Bank', href: '/question-bank', icon: Library },
+    ],
+  },
+  {
+    label: 'Workspace',
+    items: [
+      { label: 'My Competitions', href: '/organizer-competitions', icon: Trophy },
       { label: 'Participants', href: '/participants', icon: Users },
-      { label: 'Revenue', href: '/revenue', icon: Wallet },
+      { label: 'Question Bank', href: '/question-bank', icon: Library },
     ],
   },
 ];

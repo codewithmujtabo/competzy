@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Bell, ChevronsUpDown, LogOut, Moon, Sun } from 'lucide-react';
+import { Bell, LogOut, Moon, Sun } from 'lucide-react';
 
 import { useTheme } from '@/lib/theme/context';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -36,6 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ImpersonationBanner } from '@/components/impersonation-banner';
 
 export interface NavItem {
   label: string;
@@ -71,6 +71,8 @@ export interface AppShellProps {
   onSignOut: () => void;
   /** When set, the top-bar bell links here; otherwise it stays inert. */
   notificationsHref?: string;
+  /** When set, the user dropdown's "Profile" item links here. */
+  profileHref?: string;
   children: React.ReactNode;
 }
 
@@ -93,6 +95,14 @@ function isActive(pathname: string, item: NavItem): boolean {
  * The unified Competzy operator/portal chrome — a collapsible sidebar + a
  * sticky top bar. Every web portal renders its pages inside one of these,
  * passing its own role-gated `nav` config; the look is identical across roles.
+ *
+ * The user identity (avatar, name, sign-out) lives in the top bar (right
+ * side, next to the bell). The sidebar is dedicated to navigation only.
+ *
+ * The ImpersonationBanner renders inside the workspace (SidebarInset) so
+ * it pushes the header + main content down naturally, instead of overlaying
+ * either. When there's no impersonation it returns null and has zero
+ * layout impact.
  */
 export function AppShell({
   brand,
@@ -100,6 +110,7 @@ export function AppShell({
   user,
   onSignOut,
   notificationsHref,
+  profileHref,
   children,
 }: AppShellProps) {
   const pathname = usePathname() ?? '';
@@ -141,8 +152,6 @@ export function AppShell({
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
                           {item.external ? (
-                            // Plain anchor for download endpoints (e.g. PDFs).
-                            // target="_blank" so the active page state survives.
                             <a href={item.href} target="_blank" rel="noreferrer">
                               <Icon />
                               <span>{item.label}</span>
@@ -165,56 +174,17 @@ export function AppShell({
             </SidebarGroup>
           ))}
         </SidebarContent>
-
-        <SidebarFooter className="border-t border-sidebar-border/60 pt-3">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton
-                    size="lg"
-                    className="rounded-2xl bg-gradient-to-br from-[#f5f0ff] to-white data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                  >
-                    <Avatar className="size-10 rounded-xl">
-                      <AvatarFallback className="rounded-xl bg-gradient-to-br from-primary to-[#7849ff] text-primary-foreground font-semibold">
-                        {initials(user.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="grid flex-1 text-left leading-tight">
-                      <span className="truncate text-sm font-semibold">{user.name}</span>
-                      <span className="truncate text-xs text-muted-foreground">{user.email}</span>
-                    </div>
-                    <ChevronsUpDown className="ml-auto size-4" />
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side={isMobile ? 'bottom' : 'right'}
-                  align="end"
-                  sideOffset={8}
-                  className="w-56"
-                >
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="grid leading-tight">
-                      <span className="text-sm font-medium">{user.name}</span>
-                      <span className="text-xs text-muted-foreground">{user.email}</span>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onSignOut} className="text-destructive focus:text-destructive">
-                    <LogOut className="size-4" />
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
         <SidebarRail />
       </Sidebar>
 
       <SidebarInset>
+        {/* Impersonation banner — renders inside the workspace so it pushes
+            the header + content down instead of overlaying them. Returns
+            null when not impersonating, so layout is unaffected normally. */}
+        <ImpersonationBanner />
+
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/75">
-          <SidebarTrigger className="-ml-1" />
+          <SidebarTrigger className="-ml-1" aria-label="Toggle navigation" />
           <Separator orientation="vertical" className="mr-1 h-5" />
           {user.role && (
             <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
@@ -242,6 +212,56 @@ export function AppShell({
                 <Bell className="size-[1.1rem]" />
               </Button>
             )}
+
+            <Separator orientation="vertical" className="mx-1 hidden h-6 sm:block" />
+
+            {/* User menu — moved out of the sidebar footer into the top
+                bar so it's reachable from every page without scrolling
+                the sidebar, and one-clickable next to the bell. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="ml-1 h-10 gap-2 rounded-full px-1.5 pr-2.5 data-[state=open]:bg-accent"
+                  aria-label="Account menu"
+                >
+                  <Avatar className="size-8">
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-[#7849ff] text-[12px] font-semibold text-primary-foreground">
+                      {initials(user.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden max-w-[140px] truncate text-sm font-medium sm:inline">
+                    {user.name.split(' ')[0]}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side={isMobile ? 'bottom' : 'bottom'}
+                align="end"
+                sideOffset={8}
+                className="w-60"
+              >
+                <DropdownMenuLabel className="font-normal">
+                  <div className="grid leading-tight">
+                    <span className="text-sm font-semibold">{user.name}</span>
+                    <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {profileHref && (
+                  <DropdownMenuItem asChild>
+                    <Link href={profileHref}>Profile</Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onClick={onSignOut}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <LogOut className="size-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         <main className={cn('flex-1 overflow-y-auto')}>{children}</main>

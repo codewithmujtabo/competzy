@@ -1,10 +1,13 @@
 'use client';
 
-// A sticky, page-wide banner shown whenever the current session is a
-// super-admin impersonation. It self-fetches GET /auth/me (independent of the
-// per-role auth providers, which reject a mismatched role during impersonation)
-// and offers a one-click "Stop impersonating". Renders nothing for a normal
-// session, so it has zero layout impact outside an impersonation.
+// Banner shown whenever the current session is a super-admin
+// impersonation. Renders INSIDE the AppShell's SidebarInset (above the
+// sticky header) so it pushes the header + main content down naturally
+// instead of overlaying them. It self-fetches GET /auth/me (independent
+// of the per-role auth providers, which reject a mismatched role during
+// impersonation) and offers a one-click "Stop impersonating". Returns
+// null for a normal session, so it has zero layout impact outside an
+// impersonation.
 
 import { useEffect, useState } from 'react';
 import { Loader2, ShieldAlert } from 'lucide-react';
@@ -45,7 +48,7 @@ export function ImpersonationBanner() {
   };
 
   return (
-    <div className="sticky top-0 z-[100] flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 bg-amber-500 px-4 py-2 text-sm font-medium text-amber-950">
+    <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-b border-amber-600/40 bg-amber-500 px-4 py-2 text-sm font-medium text-amber-950">
       <span className="inline-flex items-center gap-2">
         <ShieldAlert className="size-4 shrink-0" />
         Impersonating <strong className="font-semibold">{name}</strong>

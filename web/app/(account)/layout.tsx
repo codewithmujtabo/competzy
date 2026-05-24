@@ -26,20 +26,25 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
   );
 }
 
+// Browse first (it's the student's home/dashboard — what they land on
+// after login). My Account underneath, ordered by how a student actually
+// progresses: identity → joined comps → docs/records/family/notifications.
 const NAV: NavSection[] = [
   {
     items: [
-      { label: 'Profile', href: '/account/profile', icon: User },
-      { label: 'Documents', href: '/account/documents', icon: FileText },
-      { label: 'Notifications', href: '/account/notifications', icon: Bell },
-      { label: 'My Competitions', href: '/account/competitions', icon: Trophy },
-      { label: 'Records', href: '/account/records', icon: History },
-      { label: 'Family', href: '/account/family', icon: Users },
+      { label: 'All Competitions', href: '/competitions', icon: LayoutGrid },
     ],
   },
   {
-    label: 'Browse',
-    items: [{ label: 'All competitions', href: '/competitions', icon: LayoutGrid }],
+    label: 'My Account',
+    items: [
+      { label: 'Profile', href: '/account/profile', icon: User },
+      { label: 'My Competitions', href: '/account/competitions', icon: Trophy },
+      { label: 'Documents', href: '/account/documents', icon: FileText },
+      { label: 'Records', href: '/account/records', icon: History },
+      { label: 'Family', href: '/account/family', icon: Users },
+      { label: 'Notifications', href: '/account/notifications', icon: Bell },
+    ],
   },
 ];
 
@@ -47,15 +52,17 @@ function ShelledAccount({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useCompetitionAuth();
   const router = useRouter();
 
-  // My Account is a student workspace — bounce everyone else home.
-  const isStudent = user?.role === 'student';
+  // My Account is shared between students and parents (parents land on
+  // the same catalog + can claim historical records / link family). Both
+  // roles see the same sidebar; admin/operator roles bounce home.
+  const isParticipant = user?.role === 'student' || user?.role === 'parent';
 
   useEffect(() => {
     if (loading) return;
-    if (!user || !isStudent) router.replace('/');
-  }, [user, loading, isStudent, router]);
+    if (!user || !isParticipant) router.replace('/');
+  }, [user, loading, isParticipant, router]);
 
-  if (loading || !user || !isStudent) {
+  if (loading || !user || !isParticipant) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -68,10 +75,11 @@ function ShelledAccount({ children }: { children: ReactNode }) {
       brand={{ name: 'Competzy', tagline: 'My Account', icon: Trophy }}
       nav={NAV}
       notificationsHref="/account/notifications"
+      profileHref="/account/profile"
       user={{
-        name: user.fullName || user.full_name || 'Student',
+        name: user.fullName || user.full_name || (user.role === 'parent' ? 'Parent' : 'Student'),
         email: user.email,
-        role: 'Participant',
+        role: user.role === 'parent' ? 'Parent' : 'Participant',
       }}
       onSignOut={async () => {
         await logout();
