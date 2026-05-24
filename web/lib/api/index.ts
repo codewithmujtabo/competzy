@@ -56,6 +56,22 @@ export const usersApi = {
     if (p.search) q.set('search', p.search);
     return adminHttp.get<{ users: User[]; pagination: Pagination }>(`/admin/users?${q}`);
   },
+  get: (id: string) =>
+    adminHttp.get<{
+      user: User & { school_id?: string | null; school_name?: string | null };
+      linkedStudents: Array<{ id: string; full_name: string; email: string }>;
+    }>(`/admin/users/${id}`),
+  update: (id: string, data: { fullName?: string; phone?: string | null; schoolId?: string | null }) =>
+    adminHttp.put<{ message: string }>(`/admin/users/${id}`, data),
+  linkStudent: (parentId: string, studentEmail: string) =>
+    adminHttp.post<{ message: string; studentId: string }>(
+      `/admin/users/${parentId}/student-links`,
+      { studentEmail },
+    ),
+  unlinkStudent: (parentId: string, studentId: string) =>
+    adminHttp.delete<{ message: string }>(
+      `/admin/users/${parentId}/student-links/${studentId}`,
+    ),
 };
 
 export const registrationsApi = {

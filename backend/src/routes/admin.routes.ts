@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { pool } from "../config/database";
+import { dbErrorResponse } from "../lib/db-errors";
 import { adminOnly } from "../middleware/admin.middleware";
 import { authMiddleware } from "../middleware/auth";
 import { audit } from "../middleware/audit";
@@ -1311,8 +1312,8 @@ router.get("/organizers", async (_req, res) => {
 // ── GET /api/admin/users ──────────────────────────────────────────────────
 router.get("/users", async (req, res) => {
   try {
-    const page   = parseInt(req.query.page   as string) || 1;
-    const limit  = parseInt(req.query.limit  as string) || 25;
+    const page   = Math.max(1, parseInt(req.query.page  as string, 10) || 1);
+    const limit  = Math.min(200, Math.max(1, parseInt(req.query.limit as string, 10) || 25));
     const role   = req.query.role   as string | undefined;
     const search = req.query.search as string | undefined;
     const offset = (page - 1) * limit;
@@ -1321,20 +1322,23 @@ router.get("/users", async (req, res) => {
     const params: unknown[]    = [];
     let   i = 1;
 
-    if (role)   { conditions.push(`role = $${i++}`);                                       params.push(role); }
-    if (search) { conditions.push(`(full_name ILIKE $${i} OR email ILIKE $${i})`); params.push(`%${search}%`); i++; }
+    if (role)   { conditions.push(`u.role = $${i++}`);                                       params.push(role); }
+    if (search) { conditions.push(`(u.full_name ILIKE $${i} OR u.email ILIKE $${i})`); params.push(`%${search}%`); i++; }
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const [data, count] = await Promise.all([
       pool.query(
-        `SELECT id, email, full_name, phone, city, role, created_at
-         FROM users ${where}
-         ORDER BY created_at DESC
+        `SELECT u.id, u.email, u.full_name, u.phone, u.city, u.role, u.created_at,
+                u.school_id, s.name AS school_name
+         FROM users u
+         LEFT JOIN schools s ON s.id = u.school_id
+         ${where}
+         ORDER BY u.created_at DESC
          LIMIT $${i} OFFSET $${i + 1}`,
         [...params, limit, offset]
       ),
-      pool.query(`SELECT COUNT(*) FROM users ${where}`, params),
+      pool.query(`SELECT COUNT(*) FROM users u ${where}`, params),
     ]);
 
     const total = parseInt(count.rows[0].count);
@@ -1347,6 +1351,183 @@ router.get("/users", async (req, res) => {
     res.status(500).json({ message: "Failed to fetch users" });
   }
 });
+
+// ── GET /api/admin/users/:id ──────────────────────────────────────────────
+// Detail view for the Edit dialog. Includes school + parent-linked
+// student list (when applicable).
+router.get("/users/:id", async (req, res) => {
+  try {
+    const userRes = await pool.query(
+      `SELECT u.id, u.email, u.full_name, u.phone, u.city, u.role, u.school_id, u.country,
+              s.name AS school_name, s.verification_status AS school_status
+         FROM users u
+         LEFT JOIN schools s ON s.id = u.school_id
+        WHERE u.id = $1 AND u.deleted_at IS NULL`,
+      [req.params.id]
+    );
+    if (userRes.rows.length === 0) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+    const user = userRes.rows[0];
+
+    // Parents → linked students (active links only). Schools/admin/teacher
+    // already get their school via the join above. Country reps' multi-comp
+    // assignments live in /country-reps and are managed there.
+    let linkedStudents: { id: string; full_name: string; email: string }[] = [];
+    if (user.role === "parent") {
+      const ls = await pool.query(
+        `SELECT u.id, u.full_name, u.email
+           FROM parent_student_links psl
+           JOIN users u ON u.id = psl.student_id
+          WHERE psl.parent_id = $1 AND psl.status = 'active'
+          ORDER BY u.full_name`,
+        [req.params.id]
+      );
+      linkedStudents = ls.rows;
+    }
+
+    res.json({ user, linkedStudents });
+  } catch (err) {
+    console.error("Admin user detail error:", err);
+    res.status(500).json({ message: "Failed to fetch user" });
+  }
+});
+
+// ── PUT /api/admin/users/:id ──────────────────────────────────────────────
+// Admin edit — fullName, phone, school assignment. Role is intentionally
+// NOT mutable here (changing role mid-flight requires data backfill — do
+// it via /create-* scripts or a future dedicated migration tool).
+router.put(
+  "/users/:id",
+  audit({ action: "admin.user.update", resourceType: "user", resourceIdParam: "id" }),
+  async (req, res) => {
+    try {
+      const { fullName, phone, schoolId } = req.body as {
+        fullName?: string;
+        phone?: string;
+        schoolId?: string | null;
+      };
+
+      const existing = await pool.query(
+        "SELECT role FROM users WHERE id = $1 AND deleted_at IS NULL",
+        [req.params.id]
+      );
+      if (existing.rows.length === 0) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+
+      // Validate school exists when one was provided (null = unlink).
+      if (schoolId) {
+        const sc = await pool.query(
+          "SELECT id FROM schools WHERE id = $1 AND deleted_at IS NULL",
+          [schoolId]
+        );
+        if (sc.rows.length === 0) {
+          res.status(400).json({ message: "School not found" });
+          return;
+        }
+      }
+
+      const fields: string[] = [];
+      const values: unknown[] = [];
+      let i = 1;
+      if (fullName !== undefined) { fields.push(`full_name = $${i++}`); values.push(fullName); }
+      if (phone !== undefined) {
+        // Reuse phone normalisation — same shape the user route writes.
+        const { toLocalPhone } = await import("../services/twilio.service");
+        const normalized = phone ? toLocalPhone(phone) : null;
+        fields.push(`phone = $${i++}`);
+        values.push(normalized);
+      }
+      if (schoolId !== undefined) { fields.push(`school_id = $${i++}`); values.push(schoolId || null); }
+
+      if (fields.length === 0) {
+        res.json({ message: "Nothing to update" });
+        return;
+      }
+
+      fields.push(`updated_at = now()`);
+      values.push(req.params.id);
+      await pool.query(`UPDATE users SET ${fields.join(", ")} WHERE id = $${i}`, values);
+
+      res.json({ message: "User updated" });
+    } catch (err) {
+      const mapped = dbErrorResponse(err, {
+        users_email_key: "Email is already registered.",
+      });
+      if (mapped) {
+        console.warn("Admin user update constraint:", (err as any)?.code);
+        res.status(mapped.status).json({ message: mapped.message });
+        return;
+      }
+      console.error("Admin user update error:", err);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  }
+);
+
+// ── POST /api/admin/users/:parentId/student-links ────────────────────────
+// Add a parent → student link (admin-side, no PIN). Status becomes
+// 'active' immediately.
+router.post(
+  "/users/:parentId/student-links",
+  audit({ action: "admin.parent.link_student", resourceType: "user", resourceIdParam: "parentId" }),
+  async (req, res) => {
+    try {
+      const { studentEmail } = req.body as { studentEmail?: string };
+      if (!studentEmail) {
+        res.status(400).json({ message: "studentEmail is required" });
+        return;
+      }
+      const parent = await pool.query(
+        "SELECT id, role FROM users WHERE id = $1 AND deleted_at IS NULL",
+        [req.params.parentId]
+      );
+      if (parent.rows.length === 0 || parent.rows[0].role !== "parent") {
+        res.status(400).json({ message: "User is not a parent" });
+        return;
+      }
+      const student = await pool.query(
+        "SELECT id FROM users WHERE email = $1 AND role = 'student' AND deleted_at IS NULL",
+        [studentEmail.trim().toLowerCase()]
+      );
+      if (student.rows.length === 0) {
+        res.status(404).json({ message: "No student found with that email" });
+        return;
+      }
+      await pool.query(
+        `INSERT INTO parent_student_links (parent_id, student_id, status)
+         VALUES ($1, $2, 'active')
+         ON CONFLICT (parent_id, student_id) DO UPDATE SET status = 'active'`,
+        [req.params.parentId, student.rows[0].id]
+      );
+      res.json({ message: "Student linked", studentId: student.rows[0].id });
+    } catch (err) {
+      console.error("Admin parent link error:", err);
+      res.status(500).json({ message: "Failed to link student" });
+    }
+  }
+);
+
+// ── DELETE /api/admin/users/:parentId/student-links/:studentId ──────────
+router.delete(
+  "/users/:parentId/student-links/:studentId",
+  audit({ action: "admin.parent.unlink_student", resourceType: "user", resourceIdParam: "parentId" }),
+  async (req, res) => {
+    try {
+      await pool.query(
+        "DELETE FROM parent_student_links WHERE parent_id = $1 AND student_id = $2",
+        [req.params.parentId, req.params.studentId]
+      );
+      res.json({ message: "Student unlinked" });
+    } catch (err) {
+      console.error("Admin parent unlink error:", err);
+      res.status(500).json({ message: "Failed to unlink student" });
+    }
+  }
+);
 
 // ── POST /api/admin/notifications/broadcast ───────────────────────────────
 router.post("/notifications/broadcast", audit({ action: "admin.notification.broadcast", resourceType: "broadcast" }), async (req, res) => {

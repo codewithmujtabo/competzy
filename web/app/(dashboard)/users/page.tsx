@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Search, UserCog, X } from 'lucide-react';
+import { Pencil, Search, UserCog, X } from 'lucide-react';
 import { usersApi } from '@/lib/api';
 import { adminHttp } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/context';
@@ -25,6 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { UserEditDialog } from '@/components/user-edit-dialog';
 
 const ROLES = [
   { key: 'all', label: 'All' },
@@ -59,6 +60,7 @@ export default function UsersPage() {
   const { user: me } = useAuth();
   const canImpersonate = !!me?.isSuperAdmin;
   const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const impersonate = async (u: User) => {
     setImpersonatingId(u.id);
@@ -165,26 +167,23 @@ export default function UsersPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>City</TableHead>
+                <TableHead>School</TableHead>
                 <TableHead>Joined</TableHead>
-                {canImpersonate && <TableHead className="text-right">Actions</TableHead>}
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={canImpersonate ? 6 : 5}>
+                    <TableCell colSpan={6}>
                       <Skeleton className="h-8 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={canImpersonate ? 6 : 5}
-                    className="h-32 text-center text-sm text-muted-foreground"
-                  >
+                  <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
                     No users found.
                   </TableCell>
                 </TableRow>
@@ -204,7 +203,14 @@ export default function UsersPage() {
                         {u.role.replace(/_/g, ' ')}
                       </Badge>
                     </TableCell>
-                    <TableCell>{u.city || '—'}</TableCell>
+                    <TableCell
+                      className="max-w-[220px] truncate text-sm text-muted-foreground"
+                      title={u.school_name ?? ''}
+                    >
+                      {u.school_name || (
+                        <span className="italic text-muted-foreground/60">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
                       {u.created_at
                         ? new Date(u.created_at).toLocaleDateString('en-US', {
@@ -214,23 +220,34 @@ export default function UsersPage() {
                           })
                         : '—'}
                     </TableCell>
-                    {canImpersonate && (
-                      <TableCell className="text-right">
-                        {u.id === me?.id ? (
-                          <span className="text-xs text-muted-foreground">You</span>
-                        ) : (
+                    <TableCell className="text-right">
+                      {u.id === me?.id ? (
+                        <span className="text-xs text-muted-foreground">You</span>
+                      ) : (
+                        <div className="flex justify-end gap-1.5">
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={impersonatingId === u.id}
-                            onClick={() => impersonate(u)}
+                            onClick={() => setEditingId(u.id)}
                           >
-                            <UserCog className="size-3.5" />
-                            {impersonatingId === u.id ? 'Starting…' : 'Impersonate'}
+                            <Pencil className="size-3.5" />
+                            Edit
                           </Button>
-                        )}
-                      </TableCell>
-                    )}
+                          {canImpersonate && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={impersonatingId === u.id}
+                              onClick={() => impersonate(u)}
+                              title="Impersonate"
+                            >
+                              <UserCog className="size-3.5" />
+                              {impersonatingId === u.id ? 'Starting…' : 'Impersonate'}
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -239,6 +256,12 @@ export default function UsersPage() {
         </div>
         <Pager page={page} total={total} limit={LIMIT} onChange={setPage} />
       </Card>
+
+      <UserEditDialog
+        userId={editingId}
+        onClose={() => setEditingId(null)}
+        onSaved={load}
+      />
     </div>
   );
 }

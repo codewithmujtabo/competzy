@@ -93,7 +93,9 @@ export interface User {
   full_name: string;
   role: string;
   is_active: boolean;
-  school_id?: string;
+  school_id?: string | null;
+  school_name?: string | null;
+  phone?: string | null;
   city?: string;
   created_at?: string;
 }
