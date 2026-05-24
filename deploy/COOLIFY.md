@@ -1,6 +1,15 @@
 # Deploy Competzy ke Coolify (host-nginx + Coolify hybrid)
 
-> **Server target:** `144.126.243.200` — sudah ada Coolify (`coolify`,
+> **Configuration placeholders** (resolve at deploy time, never commit
+> the real values back to this doc):
+> - `<PROD_HOST>` — public IPv4 of the production server
+> - `<DEPLOY_USER>` — SSH login on the host (sudo + docker group)
+> - `<COOLIFY_ADMIN_EMAIL>` — Coolify dashboard root account
+>
+> The real values live in the team's private deploy notes (Notion / 1Password).
+> This doc is a structural runbook only.
+
+> **Server target:** `<PROD_HOST>` — sudah ada Coolify (`coolify`,
 > `coolify-db`, `coolify-realtime`, `coolify-redis`, `coolify-sentinel`
 > running healthy) **plus** host-level **nginx 1.24 + certbot** sebagai
 > reverse proxy publik. Coolify di server ini **tidak pakai Traefik** —
@@ -36,14 +45,14 @@ Build dari laptop (`eas build --profile production`).
 
 - SSH access ke server sebagai user dengan sudo + docker group.
 - Akses ke DNS `competzy.com` untuk bikin A-record.
-- Coolify dashboard credentials (UI di `http://144.126.243.200:8000`).
+- Coolify dashboard credentials (UI di `http://<PROD_HOST>:8000`).
 
 ### DNS A-records yang harus dibuat
 
 ```
-api.competzy.com           A    144.126.243.200    TTL 300
-arena.competzy.com         A    144.126.243.200    TTL 300
-minio.arena.competzy.com   A    144.126.243.200    TTL 300
+api.competzy.com           A    <PROD_HOST>    TTL 300
+arena.competzy.com         A    <PROD_HOST>    TTL 300
+minio.arena.competzy.com   A    <PROD_HOST>    TTL 300
 ```
 
 Tunggu propagate (`dig +short api.competzy.com` harus return IP) sebelum
@@ -89,7 +98,7 @@ Settings:
   - `MINIO_ROOT_PASSWORD=` (generate: `openssl rand -hex 24`)
 - **Domains field di Coolify: kosongkan** — nginx host yang handle.
 
-Setelah running, akses console di `http://144.126.243.200:9001` (sementara
+Setelah running, akses console di `http://<PROD_HOST>:9001` (sementara
 sebelum SSL siap):
 1. Login pakai root user/password.
 2. **Buckets → Create Bucket** → name: `competzy`.
@@ -163,7 +172,7 @@ sudah dipangkas dari image production. Jalankan dari laptop dengan
 
 ```bash
 # Sementara expose Postgres ke public di Coolify UI, atau pakai SSH tunnel:
-ssh -L 5432:127.0.0.1:<postgres-host-port> eduadmin@144.126.243.200
+ssh -L 5432:127.0.0.1:<postgres-host-port> <DEPLOY_USER>@<PROD_HOST>
 
 # Lalu di terminal lain:
 cd backend
@@ -221,7 +230,7 @@ sudo systemctl reload nginx
 
 # Pastikan DNS sudah propagate:
 dig +short api.competzy.com arena.competzy.com minio.arena.competzy.com
-# (semuanya harus return 144.126.243.200)
+# (semuanya harus return <PROD_HOST>)
 
 # Issue SSL untuk semua subdomain sekaligus:
 sudo certbot --nginx \
@@ -249,7 +258,7 @@ curl -sI https://minio.arena.competzy.com/minio/health/live  # expect 200
   request ke `/api/*` proxy mulus ke backend
 - Login dengan admin yang dibuat lewat `db:create-admin`
 - Upload file dari halaman registrasi → cek bucket MinIO (console di
-  `https://144.126.243.200:9001` atau `http://...:9001`) — object muncul
+  `https://<PROD_HOST>:9001` atau `http://...:9001`) — object muncul
   di bucket `competzy`
 - `https://minio.arena.competzy.com/competzy/<key>?<presigned-params>`
   accessible — itu yang ditampilkan ke browser sebagai `fileUrl`
