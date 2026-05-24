@@ -35,10 +35,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# tini for proper signal handling, curl for the healthcheck, and corepack
-# again so the entrypoint's `pnpm run db:migrate` resolves.
+# tini for proper signal handling, curl for the healthcheck. Runtime
+# stage doesn't need pnpm — the entrypoint calls `node-pg-migrate`
+# directly out of node_modules/.bin (avoids pnpm's auto deps-status
+# check which tries to write a temp file to /app and EACCES-crashes
+# the nodejs user).
 RUN apk add --no-cache tini curl \
- && corepack enable && corepack prepare pnpm@11.2.2 --activate \
  && addgroup -g 1001 -S nodejs \
  && adduser -S nodejs -u 1001 -G nodejs
 

@@ -14,7 +14,14 @@
 set -e
 
 echo "[boot] applying migrations…"
-pnpm run db:migrate --silent
+# Call node-pg-migrate directly instead of via `pnpm run db:migrate`.
+# pnpm 11.3+ runs a `runDepsStatusCheck` before every `pnpm run X` which
+# writes a temp file to the CWD (`/app/_tmp_...`); the runtime container's
+# `/app` directory is root-owned (we only chown individual files), so the
+# nodejs user gets EACCES and the entrypoint crashes in a restart loop.
+# `node-pg-migrate` binary in `node_modules/.bin/` works the same with no
+# package-manager involvement.
+node_modules/.bin/node-pg-migrate up --migrations-dir migrations
 echo "[boot] migrations done — starting server."
 
 exec node dist/index.js
