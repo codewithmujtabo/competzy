@@ -5,7 +5,7 @@ import { bulkUploadLimiter } from "../middleware/rate-limit";
 import multer from "multer";
 import { parseAndValidateCsv } from "../services/bulk-processor.service";
 
-const router = Router();
+const router: Router = Router();
 
 // Configure multer for file upload (store in memory)
 const upload = multer({

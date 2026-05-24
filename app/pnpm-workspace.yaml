@@ -1,0 +1,12 @@
+# pnpm v11+ project-level settings for the Expo mobile app.
+# - @sentry/cli — downloads the Sentry CLI binary for sourcemap upload
+# - @shopify/react-native-skia — native graphics bindings
+# - unrs-resolver — alternative module resolver used by the toolchain
+# Without these whitelists, postinstall scripts are blocked and the
+# corresponding modules may fail at build/runtime.
+packages:
+  - '.'
+allowBuilds:
+  '@sentry/cli': true
+  '@shopify/react-native-skia': true
+  unrs-resolver: true

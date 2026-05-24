@@ -3,7 +3,7 @@ import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
 import PDFDocument from "pdfkit";
 
-const router = Router();
+const router: Router = Router();
 router.use(authMiddleware);
 
 // Statuses surfaced by the registrations status tabs (mirrors

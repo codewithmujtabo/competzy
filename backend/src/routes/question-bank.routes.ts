@@ -15,7 +15,7 @@ import { hasCompAccess } from "../services/comp-access.service";
 //   GET/POST/PUT/DELETE  /question-bank/questions  (+ answers + topic tags)
 //   submit / approve / send-back transitions + proofreads
 
-const router = Router();
+const router: Router = Router();
 // Path-scoped so this router, mounted at bare `/api`, does not 403 unrelated
 // fall-through traffic (e.g. the student exam routes) — only `/question-bank/*`
 // requests are gated here.

@@ -1,0 +1,10 @@
+# pnpm v11+ project-level settings. `packages: ['.']` treats this dir as a
+# single-project workspace so pnpm reads the settings. `bcrypt` ships a
+# `node-pre-gyp install` postinstall script that compiles its native
+# binding — pnpm blocks postinstall scripts by default for security, so
+# the `bcrypt: true` whitelist below opts it in. Without this, login
+# throws `Cannot find module ...bcrypt_lib.node` at runtime.
+packages:
+  - '.'
+allowBuilds:
+  bcrypt: true

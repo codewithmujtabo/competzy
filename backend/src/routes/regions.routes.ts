@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import fetch from "node-fetch";
 
-const router = Router();
+const router: Router = Router();
 
 interface Province {
   code: string;

@@ -18,7 +18,7 @@ import { getSignedUrl } from "../services/storage.service";
 // /api; the `/question-bank/exams/*` + `/question-bank/grading/*` namespaces
 // place exams inside the operator workspace alongside the question bank.
 
-const router = Router();
+const router: Router = Router();
 // Path-scoped (this router is mounted at bare `/api`) so the operator gate does
 // not 403 unrelated fall-through traffic — only `/question-bank/*` is gated.
 router.use("/question-bank", authMiddleware);

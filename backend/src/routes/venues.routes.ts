@@ -11,7 +11,7 @@ import { liveFilter, softDelete } from "../db/query-helpers";
 // `/venues/*` are admin + organizer (organizers pick a test center for a
 // paper exam); the write paths `/admin/venues/*` are admin-only.
 
-const router = Router();
+const router: Router = Router();
 router.use("/venues", authMiddleware, requireRole("admin", "organizer"));
 router.use("/admin/venues", authMiddleware, requireRole("admin"));
 

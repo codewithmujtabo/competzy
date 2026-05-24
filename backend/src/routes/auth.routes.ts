@@ -22,7 +22,7 @@ import {
   passwordResetLimiter,
 } from "../middleware/rate-limit";
 
-const router = Router();
+const router: Router = Router();
 
 // ── Auth-cookie helpers ───────────────────────────────────────────────────
 // httpOnly + sameSite=lax + secure-in-prod is the OWASP-recommended cookie posture

@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
 
-const router = Router();
+const router: Router = Router();
 router.use(authMiddleware);
 
 // ── GET /api/historical/my-records ────────────────────────────────────────

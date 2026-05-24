@@ -22,7 +22,7 @@ import { applyMedalFromSession } from "../services/round-gating.service";
 //   PUT  /sessions/:id/periods/:periodId  save one answer
 //   POST /sessions/:id/submit             finish + MC auto-grade
 
-const router = Router();
+const router: Router = Router();
 router.use(authMiddleware);
 
 // The six languages the question bank supports — must match

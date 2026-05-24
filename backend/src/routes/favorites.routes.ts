@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
 
-const router = Router();
+const router: Router = Router();
 
 // GET /api/favorites - List user's favorites with competition details
 router.get("/", authMiddleware, async (req: Request, res: Response) => {

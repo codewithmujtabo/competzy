@@ -24,7 +24,7 @@ import { renderCertificatePdf } from "../services/certificate-pdf.service";
 //     DELETE /certificates/manage/:id            soft-delete
 //     POST   /certificates/manage/backfill?compId=
 
-const router = Router();
+const router: Router = Router();
 
 const trim = (v: unknown): string | null =>
   typeof v === "string" && v.trim() ? v.trim() : null;

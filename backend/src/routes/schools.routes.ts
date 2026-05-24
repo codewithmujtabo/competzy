@@ -7,7 +7,7 @@ import { hashPassword } from "../services/auth.service";
 import PDFDocument from "pdfkit";
 import fetch from "node-fetch";
 
-const router = Router();
+const router: Router = Router();
 
 // ── POST /api/schools/signup ─────────────────────────────────────────────
 // School coordinator self-signup. Creates the school row in pending_verification

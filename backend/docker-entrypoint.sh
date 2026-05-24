@@ -14,7 +14,7 @@
 set -e
 
 echo "[boot] applying migrations…"
-npm run db:migrate --silent
+pnpm run db:migrate --silent
 echo "[boot] migrations done — starting server."
 
 exec node dist/index.js

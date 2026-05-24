@@ -9,7 +9,7 @@ import {
 } from "../services/readiness.service";
 import { checkRoundGating } from "../services/round-gating.service";
 
-const router = Router();
+const router: Router = Router();
 router.use(authMiddleware);
 
 // ── GET /api/registrations ────────────────────────────────────────────────

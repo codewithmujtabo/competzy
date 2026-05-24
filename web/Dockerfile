@@ -3,13 +3,18 @@
 # ── Stage 1: deps ────────────────────────────────────────────────────────
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+# Native build toolchain for `sharp` (Next image optimization).
+RUN apk add --no-cache python3 make g++ \
+ && corepack enable && corepack prepare pnpm@11.2.2 --activate
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY .npmrc ./
+RUN pnpm install --frozen-lockfile
 
 # ── Stage 2: build ───────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable && corepack prepare pnpm@11.2.2 --activate
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -21,7 +26,7 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 # Ensure public/ exists even if the project ships none — the runtime stage
 # COPYs it unconditionally and would otherwise fail.
-RUN mkdir -p public && npm run build
+RUN mkdir -p public && pnpm run build
 
 # ── Stage 3: runtime ─────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime

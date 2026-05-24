@@ -8,7 +8,7 @@ import { authMiddleware } from "../middleware/auth";
 import { storeFile } from "../services/storage.service";
 import { toLocalPhone } from "../services/twilio.service";
 
-const router = Router();
+const router: Router = Router();
 
 // All routes require auth
 router.use(authMiddleware);

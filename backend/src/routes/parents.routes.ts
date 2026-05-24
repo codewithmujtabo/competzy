@@ -7,7 +7,7 @@ import crypto from "crypto";
 import { isSmtpConfigured, sendParentInvitationEmail } from "../services/email.service";
 import * as pushService from "../services/push.service";
 
-const router = Router();
+const router: Router = Router();
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();

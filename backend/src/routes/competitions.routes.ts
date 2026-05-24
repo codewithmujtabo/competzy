@@ -31,7 +31,7 @@ async function callerCountry(req: Request): Promise<string | null> {
   }
 }
 
-const router = Router();
+const router: Router = Router();
 
 // Simple in-memory cache for recommendations (1 hour TTL)
 const recommendationsCache = new Map<string, { data: any[]; timestamp: number }>();

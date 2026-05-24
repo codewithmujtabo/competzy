@@ -15,7 +15,7 @@ import { createSnapToken, getTransactionStatus } from "../services/midtrans.serv
 // Mounted at bare /api with a path-scoped guard so it never 403s fall-through
 // traffic. (The student `/storefront/*` routes arrive in Phase 6.)
 
-const router = Router();
+const router: Router = Router();
 router.use("/commerce", authMiddleware);
 // Operator-only sub-trees (admin + organizer). Order routes under
 // /commerce/orders/* are guarded per-route — an order owner pays/verifies

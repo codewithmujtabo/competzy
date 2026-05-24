@@ -1,0 +1,7 @@
+# pnpm v11+ project-level settings. `sharp` (Next.js image optimization)
+# ships a postinstall that compiles its libvips binding — must be allowed
+# or `next build` warns + image optimization falls back to slow JS path.
+packages:
+  - '.'
+allowBuilds:
+  sharp: true

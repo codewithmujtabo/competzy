@@ -27,7 +27,7 @@ const imageUpload = multer({
   fileFilter: (_req, file, cb) => cb(null, file.mimetype.startsWith("image/")),
 });
 
-const router = Router();
+const router: Router = Router();
 router.use(authMiddleware);
 router.use(organizerOnly);
 

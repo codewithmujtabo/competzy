@@ -15,7 +15,7 @@ function isInternationalCountry(country: string | null | undefined): boolean {
   return country.toUpperCase() !== "ID";
 }
 
-const router = Router();
+const router: Router = Router();
 
 // ── T20: Parent ownership check ───────────────────────────────────────────────
 // Returns true if userId owns the registration directly OR is a linked parent.

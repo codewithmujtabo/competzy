@@ -19,7 +19,7 @@ import { computeCompleteness, type CompletenessResult } from "../services/readin
 //   PUT    /admin/competitions/:compId/flow/:stepId — edit a step   (admin)
 //   DELETE /admin/competitions/:compId/flow/:stepId — soft-delete   (admin)
 
-const router = Router();
+const router: Router = Router();
 router.use(authMiddleware);
 
 const CHECK_TYPES = ["profile", "documents", "payment", "approval", "none"] as const;

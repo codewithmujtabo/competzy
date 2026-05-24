@@ -15,7 +15,7 @@ import { sendBatchNotifications } from "../services/push.service";
 // The referral attribution endpoints (`/referrals/click`, `/referrals/signup`)
 // are public / student-facing and sit OUTSIDE the /marketing namespace.
 
-const router = Router();
+const router: Router = Router();
 router.use("/marketing", authMiddleware);
 router.use("/marketing", requireRole("admin", "organizer"));
 

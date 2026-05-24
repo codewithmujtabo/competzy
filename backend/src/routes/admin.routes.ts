@@ -11,7 +11,7 @@ import { replaceRounds } from "../services/competition-rounds.service";
 import { storeFile } from "../services/storage.service";
 import multer from "multer";
 
-const router = Router();
+const router: Router = Router();
 
 // All routes require authentication and admin role
 router.use(authMiddleware);

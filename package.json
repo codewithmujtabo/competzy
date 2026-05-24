@@ -2,9 +2,9 @@
   "name": "competzy",
   "private": true,
   "scripts": {
-    "backend": "cd backend && npm run dev",
-    "web":     "cd web && npm run dev",
-    "app":     "cd app && npx expo start",
-    "install:all": "cd backend && npm install && cd ../web && npm install && cd ../app && npm install"
+    "backend": "cd backend && pnpm dev",
+    "web":     "cd web && pnpm dev",
+    "app":     "cd app && pnpm exec expo start",
+    "install:all": "pnpm -C backend install && pnpm -C web install && pnpm -C app install"
   }
 }

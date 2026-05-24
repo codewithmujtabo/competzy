@@ -25,19 +25,27 @@ competzy/
 
 ## How to Run
 
+> **Package manager: pnpm** (v11+). Migrated from npm in SPRINT 38 — see
+> "Known Issues / Quirks" below for the pnpm-specific gotchas (the
+> `pnpm-workspace.yaml` per subproject holding `allowBuilds` whitelist
+> for native modules like bcrypt/sharp, plus the `@types/*` hoist in
+> `.npmrc`). Install pnpm globally: `npm install -g pnpm` or via
+> Homebrew `brew install pnpm`. Node ≥ 20 ships corepack so you can
+> also `corepack enable && corepack prepare pnpm@11.2.2 --activate`.
+
 ```bash
 # From each subdirectory:
-cd backend && npm run dev        # Express backend — port 3000
-cd web     && npm run dev        # Next.js web — port 3001
-cd app     && npm start          # Expo mobile — opens Expo dev tools
+cd backend && pnpm dev           # Express backend — port 3000 (3010 in local dev)
+cd web     && pnpm dev           # Next.js web — port 3001
+cd app     && pnpm start         # Expo mobile — opens Expo dev tools
 
 # Or from the monorepo root:
-npm run backend
-npm run web
-npm run app
+pnpm backend
+pnpm web
+pnpm app
 
 # Install all deps at once:
-npm run install:all
+pnpm install:all
 ```
 
 **Web `.env.local`** (`web/.env.local`):
@@ -801,6 +809,8 @@ T21 (MinIO) ──────────────► T22 (storage migration
 ---
 
 ## Known Issues / Quirks
+
+- **pnpm migration (SPRINT 38):** project switched from npm to pnpm. Per-subproject `pnpm-workspace.yaml` files hold the **`allowBuilds`** whitelist required by pnpm 11+ (it blocks native postinstall scripts by default for security). Native modules whitelisted: `bcrypt` (backend — login crashes without `bcrypt_lib.node`), `sharp` (web — Next.js image optimization falls back to slow JS path otherwise), `@sentry/cli` + `@shopify/react-native-skia` + `unrs-resolver` (mobile app). Per-subproject `.npmrc` files hold `public-hoist-pattern[]=@types/*` to flatten transitive `@types/*` packages — without that hoist, TypeScript throws TS2742 on every `const router = Router()` because the type lives under `node_modules/.pnpm/@types+express-serve-static-core@.../`. Mobile `app/.npmrc` additionally has `node-linker=hoisted` for Metro/Expo resolver compatibility. Dockerfiles enable pnpm via `corepack enable && corepack prepare pnpm@11.2.2 --activate` in both backend + web. `backend/docker-entrypoint.sh` now calls `pnpm run db:migrate` on container boot. All route files have explicit `const router: Router = Router()` annotation (pnpm's strict node_modules layout breaks TypeScript's inferred type without it).
 
 - **`express-rate-limit` v8 trust-proxy gotcha (SPRINT 37):** the library throws `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` as a hard error when a request carries `X-Forwarded-For` but Express isn't told to trust any proxy. Production's host nginx terminates TLS and always adds the header, so every rate-limited endpoint (login / OTP / password reset / parent PIN / bulk upload) was 500-ing. Fix lives at `backend/src/index.ts` — `app.set('trust proxy', 1)` near the top, before any rate-limit middleware. Local dev never sees the header so it's a no-op there. **Don't dismiss `ERR_ERL_*` codes in container logs as "warning noise"** — at v7+ they're hard throws.
 - **`students.nisn` empty-string vs partial unique index (SPRINT 37):** `idx_students_nisn` is a partial unique index defined as `UNIQUE (nisn) WHERE nisn IS NOT NULL`. Empty string is NOT NULL, so two rows with `nisn = ''` collide. The profile-update route now coerces `'' → null` (`users.routes.ts:171`), and migration `1751500000000_normalize-empty-nisn.sql` cleans existing rows. If any other write path lands on `students.nisn` (admin import, CSV bulk-reg), it needs the same coercion. Same pattern applies to any other partial-unique TEXT column — `users.email`/`users.phone` are safe (their unique index also excludes NULL but those fields are never empty by code path), but any new partial-unique TEXT column needs the same defensive code.

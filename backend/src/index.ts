@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/node";
-import express from "express";
+import express, { type Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import path from "path";
@@ -42,7 +42,7 @@ import { initializeCronJobs } from "./services/cron.service";
 import { verifySignedUrlToken } from "./services/storage.service";
 import fs from "fs";
 
-const app = express();
+const app: Express = express();
 
 // Trust the immediate reverse proxy (production: host nginx → container).
 // Required for `express-rate-limit` v7+ to accept X-Forwarded-For as the

@@ -14,7 +14,7 @@ import { liveFilter, softDelete } from "../db/query-helpers";
 //   POST   /competitions/:compId/credentials/bulk     — operator: bulk issue
 //   DELETE /registrations/:id/credentials             — operator: revoke
 
-const router = Router();
+const router: Router = Router();
 router.use(authMiddleware);
 
 // Whether the requester may operate on a competition: admins always, organizers

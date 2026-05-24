@@ -8,14 +8,25 @@ WORKDIR /app
 # Native build toolchain for bcrypt / pdfkit / sharp-style deps.
 RUN apk add --no-cache python3 make g++
 
-COPY package.json package-lock.json ./
-RUN npm ci
+# Enable corepack so we can use the pinned pnpm version without a
+# global install step. node 20-alpine ships with corepack bundled.
+RUN corepack enable && corepack prepare pnpm@11.2.2 --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY .npmrc ./
+
+# `--frozen-lockfile` matches the committed `pnpm-lock.yaml` exactly,
+# refusing to update it (CI/Docker safety). `allowBuilds.bcrypt: true`
+# in pnpm-workspace.yaml lets the bcrypt postinstall compile its
+# native binding (otherwise `Cannot find module bcrypt_lib.node` at
+# runtime on every login).
+RUN pnpm install --frozen-lockfile
 
 COPY tsconfig.json ./
 COPY src ./src
 COPY migrations ./migrations
 
-RUN npm run build && npm prune --omit=dev
+RUN pnpm run build && pnpm prune --prod
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime
@@ -24,7 +35,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# tini for proper signal handling, curl for the healthcheck, and corepack
+# again so the entrypoint's `pnpm run db:migrate` resolves.
 RUN apk add --no-cache tini curl \
+ && corepack enable && corepack prepare pnpm@11.2.2 --activate \
  && addgroup -g 1001 -S nodejs \
  && adduser -S nodejs -u 1001 -G nodejs
 

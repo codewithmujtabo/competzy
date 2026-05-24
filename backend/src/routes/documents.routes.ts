@@ -5,7 +5,7 @@ import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
 import { storeFile, deleteFile, getSignedUrl } from "../services/storage.service";
 
-const router = Router();
+const router: Router = Router();
 router.use(authMiddleware);
 
 // ── Multer config (memory storage — works with local disk and S3) ─────────────

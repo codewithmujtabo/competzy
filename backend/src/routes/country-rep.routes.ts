@@ -18,7 +18,7 @@ import { createSnapToken, getTransactionStatus } from "../services/midtrans.serv
 //   /api/country-representatives/*  — admin: create + manage representatives
 //   /api/rep/*                      — the representative's own portal API
 
-const router = Router();
+const router: Router = Router();
 
 router.use("/country-representatives", authMiddleware, adminOnly);
 router.use("/rep", authMiddleware, requireRole("country_representative"));
