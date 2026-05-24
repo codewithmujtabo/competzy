@@ -139,6 +139,10 @@ async function fetchUserWithRole(userId: string) {
     role: user.role,
     photoUrl: user.photo_url,
     createdAt: user.created_at,
+    // Top-level school_id so the (school) layout can detect teachers/
+    // school_admins without an associated school and prompt them to pick
+    // one (the roleData blob below is role-shaped, not always present).
+    school_id: user.school_id ?? null,
     ...roleData,
   };
 }

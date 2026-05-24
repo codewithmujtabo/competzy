@@ -110,6 +110,34 @@ router.post("/signup", async (req: Request, res: Response) => {
   }
 });
 
+// ── GET /api/schools/verified ─────────────────────────────────────────────
+// Lightweight list of verified schools — used by the (school) layout's
+// "pick your school" modal that gates teachers/school_admins who land
+// without an associated school. Authed so only signed-in users see the
+// directory, but no role gate beyond that.
+router.get("/verified", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const search = String(req.query.search ?? "").trim();
+    const params: unknown[] = [];
+    let where = "WHERE verification_status = 'verified' AND deleted_at IS NULL";
+    if (search) {
+      params.push(`%${search}%`);
+      where += ` AND (name ILIKE $${params.length} OR COALESCE(npsn,'') ILIKE $${params.length})`;
+    }
+    const r = await pool.query(
+      `SELECT id, name, npsn, city, province
+         FROM schools ${where}
+        ORDER BY name
+        LIMIT 200`,
+      params
+    );
+    res.json(r.rows);
+  } catch (err) {
+    console.error("Verified schools list error:", err);
+    res.status(500).json({ message: "Failed to load schools" });
+  }
+});
+
 // ── GET /api/schools/search ───────────────────────────────────────────────
 // Search schools using API.co.id
 router.get("/search", async (req: Request, res: Response) => {

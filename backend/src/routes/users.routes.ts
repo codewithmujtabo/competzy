@@ -391,6 +391,56 @@ router.get("/me/dashboard-summary", async (req: Request, res: Response) => {
   }
 });
 
+// ── POST /api/users/me/select-school ──────────────────────────────────────
+// Self-service school association for teachers + school_admins who land
+// without one (legacy accounts, deleted school, etc.). Only allowed when
+// the caller currently has no school_id AND the target school is verified
+// — this lets a teacher pick a school WITHOUT going through admin, but
+// still locks down spoofing (a teacher can't claim an unverified school
+// or hijack a school_admin's assignment).
+router.post("/me/select-school", async (req: Request, res: Response) => {
+  try {
+    const { schoolId } = req.body as { schoolId?: string };
+    if (!schoolId) {
+      res.status(400).json({ message: "schoolId is required" });
+      return;
+    }
+    const meRes = await pool.query(
+      "SELECT role, school_id FROM users WHERE id = $1 AND deleted_at IS NULL",
+      [req.userId]
+    );
+    if (meRes.rows.length === 0) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+    const me = meRes.rows[0];
+    if (me.role !== "teacher" && me.role !== "school_admin") {
+      res.status(403).json({ message: "Only teachers and school admins can self-link to a school" });
+      return;
+    }
+    if (me.school_id) {
+      res.status(409).json({ message: "You are already linked to a school. Ask an admin to change it." });
+      return;
+    }
+    const schoolRes = await pool.query(
+      "SELECT id FROM schools WHERE id = $1 AND verification_status = 'verified' AND deleted_at IS NULL",
+      [schoolId]
+    );
+    if (schoolRes.rows.length === 0) {
+      res.status(400).json({ message: "School not found or not yet verified" });
+      return;
+    }
+    await pool.query(
+      "UPDATE users SET school_id = $1, updated_at = now() WHERE id = $2",
+      [schoolId, req.userId]
+    );
+    res.json({ message: "School linked" });
+  } catch (err) {
+    console.error("Select school error:", err);
+    res.status(500).json({ message: "Failed to link school" });
+  }
+});
+
 // ── POST /api/users/photo ─────────────────────────────────────────────────────
 // Upload profile photo
 router.post(
