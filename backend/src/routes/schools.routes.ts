@@ -440,9 +440,10 @@ router.get("/students", authMiddleware, schoolAdminOnly, async (req: Request, re
 
     query += ` GROUP BY u.id, s.grade, s.nisn ORDER BY u.created_at DESC`;
 
-    // Add pagination
-    const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
+    // Pagination — guard against `?page=abc` returning NaN which would
+    // poison the SQL LIMIT/OFFSET and 500.
+    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit as string, 10) || 50));
     const offset = (pageNum - 1) * limitNum;
 
     query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
@@ -559,9 +560,10 @@ router.get("/registrations", authMiddleware, schoolAdminOnly, async (req: Reques
 
     query += ` ORDER BY r.created_at DESC`;
 
-    // Add pagination
-    const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
+    // Pagination — guard against `?page=abc` returning NaN which would
+    // poison the SQL LIMIT/OFFSET and 500.
+    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit as string, 10) || 50));
     const offset = (pageNum - 1) * limitNum;
 
     query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;

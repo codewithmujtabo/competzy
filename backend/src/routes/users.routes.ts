@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import multer from "multer";
 import path from "path";
 import { pool } from "../config/database";
+import { dbErrorResponse } from "../lib/db-errors";
 import { upsertSchoolFromNpsn } from "../db/upsert-school";
 import { authMiddleware } from "../middleware/auth";
 import { storeFile } from "../services/storage.service";
@@ -178,7 +179,14 @@ router.put("/me", async (req: Request, res: Response) => {
         if (dateOfBirth !== undefined) { sFields.push(`date_of_birth = $${sIdx++}`); sValues.push(dateOfBirth); }
         if (interests !== undefined) { sFields.push(`interests = $${sIdx++}`); sValues.push(interests); }
         if (referralSource !== undefined) { sFields.push(`referral_source = $${sIdx++}`); sValues.push(referralSource); }
-        if (npsn !== undefined) { sFields.push(`npsn = $${sIdx++}`); sValues.push(npsn); }
+        if (npsn !== undefined) {
+          // Coerce empty string → NULL for consistency with nisn (and to
+          // keep `npsn IS NULL` queries unambiguous). npsn index isn't
+          // unique so this isn't a constraint-violation fix per se, just
+          // hygiene against `WHERE npsn = ''` matching unrelated rows.
+          sFields.push(`npsn = $${sIdx++}`);
+          sValues.push(npsn === "" ? null : npsn);
+        }
         if (schoolAddress !== undefined) { sFields.push(`school_address = $${sIdx++}`); sValues.push(schoolAddress); }
         if (schoolEmail !== undefined) { sFields.push(`school_email = $${sIdx++}`); sValues.push(schoolEmail); }
         if (schoolWhatsapp !== undefined) { sFields.push(`school_whatsapp = $${sIdx++}`); sValues.push(schoolWhatsapp); }
@@ -232,6 +240,17 @@ router.put("/me", async (req: Request, res: Response) => {
 
     res.json({ message: "Profile updated" });
   } catch (err) {
+    // Translate known Postgres constraint violations to actionable 4xx
+    // (e.g. duplicate NISN/email when a student edits their profile).
+    const mapped = dbErrorResponse(err, {
+      idx_students_nisn: "That NISN is already linked to another student.",
+      users_email_key: "Email is already registered.",
+    });
+    if (mapped) {
+      console.warn("Update profile constraint:", (err as any)?.code, (err as any)?.constraint);
+      res.status(mapped.status).json({ message: mapped.message });
+      return;
+    }
     console.error("Update profile error:", err);
     res.status(500).json({ message: "Failed to update profile" });
   }

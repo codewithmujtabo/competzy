@@ -10,6 +10,7 @@ import {
   generateOtp,
   isSuperAdminEmail,
 } from "../services/auth.service";
+import { dbErrorResponse } from "../lib/db-errors";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service";
 import { sendPhoneOtp, verifyPhoneOtp, toE164, phoneVariants, toLocalPhone } from "../services/twilio.service";
 import { authMiddleware } from "../middleware/auth";
@@ -233,6 +234,17 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
       client.release();
     }
   } catch (err: any) {
+    // Translate known Postgres constraint violations (most commonly the
+    // unique-email collision) into actionable 4xx responses. The web's
+    // register page matches /already registered/i to set its email-taken UI.
+    const mapped = dbErrorResponse(err, {
+      users_email_key: "Email is already registered.",
+    });
+    if (mapped) {
+      console.warn("Signup constraint:", err.code, err.constraint);
+      res.status(mapped.status).json({ message: mapped.message });
+      return;
+    }
     console.error("Signup error:", err);
     res.status(500).json({ message: "Failed to create account" });
   }
