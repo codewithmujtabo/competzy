@@ -44,8 +44,17 @@ router.get("/recommended", authMiddleware, async (req: Request, res: Response) =
     const userId = req.userId!;
     const limit = parseInt(req.query.limit as string) || 10;
 
-    // Check cache
-    const cacheKey = `${userId}:${limit}`;
+    // International-only filter, mirroring `GET /api/competitions` (line ~113).
+    // A non-Indonesian student should never be recommended a local-only comp —
+    // they can't register for it anyway, so showing it in the For-You row is
+    // misleading. Read country FIRST so it can salt the cache key — otherwise
+    // a profile country change leaves a stale recommendation list cached for
+    // up to an hour.
+    const country = await callerCountry(req);
+    const isIntl = !!(country && country.toUpperCase() !== "ID");
+
+    // Cache key includes country bucket so changing country invalidates.
+    const cacheKey = `${userId}:${limit}:${isIntl ? "intl" : "any"}`;
     const cached = recommendationsCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       res.json(cached.data);
@@ -53,10 +62,16 @@ router.get("/recommended", authMiddleware, async (req: Request, res: Response) =
     }
 
     // Get recommendations
-    const recommendations = await recommendationsService.getRecommendations(
+    let recommendations = await recommendationsService.getRecommendations(
       userId,
       limit
     );
+
+    if (isIntl) {
+      recommendations = recommendations.filter(
+        (c: any) => c.is_international === true,
+      );
+    }
 
     // Cache the result
     recommendationsCache.set(cacheKey, {

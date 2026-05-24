@@ -17,12 +17,21 @@ router.get("/", async (req: Request, res: Response) => {
   try {
     const { compId } = req.query;
     const values: unknown[] = [req.userId];
-    let query = "SELECT * FROM registrations WHERE user_id = $1";
+    // INNER JOIN competitions drops orphaned registrations — rows that survived
+    // a comp delete / TRUNCATE-and-reseed and now point at a missing row. The
+    // mobile My Registrations list was rendering those as "Unknown / FREE"
+    // because the downstream join in the client couldn't resolve the comp.
+    let query = `
+      SELECT r.*
+        FROM registrations r
+        JOIN competitions c ON c.id = r.comp_id
+       WHERE r.user_id = $1
+    `;
     if (compId) {
       values.push(compId);
-      query += ` AND comp_id = $${values.length}`;
+      query += ` AND r.comp_id = $${values.length}`;
     }
-    query += " ORDER BY created_at DESC";
+    query += " ORDER BY r.created_at DESC";
     const result = await pool.query(query, values);
 
     const registrations = result.rows.map((r) => ({

@@ -83,7 +83,10 @@ export async function list(params: ListParams = {}): Promise<Competition[]> {
   if (params.search) qs.set("search", params.search);
 
   const query = qs.toString() ? `?${qs.toString()}` : "";
-  const data = await apiRequest<any[]>(`/competitions${query}`, { auth: false });
+  // Send the auth header — the backend reads `users.country` to gate non-
+  // Indonesian students to `is_international = true` competitions only
+  // (`competitions.routes.ts:108–116`). Anonymous callers still see everything.
+  const data = await apiRequest<any[]>(`/competitions${query}`);
   return (data ?? []).map(mapRow);
 }
 
