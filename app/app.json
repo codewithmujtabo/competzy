@@ -9,9 +9,12 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.competzy.app",
+      "associatedDomains": ["applinks:arena.competzy.com"]
     },
     "android": {
+      "package": "com.competzy.app",
       "adaptiveIcon": {
         "backgroundColor": "#F4EEF9",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -19,7 +22,17 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": ["BROWSABLE", "DEFAULT"],
+          "data": [
+            { "scheme": "https", "host": "arena.competzy.com", "pathPrefix": "/reset-password" }
+          ],
+          "autoVerify": true
+        }
+      ]
     },
     "web": {
       "output": "static",

@@ -225,6 +225,15 @@ export default function LoginScreen() {
                 }
                 onRightIconPress={() => setShowPassword((v) => !v)}
               />
+              <Pressable
+                onPress={() => router.push("/(auth)/forgot-password")}
+                hitSlop={8}
+                style={{ alignSelf: "flex-end", marginTop: -Spacing.sm }}
+              >
+                <Text style={[Type.label, { color: Brand.primary, fontFamily: FontFamily.bodyBold }]}>
+                  Forgot password?
+                </Text>
+              </Pressable>
               <Button label="Sign In" onPress={handleEmailLogin} loading={loading} fullWidth size="lg" />
             </View>
           ) : (

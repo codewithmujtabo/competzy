@@ -99,3 +99,25 @@ export async function getMe(): Promise<any | null> {
 export async function logout(): Promise<void> {
   await clearToken();
 }
+
+// ── Password reset ────────────────────────────────────────────────────────
+// Backend endpoints land from Sprint 20 Phase B. forgotPassword always returns
+// 200 (no enumeration) — the caller treats both "we sent an email" and "no
+// such account" identically. resetPassword takes the token from the email
+// link (mobile: arrives via the deep-link handler in expo-router).
+
+export async function forgotPassword(email: string): Promise<void> {
+  await apiRequest("/auth/forgot-password", {
+    method: "POST",
+    body: { email },
+    auth: false,
+  });
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  await apiRequest("/auth/reset-password", {
+    method: "POST",
+    body: { token, password },
+    auth: false,
+  });
+}
