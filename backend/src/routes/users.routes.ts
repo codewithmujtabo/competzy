@@ -132,11 +132,14 @@ router.put("/me", async (req: Request, res: Response) => {
     // anything that isn't two letters so analytics stays normalised.
     if (country !== undefined) {
       if (country !== null && country !== "" && !/^[A-Za-z]{2}$/.test(String(country))) {
+        console.warn(`[PUT /users/me] rejected country=${JSON.stringify(country)} for user ${req.userId}`);
         res.status(400).json({ message: "country must be a 2-letter ISO code" });
         return;
       }
+      const normalized = country ? String(country).toUpperCase() : null;
+      console.log(`[PUT /users/me] user=${req.userId} setting country=${normalized}`);
       fields.push(`country = $${idx++}`);
-      values.push(country ? String(country).toUpperCase() : null);
+      values.push(normalized);
     }
     if (photoUrl !== undefined) { fields.push(`photo_url = $${idx++}`); values.push(photoUrl); }
 

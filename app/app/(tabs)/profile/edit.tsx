@@ -1,4 +1,6 @@
 import { AppInput } from "@/components/common/AppInput";
+import { CountrySelect } from "@/components/common/CountrySelect";
+import { LocationCascade } from "@/components/common/LocationCascade";
 import { ScreenHeader } from "@/components/ui";
 import {
   Brand,
@@ -307,9 +309,14 @@ export default function ProfileEditScreen() {
               <AppInput label="Date of Birth" placeholder="DD/MM/YYYY" value={dateOfBirth} onChangeText={setDateOfBirth} keyboardType="numbers-and-punctuation" />
               <AppInput label="WhatsApp / Phone" placeholder="08xxx or +628xxx" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
               <AppInput label="Email" placeholder="email@example.com" value={email} editable={false} />
-              <AppInput label="Country" placeholder="2-letter code, e.g. ID, MY" value={country} onChangeText={(t) => setCountry(t.toUpperCase())} autoCapitalize="characters" maxLength={2} />
-              <AppInput label="Province" placeholder="Your province (optional)" value={province} onChangeText={setProvince} />
-              <AppInput label="City" placeholder="Your city (optional)" value={city} onChangeText={setCity} />
+              <CountrySelect label="Country" value={country} onChange={setCountry} />
+              <LocationCascade
+                country={country}
+                province={province}
+                city={city}
+                onChangeProvince={setProvince}
+                onChangeCity={setCity}
+              />
               <View>
                 <Text style={styles.inputLabel}>Interests</Text>
                 <View style={styles.interestChips}>
@@ -408,9 +415,14 @@ export default function ProfileEditScreen() {
               <AppInput label="Full Name" placeholder="Enter your full name" value={fullName} onChangeText={setFullName} />
               <AppInput label="WhatsApp / Phone" placeholder="08xxx or +628xxx" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
               <AppInput label="Email" placeholder="email@example.com" value={email} editable={false} />
-              <AppInput label="Country" placeholder="2-letter code, e.g. ID, MY" value={country} onChangeText={(t) => setCountry(t.toUpperCase())} autoCapitalize="characters" maxLength={2} />
-              <AppInput label="Province" placeholder="Your province (optional)" value={province} onChangeText={setProvince} />
-              <AppInput label="City" placeholder="Your city (optional)" value={city} onChangeText={setCity} />
+              <CountrySelect label="Country" value={country} onChange={setCountry} />
+              <LocationCascade
+                country={country}
+                province={province}
+                city={city}
+                onChangeProvince={setProvince}
+                onChangeCity={setCity}
+              />
             </View>
 
             <View style={styles.section}>
@@ -429,9 +441,14 @@ export default function ProfileEditScreen() {
             <AppInput label="Full Name" placeholder="Enter your full name" value={fullName} onChangeText={setFullName} />
             <AppInput label="WhatsApp / Phone" placeholder="08xxx or +628xxx" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             <AppInput label="Email" placeholder="email@example.com" value={email} editable={false} />
-            <AppInput label="Country" placeholder="2-letter code, e.g. ID, MY" value={country} onChangeText={(t) => setCountry(t.toUpperCase())} autoCapitalize="characters" maxLength={2} />
-            <AppInput label="Province" placeholder="Your province (optional)" value={province} onChangeText={setProvince} />
-            <AppInput label="City" placeholder="Your city (optional)" value={city} onChangeText={setCity} />
+            <CountrySelect label="Country" value={country} onChange={setCountry} />
+            <LocationCascade
+              country={country}
+              province={province}
+              city={city}
+              onChangeProvince={setProvince}
+              onChangeCity={setCity}
+            />
           </View>
         )}
 

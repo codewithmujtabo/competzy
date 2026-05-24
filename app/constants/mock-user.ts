@@ -21,6 +21,8 @@ export interface AppUser {
   role: UserRole;
   school: string;
   city: string;
+  province?: string;
+  country?: string;             // ISO 3166-1 alpha-2; null when not yet set
   level?: GradeLevel; // only relevant for students
   avatarUrl?: string;
   // teacher-specific

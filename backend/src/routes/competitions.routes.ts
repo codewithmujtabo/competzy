@@ -129,6 +129,7 @@ router.get("/", async (req: Request, res: Response) => {
     if (country && country.toUpperCase() !== "ID") {
       conditions.push(`is_international = true`);
     }
+    console.log(`[GET /competitions] callerCountry=${country ?? "(anon)"}  intlGate=${!!(country && country.toUpperCase() !== "ID")}`);
 
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");

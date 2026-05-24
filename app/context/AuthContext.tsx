@@ -340,6 +340,8 @@ function mapProfile(data: any): AppUser {
     school: data.schoolName || data.school || "",
     level: data.grade as "SD" | "SMP" | "SMA" | undefined,
     city: data.city || "",
+    province: data.province ?? undefined,
+    country: data.country ?? undefined,   // ISO 3166-1 alpha-2; drives the international catalog gate
     role: (data.role as "student" | "parent" | "teacher") || "student",
     avatarUrl: data.photoUrl,
     subject: data.subject,
