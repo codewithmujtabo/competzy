@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.6
 
 # ── Stage 1: deps ────────────────────────────────────────────────────────
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 # Native build toolchain for `sharp` (Next image optimization).
 RUN apk add --no-cache python3 make g++ \
@@ -11,7 +11,7 @@ COPY .npmrc ./
 RUN pnpm install --frozen-lockfile
 
 # ── Stage 2: build ───────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable && corepack prepare pnpm@11.2.2 --activate
@@ -29,7 +29,7 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN mkdir -p public && pnpm run build
 
 # ── Stage 3: runtime ─────────────────────────────────────────────────────
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
