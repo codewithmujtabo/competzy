@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { SchoolProvider, useSchool } from '@/lib/auth/school-context';
 import { AppShell, type NavSection } from '@/components/shell/app-shell';
+import { SelectSchoolModal } from '@/components/select-school-modal';
 
 // School Admin: dashboard up top, then the two daily loops — Students
 // (roster + bulk register/pay) and Registrations (status tracking) — then
@@ -137,6 +138,11 @@ function SchoolLayoutInner({ children }: { children: React.ReactNode }) {
   }
 
   const isAdmin = user.role === 'school_admin';
+  // Teachers + school_admins MUST have an associated school for any of
+  // the school-scoped pages to function (roster, bulk reg, registrations
+  // are all scoped by school_id). If they land without one, gate the
+  // entire portal behind a blocking school-picker modal until they pick.
+  const needsSchoolPick = !user.school_id;
 
   return (
     <AppShell
@@ -147,12 +153,21 @@ function SchoolLayoutInner({ children }: { children: React.ReactNode }) {
         email: user.email,
         role: isAdmin ? 'School Admin' : 'Teacher',
       }}
+      profileHref="/account/profile"
       onSignOut={async () => {
         await logout();
         router.replace('/');
       }}
     >
       {children}
+      <SelectSchoolModal
+        open={needsSchoolPick}
+        onConfirmed={() => {
+          // Hard nav re-runs the auth context's /auth/me hydration so the
+          // new school_id is picked up and the modal naturally hides.
+          window.location.assign(window.location.pathname);
+        }}
+      />
     </AppShell>
   );
 }

@@ -104,6 +104,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       brand={{ name: 'Competzy', tagline: 'Admin Panel', icon: GraduationCap }}
       nav={NAV}
       user={{ name: user.full_name || 'Admin', email: user.email, role: 'Administrator' }}
+      profileHref="/account/profile"
       onSignOut={async () => {
         await logout();
         router.replace('/');

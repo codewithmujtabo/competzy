@@ -56,6 +56,7 @@ function OrganizerLayoutInner({ children }: { children: React.ReactNode }) {
       brand={{ name: 'Competzy', tagline: 'Organizer Portal', icon: GraduationCap }}
       nav={NAV}
       user={{ name: user.full_name || 'Organizer', email: user.email, role: 'Organizer' }}
+      profileHref="/account/profile"
       onSignOut={async () => {
         await logout();
         router.replace('/');

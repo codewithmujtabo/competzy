@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Bell, LogOut, Moon, Sun } from 'lucide-react';
+import { Bell, LogOut, Moon, Settings, Sun } from 'lucide-react';
 
 import { useTheme } from '@/lib/theme/context';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -71,7 +71,7 @@ export interface AppShellProps {
   onSignOut: () => void;
   /** When set, the top-bar bell links here; otherwise it stays inert. */
   notificationsHref?: string;
-  /** When set, the user dropdown's "Profile" item links here. */
+  /** When set, the user dropdown's "Account Settings" item links here. */
   profileHref?: string;
   children: React.ReactNode;
 }
@@ -250,9 +250,13 @@ export function AppShell({
                 <DropdownMenuSeparator />
                 {profileHref && (
                   <DropdownMenuItem asChild>
-                    <Link href={profileHref}>Profile</Link>
+                    <Link href={profileHref}>
+                      <Settings className="size-4" />
+                      Account Settings
+                    </Link>
                   </DropdownMenuItem>
                 )}
+                {profileHref && <DropdownMenuSeparator />}
                 <DropdownMenuItem
                   onClick={onSignOut}
                   className="text-destructive focus:text-destructive"

@@ -74,6 +74,7 @@ function RepShell({ children }: { children: ReactNode }) {
         email: user.email,
         role: 'Country Representative',
       }}
+      profileHref="/account/profile"
       onSignOut={async () => {
         await logout();
         router.replace('/');

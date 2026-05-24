@@ -48,21 +48,37 @@ const NAV: NavSection[] = [
   },
 ];
 
+// Roles whose post-login destination IS the My Account workspace
+// (students + parents). For everyone else, /account/profile is the
+// "Account Settings" stop they can hit from the top-bar dropdown, but
+// the side-nav (Browse / My Account) is irrelevant — they don't live
+// here, they live in their own portal. So we render a slimmer shell
+// without the My Account nav for non-participants.
+const PARTICIPANT_ROLES = new Set(['student', 'parent']);
+
+// Per-role pre-login home — where to send the user when their session
+// has expired and we need to drop them off the account workspace.
+function homeForRole(role?: string): string {
+  switch (role) {
+    case 'admin': return '/dashboard';
+    case 'organizer': return '/organizer-dashboard';
+    case 'school_admin':
+    case 'teacher': return '/school-dashboard';
+    case 'country_representative': return '/rep-portal';
+    default: return '/';
+  }
+}
+
 function ShelledAccount({ children }: { children: ReactNode }) {
   const { user, loading, logout } = useCompetitionAuth();
   const router = useRouter();
 
-  // My Account is shared between students and parents (parents land on
-  // the same catalog + can claim historical records / link family). Both
-  // roles see the same sidebar; admin/operator roles bounce home.
-  const isParticipant = user?.role === 'student' || user?.role === 'parent';
-
   useEffect(() => {
     if (loading) return;
-    if (!user || !isParticipant) router.replace('/');
-  }, [user, loading, isParticipant, router]);
+    if (!user) router.replace('/');
+  }, [user, loading, router]);
 
-  if (loading || !user || !isParticipant) {
+  if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -70,16 +86,45 @@ function ShelledAccount({ children }: { children: ReactNode }) {
     );
   }
 
+  const isParticipant = PARTICIPANT_ROLES.has(user.role);
+  // Operators (admin/organizer/school_admin/teacher/country_rep) visiting
+  // /account/profile from their portal's dropdown get the full sidebar
+  // BACK TO their own portal home — they don't need the Browse + My
+  // Account items, just an exit door.
+  const operatorNav = isParticipant
+    ? NAV
+    : [
+        {
+          items: [
+            {
+              label: 'Back to portal',
+              href: homeForRole(user.role),
+              icon: LayoutGrid,
+            },
+          ],
+        },
+      ];
+
   return (
     <AppShell
-      brand={{ name: 'Competzy', tagline: 'My Account', icon: Trophy }}
-      nav={NAV}
-      notificationsHref="/account/notifications"
+      brand={{ name: 'Competzy', tagline: 'Account Settings', icon: Trophy }}
+      nav={operatorNav}
+      notificationsHref={isParticipant ? '/account/notifications' : undefined}
       profileHref="/account/profile"
       user={{
-        name: user.fullName || user.full_name || (user.role === 'parent' ? 'Parent' : 'Student'),
+        name:
+          user.fullName ||
+          user.full_name ||
+          (user.role === 'parent' ? 'Parent' : user.role === 'student' ? 'Student' : 'User'),
         email: user.email,
-        role: user.role === 'parent' ? 'Parent' : 'Participant',
+        role:
+          user.role === 'parent'
+            ? 'Parent'
+            : user.role === 'student'
+              ? 'Participant'
+              : user.role
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, (c) => c.toUpperCase()),
       }}
       onSignOut={async () => {
         await logout();

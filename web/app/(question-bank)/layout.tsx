@@ -116,6 +116,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
             ? 'Question Maker'
             : 'Organizer',
       }}
+      profileHref="/account/profile"
       onSignOut={async () => {
         await logout();
         router.replace('/');

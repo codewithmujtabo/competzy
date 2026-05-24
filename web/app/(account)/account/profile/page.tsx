@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { CheckCircle2, Loader2, Search, Upload } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
+import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { cn } from '@/lib/utils';
 import { INTEREST_CATEGORIES } from '@/lib/constants/interests';
 import type { StudentProfile } from '@/types/account';
@@ -117,6 +118,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function AccountProfilePage() {
+  const { user } = useCompetitionAuth();
+  // Student-only sections (student card, school details, supervisor,
+  // parent/guardian) all derive from the `students` row that doesn't exist
+  // for non-student accounts. Operators visiting Account Settings from the
+  // top-bar dropdown only see Photo + Personal Details.
+  const isStudent = user?.role === 'student';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -513,7 +520,8 @@ export default function AccountProfilePage() {
         </div>
       </Card>
 
-      {/* Student Card */}
+      {/* Student Card — students only */}
+      {isStudent && (
       <Card className="gap-4 p-6">
         <h2 className="font-serif text-lg font-medium text-foreground">Student card</h2>
         {studentCardUrl && (
@@ -547,8 +555,10 @@ export default function AccountProfilePage() {
           </Button>
         </div>
       </Card>
+      )}
 
-      {/* School Details */}
+      {/* School Details — students only */}
+      {isStudent && (
       <Section title="School details">
         <Field
           label="School name"
@@ -625,8 +635,10 @@ export default function AccountProfilePage() {
           placeholder="08xxx or +628xxx"
         />
       </Section>
+      )}
 
-      {/* Supervisor / Teacher */}
+      {/* Supervisor / Teacher — students only */}
+      {isStudent && (
       <Section title="Supervisor / Teacher">
         <Field
           label="Name"
@@ -646,8 +658,10 @@ export default function AccountProfilePage() {
           placeholder="08xxx or +628xxx"
         />
       </Section>
+      )}
 
-      {/* Parent / Guardian */}
+      {/* Parent / Guardian — students only */}
+      {isStudent && (
       <Section title="Parent / Guardian">
         <Field
           label="Name"
@@ -666,6 +680,7 @@ export default function AccountProfilePage() {
           placeholder="08xxx or +628xxx"
         />
       </Section>
+      )}
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
