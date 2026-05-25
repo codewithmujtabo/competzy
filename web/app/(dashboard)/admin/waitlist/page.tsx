@@ -69,6 +69,22 @@ const COMP_SLUGS = [
   'igo',
 ] as const;
 
+// ── Marketing-attribution channels (keep in sync with backend HEARD_FROM_CHANNELS).
+const HEARD_FROM_LABEL: Record<string, string> = {
+  instagram: 'Instagram',
+  tiktok: 'TikTok',
+  sekolah_guru: 'Sekolah / Guru',
+  teman: 'Teman',
+  orang_tua: 'Orang tua',
+  alumni_emc: 'Alumni EMC',
+  google: 'Google',
+  wa_telegram: 'WhatsApp / Telegram',
+  facebook: 'Facebook',
+  youtube: 'YouTube',
+  lainnya: 'Lainnya',
+};
+const HEARD_FROM_CHANNELS = Object.keys(HEARD_FROM_LABEL);
+
 const DATE_RANGES = [
   { key: 'all', label: 'All time', hours: null },
   { key: '24h', label: 'Last 24h', hours: 24 },
@@ -87,6 +103,7 @@ interface WaitlistEntry {
   kota: string;
   email: string;
   whatsapp: string;
+  heard_from: string | null;
   submitted_at: string;
   source: string;
   user_agent: string | null;
@@ -95,6 +112,11 @@ interface WaitlistEntry {
   voucher_code: string | null;
   voucher_drawn_at: string | null;
   created_at: string;
+}
+
+interface ChannelStat {
+  channel: string;
+  count: number;
 }
 
 interface ListResponse {
@@ -122,8 +144,8 @@ function csvEscape(value: string): string {
 function downloadCSV(rows: WaitlistEntry[]): void {
   const header = [
     'id', 'comp', 'lang', 'nama', 'kelas', 'kota', 'email', 'whatsapp',
-    'submitted_at', 'source', 'is_voucher_winner', 'voucher_code',
-    'voucher_drawn_at', 'created_at',
+    'heard_from', 'submitted_at', 'source', 'is_voucher_winner',
+    'voucher_code', 'voucher_drawn_at', 'created_at',
   ];
   const lines = [header.join(',')];
   for (const r of rows) {
@@ -136,6 +158,7 @@ function downloadCSV(rows: WaitlistEntry[]): void {
       csvEscape(r.kota),
       r.email,
       r.whatsapp,
+      r.heard_from ?? '',
       r.submitted_at,
       csvEscape(r.source),
       r.is_voucher_winner ? 'true' : 'false',
@@ -160,6 +183,7 @@ export default function WaitlistAdminPage() {
   const [comp, setComp] = useState<string>('all');
   const [voucher, setVoucher] = useState<'all' | 'won' | 'open'>('all');
   const [range, setRange] = useState<string>('all');
+  const [heardFrom, setHeardFrom] = useState<string>('all');
   const [searchVal, setSearchVal] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -168,6 +192,9 @@ export default function WaitlistAdminPage() {
   const [entries, setEntries] = useState<WaitlistEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Channel attribution stats (heard_from distribution, current filter)
+  const [channels, setChannels] = useState<ChannelStat[]>([]);
 
   // Per-row delete state + confirm dialog
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -189,7 +216,7 @@ export default function WaitlistAdminPage() {
   }, [range]);
 
   const buildQuery = useCallback(
-    (override?: Partial<{ page: number; limit: number }>) => {
+    (override?: Partial<{ page: number; limit: number; includeHeardFrom: boolean }>) => {
       const q = new URLSearchParams();
       q.set('page', String(override?.page ?? page));
       q.set('limit', String(override?.limit ?? LIMIT));
@@ -197,17 +224,28 @@ export default function WaitlistAdminPage() {
       if (voucher !== 'all') q.set('voucher', voucher);
       if (sinceISO) q.set('since', sinceISO);
       if (search) q.set('search', search);
+      // The channels endpoint doesn't accept heardFrom (it groups BY it),
+      // so callers can opt out.
+      if (heardFrom !== 'all' && override?.includeHeardFrom !== false) {
+        q.set('heardFrom', heardFrom);
+      }
       return q.toString();
     },
-    [page, comp, voucher, sinceISO, search],
+    [page, comp, voucher, sinceISO, search, heardFrom],
   );
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await adminHttp.get<ListResponse>(`/admin/waitlist?${buildQuery()}`);
-      setEntries(r.entries);
-      setTotal(r.pagination.total);
+      const [list, ch] = await Promise.all([
+        adminHttp.get<ListResponse>(`/admin/waitlist?${buildQuery()}`),
+        adminHttp.get<{ channels: ChannelStat[] }>(
+          `/admin/waitlist/channels?${buildQuery({ includeHeardFrom: false })}`,
+        ),
+      ]);
+      setEntries(list.entries);
+      setTotal(list.pagination.total);
+      setChannels(ch.channels);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load waitlist');
     } finally {
@@ -335,6 +373,21 @@ export default function WaitlistAdminPage() {
           </Select>
         </div>
 
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Heard from</Label>
+          <Select value={heardFrom} onValueChange={(v) => { setHeardFrom(v); setPage(1); }}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All channels</SelectItem>
+              {HEARD_FROM_CHANNELS.map((c) => (
+                <SelectItem key={c} value={c}>{HEARD_FROM_LABEL[c]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <form
           className="space-y-1.5"
           onSubmit={(e) => { e.preventDefault(); setSearch(searchVal.trim()); setPage(1); }}
@@ -376,9 +429,54 @@ export default function WaitlistAdminPage() {
         </Tabs>
       </div>
 
+      {/* Channel-attribution panel — horizontal bar chart for `heard_from`
+          distribution within the current filter. Excludes NULL entries so
+          legacy / non-EMC signups (which don't have the field) don't dilute
+          the chart. Hidden when there's no attribution data to show. */}
+      {channels.length > 0 && (
+        <Card className="gap-3 p-5">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <h2 className="font-serif text-base font-medium text-foreground">Channel attribution</h2>
+              <p className="text-xs text-muted-foreground">
+                Where signups heard about the competition. Filtered to {channels.reduce((s, c) => s + c.count, 0).toLocaleString()} entries with a known channel.
+              </p>
+            </div>
+          </div>
+          {(() => {
+            const max = Math.max(...channels.map((c) => c.count));
+            const total = channels.reduce((s, c) => s + c.count, 0);
+            return (
+              <div className="space-y-1.5">
+                {channels.map((c) => {
+                  const pct = total > 0 ? (c.count / total) * 100 : 0;
+                  const widthPct = max > 0 ? (c.count / max) * 100 : 0;
+                  return (
+                    <div key={c.channel} className="flex items-center gap-3 text-xs">
+                      <span className="w-36 shrink-0 truncate text-muted-foreground">
+                        {HEARD_FROM_LABEL[c.channel] ?? c.channel}
+                      </span>
+                      <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted/40">
+                        <div
+                          className="h-full rounded bg-primary/70 transition-[width]"
+                          style={{ width: `${widthPct}%` }}
+                        />
+                      </div>
+                      <span className="w-24 shrink-0 text-right font-mono tabular-nums text-muted-foreground">
+                        {c.count} <span className="text-[10px] opacity-70">({pct.toFixed(0)}%)</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </Card>
+      )}
+
       <Card className="overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <Table className="min-w-[1100px]">
+          <Table className="min-w-[1200px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">#</TableHead>
@@ -389,6 +487,7 @@ export default function WaitlistAdminPage() {
                 <TableHead className="w-32">City</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead className="w-32">WhatsApp</TableHead>
+                <TableHead className="w-36">Heard From</TableHead>
                 <TableHead className="w-44">Voucher</TableHead>
                 <TableHead className="w-32">Source</TableHead>
                 <TableHead className="w-12 text-right" aria-label="Actions" />
@@ -398,14 +497,14 @@ export default function WaitlistAdminPage() {
               {loading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={11}>
+                    <TableCell colSpan={12}>
                       <Skeleton className="h-8 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : entries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="h-32 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={12} className="h-32 text-center text-sm text-muted-foreground">
                     No waitlist entries match the current filter.
                   </TableCell>
                 </TableRow>
@@ -448,6 +547,15 @@ export default function WaitlistAdminPage() {
                       >
                         {e.whatsapp}
                       </a>
+                    </TableCell>
+                    <TableCell>
+                      {e.heard_from ? (
+                        <Badge variant="secondary" className="font-normal">
+                          {HEARD_FROM_LABEL[e.heard_from] ?? e.heard_from}
+                        </Badge>
+                      ) : (
+                        <span className="text-[11px] italic text-muted-foreground/60">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {e.is_voucher_winner ? (

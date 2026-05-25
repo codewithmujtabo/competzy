@@ -32,6 +32,14 @@ const COMP_SLUGS = [
   "angkor", "igo",
 ] as const;
 
+// Closed-enum marketing-attribution channels. Spec section 2.
+// Optional at the API level (legacy clients send without it); EMC's
+// form makes it required UI-side.
+const HEARD_FROM_CHANNELS = [
+  "instagram", "tiktok", "sekolah_guru", "teman", "orang_tua",
+  "alumni_emc", "google", "wa_telegram", "facebook", "youtube", "lainnya",
+] as const;
+
 const WaitlistPayload = z.object({
   comp: z.enum(COMP_SLUGS),
   lang: z.enum(["id", "en"]).optional(),
@@ -41,6 +49,9 @@ const WaitlistPayload = z.object({
   email: z.string().trim().toLowerCase().email().max(320),
   // WA: any sender-normalised Indonesian mobile ("+62…" or "08…"), 8–15 digits.
   whatsapp: z.string().trim().regex(/^(\+?\d{8,15})$/, "Invalid WhatsApp number"),
+  // Marketing attribution. Closed enum, optional at API level — legacy
+  // clients (pre-spec-v2) won't send it; new EMC form does.
+  heardFrom: z.enum(HEARD_FROM_CHANNELS).optional(),
   submittedAt: z.string().datetime().optional(),
   source: z.string().trim().max(120).optional(),
   userAgent: z.string().max(500).nullable().optional(),
@@ -80,9 +91,9 @@ router.post("/waitlist", async (req: Request, res: Response) => {
   try {
     await pool.query(
       `INSERT INTO waitlist_entry
-         (comp, lang, nama, kelas, kota, email, whatsapp,
+         (comp, lang, nama, kelas, kota, email, whatsapp, heard_from,
           submitted_at, source, user_agent, ip_hint)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        ON CONFLICT (comp, email) DO NOTHING`,
       [
         p.comp,
@@ -92,6 +103,7 @@ router.post("/waitlist", async (req: Request, res: Response) => {
         p.kota,
         p.email,
         p.whatsapp,
+        p.heardFrom ?? null,
         submittedAt,
         source,
         p.userAgent ?? null,
@@ -148,6 +160,12 @@ router.get("/admin/waitlist", requireAdmin, async (req: Request, res: Response) 
       params.push(since);
     }
 
+    const heardFrom = (req.query.heardFrom as string | undefined)?.trim();
+    if (heardFrom && heardFrom !== "all") {
+      where.push(`heard_from = $${i++}`);
+      params.push(heardFrom);
+    }
+
     const search = (req.query.search as string | undefined)?.trim();
     if (search) {
       where.push(`(nama ILIKE $${i} OR email ILIKE $${i} OR kota ILIKE $${i})`);
@@ -159,7 +177,7 @@ router.get("/admin/waitlist", requireAdmin, async (req: Request, res: Response) 
 
     const [data, count] = await Promise.all([
       pool.query(
-        `SELECT id, comp, lang, nama, kelas, kota, email, whatsapp,
+        `SELECT id, comp, lang, nama, kelas, kota, email, whatsapp, heard_from,
                 submitted_at, source, user_agent, ip_hint,
                 is_voucher_winner, voucher_code, voucher_drawn_at, created_at
            FROM waitlist_entry
@@ -280,6 +298,53 @@ router.post(
     }
   }
 );
+
+// ── GET /api/admin/waitlist/channels ────────────────────────────────────
+// Channel attribution panel — counts per `heard_from` channel within the
+// current filter (same shape as the list endpoint's params, minus
+// `heardFrom`). Excludes NULL rows so legacy entries don't skew the chart
+// (per spec section 4c).
+router.get("/admin/waitlist/channels", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const where: string[] = ["heard_from IS NOT NULL"];
+    const params: unknown[] = [];
+    let i = 1;
+
+    const comp = (req.query.comp as string | undefined)?.trim();
+    if (comp && comp !== "all") {
+      where.push(`comp = $${i++}`);
+      params.push(comp);
+    }
+    const voucher = (req.query.voucher as string | undefined)?.trim();
+    if (voucher === "won") where.push(`is_voucher_winner = true`);
+    else if (voucher === "open") where.push(`is_voucher_winner = false`);
+    const since = (req.query.since as string | undefined)?.trim();
+    if (since) {
+      where.push(`created_at >= $${i++}`);
+      params.push(since);
+    }
+    const search = (req.query.search as string | undefined)?.trim();
+    if (search) {
+      where.push(`(nama ILIKE $${i} OR email ILIKE $${i} OR kota ILIKE $${i})`);
+      params.push(`%${search}%`);
+      i++;
+    }
+    const whereSql = `WHERE ${where.join(" AND ")}`;
+
+    const r = await pool.query(
+      `SELECT heard_from AS channel, COUNT(*)::int AS count
+         FROM waitlist_entry
+         ${whereSql}
+        GROUP BY heard_from
+        ORDER BY count DESC`,
+      params
+    );
+    res.json({ channels: r.rows });
+  } catch (err) {
+    console.error("Waitlist channels error:", err);
+    res.status(500).json({ message: "Failed to load channel stats" });
+  }
+});
 
 // ── DELETE /api/admin/waitlist/:id ──────────────────────────────────────
 // Hard delete (no soft-delete column on this table — entries are
