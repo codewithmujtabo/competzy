@@ -268,7 +268,13 @@ export function AppShell({
             </DropdownMenu>
           </div>
         </header>
-        <main className={cn('flex-1 overflow-y-auto')}>{children}</main>
+        {/* `overflow-x-hidden` clips any horizontal overflow at the inset
+            level so the sticky header above can't slide horizontally and
+            overlay the sidebar. Inner overflow-x-auto containers (tables,
+            wide diagrams) still scroll horizontally inside themselves. */}
+        <main className={cn('flex-1 overflow-y-auto overflow-x-hidden')}>
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );
