@@ -38,6 +38,7 @@ import commerceRoutes from "./routes/commerce.routes";
 import marketingRoutes from "./routes/marketing.routes";
 import certificatesRoutes from "./routes/certificates.routes";
 import countryRepRoutes from "./routes/country-rep.routes";
+import waitlistRoutes from "./routes/waitlist.routes";
 import { initializeCronJobs } from "./services/cron.service";
 import { verifySignedUrlToken } from "./services/storage.service";
 import fs from "fs";
@@ -139,6 +140,11 @@ app.use("/api/historical", historicalRoutes);
 // /referrals/click endpoint is reached before they 401 unauthenticated
 // fall-through traffic.
 app.use("/api", marketingRoutes);
+// Waitlist receiver — owns PUBLIC /waitlist (POST from competzy-web subdomains)
+// + admin /admin/waitlist* (cookie-authed). Mounted at /api like marketing for
+// the same reason — its public POST must reach before any bare-/api router's
+// router-level authMiddleware 401s it.
+app.use("/api", waitlistRoutes);
 // Certificates — owns /certificates/* (mounted at /api). Like marketing, mounted
 // before the bare-/api routers with a router-level authMiddleware so the PUBLIC
 // /certificates/verify endpoints are reached before they 401 fall-through traffic.

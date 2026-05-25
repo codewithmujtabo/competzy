@@ -40,6 +40,11 @@ export const env = {
   // a reasonable mid-2026 mid-market rate.
   USD_TO_IDR_RATE: parseFloat(process.env.USD_TO_IDR_RATE || "16000"),
   API_CO_ID_KEY: process.env.API_CO_ID_KEY || "",
+  // Shared-secret token the public competzy-web landing-page subdomains
+  // include as a Bearer header when POSTing to /api/waitlist. When empty,
+  // the receiver accepts unauthenticated requests (useful for local dev /
+  // initial rollout). In production both sides must set the same value.
+  ARENA_WAITLIST_TOKEN: process.env.ARENA_WAITLIST_TOKEN || "",
   // MinIO / S3-compatible object storage (optional — falls back to local disk when absent)
   MINIO_ENDPOINT: process.env.MINIO_ENDPOINT || "",       // e.g. http://localhost:9000
   MINIO_ACCESS_KEY: process.env.MINIO_ACCESS_KEY || "",

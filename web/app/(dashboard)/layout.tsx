@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   Library,
   Loader2,
+  Mailbox,
   MapPin,
   Megaphone,
   MessageSquare,
@@ -71,6 +72,7 @@ const NAV: NavSection[] = [
   {
     label: 'Marketing',
     items: [
+      { label: 'Waitlist', href: '/admin/waitlist', icon: Mailbox },
       { label: 'Send Notification', href: '/notifications', icon: Megaphone },
       { label: 'Announcements', href: '/announcements', icon: Megaphone },
       { label: 'Materials', href: '/materials', icon: BookOpen },
