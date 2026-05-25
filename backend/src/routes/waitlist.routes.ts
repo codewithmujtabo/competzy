@@ -281,4 +281,32 @@ router.post(
   }
 );
 
+// ── DELETE /api/admin/waitlist/:id ──────────────────────────────────────
+// Hard delete (no soft-delete column on this table — entries are
+// considered ephemeral marketing data, not core records). Used by the
+// admin to clean up test rows + spam.
+router.delete(
+  "/admin/waitlist/:id",
+  requireAdmin,
+  audit({ action: "admin.waitlist.delete", resourceType: "waitlist", resourceIdParam: "id" }),
+  async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id)) {
+        res.status(400).json({ message: "Invalid id" });
+        return;
+      }
+      const r = await pool.query("DELETE FROM waitlist_entry WHERE id = $1", [id]);
+      if (r.rowCount === 0) {
+        res.status(404).json({ message: "Entry not found" });
+        return;
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("Waitlist delete error:", err);
+      res.status(500).json({ message: "Failed to delete entry" });
+    }
+  }
+);
+
 export default router;

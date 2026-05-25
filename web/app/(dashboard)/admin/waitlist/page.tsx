@@ -15,6 +15,7 @@ import {
   Search,
   Sparkles,
   Ticket,
+  Trash2,
   X,
 } from 'lucide-react';
 
@@ -168,6 +169,9 @@ export default function WaitlistAdminPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Per-row delete state
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
   // Voucher-draw dialog
   const [drawOpen, setDrawOpen] = useState(false);
   const [drawCount, setDrawCount] = useState(10);
@@ -229,6 +233,34 @@ export default function WaitlistAdminPage() {
       toast.success(`Exported ${r.entries.length} entries`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to export CSV');
+    }
+  }
+
+  async function handleDelete(e: WaitlistEntry) {
+    if (
+      !confirm(
+        `Delete waitlist entry for ${e.email}?\n\n` +
+          `Competition: ${e.comp.toUpperCase()}\n` +
+          `Name: ${e.nama}\n` +
+          `Source: ${e.source}\n\n` +
+          `This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingId(e.id);
+    // Optimistic remove — restore on failure.
+    const prev = entries;
+    setEntries((cur) => cur.filter((x) => x.id !== e.id));
+    try {
+      await adminHttp.delete<{ ok: boolean }>(`/admin/waitlist/${e.id}`);
+      setTotal((t) => Math.max(0, t - 1));
+      toast.success('Entry deleted');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete entry');
+      setEntries(prev);
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -366,20 +398,21 @@ export default function WaitlistAdminPage() {
                 <TableHead className="w-32">WhatsApp</TableHead>
                 <TableHead className="w-44">Voucher</TableHead>
                 <TableHead className="w-32">Source</TableHead>
+                <TableHead className="w-12 text-right" aria-label="Actions" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={10}>
+                    <TableCell colSpan={11}>
                       <Skeleton className="h-8 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : entries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="h-32 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={11} className="h-32 text-center text-sm text-muted-foreground">
                     No waitlist entries match the current filter.
                   </TableCell>
                 </TableRow>
@@ -437,6 +470,23 @@ export default function WaitlistAdminPage() {
                     </TableCell>
                     <TableCell className="truncate font-mono text-[10px] text-muted-foreground" title={e.source}>
                       {e.source}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-8 text-muted-foreground hover:text-destructive"
+                        aria-label={`Delete entry for ${e.email}`}
+                        title="Delete"
+                        disabled={deletingId === e.id}
+                        onClick={() => handleDelete(e)}
+                      >
+                        {deletingId === e.id ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-3.5" />
+                        )}
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
