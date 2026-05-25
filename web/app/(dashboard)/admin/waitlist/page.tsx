@@ -169,8 +169,9 @@ export default function WaitlistAdminPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Per-row delete state
+  // Per-row delete state + confirm dialog
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [toDelete, setToDelete] = useState<WaitlistEntry | null>(null);
 
   // Voucher-draw dialog
   const [drawOpen, setDrawOpen] = useState(false);
@@ -236,18 +237,9 @@ export default function WaitlistAdminPage() {
     }
   }
 
-  async function handleDelete(e: WaitlistEntry) {
-    if (
-      !confirm(
-        `Delete waitlist entry for ${e.email}?\n\n` +
-          `Competition: ${e.comp.toUpperCase()}\n` +
-          `Name: ${e.nama}\n` +
-          `Source: ${e.source}\n\n` +
-          `This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+  async function confirmDelete() {
+    const e = toDelete;
+    if (!e) return;
     setDeletingId(e.id);
     // Optimistic remove — restore on failure.
     const prev = entries;
@@ -256,6 +248,7 @@ export default function WaitlistAdminPage() {
       await adminHttp.delete<{ ok: boolean }>(`/admin/waitlist/${e.id}`);
       setTotal((t) => Math.max(0, t - 1));
       toast.success('Entry deleted');
+      setToDelete(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to delete entry');
       setEntries(prev);
@@ -479,7 +472,7 @@ export default function WaitlistAdminPage() {
                         aria-label={`Delete entry for ${e.email}`}
                         title="Delete"
                         disabled={deletingId === e.id}
-                        onClick={() => handleDelete(e)}
+                        onClick={() => setToDelete(e)}
                       >
                         {deletingId === e.id ? (
                           <Loader2 className="size-3.5 animate-spin" />
@@ -563,6 +556,76 @@ export default function WaitlistAdminPage() {
             ) : (
               <Button onClick={() => setDrawOpen(false)}>Done</Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete-confirm dialog — destructive, replaces the native confirm() */}
+      <Dialog
+        open={!!toDelete}
+        onOpenChange={(o) => {
+          if (!o && deletingId === null) setToDelete(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-destructive">
+              <Trash2 className="size-5" />
+              <DialogTitle>Delete waitlist entry?</DialogTitle>
+            </div>
+            <DialogDescription>
+              This permanently removes the row from the waitlist. The signup can&apos;t be
+              recovered — the sender would have to resubmit.
+            </DialogDescription>
+          </DialogHeader>
+
+          {toDelete && (
+            <div className="rounded-md border bg-muted/40 p-3 text-sm">
+              <dl className="space-y-1">
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0 text-xs uppercase text-muted-foreground">Comp</dt>
+                  <dd className="font-mono text-xs uppercase">{toDelete.comp}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0 text-xs uppercase text-muted-foreground">Name</dt>
+                  <dd className="font-medium">{toDelete.nama}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0 text-xs uppercase text-muted-foreground">Email</dt>
+                  <dd className="font-mono text-xs">{toDelete.email}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0 text-xs uppercase text-muted-foreground">Source</dt>
+                  <dd className="font-mono text-xs text-muted-foreground">{toDelete.source}</dd>
+                </div>
+                {toDelete.is_voucher_winner && (
+                  <div className="flex gap-2">
+                    <dt className="w-24 shrink-0 text-xs uppercase text-muted-foreground">Voucher</dt>
+                    <dd className="font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                      {toDelete.voucher_code} ⚠ winner
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setToDelete(null)}
+              disabled={deletingId !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deletingId !== null}
+            >
+              {deletingId !== null && <Loader2 className="size-4 animate-spin" />}
+              Delete entry
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
