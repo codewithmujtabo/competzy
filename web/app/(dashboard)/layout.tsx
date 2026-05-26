@@ -24,6 +24,7 @@ import {
   Trophy,
   Users,
   Wallet,
+  Wrench,
 } from 'lucide-react';
 
 import { useAuth } from '@/lib/auth/context';
@@ -40,6 +41,7 @@ const NAV: NavSection[] = [
   {
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutGrid, exact: true },
+      { label: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
     ],
   },
   {

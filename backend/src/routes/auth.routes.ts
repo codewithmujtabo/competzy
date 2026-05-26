@@ -10,6 +10,7 @@ import {
   generateOtp,
   isSuperAdminEmail,
 } from "../services/auth.service";
+import { issueBypassCookie, clearBypassCookie } from "../services/bypass-cookie.service";
 import { dbErrorResponse } from "../lib/db-errors";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service";
 import { sendPhoneOtp, verifyPhoneOtp, toE164, phoneVariants, toLocalPhone } from "../services/twilio.service";
@@ -43,6 +44,17 @@ function issueAuthCookie(res: Response, token: string) {
 
 function clearAuthCookie(res: Response) {
   res.clearCookie(COOKIE_NAME, { path: "/" });
+}
+
+// ── Cross-domain admin bypass cookie ──────────────────────────────────────
+// Maintenance toggle (spec: docs/arena-maintenance-spec.md in competzy-web)
+// gates every public landing-page subdomain behind a maintenance page when
+// admin flips it on. The bypass cookie — Domain=.competzy.com — lets the
+// admin still browse those subdomains. Only set on admin/superadmin logins;
+// always cleared on logout. No-op when BYPASS_COOKIE_SECRET is unset.
+function maybeIssueBypass(res: Response, role: string | null | undefined, isSuper: boolean) {
+  if (isSuper) issueBypassCookie(res, "superadmin");
+  else if (role === "admin") issueBypassCookie(res, "admin");
 }
 
 // ── T13: Auto-link historical records on login ────────────────────────────
@@ -280,6 +292,7 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
     const token = generateToken(dbUser.id);
     const user = await fetchUserWithRole(dbUser.id);
     issueAuthCookie(res, token);
+    maybeIssueBypass(res, user?.role, isSuperAdminEmail(user?.email));
     res.json({ token, user });
   } catch (err) {
     console.error("Login error:", err);
@@ -350,6 +363,7 @@ router.post("/verify-otp", otpVerifyLimiter, async (req: Request, res: Response)
     const token = generateToken(userId);
     const user = await fetchUserWithRole(userId);
     issueAuthCookie(res, token);
+    maybeIssueBypass(res, user?.role, isSuperAdminEmail(user?.email));
     res.json({ token, user });
   } catch (err) {
     console.error("Verify OTP error:", err);
@@ -428,6 +442,7 @@ router.post("/phone/verify-otp", otpVerifyLimiter, async (req: Request, res: Res
     // T13: Auto-link historical records on phone login
     autoLinkHistoricalRecords(userId, user?.email ?? null, e164);
     issueAuthCookie(res, token);
+    maybeIssueBypass(res, user?.role, isSuperAdminEmail(user?.email));
     res.json({ token, user });
   } catch (err: any) {
     console.error("Phone verify-otp error:", err);
@@ -559,8 +574,12 @@ router.post("/reset-password", passwordResetLimiter, async (req: Request, res: R
 // ── POST /api/auth/logout ─────────────────────────────────────────────────
 // Clears the httpOnly auth cookie (web). Mobile clients can simply discard
 // their stored token; this endpoint is a no-op for them but always 200s.
+// Also clears the .competzy.com-scoped admin bypass cookie unconditionally —
+// no harm clearing a non-existent cookie for non-admins, and admins who sign
+// back in get a fresh one issued.
 router.post("/logout", (_req: Request, res: Response) => {
   clearAuthCookie(res);
+  clearBypassCookie(res);
   res.json({ message: "Logged out" });
 });
 

@@ -67,6 +67,7 @@ function makeHttp() {
     get:          <T>(path: string)                     => httpReq<T>(path),
     post:         <T>(path: string, body: unknown)      => httpReq<T>(path, { method: 'POST',   body: JSON.stringify(body) }),
     put:          <T>(path: string, body: unknown)      => httpReq<T>(path, { method: 'PUT',    body: JSON.stringify(body) }),
+    patch:        <T>(path: string, body: unknown)      => httpReq<T>(path, { method: 'PATCH',  body: JSON.stringify(body) }),
     delete:       <T>(path: string)                     => httpReq<T>(path, { method: 'DELETE' }),
     postFormData: <T>(path: string, formData: FormData) => httpFormData<T>(path, formData),
   };

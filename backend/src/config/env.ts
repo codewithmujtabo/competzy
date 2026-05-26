@@ -45,6 +45,17 @@ export const env = {
   // the receiver accepts unauthenticated requests (useful for local dev /
   // initial rollout). In production both sides must set the same value.
   ARENA_WAITLIST_TOKEN: process.env.ARENA_WAITLIST_TOKEN || "",
+  // Maintenance toggle — admin bypass cookie shared with competzy-web.
+  // BYPASS_COOKIE_SECRET MUST match the value set on competzy-web; the
+  // landing-page middleware verifies the HMAC with the same secret.
+  // Generate with: `openssl rand -hex 32`. When empty, the bypass cookie
+  // is not issued (so every admin sees the maintenance page on a
+  // maintenance-mode subdomain — fail-closed for admins only).
+  BYPASS_COOKIE_SECRET: process.env.BYPASS_COOKIE_SECRET || "",
+  // The parent domain the bypass cookie is scoped to. Production must use
+  // `.competzy.com` (leading dot) so every subdomain sees it. Local dev
+  // leaves this unset — the cookie scopes to the request host instead.
+  BYPASS_COOKIE_DOMAIN: process.env.BYPASS_COOKIE_DOMAIN || "",
   // MinIO / S3-compatible object storage (optional — falls back to local disk when absent)
   MINIO_ENDPOINT: process.env.MINIO_ENDPOINT || "",       // e.g. http://localhost:9000
   MINIO_ACCESS_KEY: process.env.MINIO_ACCESS_KEY || "",
