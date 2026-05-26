@@ -156,18 +156,24 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-7 p-6 lg:p-8">
-      {/* Hero — cyan-to-berry horizon, brand palette only */}
+      {/* Hero — soft 2-tone cyan→teal horizon. Both anchors live in the
+          cool family of the brand palette so there's no contrast clash
+          at the corners. Decorative warm blobs (yellow/gold/pink) that
+          used to muddy the bottom-right have been removed; a single
+          ivory bloom sits behind the text for subtle depth without
+          introducing a third hue. */}
       <section
         className={cn(
           'relative overflow-hidden rounded-3xl px-7 py-8 sm:px-10 sm:py-10',
-          'bg-gradient-to-br from-[#4BC2EC] via-[#7798c8] to-[#BE65A9]',
-          'shadow-[0_28px_70px_-30px_rgba(75,194,236,0.6)]',
+          'bg-gradient-to-br from-[#66C7D7] to-[#4CBCBE]',
+          'shadow-[0_28px_70px_-30px_rgba(102,199,215,0.55)]',
         )}
       >
-        {/* Decorative blobs — lemon, gold, and teal punches from the palette */}
-        <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 size-72 rounded-full bg-[#FEE404] opacity-35 blur-3xl" />
-        <span aria-hidden className="pointer-events-none absolute -bottom-24 right-1/3 size-64 rounded-full bg-[#F7B643] opacity-30 blur-3xl" />
-        <span aria-hidden className="pointer-events-none absolute -left-12 top-1/2 size-48 rounded-full bg-[#4CBCBE] opacity-25 blur-3xl" />
+        {/* Single ivory bloom — adds depth without adding a third color. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -left-16 -top-16 size-72 rounded-full bg-[#fff4e8] opacity-20 blur-3xl"
+        />
 
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div className="min-w-0 max-w-2xl">
