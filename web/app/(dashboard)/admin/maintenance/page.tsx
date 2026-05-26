@@ -21,6 +21,7 @@ import {
   Loader2,
   PowerOff,
   ShieldCheck,
+  UserPlus,
   Wrench,
 } from 'lucide-react';
 
@@ -38,6 +39,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 // ── Friendly labels per host. Keep in sync with the backend's KNOWN_HOSTS. ──
@@ -105,7 +107,7 @@ interface AuditRow {
   id: number;
   action: string;
   resource_id: string | null;
-  payload: { body?: { mode?: string } } | null;
+  payload: { body?: { mode?: string; value?: unknown } } | null;
   created_at: string;
   actor_name: string | null;
   actor_email: string | null;
@@ -114,6 +116,19 @@ interface AuditRow {
 interface MaintenanceResponse {
   entries: MaintenanceRow[];
   audit: AuditRow[];
+}
+
+interface ArenaSetting {
+  key: string;
+  value: unknown;
+  description: string | null;
+  updated_by: string;
+  updated_by_email: string | null;
+  updated_at: string;
+}
+
+interface ArenaSettingsResponse {
+  settings: ArenaSetting[];
 }
 
 function relativeTime(iso: string): string {
@@ -190,6 +205,12 @@ export default function MaintenanceAdminPage() {
   const [loading, setLoading] = useState(true);
   const [savingHost, setSavingHost] = useState<string | null>(null);
 
+  // Arena-side feature flags (separate from site_maintenance). Today
+  // just `registration_enabled`; the table renders any flag the server
+  // returns so adding new flags later is a backend-only change.
+  const [arenaSettings, setArenaSettings] = useState<ArenaSetting[]>([]);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+
   // Confirm dialog state — only fires for transitions INTO 'on' (the
   // destructive full-takeover mode). off ↔ read-only ↔ off go through
   // without prompting since neither hides the public site.
@@ -198,9 +219,13 @@ export default function MaintenanceAdminPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await adminHttp.get<MaintenanceResponse>('/admin/maintenance');
-      setRows(r.entries);
-      setAudit(r.audit);
+      const [maintenance, settings] = await Promise.all([
+        adminHttp.get<MaintenanceResponse>('/admin/maintenance'),
+        adminHttp.get<ArenaSettingsResponse>('/admin/arena-settings'),
+      ]);
+      setRows(maintenance.entries);
+      setAudit(maintenance.audit);
+      setArenaSettings(settings.settings);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load maintenance state');
     } finally {
@@ -261,6 +286,35 @@ export default function MaintenanceAdminPage() {
       toast.error(e instanceof Error ? e.message : 'Failed to update maintenance state');
     } finally {
       setSavingHost(null);
+    }
+  }
+
+  async function setArenaSetting(key: string, value: unknown, friendlyLabel: string): Promise<void> {
+    const prev = arenaSettings;
+    setSavingKey(key);
+    setArenaSettings((cur) =>
+      cur.map((s) => (s.key === key ? { ...s, value } : s)),
+    );
+    try {
+      const r = await adminHttp.patch<ArenaSetting & { ok: true }>(
+        `/admin/arena-settings/${encodeURIComponent(key)}`,
+        { value },
+      );
+      setArenaSettings((cur) =>
+        cur.map((s) =>
+          s.key === key
+            ? { ...s, value: r.value, updated_by: r.updated_by, updated_at: r.updated_at }
+            : s,
+        ),
+      );
+      toast.success(`${friendlyLabel} → ${value === true ? 'enabled' : 'disabled'}`);
+      // Re-fetch so the joined updated_by_email comes back in.
+      void load();
+    } catch (e) {
+      setArenaSettings(prev);
+      toast.error(e instanceof Error ? e.message : 'Failed to update setting');
+    } finally {
+      setSavingKey(null);
     }
   }
 
@@ -407,6 +461,98 @@ export default function MaintenanceAdminPage() {
         </div>
       </div>
 
+      {/* ── Arena settings ─────────────────────────────────────────── */}
+      {/* Feature flags for arena.competzy.com itself — distinct from the
+          public-landing toggles above. Server is source of truth; the
+          register form on web pre-checks via GET /api/arena-settings/public. */}
+      <Card className="gap-3 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-serif text-base font-medium text-foreground">
+              Arena settings
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Controls for arena.competzy.com itself. Login + existing users are unaffected.
+            </p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 1 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full" />
+            ))}
+          </div>
+        ) : arenaSettings.length === 0 ? (
+          <p className="py-3 text-sm text-muted-foreground">
+            No arena settings configured.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border/60">
+            {arenaSettings.map((s) => {
+              const isBool = typeof s.value === 'boolean';
+              const enabled = isBool ? (s.value as boolean) : false;
+              // Friendly per-key label + icon. New flag = add a case here.
+              const meta = (() => {
+                switch (s.key) {
+                  case 'registration_enabled':
+                    return {
+                      icon: UserPlus,
+                      label: 'Allow new user registration',
+                      hint: 'When off, the register form is disabled and POST /api/auth/signup returns 503. Login + existing users keep working.',
+                    };
+                  default:
+                    return { icon: ShieldCheck, label: s.key, hint: s.description ?? '' };
+                }
+              })();
+              const Icon = meta.icon;
+              const saving = savingKey === s.key;
+              return (
+                <li key={s.key} className="flex items-center gap-4 py-3">
+                  <div
+                    className={cn(
+                      'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                      enabled
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200'
+                        : 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200',
+                    )}
+                    aria-hidden
+                  >
+                    <Icon className="size-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-2">
+                      <span className="font-medium text-foreground">{meta.label}</span>
+                      <span className="font-mono text-[10px] text-muted-foreground">{s.key}</span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{meta.hint}</p>
+                    <p className="mt-1 text-[10px] font-mono text-muted-foreground">
+                      {relativeTime(s.updated_at)} ·{' '}
+                      {s.updated_by_email ?? (s.updated_by === 'system' ? 'system' : 'unknown')}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {saving && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+                    {isBool ? (
+                      <Switch
+                        checked={enabled}
+                        disabled={saving}
+                        onCheckedChange={(next) => setArenaSetting(s.key, next, meta.label)}
+                        aria-label={meta.label}
+                      />
+                    ) : (
+                      <Badge variant="outline" className="font-mono text-[10px]">
+                        (unsupported value type)
+                      </Badge>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
+
       {/* ── Audit log ──────────────────────────────────────────────── */}
       <Card className="gap-2 p-5">
         <div className="flex items-center justify-between gap-2">
@@ -426,20 +572,34 @@ export default function MaintenanceAdminPage() {
         ) : (
           <ul className="divide-y divide-border/60 text-sm">
             {audit.map((a) => {
+              // Mixed-action audit feed: site_maintenance writes carry
+              // `body.mode` (3-mode enum); arena_settings writes carry
+              // `body.value` (boolean today). Render adapts so both
+              // surface meaningfully.
+              const isArena = a.action === 'admin.arena_settings.update';
               const mode = a.payload?.body?.mode as Mode | undefined;
               const meta = mode ? MODE_META[mode] : null;
+              const value = a.payload?.body?.value;
               return (
                 <li key={a.id} className="flex items-center gap-3 py-2">
-                  {meta ? (
-                    <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                  ) : (
-                    <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                  )}
+                  <CheckCircle2 className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                       <span className="font-mono text-xs text-foreground">{a.resource_id ?? '(unknown)'}</span>
                       <span className="text-xs text-muted-foreground">→</span>
-                      {meta ? (
+                      {isArena ? (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'font-mono text-[10px]',
+                            value === true
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200'
+                              : 'bg-rose-100 text-rose-900 dark:bg-rose-950/60 dark:text-rose-200',
+                          )}
+                        >
+                          {value === true ? 'enabled' : value === false ? 'disabled' : '(unknown)'}
+                        </Badge>
+                      ) : meta ? (
                         <Badge variant="outline" className={cn('font-mono text-[10px]', meta.pillClass)}>
                           {meta.label}
                         </Badge>

@@ -11,6 +11,7 @@ import {
   isSuperAdminEmail,
 } from "../services/auth.service";
 import { issueBypassCookie, clearBypassCookie } from "../services/bypass-cookie.service";
+import { isFlagEnabled } from "./arena-settings.routes";
 import { dbErrorResponse } from "../lib/db-errors";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service";
 import { sendPhoneOtp, verifyPhoneOtp, toE164, phoneVariants, toLocalPhone } from "../services/twilio.service";
@@ -162,6 +163,18 @@ async function fetchUserWithRole(userId: string) {
 // ── POST /api/auth/signup ─────────────────────────────────────────────────
 router.post("/signup", authLimiter, async (req: Request, res: Response) => {
   try {
+    // Gate on the admin-controlled `registration_enabled` flag. When the
+    // admin flips registration off from /admin/maintenance, every new
+    // signup is rejected with 503 + a machine-readable code so the web
+    // can render a clean "registration is paused" state.
+    if (!(await isFlagEnabled("registration_enabled"))) {
+      res.status(503).json({
+        code: "REGISTRATION_DISABLED",
+        message: "New registration is temporarily paused. Please try again later.",
+      });
+      return;
+    }
+
     const { email, password, fullName, phone, city, province, country, role, roleData, consentAccepted } = req.body;
 
     // Country is an optional ISO 3166-1 alpha-2 code (e.g. "ID", "MY") — match

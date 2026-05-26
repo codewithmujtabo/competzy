@@ -172,7 +172,7 @@ router.get("/admin/maintenance", requireAdmin, async (_req: Request, res: Respon
                 u.full_name AS actor_name, u.email AS actor_email
            FROM audit_log a
            LEFT JOIN users u ON u.id = a.user_id
-          WHERE a.action = 'admin.maintenance.update'
+          WHERE a.action IN ('admin.maintenance.update', 'admin.arena_settings.update')
           ORDER BY a.created_at DESC
           LIMIT 20`,
       ),
