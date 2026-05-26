@@ -43,20 +43,24 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 // ── Friendly labels per host. Keep in sync with the backend's KNOWN_HOSTS. ──
-const SITES: Array<{ host: string; label: string }> = [
-  { host: 'competzy.com',               label: 'Main landing' },
-  { host: 'emc.competzy.com',           label: 'EMC' },
-  { host: 'ispo.competzy.com',          label: 'ISPO' },
-  { host: 'osebi.competzy.com',         label: 'OSEBI' },
-  { host: 'komodo.competzy.com',        label: 'KOMODO' },
-  { host: 'genius.competzy.com',        label: 'Genius Olympiad' },
-  { host: 'owlypia.competzy.com',       label: 'Owlypia' },
-  { host: 'mathchallenge.competzy.com', label: 'Math Challenge Thailand' },
-  { host: 'stemolympiad.competzy.com',  label: 'STEM Olympiad' },
-  { host: 'nextgen.competzy.com',       label: 'NextGen Olympiad' },
-  { host: 'youngmaster.competzy.com',   label: 'Young Master Challenge' },
-  { host: 'angkor.competzy.com',        label: 'Angkor Math Competition' },
-  { host: 'igo.competzy.com',           label: 'IGO London' },
+// `group` drives the two-section layout below: 'main' covers the public
+// landing + arena portal, 'comp' is the 12 per-competition subdomains.
+type SiteGroup = 'main' | 'comp';
+const SITES: Array<{ host: string; label: string; group: SiteGroup }> = [
+  { host: 'competzy.com',               label: 'Main Landing',           group: 'main' },
+  { host: 'arena.competzy.com',         label: 'Main Arena Page',        group: 'main' },
+  { host: 'emc.competzy.com',           label: 'EMC',                    group: 'comp' },
+  { host: 'komodo.competzy.com',        label: 'KOMODO',                 group: 'comp' },
+  { host: 'ispo.competzy.com',          label: 'ISPO',                   group: 'comp' },
+  { host: 'osebi.competzy.com',         label: 'OSEBI',                  group: 'comp' },
+  { host: 'genius.competzy.com',        label: 'Genius Olympiad',        group: 'comp' },
+  { host: 'owlypia.competzy.com',       label: 'Owlypia',                group: 'comp' },
+  { host: 'mathchallenge.competzy.com', label: 'Math Challenge Thailand', group: 'comp' },
+  { host: 'stemolympiad.competzy.com',  label: 'STEM Olympiad',          group: 'comp' },
+  { host: 'nextgen.competzy.com',       label: 'NextGen Olympiad',       group: 'comp' },
+  { host: 'youngmaster.competzy.com',   label: 'Young Master Challenge', group: 'comp' },
+  { host: 'angkor.competzy.com',        label: 'Angkor Math Competition', group: 'comp' },
+  { host: 'igo.competzy.com',           label: 'IGO London',             group: 'comp' },
 ];
 
 type Mode = 'off' | 'read-only' | 'on';
@@ -196,6 +200,71 @@ function ModeToggle({ value, onChange, disabled, size = 'md' }: ToggleProps) {
         );
       })}
     </div>
+  );
+}
+
+/**
+ * One per-site card with the 3-mode segmented toggle. Extracted so the
+ * Main and Competitions Pages groups can render identical cards without
+ * duplicating the markup.
+ */
+function SiteCard({
+  host,
+  label,
+  row,
+  loading,
+  saving,
+  globalActive,
+  onChange,
+}: {
+  host: string;
+  label: string;
+  row: MaintenanceRow | undefined;
+  loading: boolean;
+  saving: boolean;
+  globalActive: boolean;
+  onChange: (m: Mode) => void;
+}) {
+  const mode: Mode = (row?.mode ?? 'off') as Mode;
+  return (
+    <Card className="gap-3 p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="truncate font-medium text-foreground">{label}</span>
+            {mode !== 'off' && (
+              <Badge variant="outline" className={cn('font-mono text-[10px]', MODE_META[mode].pillClass)}>
+                {MODE_META[mode].badge}
+              </Badge>
+            )}
+          </div>
+          <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">{host}</p>
+        </div>
+        <a
+          href={`https://${host}`}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Open ${host} in new tab`}
+          title="Open in new tab"
+          className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/75 rounded"
+        >
+          <ExternalLink className="size-4" />
+        </a>
+      </div>
+      {loading ? (
+        <Skeleton className="h-8 w-full" />
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <ModeToggle value={mode} onChange={onChange} disabled={saving || globalActive} size="sm" />
+          {saving && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+        </div>
+      )}
+      {row && (
+        <p className="mt-0.5 text-[10px] font-mono text-muted-foreground">
+          {relativeTime(row.updated_at)} · {actorLabel(row)}
+        </p>
+      )}
+    </Card>
   );
 }
 
@@ -397,7 +466,7 @@ export default function MaintenanceAdminPage() {
         </div>
       </Card>
 
-      {/* ── Per-site grid ──────────────────────────────────────────── */}
+      {/* ── Per-site toggle — Main + Competitions Pages ────────────── */}
       <div>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="font-serif text-base font-medium text-foreground">Per-site toggle</h2>
@@ -407,151 +476,104 @@ export default function MaintenanceAdminPage() {
             </p>
           )}
         </div>
+
+        {/* Main — Main Landing + Main Arena Page + Arena New Registration. */}
+        <h3 className="mt-1 mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+          Main
+        </h3>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {SITES.map(({ host, label }) => {
-            const row = rowByHost.get(host);
-            const mode: Mode = (row?.mode ?? 'off') as Mode;
-            const isSaving = savingHost === host;
+          {SITES.filter((s) => s.group === 'main').map(({ host, label }) => (
+            <SiteCard
+              key={host}
+              host={host}
+              label={label}
+              row={rowByHost.get(host)}
+              loading={loading}
+              saving={savingHost === host}
+              globalActive={globalActive}
+              onChange={(m) => requestMode(host, m, label)}
+            />
+          ))}
+          {/* Arena New Registration — separate flag, lives in arena_settings.
+              Rendered alongside the site_maintenance cards so admins find it
+              under the same Main grouping. */}
+          {(() => {
+            const reg = arenaSettings.find((s) => s.key === 'registration_enabled');
+            const enabled = typeof reg?.value === 'boolean' ? reg.value : true;
+            const saving = savingKey === 'registration_enabled';
             return (
-              <Card key={host} className="gap-3 p-4">
+              <Card className="gap-3 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-medium text-foreground">{label}</span>
-                      {mode !== 'off' && (
-                        <Badge variant="outline" className={cn('font-mono text-[10px]', MODE_META[mode].pillClass)}>
-                          {MODE_META[mode].badge}
+                      <span className="truncate font-medium text-foreground">
+                        Arena New Registration
+                      </span>
+                      {!enabled && (
+                        <Badge
+                          variant="outline"
+                          className="bg-rose-100 font-mono text-[10px] text-rose-900 dark:bg-rose-950/60 dark:text-rose-200"
+                        >
+                          Disabled
                         </Badge>
                       )}
                     </div>
-                    <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">{host}</p>
+                    <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+                      registration_enabled
+                    </p>
                   </div>
-                  <a
-                    href={`https://${host}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`Open ${host} in new tab`}
-                    title="Open in new tab"
-                    className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/75 rounded"
-                  >
-                    <ExternalLink className="size-4" />
-                  </a>
+                  <UserPlus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                 </div>
                 {loading ? (
                   <Skeleton className="h-8 w-full" />
                 ) : (
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <ModeToggle
-                      value={mode}
-                      onChange={(m) => requestMode(host, m, label)}
-                      disabled={isSaving || globalActive}
-                      size="sm"
-                    />
-                    {isSaving && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      Block new signups; login + existing users keep working.
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {saving && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+                      <Switch
+                        checked={enabled}
+                        disabled={saving}
+                        onCheckedChange={(next) =>
+                          setArenaSetting('registration_enabled', next, 'Arena New Registration')
+                        }
+                        aria-label="Arena New Registration"
+                      />
+                    </div>
                   </div>
                 )}
-                {row && (
+                {reg && (
                   <p className="mt-0.5 text-[10px] font-mono text-muted-foreground">
-                    {relativeTime(row.updated_at)} · {actorLabel(row)}
+                    {relativeTime(reg.updated_at)} ·{' '}
+                    {reg.updated_by_email ?? (reg.updated_by === 'system' ? 'system' : 'unknown')}
                   </p>
                 )}
               </Card>
             );
-          })}
+          })()}
+        </div>
+
+        {/* Competitions Pages — the 12 per-competition landing subdomains. */}
+        <h3 className="mt-6 mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+          Competitions Pages
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {SITES.filter((s) => s.group === 'comp').map(({ host, label }) => (
+            <SiteCard
+              key={host}
+              host={host}
+              label={label}
+              row={rowByHost.get(host)}
+              loading={loading}
+              saving={savingHost === host}
+              globalActive={globalActive}
+              onChange={(m) => requestMode(host, m, label)}
+            />
+          ))}
         </div>
       </div>
-
-      {/* ── Arena settings ─────────────────────────────────────────── */}
-      {/* Feature flags for arena.competzy.com itself — distinct from the
-          public-landing toggles above. Server is source of truth; the
-          register form on web pre-checks via GET /api/arena-settings/public. */}
-      <Card className="gap-3 p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="font-serif text-base font-medium text-foreground">
-              Arena settings
-            </h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Controls for arena.competzy.com itself. Login + existing users are unaffected.
-            </p>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 1 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full" />
-            ))}
-          </div>
-        ) : arenaSettings.length === 0 ? (
-          <p className="py-3 text-sm text-muted-foreground">
-            No arena settings configured.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border/60">
-            {arenaSettings.map((s) => {
-              const isBool = typeof s.value === 'boolean';
-              const enabled = isBool ? (s.value as boolean) : false;
-              // Friendly per-key label + icon. New flag = add a case here.
-              const meta = (() => {
-                switch (s.key) {
-                  case 'registration_enabled':
-                    return {
-                      icon: UserPlus,
-                      label: 'Allow new user registration',
-                      hint: 'When off, the register form is disabled and POST /api/auth/signup returns 503. Login + existing users keep working.',
-                    };
-                  default:
-                    return { icon: ShieldCheck, label: s.key, hint: s.description ?? '' };
-                }
-              })();
-              const Icon = meta.icon;
-              const saving = savingKey === s.key;
-              return (
-                <li key={s.key} className="flex items-center gap-4 py-3">
-                  <div
-                    className={cn(
-                      'flex size-9 shrink-0 items-center justify-center rounded-lg',
-                      enabled
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200'
-                        : 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200',
-                    )}
-                    aria-hidden
-                  >
-                    <Icon className="size-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-2">
-                      <span className="font-medium text-foreground">{meta.label}</span>
-                      <span className="font-mono text-[10px] text-muted-foreground">{s.key}</span>
-                    </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{meta.hint}</p>
-                    <p className="mt-1 text-[10px] font-mono text-muted-foreground">
-                      {relativeTime(s.updated_at)} ·{' '}
-                      {s.updated_by_email ?? (s.updated_by === 'system' ? 'system' : 'unknown')}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {saving && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
-                    {isBool ? (
-                      <Switch
-                        checked={enabled}
-                        disabled={saving}
-                        onCheckedChange={(next) => setArenaSetting(s.key, next, meta.label)}
-                        aria-label={meta.label}
-                      />
-                    ) : (
-                      <Badge variant="outline" className="font-mono text-[10px]">
-                        (unsupported value type)
-                      </Badge>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Card>
 
       {/* ── Audit log ──────────────────────────────────────────────── */}
       <Card className="gap-2 p-5">

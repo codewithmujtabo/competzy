@@ -29,12 +29,15 @@ const router: Router = Router();
 const VALID_MODES = ["off", "read-only", "on"] as const;
 type Mode = (typeof VALID_MODES)[number];
 
-// Locked to the 14 rows the seed migration inserts. Any other `host` value
+// Locked to the rows the seed migrations insert. Any other `host` value
 // — including typos — is rejected by PATCH. The state endpoint also rejects
 // unknown hosts (returns mode='off') so we never quietly serve junk values.
 const KNOWN_HOSTS = new Set([
   "*",
+  // Main — covers the public landing + arena portal itself
   "competzy.com",
+  "arena.competzy.com",
+  // Per-competition landing-page subdomains (12)
   "emc.competzy.com",
   "ispo.competzy.com",
   "osebi.competzy.com",
