@@ -27,7 +27,16 @@ import {
 import { adminHttp } from '@/lib/api/client';
 import { PageHeader } from '@/components/shell/page-header';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -181,6 +190,11 @@ export default function MaintenanceAdminPage() {
   const [loading, setLoading] = useState(true);
   const [savingHost, setSavingHost] = useState<string | null>(null);
 
+  // Confirm dialog state — only fires for transitions INTO 'on' (the
+  // destructive full-takeover mode). off ↔ read-only ↔ off go through
+  // without prompting since neither hides the public site.
+  const [pendingOn, setPendingOn] = useState<{ host: string; label: string } | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -250,6 +264,19 @@ export default function MaintenanceAdminPage() {
     }
   }
 
+  // Intercept transitions INTO 'on' so the admin must explicitly confirm —
+  // this is the full-takeover mode that hides the public site, reserved
+  // for incidents or scheduled downtime. Every other transition fires
+  // straight through.
+  function requestMode(host: string, next: Mode, label: string): void {
+    const current = (rowByHost.get(host)?.mode ?? 'off') as Mode;
+    if (next === 'on' && current !== 'on') {
+      setPendingOn({ host, label });
+      return;
+    }
+    void setMode(host, next);
+  }
+
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
@@ -309,7 +336,7 @@ export default function MaintenanceAdminPage() {
           ) : (
             <ModeToggle
               value={globalMode}
-              onChange={(m) => setMode('*', m)}
+              onChange={(m) => requestMode('*', m, 'Global kill switch')}
               disabled={savingHost === '*'}
             />
           )}
@@ -362,7 +389,7 @@ export default function MaintenanceAdminPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <ModeToggle
                       value={mode}
-                      onChange={(m) => setMode(host, m)}
+                      onChange={(m) => requestMode(host, m, label)}
                       disabled={isSaving || globalActive}
                       size="sm"
                     />
@@ -436,6 +463,66 @@ export default function MaintenanceAdminPage() {
           </ul>
         )}
       </Card>
+
+      {/* ── Confirm dialog — transitions INTO 'on' only ─────────────── */}
+      <Dialog
+        open={!!pendingOn}
+        onOpenChange={(o) => {
+          if (!o) setPendingOn(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
+              <PowerOff className="size-5" aria-hidden />
+              <DialogTitle>Turn on maintenance mode?</DialogTitle>
+            </div>
+            <DialogDescription>
+              Only flip a site to <strong>On</strong> for an incident or scheduled downtime.
+              Every public visitor will see the maintenance page until you flip it back —
+              admins with the bypass cookie keep through-access.
+            </DialogDescription>
+          </DialogHeader>
+
+          {pendingOn && (
+            <div className="rounded-md border border-rose-200/60 bg-rose-50/60 p-3 text-sm dark:border-rose-900/50 dark:bg-rose-950/30">
+              <dl className="space-y-1">
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0 text-xs uppercase text-muted-foreground">Site</dt>
+                  <dd className="font-medium">{pendingOn.label}</dd>
+                </div>
+                <div className="flex gap-2">
+                  <dt className="w-24 shrink-0 text-xs uppercase text-muted-foreground">Host</dt>
+                  <dd className="font-mono text-xs">{pendingOn.host === '*' ? '(global kill switch — every site)' : pendingOn.host}</dd>
+                </div>
+              </dl>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setPendingOn(null)}
+              disabled={!!savingHost}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!pendingOn) return;
+                const host = pendingOn.host;
+                setPendingOn(null);
+                void setMode(host, 'on');
+              }}
+              disabled={!!savingHost}
+            >
+              {savingHost && <Loader2 className="size-4 animate-spin" />}
+              Turn on maintenance
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

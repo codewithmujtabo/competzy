@@ -44,12 +44,6 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: 'Operations',
-    items: [
-      { label: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
-    ],
-  },
-  {
     label: 'Competitions',
     items: [
       { label: 'Competitions', href: '/admin/competitions', icon: Trophy },
@@ -86,6 +80,12 @@ const NAV: NavSection[] = [
       { label: 'Referrals', href: '/referrals', icon: Share2 },
       { label: 'Segments', href: '/segments', icon: Layers },
       { label: 'Suggestions', href: '/suggestions', icon: MessageSquare },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { label: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
     ],
   },
 ];
