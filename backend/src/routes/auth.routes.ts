@@ -12,7 +12,6 @@ import {
 } from "../services/auth.service";
 import { issueBypassCookie, clearBypassCookie } from "../services/bypass-cookie.service";
 import { gateArenaAuth, enforceArenaAuthGate } from "../services/arena-maintenance-gate.service";
-import { isFlagEnabled } from "./arena-settings.routes";
 import { dbErrorResponse } from "../lib/db-errors";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service";
 import { sendPhoneOtp, verifyPhoneOtp, toE164, phoneVariants, toLocalPhone } from "../services/twilio.service";
@@ -164,20 +163,12 @@ async function fetchUserWithRole(userId: string) {
 // ── POST /api/auth/signup ─────────────────────────────────────────────────
 router.post("/signup", authLimiter, async (req: Request, res: Response) => {
   try {
-    // Arena maintenance gate first — read-only/on with no admin bypass
+    // Arena maintenance gate — read-only/on with no admin bypass
     // cookie blocks every fresh auth attempt (login + signup + OTP).
+    // Signup itself otherwise stays open: arena.competzy.com keeps
+    // registration always available so students can reach the portal;
+    // closing happens per-competition via competitions.registration_*.
     if (await gateArenaAuth(req, res)) return;
-
-    // Then the narrower `registration_enabled` flag — even when arena
-    // is fully open (mode=off), the admin can still pause signups
-    // surgically via the boolean switch.
-    if (!(await isFlagEnabled("registration_enabled"))) {
-      res.status(503).json({
-        code: "REGISTRATION_DISABLED",
-        message: "New registration is temporarily paused. Please try again later.",
-      });
-      return;
-    }
 
     const { email, password, fullName, phone, city, province, country, role, roleData, consentAccepted } = req.body;
 

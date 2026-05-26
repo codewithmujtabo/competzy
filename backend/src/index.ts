@@ -40,7 +40,6 @@ import certificatesRoutes from "./routes/certificates.routes";
 import countryRepRoutes from "./routes/country-rep.routes";
 import waitlistRoutes from "./routes/waitlist.routes";
 import maintenanceRoutes from "./routes/maintenance.routes";
-import arenaSettingsRoutes from "./routes/arena-settings.routes";
 import { initializeCronJobs } from "./services/cron.service";
 import { verifySignedUrlToken } from "./services/storage.service";
 import fs from "fs";
@@ -152,10 +151,6 @@ app.use("/api", waitlistRoutes);
 // rule as the marketing/waitlist routers above: public GET must reach before
 // any bare-/api router's router-level authMiddleware fall-through.
 app.use("/api", maintenanceRoutes);
-// Arena feature-flag toggles (registration_enabled, future flags) — owns
-// PUBLIC /arena-settings/public + admin /admin/arena-settings*. Same
-// mount-order rule.
-app.use("/api", arenaSettingsRoutes);
 // Certificates — owns /certificates/* (mounted at /api). Like marketing, mounted
 // before the bare-/api routers with a router-level authMiddleware so the PUBLIC
 // /certificates/verify endpoints are reached before they 401 fall-through traffic.
