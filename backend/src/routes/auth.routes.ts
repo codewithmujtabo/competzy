@@ -11,7 +11,7 @@ import {
   isSuperAdminEmail,
 } from "../services/auth.service";
 import { issueBypassCookie, clearBypassCookie } from "../services/bypass-cookie.service";
-import { gateArenaAuth } from "../services/arena-maintenance-gate.service";
+import { gateArenaAuth, enforceArenaAuthGate } from "../services/arena-maintenance-gate.service";
 import { isFlagEnabled } from "./arena-settings.routes";
 import { dbErrorResponse } from "../lib/db-errors";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service";
@@ -286,11 +286,6 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
 // ── POST /api/auth/login ──────────────────────────────────────────────────
 router.post("/login", authLimiter, async (req: Request, res: Response) => {
   try {
-    // Arena maintenance gate — read-only/on with no admin bypass cookie
-    // blocks fresh sign-ins. Admins with the bypass cookie pass through
-    // so they can sign in to flip the toggle off.
-    if (await gateArenaAuth(req, res)) return;
-
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -310,6 +305,12 @@ router.post("/login", authLimiter, async (req: Request, res: Response) => {
       res.status(401).json({ message: "Invalid email or password" });
       return;
     }
+
+    // Arena maintenance gate — runs AFTER credentials are verified so
+    // an admin without a bypass cookie can never lock themselves out of
+    // their own kill switch. enforceArenaAuthGate sails admin/superadmin
+    // through regardless of mode; everyone else gets 503'd.
+    if (await enforceArenaAuthGate(req, res, dbUser.email, dbUser.role)) return;
 
     const token = generateToken(dbUser.id);
     const user = await fetchUserWithRole(dbUser.id);
@@ -351,11 +352,6 @@ router.post("/send-otp", otpSendLimiter, async (req: Request, res: Response) => 
 // ── POST /api/auth/verify-otp ────────────────────────────────────────────
 router.post("/verify-otp", otpVerifyLimiter, async (req: Request, res: Response) => {
   try {
-    // Arena maintenance gate — OTP verify is the moment a session is
-    // actually issued, so it's the right place to block (sending the
-    // OTP itself is harmless; we just won't honour it).
-    if (await gateArenaAuth(req, res)) return;
-
     const { email, code } = req.body;
 
     if (!email || !code) {
@@ -380,13 +376,22 @@ router.post("/verify-otp", otpVerifyLimiter, async (req: Request, res: Response)
     await pool.query("UPDATE otp_codes SET used = true WHERE id = $1", [otpResult.rows[0].id]);
 
     // Find or error — user must exist (OTP login only for existing users)
-    const userResult = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
+    const userResult = await pool.query(
+      "SELECT id, email, role FROM users WHERE email = $1",
+      [email],
+    );
     if (userResult.rows.length === 0) {
       res.status(404).json({ message: "No account found with this email. Please sign up first." });
       return;
     }
 
-    const userId = userResult.rows[0].id;
+    const userRow = userResult.rows[0];
+
+    // Arena maintenance gate — runs AFTER OTP is verified so an admin
+    // can always log in even when no bypass cookie is present.
+    if (await enforceArenaAuthGate(req, res, userRow.email, userRow.role)) return;
+
+    const userId = userRow.id;
     const token = generateToken(userId);
     const user = await fetchUserWithRole(userId);
     issueAuthCookie(res, token);
@@ -417,9 +422,6 @@ router.post("/phone/send-otp", otpSendLimiter, async (req: Request, res: Respons
 // ── POST /api/auth/phone/verify-otp ──────────────────────────────────────
 router.post("/phone/verify-otp", otpVerifyLimiter, async (req: Request, res: Response) => {
   try {
-    // Arena maintenance gate (see /verify-otp above).
-    if (await gateArenaAuth(req, res)) return;
-
     const { phone, code } = req.body;
     if (!phone || !code) {
       res.status(400).json({ message: "phone and code are required" });
@@ -439,7 +441,7 @@ router.post("/phone/verify-otp", otpVerifyLimiter, async (req: Request, res: Res
     // by the app, +62xxx by the web, …) so a phone-format mismatch can't make
     // an existing account look unregistered.
     const result = await pool.query(
-      "SELECT id FROM users WHERE phone = ANY($1::text[])",
+      "SELECT id, email, role FROM users WHERE phone = ANY($1::text[])",
       [variants]
     );
 
@@ -459,7 +461,14 @@ router.post("/phone/verify-otp", otpVerifyLimiter, async (req: Request, res: Res
       return;
     }
 
-    const userId = result.rows[0].id;
+    const userRow = result.rows[0];
+
+    // Arena maintenance gate — runs AFTER OTP is verified and the user
+    // is identified, so an admin who lost their bypass cookie can always
+    // sign back in via phone OTP.
+    if (await enforceArenaAuthGate(req, res, userRow.email, userRow.role)) return;
+
+    const userId = userRow.id;
 
     // Mark phone as verified
     await pool.query(
