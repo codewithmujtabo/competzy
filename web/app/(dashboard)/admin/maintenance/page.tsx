@@ -7,8 +7,10 @@
 // in the competzy-web repo.
 //
 // Layout (top → bottom):
-//   1. Global kill switch banner (the `*` row)
-//   2. Per-site grid with 3-way segmented control
+//   1. Per-site grid: Main group + Competitions Pages group
+//   2. Global kill switch banner (the `*` row) — at the BOTTOM, since
+//      it's a rare "everything off" escape hatch; admins shouldn't have
+//      to scroll past it on every visit to reach the per-site toggles.
 //   3. Audit log (last 20 changes)
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -408,71 +410,13 @@ export default function MaintenanceAdminPage() {
         subtitle="Per-site toggle for the public landing pages. Read-only disables form submissions; On replaces every page with the maintenance screen until an admin bypass cookie is present."
       />
 
-      {/* ── Global kill switch ──────────────────────────────────────── */}
-      <Card
-        className={cn(
-          'gap-3 border-2 p-5 transition-colors',
-          globalActive
-            ? 'border-rose-300 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/30'
-            : 'border-border bg-background',
-        )}
-      >
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div
-              className={cn(
-                'flex size-10 shrink-0 items-center justify-center rounded-full',
-                globalActive
-                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200'
-                  : 'bg-muted text-muted-foreground',
-              )}
-              aria-hidden
-            >
-              <Globe className="size-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-serif text-lg font-semibold text-foreground">
-                  Global kill switch
-                </h2>
-                {globalActive && (
-                  <Badge variant="destructive" className="gap-1">
-                    <AlertTriangle className="size-3" />
-                    Overrides every site
-                  </Badge>
-                )}
-              </div>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                When this is set to <strong>read-only</strong> or <strong>on</strong>, every
-                landing-page subdomain serves that mode regardless of its individual setting.
-                Use it for platform-wide incidents or scheduled downtime.
-              </p>
-              {globalRow && (
-                <p className="mt-2 text-xs font-mono text-muted-foreground">
-                  Last changed {relativeTime(globalRow.updated_at)} by {actorLabel(globalRow)}
-                </p>
-              )}
-            </div>
-          </div>
-          {loading ? (
-            <Skeleton className="h-9 w-72" />
-          ) : (
-            <ModeToggle
-              value={globalMode}
-              onChange={(m) => requestMode('*', m, 'Global kill switch')}
-              disabled={savingHost === '*'}
-            />
-          )}
-        </div>
-      </Card>
-
       {/* ── Per-site toggle — Main + Competitions Pages ────────────── */}
       <div>
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="font-serif text-base font-medium text-foreground">Per-site toggle</h2>
           {globalActive && (
             <p className="text-xs italic text-muted-foreground">
-              Per-site values are hidden by the global override above.
+              Per-site values are hidden by the global override below.
             </p>
           )}
         </div>
@@ -574,6 +518,67 @@ export default function MaintenanceAdminPage() {
           ))}
         </div>
       </div>
+
+      {/* ── Global kill switch — placed AFTER the per-site grid because
+          it's a rarely-used "everything off" escape hatch; admins reach
+          for per-site toggles 99% of the time and shouldn't have to
+          scroll past the big card to get there. ──────────────────── */}
+      <Card
+        className={cn(
+          'gap-3 border-2 p-5 transition-colors',
+          globalActive
+            ? 'border-rose-300 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/30'
+            : 'border-border bg-background',
+        )}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div
+              className={cn(
+                'flex size-10 shrink-0 items-center justify-center rounded-full',
+                globalActive
+                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-200'
+                  : 'bg-muted text-muted-foreground',
+              )}
+              aria-hidden
+            >
+              <Globe className="size-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-serif text-lg font-semibold text-foreground">
+                  Global kill switch
+                </h2>
+                {globalActive && (
+                  <Badge variant="destructive" className="gap-1">
+                    <AlertTriangle className="size-3" />
+                    Overrides every site
+                  </Badge>
+                )}
+              </div>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                When this is set to <strong>read-only</strong> or <strong>on</strong>, every
+                landing-page subdomain serves that mode regardless of its individual setting.
+                Use it for platform-wide incidents or scheduled downtime.
+              </p>
+              {globalRow && (
+                <p className="mt-2 text-xs font-mono text-muted-foreground">
+                  Last changed {relativeTime(globalRow.updated_at)} by {actorLabel(globalRow)}
+                </p>
+              )}
+            </div>
+          </div>
+          {loading ? (
+            <Skeleton className="h-9 w-72" />
+          ) : (
+            <ModeToggle
+              value={globalMode}
+              onChange={(m) => requestMode('*', m, 'Global kill switch')}
+              disabled={savingHost === '*'}
+            />
+          )}
+        </div>
+      </Card>
 
       {/* ── Audit log ──────────────────────────────────────────────── */}
       <Card className="gap-2 p-5">
