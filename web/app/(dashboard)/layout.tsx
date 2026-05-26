@@ -41,6 +41,11 @@ const NAV: NavSection[] = [
   {
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutGrid, exact: true },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
       { label: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
     ],
   },
