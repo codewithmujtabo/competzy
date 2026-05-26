@@ -11,6 +11,7 @@ import {
   isSuperAdminEmail,
 } from "../services/auth.service";
 import { issueBypassCookie, clearBypassCookie } from "../services/bypass-cookie.service";
+import { gateArenaAuth } from "../services/arena-maintenance-gate.service";
 import { isFlagEnabled } from "./arena-settings.routes";
 import { dbErrorResponse } from "../lib/db-errors";
 import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service";
@@ -163,10 +164,13 @@ async function fetchUserWithRole(userId: string) {
 // ── POST /api/auth/signup ─────────────────────────────────────────────────
 router.post("/signup", authLimiter, async (req: Request, res: Response) => {
   try {
-    // Gate on the admin-controlled `registration_enabled` flag. When the
-    // admin flips registration off from /admin/maintenance, every new
-    // signup is rejected with 503 + a machine-readable code so the web
-    // can render a clean "registration is paused" state.
+    // Arena maintenance gate first — read-only/on with no admin bypass
+    // cookie blocks every fresh auth attempt (login + signup + OTP).
+    if (await gateArenaAuth(req, res)) return;
+
+    // Then the narrower `registration_enabled` flag — even when arena
+    // is fully open (mode=off), the admin can still pause signups
+    // surgically via the boolean switch.
     if (!(await isFlagEnabled("registration_enabled"))) {
       res.status(503).json({
         code: "REGISTRATION_DISABLED",
@@ -282,6 +286,11 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
 // ── POST /api/auth/login ──────────────────────────────────────────────────
 router.post("/login", authLimiter, async (req: Request, res: Response) => {
   try {
+    // Arena maintenance gate — read-only/on with no admin bypass cookie
+    // blocks fresh sign-ins. Admins with the bypass cookie pass through
+    // so they can sign in to flip the toggle off.
+    if (await gateArenaAuth(req, res)) return;
+
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -342,6 +351,11 @@ router.post("/send-otp", otpSendLimiter, async (req: Request, res: Response) => 
 // ── POST /api/auth/verify-otp ────────────────────────────────────────────
 router.post("/verify-otp", otpVerifyLimiter, async (req: Request, res: Response) => {
   try {
+    // Arena maintenance gate — OTP verify is the moment a session is
+    // actually issued, so it's the right place to block (sending the
+    // OTP itself is harmless; we just won't honour it).
+    if (await gateArenaAuth(req, res)) return;
+
     const { email, code } = req.body;
 
     if (!email || !code) {
@@ -403,6 +417,9 @@ router.post("/phone/send-otp", otpSendLimiter, async (req: Request, res: Respons
 // ── POST /api/auth/phone/verify-otp ──────────────────────────────────────
 router.post("/phone/verify-otp", otpVerifyLimiter, async (req: Request, res: Response) => {
   try {
+    // Arena maintenance gate (see /verify-otp above).
+    if (await gateArenaAuth(req, res)) return;
+
     const { phone, code } = req.body;
     if (!phone || !code) {
       res.status(400).json({ message: "phone and code are required" });

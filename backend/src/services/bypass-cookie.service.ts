@@ -101,3 +101,53 @@ export function clearBypassCookie(res: Response): void {
   }
   res.clearCookie(COOKIE_NAME, opts);
 }
+
+/**
+ * Verify a `competzy_bypass` cookie value sent by the browser. Returns
+ * true when the cookie is well-formed, signature matches the configured
+ * secret, hasn't expired, and the role is admin/superadmin.
+ *
+ * Used by the auth routes to let an existing admin bypass the arena
+ * maintenance gate (otherwise they'd be locked out of their own kill
+ * switch). Mirror of competzy-web's lib/admin-bypass.ts but using Node
+ * crypto since the backend isn't on the edge runtime.
+ */
+export function verifyBypass(cookieValue: string | undefined | null): boolean {
+  if (!cookieValue) return false;
+  const secret = env.BYPASS_COOKIE_SECRET;
+  if (!secret) return false;
+
+  try {
+    const [payloadB64, sigB64] = cookieValue.split(".");
+    if (!payloadB64 || !sigB64) return false;
+
+    const expectedSig = crypto
+      .createHmac("sha256", secret)
+      .update(payloadB64)
+      .digest("base64url");
+    // timingSafeEqual throws when buffers differ in length; tampered or
+    // truncated signatures simply aren't equal.
+    if (expectedSig.length !== sigB64.length) return false;
+    if (!crypto.timingSafeEqual(Buffer.from(expectedSig), Buffer.from(sigB64))) {
+      return false;
+    }
+
+    const payloadJson = Buffer.from(payloadB64, "base64url").toString("utf8");
+    const payload = JSON.parse(payloadJson) as { role?: unknown; exp?: unknown };
+    if (typeof payload.exp !== "number") return false;
+    if (payload.exp < Math.floor(Date.now() / 1000)) return false;
+    if (payload.role !== "admin" && payload.role !== "superadmin") return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Convenience: pull the bypass cookie off an Express request and verify
+ * it in one call. Cookie-parser middleware must have run upstream
+ * (`app.use(cookieParser())` in index.ts — already wired).
+ */
+export function requestHasValidBypass(req: { cookies?: Record<string, string> }): boolean {
+  return verifyBypass(req.cookies?.[COOKIE_NAME]);
+}

@@ -111,6 +111,21 @@ async function resolveMode(host: string): Promise<Mode> {
   return mode;
 }
 
+/**
+ * Public helper for in-process consumers (e.g. auth routes gating
+ * login/signup on arena.competzy.com's mode). Fails OPEN to 'off' on
+ * any DB error — a backend DB hiccup must NEVER lock the auth path out.
+ */
+export async function getMaintenanceMode(host: string): Promise<Mode> {
+  if (!KNOWN_HOSTS.has(host) || host === "*") return "off";
+  try {
+    return await resolveMode(host);
+  } catch (err) {
+    console.error("[maintenance] in-process lookup failed:", err);
+    return "off";
+  }
+}
+
 function isValidMode(value: unknown): value is Mode {
   return typeof value === "string" && (VALID_MODES as readonly string[]).includes(value);
 }
