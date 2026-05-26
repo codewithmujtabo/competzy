@@ -61,13 +61,14 @@ export async function checkArenaAuthGate(
         },
       };
     }
-    // read-only — softer copy
+    // read-only — softer copy. Caller renders the message verbatim in
+    // the auth form (see /web/app/page.tsx), so keep it short + direct.
     return {
       status: 503,
       body: {
         code: "ARENA_READONLY",
         mode,
-        message: "Arena is in read-only mode. New sign-ins and sign-ups are temporarily paused.",
+        message: "New sign-ins and sign-ups are temporarily paused.",
       },
     };
   } catch (err) {
