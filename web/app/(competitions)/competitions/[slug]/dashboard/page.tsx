@@ -6,9 +6,14 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { emcHttp, HttpError } from '@/lib/api/client';
+import { cn } from '@/lib/utils';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
-import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
+import {
+  getCompetitionConfig,
+  competitionPaths,
+  type CompetitionPortalConfig,
+} from '@/lib/competitions/registry';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -811,6 +816,103 @@ function Stepper({
   );
 }
 
+// ── Branded competition hero (Phase 3 — mockup parity) ────────────────────
+// EMC gets the white tricolor + math-watermark treatment from the mockup;
+// every other competition gets a clean accent-gradient hero from its registry
+// config. The sidebar stays Competzy-branded — the competition's identity
+// lives HERE, in the page hero, not in the chrome.
+const EMC_TRI = { blue: '#1B6EF3', pink: '#E91E8C', orange: '#FF6B00' };
+
+function HeroStats({
+  reg,
+  light,
+  accent,
+}: {
+  reg: RegistrationRow | null;
+  light?: boolean;
+  accent?: string;
+}) {
+  const stats = [
+    { k: 'Participant ID', v: reg?.registrationNumber ?? '—' },
+    { k: 'Status', v: reg ? reg.status.replace(/_/g, ' ') : 'Not registered' },
+  ];
+  return (
+    <div
+      className={cn(
+        'mt-5 flex flex-wrap gap-x-10 gap-y-3 border-t pt-4',
+        light ? 'border-white/20' : 'border-border',
+      )}
+    >
+      {stats.map((s) => (
+        <div key={s.k}>
+          <p
+            className={cn(
+              'font-mono text-[10px] uppercase tracking-[0.12em]',
+              light ? 'text-white/60' : 'text-muted-foreground',
+            )}
+          >
+            {s.k}
+          </p>
+          <p
+            className={cn('mt-1 text-sm font-semibold capitalize', light ? 'text-white' : 'text-foreground')}
+            style={!light && accent ? { color: accent } : undefined}
+          >
+            {s.v}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CompetitionHero({
+  config,
+  reg,
+}: {
+  config: CompetitionPortalConfig;
+  reg: RegistrationRow | null;
+}) {
+  if (config.slug === 'emc') {
+    return (
+      <Card className="relative gap-0 overflow-hidden p-7 sm:p-9">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute right-5 top-1/2 hidden -translate-y-1/2 select-none bg-gradient-to-br from-[#1B6EF3] via-[#E91E8C] to-[#FF6B00] bg-clip-text text-5xl font-black tracking-[0.2em] text-transparent opacity-10 sm:block"
+        >
+          ∑ ∂ ∫ π
+        </span>
+        <p className="font-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: EMC_TRI.orange }}>
+          {config.shortName} 2026
+        </p>
+        <h1 className="relative mt-2 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
+          <span style={{ color: EMC_TRI.blue }}>Mathematics</span>{' '}
+          <span style={{ color: EMC_TRI.pink }}>Competition</span>
+        </h1>
+        <p className="mt-1 text-sm font-medium italic" style={{ color: EMC_TRI.orange }}>
+          {config.tagline}
+        </p>
+        <HeroStats reg={reg} accent={EMC_TRI.blue} />
+      </Card>
+    );
+  }
+
+  return (
+    <Card
+      className="relative gap-0 overflow-hidden border-0 p-7 text-white sm:p-9"
+      style={{ background: `linear-gradient(135deg, ${config.gradient[0]}, ${config.gradient[1]})` }}
+    >
+      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/70">
+        {config.shortName} 2026
+      </p>
+      <h1 className="mt-2 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
+        {config.wordmark}
+      </h1>
+      <p className="mt-1 text-sm italic text-white/80">{config.tagline}</p>
+      <HeroStats reg={reg} light />
+    </Card>
+  );
+}
+
 export default function CompetitionDashboardPage() {
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
@@ -1084,14 +1186,7 @@ export default function CompetitionDashboardPage() {
               All competitions
             </Link>
           )}
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
-              {config.shortName} 2026
-            </p>
-            <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">
-              Hi {user?.fullName || user?.full_name || 'there'} 👋
-            </h1>
-          </div>
+          <CompetitionHero config={config} reg={reg ?? null} />
         </header>
 
         {err && (
