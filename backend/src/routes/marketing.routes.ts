@@ -805,6 +805,37 @@ router.get("/announcements", authMiddleware, async (req: Request, res: Response)
   }
 });
 
+// GET /api/announcements/mine — the caller's aggregated feed: announcements
+// for every competition they're registered in, plus platform-wide posts
+// (comp_id IS NULL). Powers the global /account/announcements page.
+router.get("/announcements/mine", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const r = await pool.query(
+      `SELECT a.*, c.name AS competition_name
+         FROM announcements a
+         LEFT JOIN competitions c ON c.id = a.comp_id
+        WHERE a.is_active = true AND a.published_at IS NOT NULL AND a.deleted_at IS NULL
+          AND (a.comp_id IS NULL OR a.comp_id IN (
+            SELECT DISTINCT reg.comp_id FROM registrations reg
+             WHERE reg.user_id = $1 AND reg.deleted_at IS NULL
+          ))
+        ORDER BY a.is_featured DESC, a.published_at DESC`,
+      [req.userId]
+    );
+    res.json(
+      await Promise.all(
+        r.rows.map(async (row) => ({
+          ...(await mapAnnouncement(row)),
+          competitionName: row.competition_name ?? null,
+        }))
+      )
+    );
+  } catch (err) {
+    console.error("My announcements feed error:", err);
+    res.status(500).json({ message: "Failed to load announcements" });
+  }
+});
+
 // ──────────────────────────────────────────────────────────────────────────
 // Suggestions (Wave 10 Phase 6) — student feedback. Students submit via the
 // public-namespace POST /api/suggestions; operators read the per-competition

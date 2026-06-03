@@ -11,20 +11,14 @@ import Link from 'next/link';
 import {
   ArrowRight,
   Award,
-  Bell,
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
-  FileText,
   Heart,
-  History,
-  LayoutGrid,
   Loader2,
   ShieldCheck,
   Sparkles,
   Trophy,
-  User,
-  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -35,31 +29,8 @@ import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AppShell, type NavSection } from '@/components/shell/app-shell';
-
-// Sidebar nav shared with the (account) layout — Browse FIRST (this
-// catalog IS the student/parent home) and My Account below. Duplication
-// is intentional: the catalog is in the (competitions) route group so
-// it stays reachable without the account guard, but students/parents
-// land here and benefit from the same workspace shell.
-const STUDENT_NAV: NavSection[] = [
-  {
-    items: [
-      { label: 'All Competitions', href: '/competitions', icon: LayoutGrid },
-    ],
-  },
-  {
-    label: 'My Account',
-    items: [
-      { label: 'Profile', href: '/account/profile', icon: User },
-      { label: 'My Competitions', href: '/account/competitions', icon: Trophy },
-      { label: 'Documents', href: '/account/documents', icon: FileText },
-      { label: 'Records', href: '/account/records', icon: History },
-      { label: 'Family', href: '/account/family', icon: Users },
-      { label: 'Notifications', href: '/account/notifications', icon: Bell },
-    ],
-  },
-];
+import { AppShell } from '@/components/shell/app-shell';
+import { STUDENT_NAV, STUDENT_BRAND } from '@/lib/nav/student-nav';
 
 interface CatalogCompetition {
   id: string;
@@ -612,7 +583,7 @@ export default function CompetitionCatalogPage() {
   const isParent = user.role === 'parent';
   return (
     <AppShell
-      brand={{ name: 'Competzy', tagline: 'My Account', icon: Trophy }}
+      brand={STUDENT_BRAND}
       nav={STUDENT_NAV}
       notificationsHref="/account/notifications"
       profileHref="/account/profile"

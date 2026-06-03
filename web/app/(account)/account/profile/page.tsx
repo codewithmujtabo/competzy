@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { INTEREST_CATEGORIES } from '@/lib/constants/interests';
 import type { StudentProfile } from '@/types/account';
 import { PageHeader } from '@/components/shell/page-header';
+import { AccountTabs } from '@/components/account/account-tabs';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -378,6 +379,7 @@ export default function AccountProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-8">
+      <AccountTabs />
       <PageHeader
         eyebrow="My Account"
         title="Profile"

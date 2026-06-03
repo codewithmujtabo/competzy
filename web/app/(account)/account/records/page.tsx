@@ -1,5 +1,7 @@
 'use client';
 
+import { AccountTabs } from '@/components/account/account-tabs';
+
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { History, Loader2, Search } from 'lucide-react';
@@ -137,6 +139,7 @@ export default function AccountRecordsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-8">
+      <AccountTabs />
       <PageHeader
         eyebrow="My Account"
         title="Records"

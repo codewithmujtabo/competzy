@@ -2,12 +2,13 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, User, FileText, Bell, Trophy, History, Users, LayoutGrid } from 'lucide-react';
+import { Loader2, Trophy, LayoutGrid } from 'lucide-react';
 import {
   CompetitionAuthProvider,
   useCompetitionAuth,
 } from '@/lib/auth/competition-context';
-import { AppShell, type NavSection } from '@/components/shell/app-shell';
+import { AppShell } from '@/components/shell/app-shell';
+import { STUDENT_NAV, STUDENT_BRAND } from '@/lib/nav/student-nav';
 
 /**
  * The global "My Account" workspace — the student's account-wide pages
@@ -26,27 +27,8 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
   );
 }
 
-// Browse first (it's the student's home/dashboard — what they land on
-// after login). My Account underneath, ordered by how a student actually
-// progresses: identity → joined comps → docs/records/family/notifications.
-const NAV: NavSection[] = [
-  {
-    items: [
-      { label: 'All Competitions', href: '/competitions', icon: LayoutGrid },
-    ],
-  },
-  {
-    label: 'My Account',
-    items: [
-      { label: 'Profile', href: '/account/profile', icon: User },
-      { label: 'My Competitions', href: '/account/competitions', icon: Trophy },
-      { label: 'Documents', href: '/account/documents', icon: FileText },
-      { label: 'Records', href: '/account/records', icon: History },
-      { label: 'Family', href: '/account/family', icon: Users },
-      { label: 'Notifications', href: '/account/notifications', icon: Bell },
-    ],
-  },
-];
+// The student/parent sidebar is the SHARED 5-item nav (see lib/nav/student-nav)
+// so the menu is identical here, on the catalog, and inside a competition.
 
 // Roles whose post-login destination IS the My Account workspace
 // (students + parents). For everyone else, /account/profile is the
@@ -92,7 +74,7 @@ function ShelledAccount({ children }: { children: ReactNode }) {
   // BACK TO their own portal home — they don't need the Browse + My
   // Account items, just an exit door.
   const operatorNav = isParticipant
-    ? NAV
+    ? STUDENT_NAV
     : [
         {
           items: [
@@ -107,7 +89,7 @@ function ShelledAccount({ children }: { children: ReactNode }) {
 
   return (
     <AppShell
-      brand={{ name: 'Competzy', tagline: 'Account Settings', icon: Trophy }}
+      brand={isParticipant ? STUDENT_BRAND : { name: 'Competzy', tagline: 'Account Settings', icon: Trophy }}
       nav={operatorNav}
       notificationsHref={isParticipant ? '/account/notifications' : undefined}
       profileHref="/account/profile"

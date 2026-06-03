@@ -1,5 +1,7 @@
 'use client';
 
+import { AccountTabs } from '@/components/account/account-tabs';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Download, FileText, Loader2, Trash2, Upload } from 'lucide-react';
@@ -135,6 +137,7 @@ export default function AccountDocumentsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-8">
+      <AccountTabs />
       <PageHeader
         eyebrow="My Account"
         title="Documents"

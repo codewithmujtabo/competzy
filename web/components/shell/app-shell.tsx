@@ -50,6 +50,12 @@ export interface NavItem {
    * shouldn't take part in client-side navigation.
    */
   external?: boolean;
+  /**
+   * Extra pathname prefixes that also mark this item active — e.g. a global
+   * item that stays lit on related sub-routes (its own tabs, or a nested
+   * portal that's logically "inside" this item).
+   */
+  activePrefixes?: string[];
 }
 
 export interface NavSection {
@@ -88,7 +94,10 @@ function initials(name: string): string {
 
 function isActive(pathname: string, item: NavItem): boolean {
   if (item.exact) return pathname === item.href;
-  return pathname === item.href || pathname.startsWith(item.href + '/');
+  if (pathname === item.href || pathname.startsWith(item.href + '/')) return true;
+  return (item.activePrefixes ?? []).some(
+    (p) => pathname === p || pathname.startsWith(p),
+  );
 }
 
 /**
