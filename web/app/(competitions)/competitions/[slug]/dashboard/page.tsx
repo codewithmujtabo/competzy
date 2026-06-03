@@ -29,6 +29,7 @@ import {
   type ProfileFieldKey,
 } from '@/components/profile/profile-completion-dialog';
 import { CreatureCard, type CreatureRow } from '@/components/profile/creature-card';
+import { RegistrationFormDialog } from '@/components/competition/registration-form-dialog';
 
 interface RegistrationRow {
   id: string;
@@ -763,12 +764,14 @@ function Stepper({
   credential,
   compId,
   slug,
+  onCompleteProfile,
 }: {
   steps: FlowProgressStep[];
   externalUrl: string | null;
   credential: AffiliatedCredential | null;
   compId: string | null;
   slug: string;
+  onCompleteProfile: () => void;
 }) {
   return (
     <ol className="mt-1">
@@ -824,8 +827,8 @@ function Stepper({
                   </Button>
                 )}
                 {showProfile && (
-                  <Button asChild size="sm" className="mt-3">
-                    <Link href="/account/profile">Complete your profile</Link>
+                  <Button size="sm" className="mt-3" onClick={onCompleteProfile}>
+                    Complete registration form
                   </Button>
                 )}
                 {showDocs && (
@@ -978,6 +981,11 @@ export default function CompetitionDashboardPage() {
   // mandatory keys). The dialog renders every entry — pre-filled with the
   // student's current value — so they can confirm/edit before payment.
   const [requiredProfileFields, setRequiredProfileFields] = useState<ProfileFieldKey[]>([]);
+  // Bumped after the in-dashboard registration modal saves, so the
+  // flow-progress effect re-fetches (the profile step's done-state is
+  // computed server-side from the saved fields).
+  const [bump, setBump] = useState(0);
+  const [regFormOpen, setRegFormOpen] = useState(false);
 
   useEffect(() => {
     if (!config) notFound();
@@ -1079,7 +1087,7 @@ export default function CompetitionDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [reg?.id]);
+  }, [reg?.id, bump]);
 
   // Extract a PROFILE_INCOMPLETE response. Returns the missing-fields list
   // (always at least one element when the server returned the gate) or null
@@ -1108,6 +1116,9 @@ export default function CompetitionDashboardPage() {
     try {
       await emcHttp.post('/registrations', { id: crypto.randomUUID(), compId: comp.id });
       await refresh(comp.id);
+      // Open the registration form straight away so the student fills their
+      // details in-place (mockup flow) instead of being sent to a profile page.
+      setRegFormOpen(true);
     } catch (e) {
       const gate = profileGateFrom(e);
       if (gate) {
@@ -1320,6 +1331,7 @@ export default function CompetitionDashboardPage() {
                   credential={access?.credential ?? null}
                   compId={comp?.id ?? null}
                   slug={slug}
+                  onCompleteProfile={() => setRegFormOpen(true)}
                 />
               </>
             ) : (
@@ -1356,6 +1368,15 @@ export default function CompetitionDashboardPage() {
             )}
           </Card>
         )}
+        <RegistrationFormDialog
+          open={regFormOpen}
+          onClose={() => setRegFormOpen(false)}
+          compName={`${config.shortName} 2026`}
+          onSaved={() => {
+            void refresh(comp?.id ?? null);
+            setBump((b) => b + 1);
+          }}
+        />
         <ProfileCompletionDialog
           open={!!profileGate}
           missingFields={profileGate?.missingFields ?? []}
