@@ -790,11 +790,16 @@ function Stepper({
         const last = i === steps.length - 1;
         const hint = s.status === 'current' ? currentHint(s.checkType) : '';
         const showAccess = s.stepKey === 'external_access' && s.status !== 'upcoming';
-        const showExam = s.stepKey === 'exam' && s.status !== 'upcoming';
-        const showCert = s.stepKey === 'results';
+        const showExam =
+          (s.stepKey === 'exam' || s.stepKey.startsWith('round')) && s.status !== 'upcoming';
+        const showCert = s.stepKey === 'results' || s.stepKey === 'announcement';
         const showPay = s.checkType === 'payment' && s.status === 'current';
         const showProfile = s.checkType === 'profile' && s.status === 'current';
         const showDocs = s.checkType === 'documents' && s.status === 'current';
+        // The mockup's "Pendaftaran" stage carries BOTH a fill-the-form action
+        // and a pay action — our flow has one check_type per step, so the
+        // registration stage surfaces the form button explicitly by step key.
+        const showRegForm = s.stepKey === 'registration' && s.status === 'current';
         return (
           <li key={s.id} className="flex gap-4">
             <div className="flex flex-col items-center pt-1">
@@ -840,10 +845,19 @@ function Stepper({
                 {showAccess && <AccessBlock externalUrl={externalUrl} credential={credential} />}
                 {showExam && <ExamBlock compId={compId} slug={slug} />}
                 {showCert && <CertificateBlock compId={compId} />}
-                {showPay && (
-                  <Button asChild size="sm" className="mt-3">
-                    <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
-                  </Button>
+                {(showRegForm || showPay) && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {showRegForm && (
+                      <Button size="sm" onClick={onCompleteProfile}>
+                        Fill registration form
+                      </Button>
+                    )}
+                    {showPay && (
+                      <Button asChild size="sm" variant={showRegForm ? 'outline' : 'default'}>
+                        <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
+                      </Button>
+                    )}
+                  </div>
                 )}
                 {showProfile && (
                   <Button size="sm" className="mt-3" onClick={onCompleteProfile}>

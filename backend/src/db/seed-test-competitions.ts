@@ -86,6 +86,16 @@ interface RoundSpec {
   questions: SeedQuestion[];
 }
 
+interface FlowStageSpec {
+  key: string;
+  title: string;
+  description: string;
+  check: "profile" | "documents" | "payment" | "approval" | "none";
+  startOffset?: number; // days from today → starts_on
+  endOffset?: number; // days from today → ends_on
+  location?: string;
+}
+
 interface CompSpec {
   id: string;
   slug: string;
@@ -103,6 +113,9 @@ interface CompSpec {
   questions?: SeedQuestion[];
   // Multi-round competitions: rounds, each with its own exam + question set.
   rounds?: RoundSpec[];
+  // Custom dated flow (the mockup's contest stages). Seeded instead of the
+  // generic native lifecycle flow when present.
+  flow?: FlowStageSpec[];
   products: { name: string; price: number; description: string }[];
   announcements: { title: string; body: string }[];
   materials: { title: string; body: string; category: string }[];
@@ -133,6 +146,61 @@ const SPECS: CompSpec[] = [
       { name: "Arithmetic", topics: ["Fractions", "Percentages"] },
       { name: "Algebra", topics: ["Linear Equations", "Quadratics"] },
       { name: "Geometry", topics: ["Triangles", "Circles"] },
+    ],
+    flow: [
+      {
+        key: "registration",
+        title: "Registration",
+        check: "payment",
+        description:
+          "Complete your registration form and pay the fee to activate your participant card.",
+        startOffset: -5,
+        endOffset: 55,
+        location: "Online / Test Center",
+      },
+      {
+        key: "simulation",
+        title: "Online Simulation",
+        check: "none",
+        description:
+          "A practice run to learn the exam interface. Your simulation score does not affect any round.",
+        startOffset: 63,
+        location: "Online",
+      },
+      {
+        key: "round1",
+        title: "Round 1 · City / Regency Level",
+        check: "none",
+        description:
+          "The first qualifying round, online. Opens automatically after the simulation.",
+        startOffset: 70,
+        location: "Online",
+      },
+      {
+        key: "round2",
+        title: "Round 2 · Provincial Level",
+        check: "none",
+        description: "Provincial round — open to participants who pass Round 1.",
+        startOffset: 84,
+        location: "Online",
+      },
+      {
+        key: "round3",
+        title: "Round 3 · National Level",
+        check: "none",
+        description:
+          "The offline national final at a Test Center, for participants who pass Round 2.",
+        startOffset: 112,
+        location: "Offline · Test Center",
+      },
+      {
+        key: "announcement",
+        title: "Winners Announcement",
+        check: "none",
+        description: "Champions announced and the closing ceremony.",
+        startOffset: 133,
+        location: "Online · Zoom",
+      },
     ],
     examName: "EMC Round 1",
     questions: [
@@ -481,8 +549,31 @@ async function seedCompetition(
       ymd(-30), ymd(30), ymd(45), spec.description, spec.slug, owner,
     ]
   );
-  // The 6-step native flow.
-  await seedDefaultFlow(client, spec.id, "native");
+  // A custom dated flow (the mockup's contest stages) when the spec defines
+  // one, else the generic native lifecycle flow.
+  if (spec.flow && spec.flow.length > 0) {
+    for (let i = 0; i < spec.flow.length; i++) {
+      const f = spec.flow[i];
+      await client.query(
+        `INSERT INTO competition_flows
+           (comp_id, step_order, step_key, title, description, check_type, starts_on, ends_on, location)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [
+          spec.id,
+          i + 1,
+          f.key,
+          f.title,
+          f.description,
+          f.check,
+          f.startOffset != null ? ymd(f.startOffset) : null,
+          f.endOffset != null ? ymd(f.endOffset) : null,
+          f.location ?? null,
+        ]
+      );
+    }
+  } else {
+    await seedDefaultFlow(client, spec.id, "native");
+  }
 
   // Taxonomy.
   for (const s of spec.subjects) {
