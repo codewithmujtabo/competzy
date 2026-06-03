@@ -1290,9 +1290,30 @@ export default function CompetitionDashboardPage() {
                 <h2 className="mt-2 font-serif text-xl font-medium text-foreground">
                   Your registration progress
                 </h2>
-                <p className="mt-1 mb-5 text-sm text-muted-foreground">
+                <p className="mt-1 mb-4 text-sm text-muted-foreground">
                   Follow the steps below to complete your entry to {config.wordmark}.
                 </p>
+                {(() => {
+                  const done = progress!.steps.filter((s) => s.status === 'done').length;
+                  const total = progress!.steps.length;
+                  const pct = total ? Math.round((done / total) * 100) : 0;
+                  return (
+                    <div className="mb-6">
+                      <div className="mb-1.5 flex items-center justify-between text-xs">
+                        <span className="font-medium text-foreground">Path progress</span>
+                        <span className="text-muted-foreground">
+                          {done} of {total} steps
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
                 <Stepper
                   steps={progress!.steps}
                   externalUrl={access?.externalUrl ?? null}
