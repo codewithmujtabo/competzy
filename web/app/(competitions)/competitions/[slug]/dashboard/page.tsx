@@ -853,27 +853,28 @@ function Stepper({
 const EMC_TRI = { blue: '#1B6EF3', pink: '#E91E8C', orange: '#FF6B00' };
 
 function HeroStats({
-  reg,
+  stats,
   light,
-  accent,
 }: {
-  reg: RegistrationRow | null;
+  stats: { k: string; v: string; color?: string }[];
   light?: boolean;
-  accent?: string;
 }) {
-  const stats = [
-    { k: 'Participant ID', v: reg?.registrationNumber ?? '—' },
-    { k: 'Status', v: reg ? reg.status.replace(/_/g, ' ') : 'Not registered' },
-  ];
   return (
     <div
       className={cn(
-        'mt-5 flex flex-wrap gap-x-10 gap-y-3 border-t pt-4',
+        'mt-6 flex flex-wrap gap-y-4 border-t pt-4',
         light ? 'border-white/20' : 'border-border',
       )}
     >
-      {stats.map((s) => (
-        <div key={s.k}>
+      {stats.map((s, i) => (
+        <div
+          key={s.k}
+          className={cn(
+            'pr-6',
+            i < stats.length - 1 && 'mr-6 border-r',
+            i < stats.length - 1 && (light ? 'border-white/20' : 'border-border'),
+          )}
+        >
           <p
             className={cn(
               'font-mono text-[10px] uppercase tracking-[0.12em]',
@@ -884,7 +885,7 @@ function HeroStats({
           </p>
           <p
             className={cn('mt-1 text-sm font-semibold capitalize', light ? 'text-white' : 'text-foreground')}
-            style={!light && accent ? { color: accent } : undefined}
+            style={!light && s.color ? { color: s.color } : undefined}
           >
             {s.v}
           </p>
@@ -897,30 +898,47 @@ function HeroStats({
 function CompetitionHero({
   config,
   reg,
+  grade,
 }: {
   config: CompetitionPortalConfig;
   reg: RegistrationRow | null;
+  grade: string | null;
 }) {
+  const status = reg ? reg.status.replace(/_/g, ' ') : 'Not registered';
+  const participantId = reg?.registrationNumber ?? '—';
+  const category = grade ? `Grade ${grade}` : '—';
+
   if (config.slug === 'emc') {
     return (
       <Card className="relative gap-0 overflow-hidden p-7 sm:p-9">
         <span
           aria-hidden
-          className="pointer-events-none absolute right-5 top-1/2 hidden -translate-y-1/2 select-none bg-gradient-to-br from-[#1B6EF3] via-[#E91E8C] to-[#FF6B00] bg-clip-text text-5xl font-black tracking-[0.2em] text-transparent opacity-10 sm:block"
+          className="pointer-events-none absolute right-6 top-1/2 hidden -translate-y-1/2 select-none bg-gradient-to-br from-[#1B6EF3] via-[#E91E8C] to-[#FF6B00] bg-clip-text text-5xl font-black tracking-[0.18em] text-transparent opacity-[0.08] lg:block"
         >
-          ∑ ∂ ∫ π
+          ∑ ∂ ∫ π ∞ √
         </span>
-        <p className="font-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: EMC_TRI.orange }}>
-          {config.shortName} 2026
-        </p>
-        <h1 className="relative mt-2 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
-          <span style={{ color: EMC_TRI.blue }}>Mathematics</span>{' '}
-          <span style={{ color: EMC_TRI.pink }}>Competition</span>
+        <span
+          className="inline-block rounded-full px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-white"
+          style={{ background: EMC_TRI.orange }}
+        >
+          {config.shortName} 2026 · Eduversal Mathematics Competition
+        </span>
+        <h1 className="relative mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
+          <span style={{ color: EMC_TRI.blue }}>Eduversal</span>{' '}
+          <span style={{ color: EMC_TRI.pink }}>Mathematics</span>{' '}
+          <span style={{ color: EMC_TRI.orange }}>Competition</span>
         </h1>
         <p className="mt-1 text-sm font-medium italic" style={{ color: EMC_TRI.orange }}>
           {config.tagline}
         </p>
-        <HeroStats reg={reg} accent={EMC_TRI.blue} />
+        <HeroStats
+          stats={[
+            { k: 'Participant ID', v: participantId, color: EMC_TRI.blue },
+            { k: 'Category', v: category, color: EMC_TRI.pink },
+            { k: 'Test Center', v: '—', color: EMC_TRI.orange },
+            { k: 'Status', v: status, color: EMC_TRI.blue },
+          ]}
+        />
       </Card>
     );
   }
@@ -930,14 +948,21 @@ function CompetitionHero({
       className="relative gap-0 overflow-hidden border-0 p-7 text-white sm:p-9"
       style={{ background: `linear-gradient(135deg, ${config.gradient[0]}, ${config.gradient[1]})` }}
     >
-      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/70">
+      <span className="inline-block rounded-full bg-white/15 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-white/90 ring-1 ring-white/25">
         {config.shortName} 2026
-      </p>
-      <h1 className="mt-2 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
+      </span>
+      <h1 className="mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
         {config.wordmark}
       </h1>
       <p className="mt-1 text-sm italic text-white/80">{config.tagline}</p>
-      <HeroStats reg={reg} light />
+      <HeroStats
+        light
+        stats={[
+          { k: 'Participant ID', v: participantId },
+          { k: 'Category', v: category },
+          { k: 'Status', v: status },
+        ]}
+      />
     </Card>
   );
 }
@@ -977,6 +1002,8 @@ export default function CompetitionDashboardPage() {
   // Drives the local-vs-international price the rounds panel shows.
   // Null while we haven't fetched yet OR if they have no country saved.
   const [userCountry, setUserCountry] = useState<string | null>(null);
+  // The caller's stored grade (1–12) — drives the hero's Category stat.
+  const [userGrade, setUserGrade] = useState<string | null>(null);
   // The competition's full `required_profile_fields` list (e.g. Komodo's 9
   // mandatory keys). The dialog renders every entry — pre-filled with the
   // student's current value — so they can confirm/edit before payment.
@@ -998,13 +1025,15 @@ export default function CompetitionDashboardPage() {
   useEffect(() => {
     let cancelled = false;
     emcHttp
-      .get<{ country?: string | null }>('/users/me')
+      .get<{ country?: string | null; grade?: string | null }>('/users/me')
       .then((me) => {
-        if (!cancelled) setUserCountry(typeof me.country === 'string' ? me.country : null);
+        if (cancelled) return;
+        setUserCountry(typeof me.country === 'string' ? me.country : null);
+        setUserGrade(typeof me.grade === 'string' ? me.grade : null);
       })
       .catch(() => { /* silent — see comment above */ });
     return () => { cancelled = true; };
-  }, []);
+  }, [bump]);
 
   const refresh = async (compId?: string | null) => {
     try {
@@ -1223,7 +1252,7 @@ export default function CompetitionDashboardPage() {
               All competitions
             </Link>
           )}
-          <CompetitionHero config={config} reg={reg ?? null} />
+          <CompetitionHero config={config} reg={reg ?? null} grade={userGrade} />
         </header>
 
         {err && (
