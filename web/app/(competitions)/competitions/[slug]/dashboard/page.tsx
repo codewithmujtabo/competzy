@@ -737,6 +737,26 @@ function RoundsPanel({
   );
 }
 
+// Status badge per timeline stage (mockup parity).
+function StepBadge({ status }: { status: StepStatus }) {
+  const map = {
+    done: { label: 'Done', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' },
+    current: { label: 'Action needed', cls: 'bg-primary/10 text-primary' },
+    upcoming: { label: 'Upcoming', cls: 'bg-muted text-muted-foreground' },
+  } as const;
+  const m = map[status];
+  return (
+    <span
+      className={cn(
+        'shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+        m.cls,
+      )}
+    >
+      {m.label}
+    </span>
+  );
+}
+
 function Stepper({
   steps,
   externalUrl,
@@ -763,51 +783,57 @@ function Stepper({
         const showDocs = s.checkType === 'documents' && s.status === 'current';
         return (
           <li key={s.id} className="flex gap-4">
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center pt-1">
               <StepNode status={s.status} order={s.stepOrder} />
               {!last && <span className="w-px flex-1 bg-border" />}
             </div>
-            <div className={last ? 'flex-1' : 'flex-1 pb-6'}>
-              <p
-                className={
-                  'text-sm ' +
-                  (s.status === 'upcoming'
-                    ? 'text-muted-foreground'
-                    : s.status === 'current'
-                      ? 'font-semibold text-foreground'
-                      : 'font-medium text-foreground')
-                }
+            <div className={cn('flex-1', !last && 'pb-5')}>
+              <div
+                className={cn(
+                  s.status === 'current' &&
+                    'rounded-xl border border-primary/50 bg-primary/[0.03] p-4 shadow-sm',
+                )}
               >
-                {s.title}
-              </p>
-              {s.status !== 'upcoming' && s.description && (
-                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                  {s.description}
-                </p>
-              )}
-              {hint && (
-                <p className="mt-2 rounded-md bg-primary/5 px-3 py-2 text-xs leading-relaxed text-primary">
-                  {hint}
-                </p>
-              )}
-              {showAccess && <AccessBlock externalUrl={externalUrl} credential={credential} />}
-              {showExam && <ExamBlock compId={compId} slug={slug} />}
-              {showCert && <CertificateBlock compId={compId} />}
-              {showPay && (
-                <Button asChild size="sm" className="mt-2">
-                  <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
-                </Button>
-              )}
-              {showProfile && (
-                <Button asChild size="sm" className="mt-2">
-                  <Link href="/account/profile">Complete your profile</Link>
-                </Button>
-              )}
-              {showDocs && (
-                <Button asChild size="sm" className="mt-2">
-                  <Link href="/account/documents">Upload documents</Link>
-                </Button>
-              )}
+                <div className="flex items-start justify-between gap-3">
+                  <p
+                    className={cn(
+                      'text-sm',
+                      s.status === 'upcoming' ? 'text-muted-foreground' : 'font-semibold text-foreground',
+                    )}
+                  >
+                    {s.title}
+                  </p>
+                  <StepBadge status={s.status} />
+                </div>
+                {s.status !== 'upcoming' && s.description && (
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    {s.description}
+                  </p>
+                )}
+                {hint && (
+                  <p className="mt-2 rounded-md bg-primary/5 px-3 py-2 text-xs leading-relaxed text-primary">
+                    {hint}
+                  </p>
+                )}
+                {showAccess && <AccessBlock externalUrl={externalUrl} credential={credential} />}
+                {showExam && <ExamBlock compId={compId} slug={slug} />}
+                {showCert && <CertificateBlock compId={compId} />}
+                {showPay && (
+                  <Button asChild size="sm" className="mt-3">
+                    <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
+                  </Button>
+                )}
+                {showProfile && (
+                  <Button asChild size="sm" className="mt-3">
+                    <Link href="/account/profile">Complete your profile</Link>
+                  </Button>
+                )}
+                {showDocs && (
+                  <Button asChild size="sm" className="mt-3">
+                    <Link href="/account/documents">Upload documents</Link>
+                  </Button>
+                )}
+              </div>
             </div>
           </li>
         );
