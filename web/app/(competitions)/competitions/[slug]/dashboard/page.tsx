@@ -1000,6 +1000,52 @@ function CompetitionHero({
   );
 }
 
+// Komodo / multi-round side panel — the rounds equivalent of the flow view's
+// "Competition path": how many rounds the student has joined + each round's
+// status, from the per-round registrations.
+function RoundsProgressCard({ rounds, regs }: { rounds: Round[]; regs: RegistrationRow[] }) {
+  const byRound = new Map(
+    regs.filter((r) => r.roundId).map((r) => [r.roundId as string, r]),
+  );
+  const joined = rounds.filter((r) => byRound.has(r.id)).length;
+  return (
+    <Card className="gap-0 p-5">
+      <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        Competition path
+      </p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {joined} of {rounds.length} rounds joined
+      </p>
+      <ul className="mt-3 space-y-2.5">
+        {rounds.map((r) => {
+          const reg = byRound.get(r.id);
+          const paid = reg?.status === 'paid';
+          return (
+            <li key={r.id} className="flex items-center gap-2.5 text-sm">
+              <span
+                className={cn(
+                  'flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',
+                  paid
+                    ? 'bg-primary text-primary-foreground'
+                    : reg
+                      ? 'border-2 border-primary text-primary'
+                      : 'bg-muted text-muted-foreground',
+                )}
+              >
+                {paid ? <Check className="size-3" /> : ''}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-foreground">{r.roundName}</span>
+              <span className="shrink-0 text-xs capitalize text-muted-foreground">
+                {reg ? reg.status.replace(/_/g, ' ') : 'Not joined'}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
+}
+
 function Countdown({ num, lbl }: { num: number | string; lbl: string }) {
   return (
     <div className="rounded-lg bg-white/10 p-2 text-center">
@@ -1461,33 +1507,38 @@ export default function CompetitionDashboardPage() {
             <p className="text-sm text-muted-foreground">Loading your registration…</p>
           </Card>
         ) : rounds.length > 0 ? (
-          <>
-            {creatureRounds && creatureRounds.length > 0 && (
-              <CreatureCard rounds={creatureRounds} />
-            )}
-            <RoundsPanel
-              rounds={rounds}
-              regs={regs}
-              slug={slug}
-              wordmark={config.wordmark}
-              registering={registering}
-              onRegister={enrollRound}
-              userCountry={userCountry}
-            />
-            <Card className="gap-0 p-7">
-              <h2 className="font-serif text-xl font-medium text-foreground">Your exams</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Exams unlock once you’ve registered and paid for their round.
-              </p>
-              <ExamBlock compId={comp?.id ?? null} slug={slug} />
-            </Card>
-            <Card className="gap-0 p-7">
-              <h2 className="font-serif text-xl font-medium text-foreground">
-                Your certificates
-              </h2>
-              <CertificateBlock compId={comp?.id ?? null} />
-            </Card>
-          </>
+          <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+            <div className="space-y-6">
+              <RoundsPanel
+                rounds={rounds}
+                regs={regs}
+                slug={slug}
+                wordmark={config.wordmark}
+                registering={registering}
+                onRegister={enrollRound}
+                userCountry={userCountry}
+              />
+              <Card className="gap-0 p-7">
+                <h2 className="font-serif text-xl font-medium text-foreground">Your exams</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Exams unlock once you’ve registered and paid for their round.
+                </p>
+                <ExamBlock compId={comp?.id ?? null} slug={slug} />
+              </Card>
+              <Card className="gap-0 p-7">
+                <h2 className="font-serif text-xl font-medium text-foreground">
+                  Your certificates
+                </h2>
+                <CertificateBlock compId={comp?.id ?? null} />
+              </Card>
+            </div>
+            <div className="space-y-4 lg:sticky lg:top-20">
+              {creatureRounds && creatureRounds.length > 0 && (
+                <CreatureCard rounds={creatureRounds} />
+              )}
+              <RoundsProgressCard rounds={rounds} regs={regs} />
+            </div>
+          </div>
         ) : reg ? (
           hasFlow && progress ? (
             <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
