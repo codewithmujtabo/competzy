@@ -2,20 +2,12 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { usePathname, useParams, useRouter } from 'next/navigation';
-import {
-  Loader2,
-  LayoutGrid,
-  Megaphone,
-  BookOpen,
-  ShoppingBag,
-  Award,
-  MessageSquare,
-  Trophy,
-  UserCircle,
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
-import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
-import { AppShell, type NavSection } from '@/components/shell/app-shell';
+import { competitionPaths } from '@/lib/competitions/registry';
+import { AppShell } from '@/components/shell/app-shell';
+import { STUDENT_NAV, STUDENT_BRAND } from '@/lib/nav/student-nav';
+import { CompetitionTabs } from '@/components/competition/competition-tabs';
 
 // Route sections that render WITHOUT the student shell: `register` is
 // unauthenticated (its own split-screen auth), `admin` is the operator view
@@ -42,7 +34,6 @@ export default function CompetitionSlugLayout({ children }: { children: ReactNod
 function ShelledCompetition({ slug, children }: { slug: string; children: ReactNode }) {
   const { user, loading, logout } = useCompetitionAuth();
   const router = useRouter();
-  const config = getCompetitionConfig(slug);
   const paths = competitionPaths(slug);
 
   useEffect(() => {
@@ -59,29 +50,16 @@ function ShelledCompetition({ slug, children }: { slug: string; children: ReactN
     );
   }
 
-  const nav: NavSection[] = [
-    {
-      items: [
-        { label: 'Dashboard', href: paths.dashboard, icon: LayoutGrid },
-        { label: 'Announcements', href: paths.announcements, icon: Megaphone },
-        { label: 'Materials', href: paths.materials, icon: BookOpen },
-        { label: 'Store', href: paths.store, icon: ShoppingBag },
-        { label: 'Certificates', href: paths.certificate, icon: Award },
-        { label: 'Feedback', href: paths.feedback, icon: MessageSquare },
-      ],
-    },
-    {
-      label: 'Account',
-      // The global My Account area — account-wide pages (profile, documents, …)
-      // that aren't tied to this competition.
-      items: [{ label: 'My Account', href: '/account/profile', icon: UserCircle }],
-    },
-  ];
-
+  // The sidebar is the SHARED global 5-item student nav — the same menu as the
+  // catalog + account area — so it does NOT change when you enter a competition
+  // (mentor ask #2). The competition's own features (Announcements, Materials,
+  // Store, Certificates, Feedback) live in the in-page CompetitionTabs bar
+  // under the header, scoped to this competition. Its brand stays Competzy; the
+  // competition's identity shows in the page hero instead.
   return (
     <AppShell
-      brand={{ name: config.shortName, tagline: config.wordmark, icon: Trophy }}
-      nav={nav}
+      brand={STUDENT_BRAND}
+      nav={STUDENT_NAV}
       notificationsHref="/account/notifications"
       profileHref="/account/profile"
       user={{
@@ -94,6 +72,7 @@ function ShelledCompetition({ slug, children }: { slug: string; children: ReactN
         router.replace(paths.login);
       }}
     >
+      <CompetitionTabs slug={slug} />
       {children}
     </AppShell>
   );
