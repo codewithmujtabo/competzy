@@ -32,6 +32,9 @@ interface FlowStep {
   title: string;
   description: string | null;
   checkType: CheckType;
+  startsOn: string | null;
+  endsOn: string | null;
+  location: string | null;
 }
 
 function mapStep(r: any): FlowStep {
@@ -42,6 +45,9 @@ function mapStep(r: any): FlowStep {
     title: r.title,
     description: r.description ?? null,
     checkType: r.check_type,
+    startsOn: r.starts_on ?? null,
+    endsOn: r.ends_on ?? null,
+    location: r.location ?? null,
   };
 }
 
@@ -51,7 +57,8 @@ function isValidCheckType(v: unknown): v is CheckType {
 
 async function loadFlow(compId: string): Promise<FlowStep[]> {
   const result = await pool.query(
-    `SELECT id, step_order, step_key, title, description, check_type
+    `SELECT id, step_order, step_key, title, description, check_type,
+            starts_on, ends_on, location
        FROM competition_flows
       WHERE ${compFilter()} AND ${liveFilter()}
       ORDER BY step_order ASC`,

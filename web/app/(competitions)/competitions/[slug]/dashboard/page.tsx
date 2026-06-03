@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { ArrowLeft, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, Loader2 } from 'lucide-react';
 import { emcHttp, HttpError } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
@@ -56,6 +56,17 @@ interface FlowProgressStep {
   description: string | null;
   checkType: CheckType;
   status: StepStatus;
+  startsOn: string | null;
+  endsOn: string | null;
+  location: string | null;
+}
+
+// "25 May – 30 Sep 2026" / "10 Oct 2026" / "" — the schedule label for a stage.
+function stageDateLabel(startsOn: string | null, endsOn: string | null): string {
+  const f = (d: string) =>
+    new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (startsOn && endsOn) return `${f(startsOn)} – ${f(endsOn)}`;
+  return startsOn ? f(startsOn) : endsOn ? f(endsOn) : '';
 }
 
 interface FlowProgress {
@@ -808,6 +819,14 @@ function Stepper({
                   </p>
                   <StepBadge status={s.status} />
                 </div>
+                {(s.startsOn || s.endsOn || s.location) && (
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <CalendarDays className="size-3.5 shrink-0" />
+                    <span>
+                      {[stageDateLabel(s.startsOn, s.endsOn), s.location].filter(Boolean).join(' · ')}
+                    </span>
+                  </p>
+                )}
                 {s.status !== 'upcoming' && s.description && (
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                     {s.description}
