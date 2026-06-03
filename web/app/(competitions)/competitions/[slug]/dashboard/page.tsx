@@ -1000,6 +1000,149 @@ function CompetitionHero({
   );
 }
 
+function Countdown({ num, lbl }: { num: number | string; lbl: string }) {
+  return (
+    <div className="rounded-lg bg-white/10 p-2 text-center">
+      <p className="font-serif text-lg font-bold leading-none">{num}</p>
+      <p className="mt-1 text-[9px] uppercase tracking-wide text-white/60">{lbl}</p>
+    </div>
+  );
+}
+
+// The mockup's right column: Next action (+ countdown), Competition path, and
+// Grade levels. Reuses the same flow-progress data the timeline renders.
+function CompetitionSidePanel({
+  steps,
+  grade,
+  slug,
+  onCompleteProfile,
+}: {
+  steps: FlowProgressStep[];
+  grade: string | null;
+  slug: string;
+  onCompleteProfile: () => void;
+}) {
+  const current = steps.find((s) => s.status === 'current');
+  const done = steps.filter((s) => s.status === 'done').length;
+  const total = steps.length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  const target = current?.startsOn || current?.endsOn || null;
+  const days = target
+    ? Math.max(0, Math.ceil((new Date(target).getTime() - Date.now()) / 86400000))
+    : null;
+
+  const cta = (() => {
+    if (!current) return null;
+    if (current.stepKey === 'registration' || current.checkType === 'profile') {
+      return (
+        <Button className="w-full" onClick={onCompleteProfile}>
+          Fill registration form
+        </Button>
+      );
+    }
+    if (current.checkType === 'payment') {
+      return (
+        <Button asChild className="w-full">
+          <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
+        </Button>
+      );
+    }
+    if (current.checkType === 'documents') {
+      return (
+        <Button asChild className="w-full">
+          <Link href="/account/documents">Upload documents</Link>
+        </Button>
+      );
+    }
+    return null;
+  })();
+
+  const g = grade ? parseInt(grade, 10) : NaN;
+  const bracket = Number.isNaN(g) ? null : g <= 6 ? 'SD' : g <= 9 ? 'SMP' : 'SMA';
+  const levels = [
+    { key: 'SD', label: 'SD', range: 'Grades 4–6' },
+    { key: 'SMP', label: 'SMP / MTs', range: 'Grades 7–9' },
+    { key: 'SMA', label: 'SMA / MA / SMK', range: 'Grades 10–12' },
+  ];
+
+  return (
+    <div className="space-y-4 lg:sticky lg:top-20">
+      {current && (
+        <Card className="gap-0 overflow-hidden border-0 bg-gradient-to-br from-[#1F0454] via-[#3D087B] to-[#5627FF] p-6 text-white">
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
+            ⚡ Next action
+          </p>
+          <h3 className="mt-2 font-serif text-lg font-semibold leading-snug">{current.title}</h3>
+          {current.description && <p className="mt-1 text-sm text-white/80">{current.description}</p>}
+          {cta && <div className="mt-4">{cta}</div>}
+          {days != null && (
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <Countdown num={days} lbl="Days" />
+              <Countdown num={Math.floor(days / 7)} lbl="Weeks" />
+              <Countdown num={`H-${days}`} lbl="To event" />
+            </div>
+          )}
+        </Card>
+      )}
+
+      <Card className="gap-0 p-5">
+        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Competition path
+        </p>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+        </div>
+        <ul className="mt-4 space-y-2.5">
+          {steps.map((s) => (
+            <li key={s.id} className="flex items-center gap-2.5 text-sm">
+              <span
+                className={cn(
+                  'flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',
+                  s.status === 'done'
+                    ? 'bg-primary text-primary-foreground'
+                    : s.status === 'current'
+                      ? 'border-2 border-primary text-primary'
+                      : 'bg-muted text-muted-foreground',
+                )}
+              >
+                {s.status === 'done' ? <Check className="size-3" /> : s.stepOrder}
+              </span>
+              <span className={cn('truncate', s.status === 'upcoming' ? 'text-muted-foreground' : 'text-foreground')}>
+                {s.title}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      {bracket && (
+        <Card className="gap-0 p-5">
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Grade levels
+          </p>
+          <ul className="mt-3 space-y-2">
+            {levels.map((l) => {
+              const active = l.key === bracket;
+              return (
+                <li
+                  key={l.key}
+                  className={cn(
+                    'flex items-center justify-between rounded-lg px-3 py-2 text-sm',
+                    active ? 'bg-primary/10 font-semibold text-primary' : 'text-muted-foreground',
+                  )}
+                >
+                  <span>{l.label}</span>
+                  <span className="text-xs">{l.range}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 export default function CompetitionDashboardPage() {
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
@@ -1274,7 +1417,7 @@ export default function CompetitionDashboardPage() {
     !!userCountry && userCountry.toUpperCase() !== 'ID';
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-10">
+    <div className="mx-auto max-w-5xl space-y-6 p-6 lg:p-10">
         <header className="space-y-3">
           {!isInternationalUser && (
             <Link
@@ -1346,72 +1489,66 @@ export default function CompetitionDashboardPage() {
             </Card>
           </>
         ) : reg ? (
-          <Card className="gap-0 p-7">
-            <div className="flex items-center justify-between">
-              <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-primary">
-                Status · {reg.status.replace(/_/g, ' ')}
-              </p>
-              {reg.registrationNumber && (
-                <p className="font-mono text-xs text-muted-foreground">
-                  #&nbsp;{reg.registrationNumber}
-                </p>
-              )}
-            </div>
-
-            {hasFlow ? (
-              <>
+          hasFlow && progress ? (
+            <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+              <Card className="gap-0 p-7">
+                <div className="flex items-center justify-between">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-primary">
+                    Status · {reg.status.replace(/_/g, ' ')}
+                  </p>
+                  {reg.registrationNumber && (
+                    <p className="font-mono text-xs text-muted-foreground">
+                      #&nbsp;{reg.registrationNumber}
+                    </p>
+                  )}
+                </div>
                 <h2 className="mt-2 font-serif text-xl font-medium text-foreground">
-                  Your registration progress
+                  Activity timeline
                 </h2>
                 <p className="mt-1 mb-4 text-sm text-muted-foreground">
-                  Follow the steps below to complete your entry to {config.wordmark}.
+                  Your journey through {config.wordmark}.
                 </p>
-                {(() => {
-                  const done = progress!.steps.filter((s) => s.status === 'done').length;
-                  const total = progress!.steps.length;
-                  const pct = total ? Math.round((done / total) * 100) : 0;
-                  return (
-                    <div className="mb-6">
-                      <div className="mb-1.5 flex items-center justify-between text-xs">
-                        <span className="font-medium text-foreground">Path progress</span>
-                        <span className="text-muted-foreground">
-                          {done} of {total} steps
-                        </span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })()}
                 <Stepper
-                  steps={progress!.steps}
+                  steps={progress.steps}
                   externalUrl={access?.externalUrl ?? null}
                   credential={access?.credential ?? null}
                   compId={comp?.id ?? null}
                   slug={slug}
                   onCompleteProfile={() => setRegFormOpen(true)}
                 />
-              </>
-            ) : (
-              <>
-                <h2 className="mt-2 font-serif text-xl font-medium text-foreground">
-                  {fallbackCopy?.title ?? 'Registration recorded.'}
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {fallbackCopy?.body ?? `Status: ${reg.status}`}
+              </Card>
+              <CompetitionSidePanel
+                steps={progress.steps}
+                grade={userGrade}
+                slug={slug}
+                onCompleteProfile={() => setRegFormOpen(true)}
+              />
+            </div>
+          ) : (
+            <Card className="gap-0 p-7">
+              <div className="flex items-center justify-between">
+                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-primary">
+                  Status · {reg.status.replace(/_/g, ' ')}
                 </p>
-                {reg.status === 'pending_payment' && (
-                  <Button asChild className="mt-4 w-fit">
-                    <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
-                  </Button>
+                {reg.registrationNumber && (
+                  <p className="font-mono text-xs text-muted-foreground">
+                    #&nbsp;{reg.registrationNumber}
+                  </p>
                 )}
-              </>
-            )}
-          </Card>
+              </div>
+              <h2 className="mt-2 font-serif text-xl font-medium text-foreground">
+                {fallbackCopy?.title ?? 'Registration recorded.'}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {fallbackCopy?.body ?? `Status: ${reg.status}`}
+              </p>
+              {reg.status === 'pending_payment' && (
+                <Button asChild className="mt-4 w-fit">
+                  <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
+                </Button>
+              )}
+            </Card>
+          )
         ) : (
           <Card className="gap-0 p-8 text-center">
             <h2 className="font-serif text-xl font-medium text-foreground">
