@@ -424,6 +424,29 @@ Long session covering local dev setup, two production firefights, a comprehensiv
 
 **GitHub Linguist fix:** repo's Languages bar was showing HTML 56% (because `graphify-out/graph.html` is 3.3 MB of auto-generated knowledge-graph viewer). Added `.gitattributes` with `graphify-out/** linguist-generated=true` so the bar now reflects actual source code (TypeScript ~95%).
 
+### SPRINT 37 — My-Account redesign + EMC/Komodo dashboard mockup match (June 3, 2026 — Session 18) 🚧 IN PROGRESS
+
+Mentor-driven redesign from a mockup (`competzy_v3.html`). Goal: **one shared student UI for all competitions, flow differs per competition.** Stacked PRs to `eduversal-team/competzy:main`, merge bottom-up: **#53 → #54 → #55**.
+
+**Locked decisions (from the mentor + mockup):**
+- **5-item sidebar** — All Competitions · Profile · My Competitions · My Achievements · Announcements. Documents/Records/Family → tabs under Profile; Notifications → top-bar bell; per-competition features → in-page tabs.
+- **The Competzy sidebar does NOT change when you enter a competition** (was swapping to a per-comp menu). A competition's identity lives in the page **hero**, not the chrome.
+- **Registration is a MODAL** on the dashboard (mockup's "Formulir Pendaftaran"), NOT a nav to `/account/profile` (the old behavior the mentor flagged as bad).
+- **EMC hero keeps the real competition name "Eduversal Mathematics Competition"** (tricolor) per the mockup — this is the *competition's* name, distinct from the *platform* brand (Competzy). ⚠️ Nuances memory `feedback_brand_competzy_only` (platform stays Competzy; partner competition names are their real names). Confirm with the user if in doubt.
+- **Web first**; mobile parity is a later wave. The mockup's "preview participant stage" switcher is omitted (real registration status drives the view).
+
+| PR | Phase | What | Status |
+|----|-------|------|--------|
+| #53 | 1 | Shared 5-item `STUDENT_NAV` (`web/lib/nav/student-nav.ts`) on catalog + account; new `/account/achievements` (all certs via `/certificates/mine`) + `/account/announcements` (new `GET /api/announcements/mine` aggregator); Profile hub tabs (`web/components/account/account-tabs.tsx`); `AppShell` `NavItem.activePrefixes`. | ✅ pushed |
+| #54 | 2 | `/competitions/[slug]/*` renders the same `STUDENT_NAV` (menu persists inside a competition); per-comp features → in-page `CompetitionTabs` (`web/components/competition/competition-tabs.tsx`). | ✅ pushed |
+| #55 | 3 | Dashboard mockup match: **3a** branded hero, **3b** timeline status badges + active-stage highlight, **3c** path-progress bar, **3d** registration MODAL (`web/components/competition/registration-form-dialog.tsx`) replacing the profile-page nav, **3e** full hero (Eduversal tricolor + pill eyebrow + 4-stat row w/ grade). | ✅ pushed |
+
+**Remaining to fully match the mockup (continue on #55 / new stacked PRs):**
+- **Dated timeline** — the mockup's EMC timeline has 6 dated stages (Pendaftaran/Simulasi/R1/R2/R3/Pengumuman). EMC is currently **single-round** in seed data (flow steps have no dates). To match: model EMC's stages with dates — either give EMC `competition_rounds` (which carry dates) or add dates to `competition_flows`. **Data/seed change needed.**
+- **Two-column side panel** — the mockup's right column: **Aksi Berikutnya** (next action + countdown), **Jalur Kompetisi** (path), **Jenjang Kelas** (grade brackets). Needs a layout widen + new components.
+- **Komodo parity** — apply the same hero + timeline + side-panel treatment to its `RoundsPanel`.
+- **Every button working** + browser verification of all of the above (mentor reviews via test accounts).
+
 ### SPRINT 36 — Multi-currency round pricing + unified competition view + admin registrations overhaul (May 21, 2026 — Session 17) ✅ COMPLETE
 
 QA-driven session — three independent bug-fix / UX-tightening tracks shipped on one branch.
