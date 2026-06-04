@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { CheckCircle2, Loader2, Search, Upload } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
+import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 import { INTEREST_CATEGORIES } from '@/lib/constants/interests';
 import type { StudentProfile } from '@/types/account';
@@ -125,6 +126,7 @@ export default function AccountProfilePage() {
   // for non-student accounts. Operators visiting Account Settings from the
   // top-bar dropdown only see Photo + Personal Details.
   const isStudent = user?.role === 'student';
+  const t = useT();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -214,7 +216,7 @@ export default function AccountProfilePage() {
       setReferralOption(ref.option);
       setReferralCustom(ref.custom);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load your profile');
+      toast.error(e instanceof Error ? e.message : t('apf.toastLoadFailed'));
     } finally {
       setLoading(false);
     }
@@ -283,9 +285,9 @@ export default function AccountProfilePage() {
       fd.append('photo', file);
       const r = await emcHttp.postFormData<{ photoUrl: string }>('/users/photo', fd);
       setPhotoUrl(r.photoUrl);
-      toast.success('Profile photo updated');
+      toast.success(t('apf.toastPhotoUpdated'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to upload photo');
+      toast.error(err instanceof Error ? err.message : t('apf.toastPhotoFailed'));
     } finally {
       setUploadingPhoto(false);
     }
@@ -304,9 +306,9 @@ export default function AccountProfilePage() {
         fd,
       );
       setStudentCardUrl(r.studentCardUrl);
-      toast.success('Student card uploaded');
+      toast.success(t('apf.toastCardUploaded'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to upload student card');
+      toast.error(err instanceof Error ? err.message : t('apf.toastCardFailed'));
     } finally {
       setUploadingCard(false);
     }
@@ -320,7 +322,7 @@ export default function AccountProfilePage() {
 
   async function handleSave() {
     if (!form.fullName.trim()) {
-      toast.error('Full name is required');
+      toast.error(t('apf.toastFullNameRequired'));
       return;
     }
     setSaving(true);
@@ -358,10 +360,10 @@ export default function AccountProfilePage() {
         parentWhatsapp: form.parentWhatsapp,
         parentPhone: form.parentPhone,
       });
-      toast.success('Profile saved');
+      toast.success(t('apf.toastSaved'));
       await load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save profile');
+      toast.error(err instanceof Error ? err.message : t('apf.toastSaveFailed'));
     } finally {
       setSaving(false);
     }
@@ -381,14 +383,14 @@ export default function AccountProfilePage() {
     <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-8">
       <AccountTabs />
       <PageHeader
-        eyebrow="My Account"
-        title="Profile"
-        subtitle="Your details are shared across the Competzy app and web — edit them here or in the app."
+        eyebrow={t('apf.eyebrow')}
+        title={t('apf.title')}
+        subtitle={t('apf.subtitle')}
       />
 
       {/* Photo */}
       <Card className="gap-4 p-6">
-        <h2 className="font-serif text-lg font-medium text-foreground">Profile photo</h2>
+        <h2 className="font-serif text-lg font-medium text-foreground">{t('apf.photo')}</h2>
         <div className="flex items-center gap-4">
           <Avatar className="size-20">
             {photoUrl && <AvatarImage src={photoUrl} alt="Profile photo" />}
@@ -415,38 +417,38 @@ export default function AccountProfilePage() {
               ) : (
                 <Upload className="size-3.5" />
               )}
-              {photoUrl ? 'Change photo' : 'Upload photo'}
+              {photoUrl ? t('apf.changePhoto') : t('apf.uploadPhoto')}
             </Button>
-            <p className="mt-1.5 text-xs text-muted-foreground">JPG or PNG, up to 5 MB.</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">{t('apf.photoHint')}</p>
           </div>
         </div>
       </Card>
 
       {/* Personal Details */}
       <Card className="gap-4 p-6">
-        <h2 className="font-serif text-lg font-medium text-foreground">Personal details</h2>
+        <h2 className="font-serif text-lg font-medium text-foreground">{t('apf.personalDetails')}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
-            label="Full name"
+            label={t('pf.fullName')}
             value={form.fullName}
             onChange={(e) => set('fullName', e.target.value)}
-            placeholder="Your full name"
+            placeholder={t('regform.fullNamePlaceholder')}
           />
           <Field
-            label="Date of birth"
+            label={t('pf.dateOfBirth')}
             type="date"
             value={form.dateOfBirth}
             onChange={(e) => set('dateOfBirth', e.target.value)}
           />
           <Field
-            label="WhatsApp / Phone"
+            label={t('pf.phone')}
             value={form.phone}
             onChange={(e) => set('phone', e.target.value)}
             placeholder="08xxx or +628xxx"
           />
-          <Field label="Email" value={email} disabled />
+          <Field label={t('pf.email')} value={email} disabled />
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Location</Label>
+            <Label>{t('apf.location')}</Label>
             <LocationCascade
               idCountry="profile-country"
               idProvince="profile-province"
@@ -465,7 +467,7 @@ export default function AccountProfilePage() {
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label>Interests</Label>
+            <Label>{t('apf.interests')}</Label>
             <div className="flex flex-wrap gap-2">
               {INTEREST_CATEGORIES.map((cat) => {
                 const on = selectedInterests.includes(cat);
@@ -485,14 +487,14 @@ export default function AccountProfilePage() {
             </div>
           </div>
           <Field
-            label="Other interests"
+            label={t('apf.otherInterests')}
             wide
             value={otherInterest}
             onChange={(e) => setOtherInterest(e.target.value)}
-            placeholder="e.g. Robotics, Gaming"
+            placeholder={t('apf.otherInterestsPlaceholder')}
           />
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>How did you hear about us?</Label>
+            <Label>{t('apf.hearAbout')}</Label>
             <Select
               value={referralOption}
               onValueChange={(v) => {
@@ -501,7 +503,7 @@ export default function AccountProfilePage() {
               }}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Pick an option" />
+                <SelectValue placeholder={t('apf.pickOption')} />
               </SelectTrigger>
               <SelectContent>
                 {REFERRAL_OPTIONS.map((o) => (
@@ -515,7 +517,7 @@ export default function AccountProfilePage() {
               <Input
                 value={referralCustom}
                 onChange={(e) => setReferralCustom(e.target.value)}
-                placeholder="Tell us how — e.g. WhatsApp group, school newsletter"
+                placeholder={t('apf.hearAboutCustom')}
               />
             )}
           </div>
@@ -525,7 +527,7 @@ export default function AccountProfilePage() {
       {/* Student Card — students only */}
       {isStudent && (
       <Card className="gap-4 p-6">
-        <h2 className="font-serif text-lg font-medium text-foreground">Student card</h2>
+        <h2 className="font-serif text-lg font-medium text-foreground">{t('apf.studentCard')}</h2>
         {studentCardUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -553,7 +555,7 @@ export default function AccountProfilePage() {
             ) : (
               <Upload className="size-3.5" />
             )}
-            {studentCardUrl ? 'Change student card' : 'Upload student card'}
+            {studentCardUrl ? t('apf.changeCard') : t('apf.uploadCard')}
           </Button>
         </div>
       </Card>
@@ -561,39 +563,39 @@ export default function AccountProfilePage() {
 
       {/* School Details — students only */}
       {isStudent && (
-      <Section title="School details">
+      <Section title={t('apf.schoolDetails')}>
         <Field
-          label="School name"
+          label={t('pf.schoolName')}
           value={form.schoolName}
           onChange={(e) => set('schoolName', e.target.value)}
-          placeholder="Your school"
+          placeholder={t('apf.schoolNamePlaceholder')}
         />
         <div className="space-y-1.5">
-          <Label>Grade</Label>
+          <Label>{t('pf.grade')}</Label>
           <Select
             value={form.grade || ''}
             onValueChange={(v) => set('grade', v)}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Pick a grade" />
+              <SelectValue placeholder={t('profileDlg.pickGrade')} />
             </SelectTrigger>
             <SelectContent>
               {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
                 <SelectItem key={g} value={String(g)}>
-                  Grade {g}
+                  {t('dashboard.heroGrade', { n: g })}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <Field
-          label="NISN"
+          label={t('pf.nisn')}
           value={form.nisn}
           onChange={(e) => set('nisn', e.target.value)}
           placeholder="National Student Number"
         />
         <div className="space-y-1.5">
-          <Label>NPSN</Label>
+          <Label>{t('pf.npsn')}</Label>
           <Input
             value={form.npsn}
             onChange={(e) => set('npsn', e.target.value.replace(/\D/g, ''))}
@@ -603,35 +605,33 @@ export default function AccountProfilePage() {
           {npsnLookup.status === 'loading' && (
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Search className="size-3 animate-pulse" />
-              Looking up school…
+              {t('apf.npsnLooking')}
             </p>
           )}
           {npsnLookup.status === 'found' && (
             <p className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="size-3" />
-              Found: <span className="font-medium">{npsnLookup.name}</span>
+              {t('apf.npsnFound')} <span className="font-medium">{npsnLookup.name}</span>
             </p>
           )}
           {npsnLookup.status === 'not-found' && (
-            <p className="text-xs text-amber-700 dark:text-amber-400">
-              No school matches that NPSN — type the school name manually.
-            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400">{t('apf.npsnNotFound')}</p>
           )}
         </div>
         <Field
-          label="School address"
+          label={t('pf.schoolAddress')}
           wide
           value={form.schoolAddress}
           onChange={(e) => set('schoolAddress', e.target.value)}
         />
         <Field
-          label="School email"
+          label={t('pf.schoolEmail')}
           type="email"
           value={form.schoolEmail}
           onChange={(e) => set('schoolEmail', e.target.value)}
         />
         <Field
-          label="School Phone / WhatsApp"
+          label={t('apf.schoolPhone')}
           value={form.schoolWhatsapp}
           onChange={(e) => setPair('schoolWhatsapp', 'schoolPhone', e.target.value)}
           placeholder="08xxx or +628xxx"
@@ -641,20 +641,20 @@ export default function AccountProfilePage() {
 
       {/* Supervisor / Teacher — students only */}
       {isStudent && (
-      <Section title="Supervisor / Teacher">
+      <Section title={t('apf.supervisorSection')}>
         <Field
-          label="Name"
+          label={t('apf.name')}
           value={form.supervisorName}
           onChange={(e) => set('supervisorName', e.target.value)}
         />
         <Field
-          label="Email"
+          label={t('pf.email')}
           type="email"
           value={form.supervisorEmail}
           onChange={(e) => set('supervisorEmail', e.target.value)}
         />
         <Field
-          label="Phone / WhatsApp"
+          label={t('apf.phoneWa')}
           value={form.supervisorWhatsapp}
           onChange={(e) => setPair('supervisorWhatsapp', 'supervisorPhone', e.target.value)}
           placeholder="08xxx or +628xxx"
@@ -664,19 +664,19 @@ export default function AccountProfilePage() {
 
       {/* Parent / Guardian — students only */}
       {isStudent && (
-      <Section title="Parent / Guardian">
+      <Section title={t('apf.parentSection')}>
         <Field
-          label="Name"
+          label={t('apf.name')}
           value={form.parentName}
           onChange={(e) => set('parentName', e.target.value)}
         />
         <Field
-          label="Occupation"
+          label={t('apf.occupation')}
           value={form.parentOccupation}
           onChange={(e) => set('parentOccupation', e.target.value)}
         />
         <Field
-          label="Phone / WhatsApp"
+          label={t('apf.phoneWa')}
           value={form.parentWhatsapp}
           onChange={(e) => setPair('parentWhatsapp', 'parentPhone', e.target.value)}
           placeholder="08xxx or +628xxx"
@@ -687,7 +687,7 @@ export default function AccountProfilePage() {
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
           {saving && <Loader2 className="size-4 animate-spin" />}
-          Save changes
+          {t('apf.saveChanges')}
         </Button>
       </div>
     </div>
