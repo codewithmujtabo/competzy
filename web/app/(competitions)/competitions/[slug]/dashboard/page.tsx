@@ -16,8 +16,9 @@ import {
 } from 'lucide-react';
 import { emcHttp, HttpError } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
-import { useT } from '@/lib/i18n/context';
+import { useT, useLocale } from '@/lib/i18n/context';
 import type { MessageKey } from '@/lib/i18n/messages/en';
+import { pickText } from '@/lib/i18n/pick-text';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import {
@@ -130,12 +131,16 @@ interface FlowProgressStep {
   stepOrder: number;
   stepKey: string;
   title: string;
+  /** Bahasa Indonesia translations (Phase 4) — null = render the canonical value. */
+  titleId: string | null;
   description: string | null;
+  descriptionId: string | null;
   checkType: CheckType;
   status: StepStatus;
   startsOn: string | null;
   endsOn: string | null;
   location: string | null;
+  locationId: string | null;
 }
 
 // "25 May – 30 Sep 2026" / "10 Oct 2026" / "" — the schedule label for a stage.
@@ -885,6 +890,7 @@ function Stepper({
   onCompleteProfile: () => void;
 }) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <ol className="mt-1">
       {steps.map((s, i) => {
@@ -928,7 +934,7 @@ function Stepper({
                       s.status === 'upcoming' ? 'text-muted-foreground' : 'font-semibold text-foreground',
                     )}
                   >
-                    {s.title}
+                    {pickText(s.title, s.titleId, locale)}
                   </p>
                   <StepBadge status={s.status} theme={theme} />
                 </div>
@@ -936,13 +942,15 @@ function Stepper({
                   <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                     <CalendarDays className="size-3.5 shrink-0" />
                     <span>
-                      {[stageDateLabel(s.startsOn, s.endsOn), s.location].filter(Boolean).join(' · ')}
+                      {[stageDateLabel(s.startsOn, s.endsOn), pickText(s.location, s.locationId, locale)]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </span>
                   </p>
                 )}
                 {s.status !== 'upcoming' && s.description && (
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    {s.description}
+                    {pickText(s.description, s.descriptionId, locale)}
                   </p>
                 )}
                 {hint && (
@@ -1246,6 +1254,7 @@ function CompetitionSidePanel({
   onCompleteProfile: () => void;
 }) {
   const t = useT();
+  const { locale } = useLocale();
   const current = steps.find((s) => s.status === 'current');
   const done = steps.filter((s) => s.status === 'done').length;
   const total = steps.length;
@@ -1306,8 +1315,14 @@ function CompetitionSidePanel({
             <Zap className="size-3.5" />
             {t('dashboard.nextAction')}
           </p>
-          <h3 className="mt-2 font-serif text-lg font-semibold leading-snug">{current.title}</h3>
-          {current.description && <p className="mt-1 text-sm text-white/80">{current.description}</p>}
+          <h3 className="mt-2 font-serif text-lg font-semibold leading-snug">
+            {pickText(current.title, current.titleId, locale)}
+          </h3>
+          {current.description && (
+            <p className="mt-1 text-sm text-white/80">
+              {pickText(current.description, current.descriptionId, locale)}
+            </p>
+          )}
           {cta && <div className="mt-4">{cta}</div>}
           {days != null && (
             <div className="mt-4 grid grid-cols-3 gap-2">
@@ -1348,7 +1363,7 @@ function CompetitionSidePanel({
                 {s.status === 'done' ? <Check className="size-3" /> : s.stepOrder}
               </span>
               <span className={cn('truncate', s.status === 'upcoming' ? 'text-muted-foreground' : 'text-foreground')}>
-                {s.title}
+                {pickText(s.title, s.titleId, locale)}
               </span>
             </li>
           ))}

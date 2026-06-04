@@ -11,8 +11,8 @@ import { ArrowDown, ArrowUp, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { adminHttp } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { BilingualInput } from '@/components/ui/bilingual-input';
 import {
   Dialog,
   DialogContent,
@@ -35,7 +35,9 @@ interface FlowStep {
   stepOrder: number;
   stepKey: string;
   title: string;
+  titleId: string | null;
   description: string | null;
+  descriptionId: string | null;
   checkType: CheckType;
 }
 
@@ -55,7 +57,13 @@ const CHECK_TYPE_LABEL: Record<CheckType, string> = {
   none: 'Info',
 };
 
-const FORM_DEFAULTS = { title: '', description: '', checkType: 'none' as CheckType };
+const FORM_DEFAULTS = {
+  title: '',
+  titleId: '',
+  description: '',
+  descriptionId: '',
+  checkType: 'none' as CheckType,
+};
 
 export function FlowEditorDialog({
   competitionId,
@@ -102,7 +110,9 @@ export function FlowEditorDialog({
     try {
       const body = {
         title: form.title.trim(),
+        titleId: form.titleId.trim() || null,
         description: form.description.trim() || null,
+        descriptionId: form.descriptionId.trim() || null,
         checkType: form.checkType,
       };
       if (editId) {
@@ -123,7 +133,13 @@ export function FlowEditorDialog({
 
   const startEdit = (s: FlowStep) => {
     setEditId(s.id);
-    setForm({ title: s.title, description: s.description ?? '', checkType: s.checkType });
+    setForm({
+      title: s.title,
+      titleId: s.titleId ?? '',
+      description: s.description ?? '',
+      descriptionId: s.descriptionId ?? '',
+      checkType: s.checkType,
+    });
   };
 
   const remove = async (s: FlowStep) => {
@@ -252,22 +268,24 @@ export function FlowEditorDialog({
           <p className="text-xs font-medium text-muted-foreground">
             {editId ? 'Edit step' : 'Add a step'}
           </p>
-          <div>
-            <Label className="mb-1.5 text-xs text-muted-foreground">Title</Label>
-            <Input
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="e.g. Pay the registration fee"
-            />
-          </div>
-          <div>
-            <Label className="mb-1.5 text-xs text-muted-foreground">Description</Label>
-            <Input
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="Shown under the step on the dashboard"
-            />
-          </div>
+          <BilingualInput
+            label="Title"
+            required
+            value={form.title}
+            valueId={form.titleId}
+            onChange={(v) => setForm((f) => ({ ...f, title: v }))}
+            onChangeId={(v) => setForm((f) => ({ ...f, titleId: v }))}
+            placeholder="e.g. Pay the registration fee"
+          />
+          <BilingualInput
+            label="Description"
+            textarea
+            value={form.description}
+            valueId={form.descriptionId}
+            onChange={(v) => setForm((f) => ({ ...f, description: v }))}
+            onChangeId={(v) => setForm((f) => ({ ...f, descriptionId: v }))}
+            placeholder="Shown under the step on the dashboard"
+          />
           <div>
             <Label className="mb-1.5 text-xs text-muted-foreground">Gate</Label>
             <Select

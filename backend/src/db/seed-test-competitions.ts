@@ -89,7 +89,10 @@ interface RoundSpec {
 interface FlowStageSpec {
   key: string;
   title: string;
+  /** Bahasa Indonesia translations (Phase 4 dynamic-content demo). */
+  titleId?: string;
   description: string;
+  descriptionId?: string;
   check: "profile" | "documents" | "payment" | "approval" | "none";
   startOffset?: number; // days from today → starts_on
   endOffset?: number; // days from today → ends_on
@@ -151,9 +154,12 @@ const SPECS: CompSpec[] = [
       {
         key: "registration",
         title: "Registration",
+        titleId: "Pendaftaran",
         check: "payment",
         description:
           "Complete your registration form and pay the fee to activate your participant card.",
+        descriptionId:
+          "Lengkapi formulir pendaftaran dan bayar biayanya untuk mengaktifkan kartu pesertamu.",
         startOffset: -5,
         endOffset: 55,
         location: "Online / Test Center",
@@ -161,43 +167,56 @@ const SPECS: CompSpec[] = [
       {
         key: "simulation",
         title: "Online Simulation",
+        titleId: "Simulasi Daring",
         check: "none",
         description:
           "A practice run to learn the exam interface. Your simulation score does not affect any round.",
+        descriptionId:
+          "Latihan untuk mengenal antarmuka ujian. Nilai simulasi tidak memengaruhi babak mana pun.",
         startOffset: 63,
         location: "Online",
       },
       {
         key: "round1",
         title: "Round 1 · City / Regency Level",
+        titleId: "Babak 1 · Tingkat Kota/Kabupaten",
         check: "none",
         description:
           "The first qualifying round, online. Opens automatically after the simulation.",
+        descriptionId:
+          "Babak penyisihan pertama, daring. Terbuka otomatis setelah simulasi.",
         startOffset: 70,
         location: "Online",
       },
       {
         key: "round2",
         title: "Round 2 · Provincial Level",
+        titleId: "Babak 2 · Tingkat Provinsi",
         check: "none",
         description: "Provincial round — open to participants who pass Round 1.",
+        descriptionId: "Babak provinsi — terbuka untuk peserta yang lolos Babak 1.",
         startOffset: 84,
         location: "Online",
       },
       {
         key: "round3",
         title: "Round 3 · National Level",
+        titleId: "Babak 3 · Tingkat Nasional",
         check: "none",
         description:
           "The offline national final at a Test Center, for participants who pass Round 2.",
+        descriptionId:
+          "Final nasional luring di Test Center, untuk peserta yang lolos Babak 2.",
         startOffset: 112,
         location: "Offline · Test Center",
       },
       {
         key: "announcement",
         title: "Winners Announcement",
+        titleId: "Pengumuman Pemenang",
         check: "none",
         description: "Champions announced and the closing ceremony.",
+        descriptionId: "Pengumuman juara dan upacara penutupan.",
         startOffset: 133,
         location: "Online · Zoom",
       },
@@ -556,14 +575,17 @@ async function seedCompetition(
       const f = spec.flow[i];
       await client.query(
         `INSERT INTO competition_flows
-           (comp_id, step_order, step_key, title, description, check_type, starts_on, ends_on, location)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+           (comp_id, step_order, step_key, title, title_id, description, description_id,
+            check_type, starts_on, ends_on, location)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
         [
           spec.id,
           i + 1,
           f.key,
           f.title,
+          f.titleId ?? null,
           f.description,
+          f.descriptionId ?? null,
           f.check,
           f.startOffset != null ? ymd(f.startOffset) : null,
           f.endOffset != null ? ymd(f.endOffset) : null,

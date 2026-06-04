@@ -30,11 +30,15 @@ interface FlowStep {
   stepOrder: number;
   stepKey: string;
   title: string;
+  /** Bahasa Indonesia translation of `title` (Phase 4); null = use `title`. */
+  titleId: string | null;
   description: string | null;
+  descriptionId: string | null;
   checkType: CheckType;
   startsOn: string | null;
   endsOn: string | null;
   location: string | null;
+  locationId: string | null;
 }
 
 function mapStep(r: any): FlowStep {
@@ -43,13 +47,21 @@ function mapStep(r: any): FlowStep {
     stepOrder: r.step_order,
     stepKey: r.step_key,
     title: r.title,
+    titleId: r.title_id ?? null,
     description: r.description ?? null,
+    descriptionId: r.description_id ?? null,
     checkType: r.check_type,
     startsOn: r.starts_on ?? null,
     endsOn: r.ends_on ?? null,
     location: r.location ?? null,
+    locationId: r.location_id ?? null,
   };
 }
+
+// The column list shared by every SELECT/RETURNING so the `*_id` fields are
+// always present for mapStep.
+const FLOW_COLS =
+  "id, step_order, step_key, title, title_id, description, description_id, check_type, starts_on, ends_on, location, location_id";
 
 function isValidCheckType(v: unknown): v is CheckType {
   return typeof v === "string" && (CHECK_TYPES as readonly string[]).includes(v);
@@ -57,8 +69,7 @@ function isValidCheckType(v: unknown): v is CheckType {
 
 async function loadFlow(compId: string): Promise<FlowStep[]> {
   const result = await pool.query(
-    `SELECT id, step_order, step_key, title, description, check_type,
-            starts_on, ends_on, location
+    `SELECT ${FLOW_COLS}
        FROM competition_flows
       WHERE ${compFilter()} AND ${liveFilter()}
       ORDER BY step_order ASC`,
@@ -142,13 +153,17 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const { compId } = req.params;
-      const { stepKey, title, description, checkType } = req.body ?? {};
+      const { stepKey, title, titleId, description, descriptionId, checkType } = req.body ?? {};
 
       if (!title || typeof title !== "string" || !title.trim()) {
         res.status(400).json({ message: "title is required" });
         return;
       }
       const ct: CheckType = isValidCheckType(checkType) ? checkType : "none";
+      // Optional Bahasa Indonesia translations — empty string normalises to NULL
+      // so the renderer falls back to the canonical (English) column.
+      const norm = (v: unknown): string | null =>
+        typeof v === "string" && v.trim() ? v.trim() : null;
 
       const comp = await pool.query("SELECT 1 FROM competitions WHERE id = $1", [compId]);
       if (comp.rows.length === 0) {
@@ -164,10 +179,20 @@ router.post(
       const nextOrder = Number(max.rows[0].m) + 1;
 
       const inserted = await pool.query(
-        `INSERT INTO competition_flows (comp_id, step_order, step_key, title, description, check_type)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id, step_order, step_key, title, description, check_type`,
-        [compId, nextOrder, (typeof stepKey === "string" && stepKey.trim()) || "custom", title.trim(), description ?? null, ct]
+        `INSERT INTO competition_flows
+           (comp_id, step_order, step_key, title, title_id, description, description_id, check_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING ${FLOW_COLS}`,
+        [
+          compId,
+          nextOrder,
+          (typeof stepKey === "string" && stepKey.trim()) || "custom",
+          title.trim(),
+          norm(titleId),
+          description ?? null,
+          norm(descriptionId),
+          ct,
+        ]
       );
       res.status(201).json(mapStep(inserted.rows[0]));
     } catch (err) {
@@ -232,7 +257,10 @@ router.put(
   async (req: Request, res: Response) => {
     try {
       const { compId, stepId } = req.params;
-      const { stepKey, title, description, checkType } = req.body ?? {};
+      const { stepKey, title, titleId, description, descriptionId, location, locationId, checkType } =
+        req.body ?? {};
+      const norm = (v: unknown): string | null =>
+        typeof v === "string" && v.trim() ? v.trim() : null;
 
       const sets: string[] = [];
       const values: unknown[] = [];
@@ -241,9 +269,25 @@ router.put(
         sets.push(`title = $${i++}`);
         values.push(title.trim());
       }
+      if (titleId !== undefined) {
+        sets.push(`title_id = $${i++}`);
+        values.push(norm(titleId));
+      }
       if (typeof description === "string" || description === null) {
         sets.push(`description = $${i++}`);
         values.push(description ?? null);
+      }
+      if (descriptionId !== undefined) {
+        sets.push(`description_id = $${i++}`);
+        values.push(norm(descriptionId));
+      }
+      if (typeof location === "string" || location === null) {
+        sets.push(`location = $${i++}`);
+        values.push(location ?? null);
+      }
+      if (locationId !== undefined) {
+        sets.push(`location_id = $${i++}`);
+        values.push(norm(locationId));
       }
       if (typeof stepKey === "string") {
         sets.push(`step_key = $${i++}`);
@@ -267,7 +311,7 @@ router.put(
       const updated = await pool.query(
         `UPDATE competition_flows SET ${sets.join(", ")}
           WHERE id = $${i++} AND comp_id = $${i} AND deleted_at IS NULL
-          RETURNING id, step_order, step_key, title, description, check_type`,
+          RETURNING ${FLOW_COLS}`,
         values
       );
       if (updated.rows.length === 0) {
