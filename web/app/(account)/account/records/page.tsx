@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { History, Loader2, Search } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +70,7 @@ function RecordCard({ rec, action }: { rec: HistoricalRecord; action?: React.Rea
 }
 
 export default function AccountRecordsPage() {
+  const t = useT();
   const [mine, setMine] = useState<HistoricalRecord[] | null>(null);
 
   const [name, setName] = useState('');
@@ -141,17 +143,17 @@ export default function AccountRecordsPage() {
     <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-8">
       <AccountTabs />
       <PageHeader
-        eyebrow="My Account"
-        title="Records"
-        subtitle="Competition results from before Competzy — claim the ones that are yours."
+        eyebrow={t('apf.eyebrow')}
+        title={t('acc.recordsTitle')}
+        subtitle={t('acc.recordsSubtitle')}
       />
 
       <Tabs defaultValue="mine">
         <TabsList>
           <TabsTrigger value="mine">
-            My records{mine ? ` (${mine.length})` : ''}
+            {t('acc.recTabMine')}{mine ? ` (${mine.length})` : ''}
           </TabsTrigger>
-          <TabsTrigger value="find">Find &amp; claim</TabsTrigger>
+          <TabsTrigger value="find">{t('acc.recTabFind')}</TabsTrigger>
         </TabsList>
 
         {/* My records */}
@@ -164,12 +166,9 @@ export default function AccountRecordsPage() {
             <Card className="items-center gap-2 p-12 text-center">
               <History className="size-7 text-muted-foreground" />
               <h2 className="font-serif text-lg font-medium text-foreground">
-                No records claimed
+                {t('acc.noRecordsClaimed')}
               </h2>
-              <p className="text-sm text-muted-foreground">
-                Records matched to your email or phone link automatically. Use
-                <strong> Find &amp; claim</strong> to add others.
-              </p>
+              <p className="text-sm text-muted-foreground">{t('acc.recNoClaimedBody')}</p>
             </Card>
           ) : (
             <div className="space-y-3">
@@ -185,7 +184,7 @@ export default function AccountRecordsPage() {
                       disabled={busy === r.id}
                       onClick={() => unclaim(r)}
                     >
-                      {busy === r.id ? <Loader2 className="size-4 animate-spin" /> : 'Remove'}
+                      {busy === r.id ? <Loader2 className="size-4 animate-spin" /> : t('acc.remove')}
                     </Button>
                   }
                 />
@@ -199,45 +198,43 @@ export default function AccountRecordsPage() {
           <Card className="gap-4 p-6">
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
-                <Label>Name</Label>
+                <Label>{t('acc.recName')}</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Full name"
+                  placeholder={t('acc.searchFullName')}
                   onKeyDown={(e) => e.key === 'Enter' && doSearch()}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>School (optional)</Label>
+                <Label>{t('acc.recSchoolOpt')}</Label>
                 <Input
                   value={school}
                   onChange={(e) => setSchool(e.target.value)}
-                  placeholder="School name"
+                  placeholder={t('acc.searchSchool')}
                   onKeyDown={(e) => e.key === 'Enter' && doSearch()}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Competition (optional)</Label>
+                <Label>{t('acc.recCompetitionOpt')}</Label>
                 <Input
                   value={compName}
                   onChange={(e) => setCompName(e.target.value)}
-                  placeholder="Competition name"
+                  placeholder={t('acc.searchCompetition')}
                   onKeyDown={(e) => e.key === 'Enter' && doSearch()}
                 />
               </div>
             </div>
             <Button onClick={doSearch} disabled={searching} className="self-start">
               {searching ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
-              Search
+              {t('acc.search')}
             </Button>
           </Card>
 
           {results !== null &&
             (results.length === 0 ? (
               <Card className="items-center gap-1 p-10 text-center">
-                <p className="text-sm text-muted-foreground">
-                  No unclaimed records match that search.
-                </p>
+                <p className="text-sm text-muted-foreground">{t('acc.noRecordMatch')}</p>
               </Card>
             ) : (
               <div className="space-y-3">
@@ -252,7 +249,7 @@ export default function AccountRecordsPage() {
                         disabled={busy === r.id}
                         onClick={() => claim(r)}
                       >
-                        {busy === r.id ? <Loader2 className="size-4 animate-spin" /> : 'Claim'}
+                        {busy === r.id ? <Loader2 className="size-4 animate-spin" /> : t('acc.claim')}
                       </Button>
                     }
                   />

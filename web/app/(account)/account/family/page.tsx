@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Check, Loader2, Mail, Users, X } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ function fmtDate(d: string): string {
 }
 
 export default function AccountFamilyPage() {
+  const t = useT();
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [lastInvite, setLastInvite] = useState<InviteResponse | null>(null);
@@ -100,21 +102,18 @@ export default function AccountFamilyPage() {
     <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-8">
       <AccountTabs />
       <PageHeader
-        eyebrow="My Account"
-        title="Family"
-        subtitle="Invite a parent or guardian so they can follow your competitions."
+        eyebrow={t('apf.eyebrow')}
+        title={t('acc.familyTitle')}
+        subtitle={t('acc.familySubtitle')}
       />
 
       {/* Invite */}
       <Card className="gap-4 p-6">
-        <h2 className="font-serif text-lg font-medium text-foreground">Invite a parent</h2>
-        <p className="text-sm text-muted-foreground">
-          We&apos;ll email them a 6-digit PIN. Once they sign up and enter it, their request
-          shows below for you to approve.
-        </p>
+        <h2 className="font-serif text-lg font-medium text-foreground">{t('acc.inviteParent')}</h2>
+        <p className="text-sm text-muted-foreground">{t('acc.inviteBody')}</p>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[16rem] flex-1 space-y-1.5">
-            <Label>Parent / guardian email</Label>
+            <Label>{t('acc.parentEmail')}</Label>
             <Input
               type="email"
               value={email}
@@ -125,7 +124,7 @@ export default function AccountFamilyPage() {
           </div>
           <Button onClick={sendInvite} disabled={sending}>
             {sending ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
-            Send invite
+            {t('acc.sendInvite')}
           </Button>
         </div>
         {lastInvite?.debugPin && (
@@ -142,10 +141,8 @@ export default function AccountFamilyPage() {
       {/* Pending approvals */}
       <Card className="gap-0 p-0">
         <div className="border-b p-5">
-          <h2 className="font-serif text-lg font-medium text-foreground">Parent requests</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            People who entered your PIN and are waiting for you to link them.
-          </p>
+          <h2 className="font-serif text-lg font-medium text-foreground">{t('acc.parentRequests')}</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">{t('acc.requestsBody')}</p>
         </div>
         {!pending ? (
           <div className="flex items-center justify-center p-10">

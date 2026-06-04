@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { Loader2, Megaphone } from 'lucide-react';
 
 import { marketingHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +34,7 @@ function fmtDate(d: string | null): string {
 }
 
 function AnnouncementCard({ a }: { a: Announcement }) {
+  const t = useT();
   return (
     <Card className={cn('gap-0 overflow-hidden p-0', a.isFeatured && 'border-amber-300/70')}>
       {a.image && (
@@ -43,11 +45,11 @@ function AnnouncementCard({ a }: { a: Announcement }) {
         <div className="flex flex-wrap items-center gap-1.5">
           {a.isFeatured && (
             <Badge className="bg-amber-100 font-normal text-amber-800 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-200">
-              Featured
+              {t('acc.featured')}
             </Badge>
           )}
           <Badge variant="secondary" className="font-normal">
-            {a.competitionName ?? 'Platform-wide'}
+            {a.competitionName ?? t('acc.platformWide')}
           </Badge>
           {a.type && (
             <Badge variant="outline" className="font-normal text-muted-foreground">
@@ -63,7 +65,7 @@ function AnnouncementCard({ a }: { a: Announcement }) {
         {a.file && (
           <Button asChild variant="outline" size="sm" className="mt-1">
             <a href={a.file} target="_blank" rel="noreferrer">
-              Open attachment
+              {t('acc.openAttachment')}
             </a>
           </Button>
         )}
@@ -73,6 +75,7 @@ function AnnouncementCard({ a }: { a: Announcement }) {
 }
 
 export default function AnnouncementsPage() {
+  const t = useT();
   const [items, setItems] = useState<Announcement[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -80,18 +83,16 @@ export default function AnnouncementsPage() {
     marketingHttp
       .get<Announcement[]>('/announcements/mine')
       .then(setItems)
-      .catch((e) => setErr(e instanceof Error ? e.message : 'Failed to load announcements'));
-  }, []);
+      .catch((e) => setErr(e instanceof Error ? e.message : t('acc.failedAnnouncements')));
+  }, [t]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-10">
       <div>
         <h1 className="font-serif text-2xl font-semibold tracking-tight text-foreground">
-          Announcements
+          {t('acc.announcementsTitle')}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Updates from your competitions and the Competzy team.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t('acc.announcementsSubtitle')}</p>
       </div>
 
       {err && (
@@ -103,15 +104,13 @@ export default function AnnouncementsPage() {
       {!items ? (
         <Card className="items-center gap-3 p-10 text-center">
           <Loader2 className="size-5 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Loading announcements…</p>
+          <p className="text-sm text-muted-foreground">{t('acc.loadingAnnouncements')}</p>
         </Card>
       ) : items.length === 0 ? (
         <Card className="items-center gap-2 p-10 text-center">
           <Megaphone className="size-7 text-muted-foreground" />
-          <h2 className="font-serif text-lg font-medium text-foreground">No announcements yet</h2>
-          <p className="text-sm text-muted-foreground">
-            Updates from competitions you join will show up here.
-          </p>
+          <h2 className="font-serif text-lg font-medium text-foreground">{t('acc.noAnnouncements')}</h2>
+          <p className="text-sm text-muted-foreground">{t('acc.noAnnouncementsBody')}</p>
         </Card>
       ) : (
         <div className="space-y-4">

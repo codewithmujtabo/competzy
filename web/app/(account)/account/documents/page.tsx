@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Download, FileText, Loader2, Trash2, Upload } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -72,6 +73,7 @@ function fmtDate(d: string): string {
 }
 
 export default function AccountDocumentsPage() {
+  const t = useT();
   const [docs, setDocs] = useState<Doc[] | null>(null);
   const [docType, setDocType] = useState('id_card');
   const [uploading, setUploading] = useState(false);
@@ -111,7 +113,7 @@ export default function AccountDocumentsPage() {
       fd.append('file', file);
       fd.append('docType', docType);
       await emcHttp.postFormData<{ id: string }>('/documents/upload', fd);
-      toast.success('Document uploaded');
+      toast.success(t('acc.docUploaded'));
       await load();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to upload document');
@@ -125,7 +127,7 @@ export default function AccountDocumentsPage() {
     setDeleting(true);
     try {
       await emcHttp.delete<{ message: string }>(`/documents/${toDelete.id}`);
-      toast.success('Document deleted');
+      toast.success(t('acc.docDeleted'));
       setToDelete(null);
       await load();
     } catch (err) {
@@ -139,17 +141,17 @@ export default function AccountDocumentsPage() {
     <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-8">
       <AccountTabs />
       <PageHeader
-        eyebrow="My Account"
-        title="Documents"
-        subtitle="Upload the documents your competitions ask for. They're shared with the Competzy app."
+        eyebrow={t('apf.eyebrow')}
+        title={t('acc.docsTitle')}
+        subtitle={t('acc.docsSubtitle')}
       />
 
       {/* Upload */}
       <Card className="gap-4 p-6">
-        <h2 className="font-serif text-lg font-medium text-foreground">Upload a document</h2>
+        <h2 className="font-serif text-lg font-medium text-foreground">{t('acc.uploadDoc')}</h2>
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-1.5">
-            <Label>Document type</Label>
+            <Label>{t('acc.docType')}</Label>
             <Select value={docType} onValueChange={setDocType}>
               <SelectTrigger className="w-56">
                 <SelectValue />
@@ -176,10 +178,10 @@ export default function AccountDocumentsPage() {
             ) : (
               <Upload className="size-4" />
             )}
-            Choose file
+            {t('acc.chooseFile')}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">PDF, JPG or PNG, up to 10 MB.</p>
+        <p className="text-xs text-muted-foreground">{t('acc.uploadHint')}</p>
       </Card>
 
       {/* List */}
@@ -191,20 +193,18 @@ export default function AccountDocumentsPage() {
         ) : docs.length === 0 ? (
           <div className="flex flex-col items-center gap-2 p-12 text-center">
             <FileText className="size-7 text-muted-foreground" />
-            <h2 className="font-serif text-lg font-medium text-foreground">No documents yet</h2>
-            <p className="text-sm text-muted-foreground">
-              Uploaded documents will appear here.
-            </p>
+            <h2 className="font-serif text-lg font-medium text-foreground">{t('acc.noDocuments')}</h2>
+            <p className="text-sm text-muted-foreground">{t('acc.noDocsBody')}</p>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>File</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Uploaded</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('acc.colType')}</TableHead>
+                <TableHead>{t('acc.colFile')}</TableHead>
+                <TableHead>{t('acc.colSize')}</TableHead>
+                <TableHead>{t('acc.colUploaded')}</TableHead>
+                <TableHead className="text-right">{t('acc.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -219,7 +219,7 @@ export default function AccountDocumentsPage() {
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       {d.fileUrl && (
-                        <Button asChild size="icon" variant="ghost" title="Download">
+                        <Button asChild size="icon" variant="ghost" title={t('acc.download')}>
                           <a href={d.fileUrl} target="_blank" rel="noopener noreferrer">
                             <Download className="size-4" />
                           </a>
@@ -228,7 +228,7 @@ export default function AccountDocumentsPage() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        title="Delete"
+                        title={t('acc.delete')}
                         className="text-destructive hover:text-destructive"
                         onClick={() => setToDelete(d)}
                       >
@@ -246,18 +246,18 @@ export default function AccountDocumentsPage() {
       <Dialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete document</DialogTitle>
+            <DialogTitle>{t('acc.deleteDocTitle')}</DialogTitle>
             <DialogDescription>
-              Delete “{toDelete?.fileName}”? This can&apos;t be undone.
+              {t('acc.deleteDocConfirm', { name: toDelete?.fileName ?? '' })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setToDelete(null)} disabled={deleting}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
               {deleting && <Loader2 className="size-4 animate-spin" />}
-              Delete
+              {t('acc.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

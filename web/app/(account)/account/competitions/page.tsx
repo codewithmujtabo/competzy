@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { ArrowRight, Heart, Loader2, Trophy } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 import { getCompetitionConfig } from '@/lib/competitions/registry';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
@@ -35,27 +37,13 @@ interface FavRow {
   category: string | null;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  pending_payment: 'Pending payment',
-  pending_review: 'Under review',
-  pending_approval: 'Under review',
-  registered: 'Registered',
-  paid: 'Paid',
-  approved: 'Approved',
-  completed: 'Completed',
-  rejected: 'Declined',
-};
-
-function statusLabel(s: string): string {
-  return STATUS_LABEL[s] ?? s.replace(/_/g, ' ');
-}
-
 function portalHref(slug: string | null): string | null {
   if (!slug) return null;
   return getCompetitionConfig(slug) ? `/competitions/${slug}/dashboard` : null;
 }
 
 export default function AccountCompetitionsPage() {
+  const t = useT();
   const [regs, setRegs] = useState<Registration[] | null>(null);
   const [compList, setCompList] = useState<Catalog[] | null>(null);
   const [favs, setFavs] = useState<FavRow[] | null>(null);
@@ -108,18 +96,18 @@ export default function AccountCompetitionsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="My Account"
-        title="My Competitions"
-        subtitle="The competitions you've registered for and the ones you've saved."
+        eyebrow={t('apf.eyebrow')}
+        title={t('acc.myCompTitle')}
+        subtitle={t('acc.myCompSubtitle')}
       />
 
       <Tabs defaultValue="registered">
         <TabsList>
           <TabsTrigger value="registered">
-            Registered{registeredReady ? ` (${byComp.size})` : ''}
+            {t('acc.tabRegistered')}{registeredReady ? ` (${byComp.size})` : ''}
           </TabsTrigger>
           <TabsTrigger value="saved">
-            Saved{favs ? ` (${favs.length})` : ''}
+            {t('acc.tabSaved')}{favs ? ` (${favs.length})` : ''}
           </TabsTrigger>
         </TabsList>
 
@@ -133,13 +121,11 @@ export default function AccountCompetitionsPage() {
             <Card className="items-center gap-2 p-12 text-center">
               <Trophy className="size-7 text-muted-foreground" />
               <h2 className="font-serif text-lg font-medium text-foreground">
-                No registrations yet
+                {t('acc.noRegistrations')}
               </h2>
-              <p className="text-sm text-muted-foreground">
-                Browse competitions and register to see them here.
-              </p>
+              <p className="text-sm text-muted-foreground">{t('acc.noRegistrationsBody')}</p>
               <Button asChild size="sm" variant="outline" className="mt-1">
-                <Link href="/competitions">Browse competitions</Link>
+                <Link href="/competitions">{t('acc.browse')}</Link>
               </Button>
             </Card>
           ) : (
@@ -170,14 +156,14 @@ export default function AccountCompetitionsPage() {
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {statuses.map((s) => (
                         <Badge key={s} variant="outline" className="font-normal">
-                          {statusLabel(s)}
+                          {t(`status.${s}` as MessageKey)}
                         </Badge>
                       ))}
                     </div>
                     {href && (
                       <Button asChild size="sm" variant="outline" className="mt-4 self-start">
                         <Link href={href}>
-                          Open competition
+                          {t('acc.openCompetition')}
                           <ArrowRight className="size-3.5" />
                         </Link>
                       </Button>
@@ -199,13 +185,11 @@ export default function AccountCompetitionsPage() {
             <Card className="items-center gap-2 p-12 text-center">
               <Heart className="size-7 text-muted-foreground" />
               <h2 className="font-serif text-lg font-medium text-foreground">
-                Nothing saved yet
+                {t('acc.noSaved')}
               </h2>
-              <p className="text-sm text-muted-foreground">
-                Tap the heart on a competition to save it for later.
-              </p>
+              <p className="text-sm text-muted-foreground">{t('acc.noSavedBody')}</p>
               <Button asChild size="sm" variant="outline" className="mt-1">
-                <Link href="/competitions">Browse competitions</Link>
+                <Link href="/competitions">{t('acc.browse')}</Link>
               </Button>
             </Card>
           ) : (
@@ -225,8 +209,8 @@ export default function AccountCompetitionsPage() {
                       </div>
                       <button
                         type="button"
-                        aria-label="Remove from saved"
-                        title="Remove from saved"
+                        aria-label={t('acc.removeFromSaved')}
+                        title={t('acc.removeFromSaved')}
                         onClick={() => unsave(f.id)}
                         className="shrink-0 rounded-full p-1 text-primary transition-colors hover:text-muted-foreground"
                       >
@@ -243,7 +227,7 @@ export default function AccountCompetitionsPage() {
                     {href && (
                       <Button asChild size="sm" variant="outline" className="mt-4 self-start">
                         <Link href={href}>
-                          Open competition
+                          {t('acc.openCompetition')}
                           <ArrowRight className="size-3.5" />
                         </Link>
                       </Button>

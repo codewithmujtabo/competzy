@@ -17,6 +17,7 @@ import type { LucideIcon } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -62,6 +63,7 @@ function timeAgo(iso: string): string {
 }
 
 export default function AccountNotificationsPage() {
+  const t = useT();
   const [items, setItems] = useState<Notif[] | null>(null);
   const [unread, setUnread] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -149,9 +151,9 @@ export default function AccountNotificationsPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="My Account"
-        title="Notifications"
-        subtitle={unread > 0 ? `${unread} unread` : 'You are all caught up.'}
+        eyebrow={t('apf.eyebrow')}
+        title={t('acc.notifTitle')}
+        subtitle={unread > 0 ? t('acc.notifUnread', { n: unread }) : t('acc.notifCaughtUp')}
         actions={
           <Button
             variant="outline"
@@ -160,7 +162,7 @@ export default function AccountNotificationsPage() {
             disabled={busy || unread === 0}
           >
             <CheckCheck className="size-4" />
-            Mark all read
+            {t('acc.markAllRead')}
           </Button>
         }
       />
@@ -172,10 +174,8 @@ export default function AccountNotificationsPage() {
       ) : items.length === 0 ? (
         <Card className="items-center gap-2 p-12 text-center">
           <Bell className="size-7 text-muted-foreground" />
-          <h2 className="font-serif text-lg font-medium text-foreground">No notifications</h2>
-          <p className="text-sm text-muted-foreground">
-            Updates about your competitions will appear here.
-          </p>
+          <h2 className="font-serif text-lg font-medium text-foreground">{t('acc.noNotifications')}</h2>
+          <p className="text-sm text-muted-foreground">{t('acc.noAnnouncementsBody')}</p>
         </Card>
       ) : (
         <>
@@ -218,7 +218,7 @@ export default function AccountNotificationsPage() {
                   <Button
                     size="icon"
                     variant="ghost"
-                    title="Delete"
+                    title={t('acc.delete')}
                     className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
                     onClick={() => remove(n)}
                   >
@@ -237,7 +237,7 @@ export default function AccountNotificationsPage() {
                 disabled={loadingMore}
               >
                 {loadingMore && <Loader2 className="size-4 animate-spin" />}
-                Load more
+                {t('acc.loadMore')}
               </Button>
             </div>
           )}

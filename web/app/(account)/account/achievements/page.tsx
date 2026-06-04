@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Award, CheckCircle2, Loader2, Trophy } from 'lucide-react';
 
 import { certificatesHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,7 @@ function fmtDate(d: string | null): string {
 }
 
 export default function AchievementsPage() {
+  const t = useT();
   const [certs, setCerts] = useState<Certificate[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -39,18 +41,16 @@ export default function AchievementsPage() {
     certificatesHttp
       .get<Certificate[]>('/certificates/mine')
       .then(setCerts)
-      .catch((e) => setErr(e instanceof Error ? e.message : 'Failed to load achievements'));
-  }, []);
+      .catch((e) => setErr(e instanceof Error ? e.message : t('acc.failedAchievements')));
+  }, [t]);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6 lg:p-10">
       <div>
         <h1 className="font-serif text-2xl font-semibold tracking-tight text-foreground">
-          My Achievements
+          {t('acc.achievementsTitle')}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Certificates you have earned across every competition.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t('acc.achievementsSubtitle')}</p>
       </div>
 
       {err && (
@@ -62,15 +62,13 @@ export default function AchievementsPage() {
       {!certs ? (
         <Card className="items-center gap-3 p-10 text-center">
           <Loader2 className="size-5 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Loading achievements…</p>
+          <p className="text-sm text-muted-foreground">{t('acc.loadingAchievements')}</p>
         </Card>
       ) : certs.length === 0 ? (
         <Card className="items-center gap-2 p-10 text-center">
           <Award className="size-7 text-muted-foreground" />
-          <h2 className="font-serif text-lg font-medium text-foreground">No certificates yet</h2>
-          <p className="text-sm text-muted-foreground">
-            Finish a competition exam to earn your first certificate.
-          </p>
+          <h2 className="font-serif text-lg font-medium text-foreground">{t('acc.noCerts')}</h2>
+          <p className="text-sm text-muted-foreground">{t('acc.noCertsBody')}</p>
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -89,7 +87,7 @@ export default function AchievementsPage() {
                     {c.type === 'achievement' ? <Trophy className="size-4" /> : <CheckCircle2 className="size-4" />}
                   </span>
                   <Badge variant="outline" className="border-current/30 bg-white/15 font-mono text-[10px] uppercase">
-                    {c.type === 'achievement' ? 'Achievement' : 'Participation'}
+                    {c.type === 'achievement' ? t('acc.achievement') : t('acc.participation')}
                   </Badge>
                 </div>
                 <h2 className="mt-3 font-serif text-base font-semibold tracking-tight">
@@ -100,16 +98,16 @@ export default function AchievementsPage() {
               <div className="flex items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
                   <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Certificate
+                    {t('acc.certificate')}
                   </p>
                   <p className="mt-0.5 truncate font-mono text-xs text-foreground">{c.certificateNumber}</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {c.revokedAt ? 'Revoked' : `Issued ${fmtDate(c.issuedAt)}`}
+                    {c.revokedAt ? t('acc.revoked') : t('acc.issued', { date: fmtDate(c.issuedAt) })}
                   </p>
                 </div>
                 <Button asChild variant="outline" size="sm">
                   <a href={`/verify/${c.verificationCode}`} target="_blank" rel="noreferrer">
-                    Verify
+                    {t('acc.verify')}
                   </a>
                 </Button>
               </div>
