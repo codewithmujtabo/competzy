@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { emcHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -94,6 +95,7 @@ export function RegistrationFormDialog({
   compName: string;
   onSaved: () => void;
 }) {
+  const t = useT();
   const [form, setForm] = useState<Form>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -141,7 +143,7 @@ export function RegistrationFormDialog({
   async function lookupNpsn() {
     const npsn = form.npsn.trim();
     if (!/^\d{6,12}$/.test(npsn)) {
-      toast.error('Enter a valid NPSN first');
+      toast.error(t('regform.toastNpsnFirst'));
       return;
     }
     if (lastNpsn.current === npsn) return;
@@ -160,18 +162,18 @@ export function RegistrationFormDialog({
         city: r.city ?? f.city,
         province: r.province ?? f.province,
       }));
-      toast.success(`School found: ${r.name}`);
+      toast.success(t('regform.toastSchoolFound', { name: r.name }));
     } catch (e) {
       lastNpsn.current = npsn;
       const msg = e instanceof Error ? e.message : '';
-      if (/not found|404/i.test(msg)) toast.message('No school for that NPSN — type the name manually.');
-      else toast.error('NPSN lookup failed');
+      if (/not found|404/i.test(msg)) toast.message(t('regform.toastNoSchool'));
+      else toast.error(t('regform.toastNpsnFailed'));
     }
   }
 
   async function handleSave() {
     if (!form.fullName.trim()) {
-      toast.error('Full name is required');
+      toast.error(t('regform.toastFullNameRequired'));
       return;
     }
     setSaving(true);
@@ -195,11 +197,11 @@ export function RegistrationFormDialog({
         country: form.country,
         nisn: form.nisn,
       });
-      toast.success('Details saved — next, complete your payment to confirm your spot.');
+      toast.success(t('regform.toastSaved'));
       onSaved();
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save');
+      toast.error(e instanceof Error ? e.message : t('regform.toastSaveFailed'));
     } finally {
       setSaving(false);
     }
@@ -209,51 +211,51 @@ export function RegistrationFormDialog({
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Registration form · {compName}</DialogTitle>
+          <DialogTitle>{t('regform.title', { comp: compName })}</DialogTitle>
         </DialogHeader>
 
         {loading ? (
-          <div className="py-10 text-center text-sm text-muted-foreground">Loading your details…</div>
+          <div className="py-10 text-center text-sm text-muted-foreground">{t('regform.loading')}</div>
         ) : (
           <div className="space-y-5">
             <section className="space-y-3">
               <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
-                Participant details
+                {t('regform.participantDetails')}
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Full name" required>
+                <Field label={t('regform.fullName')} required>
                   <Input
                     value={form.fullName}
                     onChange={(e) => set('fullName', e.target.value)}
-                    placeholder="Name as on documents"
+                    placeholder={t('regform.fullNamePlaceholder')}
                   />
                 </Field>
-                <Field label="Gender">
+                <Field label={t('regform.gender')}>
                   <Select value={form.gender} onValueChange={(v) => set('gender', v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t('regform.select')} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="male">{t('regform.male')}</SelectItem>
+                      <SelectItem value="female">{t('regform.female')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="Grade">
+                <Field label={t('regform.grade')}>
                   <Select value={form.grade} onValueChange={(v) => set('grade', v)}>
-                    <SelectTrigger><SelectValue placeholder="Select grade" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t('regform.selectGrade')} /></SelectTrigger>
                     <SelectContent>
                       {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((g) => (
-                        <SelectItem key={g} value={g}>Grade {g}</SelectItem>
+                        <SelectItem key={g} value={g}>{t('dashboard.heroGrade', { n: g })}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="Date of birth">
+                <Field label={t('regform.dateOfBirth')}>
                   <Input type="date" value={form.dateOfBirth} onChange={(e) => set('dateOfBirth', e.target.value)} />
                 </Field>
-                <Field label="Phone">
+                <Field label={t('regform.phone')}>
                   <Input value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="08xxxxxxxxxx" />
                 </Field>
-                <Field label="Parent phone">
+                <Field label={t('regform.parentPhone')}>
                   <Input value={form.parentPhone} onChange={(e) => set('parentPhone', e.target.value)} placeholder="08xxxxxxxxxx" />
                 </Field>
               </div>
@@ -261,39 +263,39 @@ export function RegistrationFormDialog({
 
             <section className="space-y-3">
               <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
-                School details
+                {t('regform.schoolDetails')}
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="NPSN">
+                <Field label={t('regform.npsn')}>
                   <div className="flex gap-2">
                     <Input
                       value={form.npsn}
                       onChange={(e) => set('npsn', e.target.value)}
-                      placeholder="National school ID"
+                      placeholder={t('regform.npsnPlaceholder')}
                     />
                     <Button type="button" variant="secondary" onClick={lookupNpsn} className="shrink-0">
-                      Find
+                      {t('regform.find')}
                     </Button>
                   </div>
                 </Field>
-                <Field label="School name">
+                <Field label={t('regform.schoolName')}>
                   <Input
                     value={form.schoolName}
                     onChange={(e) => set('schoolName', e.target.value)}
-                    placeholder="Auto-fills after NPSN lookup"
+                    placeholder={t('regform.schoolNamePlaceholder')}
                   />
                 </Field>
-                <Field label="Parent / guardian name">
+                <Field label={t('regform.parentName')}>
                   <Input value={form.parentName} onChange={(e) => set('parentName', e.target.value)} />
                 </Field>
-                <Field label="Parent occupation">
+                <Field label={t('regform.parentOccupation')}>
                   <Input value={form.parentOccupation} onChange={(e) => set('parentOccupation', e.target.value)} />
                 </Field>
-                <Field label="Supervising teacher" wide>
+                <Field label={t('regform.supervisor')} wide>
                   <Input
                     value={form.supervisorName}
                     onChange={(e) => set('supervisorName', e.target.value)}
-                    placeholder="Optional"
+                    placeholder={t('regform.optional')}
                   />
                 </Field>
               </div>
@@ -302,9 +304,9 @@ export function RegistrationFormDialog({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="outline" onClick={onClose} disabled={saving}>{t('common.cancel')}</Button>
           <Button onClick={handleSave} disabled={saving || loading}>
-            {saving ? 'Saving…' : 'Save registration details'}
+            {saving ? t('regform.saving') : t('regform.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

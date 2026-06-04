@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { ArrowLeft, Check, CheckCircle2, Loader2, Ticket, X } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
 import { Card } from '@/components/ui/card';
@@ -34,6 +36,7 @@ function rupiah(n: number) {
 }
 
 export default function CompetitionPayPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -235,7 +238,7 @@ export default function CompetitionPayPage() {
         <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" asChild>
           <Link href={paths.dashboard}>
             <ArrowLeft className="size-4" />
-            Back to dashboard
+            {t('pay.back')}
           </Link>
         </Button>
 
@@ -244,7 +247,7 @@ export default function CompetitionPayPage() {
             {config.shortName} 2026
           </p>
           <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">
-            {round ? `${round.name} payment` : 'Registration payment'}
+            {round ? t('pay.headerRound', { round: round.name }) : t('pay.headerTitle')}
           </h1>
         </div>
 
@@ -257,54 +260,46 @@ export default function CompetitionPayPage() {
         {!regs ? (
           <Card className="items-center gap-3 p-10 text-center">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
           </Card>
         ) : settled ? (
           <Card className="items-center gap-3 p-10 text-center">
             <CheckCircle2 className="size-10 text-emerald-600" />
-            <h2 className="font-serif text-xl font-medium text-foreground">Payment received</h2>
-            <p className="text-sm text-muted-foreground">
-              Your registration is now awaiting admin review.
-            </p>
+            <h2 className="font-serif text-xl font-medium text-foreground">{t('pay.successTitle')}</h2>
+            <p className="text-sm text-muted-foreground">{t('pay.successBody')}</p>
             <Button className="mt-2" onClick={() => router.replace(paths.dashboard)}>
-              Back to dashboard
+              {t('pay.back')}
             </Button>
           </Card>
         ) : !reg ? (
           <Card className="gap-2 p-8 text-center">
-            <h2 className="font-serif text-xl font-medium text-foreground">No registration yet</h2>
-            <p className="text-sm text-muted-foreground">
-              Enroll from the dashboard before paying.
-            </p>
+            <h2 className="font-serif text-xl font-medium text-foreground">{t('pay.noReg')}</h2>
+            <p className="text-sm text-muted-foreground">{t('pay.noRegBody')}</p>
             <Button variant="outline" className="mx-auto mt-3 w-fit" asChild>
-              <Link href={paths.dashboard}>Go to dashboard</Link>
+              <Link href={paths.dashboard}>{t('pay.goToDashboard')}</Link>
             </Button>
           </Card>
         ) : !payable ? (
           <Card className="gap-2 p-8 text-center">
-            <h2 className="font-serif text-xl font-medium text-foreground">
-              Nothing to pay
-            </h2>
+            <h2 className="font-serif text-xl font-medium text-foreground">{t('pay.nothingTitle')}</h2>
             <p className="text-sm text-muted-foreground">
-              This registration is{' '}
-              <span className="font-medium">{reg.status.replace(/_/g, ' ')}</span> — no payment is
-              due.
+              {t(`status.${reg.status}` as MessageKey)}
             </p>
             <Button variant="outline" className="mx-auto mt-3 w-fit" asChild>
-              <Link href={paths.dashboard}>Back to dashboard</Link>
+              <Link href={paths.dashboard}>{t('pay.back')}</Link>
             </Button>
           </Card>
         ) : (
           <Card className="gap-0 p-7">
             {/* Voucher */}
             <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-              Have a voucher?
+              {t('pay.voucherTitle')}
             </p>
             {voucher?.valid ? (
               <div className="mt-2 flex items-center justify-between rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 dark:border-emerald-900 dark:bg-emerald-950/40">
                 <span className="flex items-center gap-2 text-sm text-emerald-800 dark:text-emerald-200">
                   <Check className="size-4" />
-                  <span className="font-mono">{code.trim()}</span> applied
+                  <span className="font-mono">{code.trim()}</span>
                 </span>
                 <Button
                   size="icon"
@@ -320,7 +315,7 @@ export default function CompetitionPayPage() {
                 <Input
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="VG-001-XXXXXX"
+                  placeholder={t('pay.voucherPlaceholder')}
                   className="font-mono"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') applyVoucher();
@@ -328,7 +323,7 @@ export default function CompetitionPayPage() {
                 />
                 <Button variant="outline" onClick={applyVoucher} disabled={checking || !code.trim()}>
                   <Ticket className="size-4" />
-                  {checking ? 'Checking…' : 'Apply'}
+                  {checking ? t('pay.checking') : t('pay.apply')}
                 </Button>
               </div>
             )}
@@ -339,17 +334,17 @@ export default function CompetitionPayPage() {
             {/* Fee summary */}
             <div className="mt-6 space-y-1.5 border-t pt-5 text-sm">
               <div className="flex justify-between text-muted-foreground">
-                <span>Registration fee</span>
+                <span>{t('pay.summaryFee')}</span>
                 <span className={voucher?.valid ? 'line-through' : ''}>{formatAmount(fee)}</span>
               </div>
               {voucher?.valid && (
                 <div className="flex justify-between text-emerald-700 dark:text-emerald-300">
-                  <span>Voucher discount</span>
+                  <span>{t('pay.summaryDiscount')}</span>
                   <span>− {formatAmount(fee - amountDue)}</span>
                 </div>
               )}
               <div className="flex justify-between pt-1.5 text-base font-semibold text-foreground">
-                <span>Amount due</span>
+                <span>{t('pay.summaryDue')}</span>
                 <span>{formatAmount(amountDue)}</span>
               </div>
             </div>
@@ -363,13 +358,11 @@ export default function CompetitionPayPage() {
               >
                 <p className="flex items-center gap-2">
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  Waiting for your payment to complete…
+                  {t('pay.waiting')}
                 </p>
-                <p className="mt-1 text-xs text-primary/80">
-                  Finish the payment in the tab that opened. This page updates automatically.
-                </p>
+                <p className="mt-1 text-xs text-primary/80">{t('pay.waitingHint')}</p>
                 <Button size="sm" variant="outline" className="mt-3" onClick={() => void checkStatus()}>
-                  I’ve paid — check now
+                  {t('pay.checkNow')}
                 </Button>
               </div>
             ) : (
@@ -380,14 +373,13 @@ export default function CompetitionPayPage() {
                     aria-live="polite"
                     className="mt-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
                   >
-                    <p className="font-medium">Still processing your payment.</p>
+                    <p className="font-medium">{t('pay.timedOutTitle')}</p>
                     <p className="mt-1 text-xs">
-                      If you’ve already paid, it can take a few minutes to confirm. Use
-                      “I’ve paid — check now”, or head to{' '}
+                      {t('pay.waitingHint')}{' '}
                       <Link href="/account/competitions" className="font-medium underline">
-                        My Competitions
-                      </Link>{' '}
-                      — we’ll update your status there automatically.
+                        {t('pay.myCompetitions')}
+                      </Link>
+                      .
                     </p>
                     <Button
                       size="sm"
@@ -395,18 +387,18 @@ export default function CompetitionPayPage() {
                       className="mt-3"
                       onClick={() => void checkStatus()}
                     >
-                      I’ve paid — check now
+                      {t('pay.checkNow')}
                     </Button>
                   </div>
                 )}
                 <Button className="mt-6 w-full" size="lg" onClick={pay} disabled={paying}>
                   {paying
-                    ? 'Starting payment…'
+                    ? t('pay.starting')
                     : timedOut
-                      ? 'Try payment again'
+                      ? t('pay.tryAgain')
                       : usdEquivalent != null
-                        ? `Pay ${formatAmount(amountDue)} (~$${usdEquivalent} USD)`
-                        : `Pay ${formatAmount(amountDue)}`}
+                        ? `${t('dashboard.pay', { amount: formatAmount(amountDue) })} (~$${usdEquivalent} USD)`
+                        : t('dashboard.pay', { amount: formatAmount(amountDue) })}
                 </Button>
               </>
             )}

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -55,35 +57,35 @@ export type ProfileFieldKey =
 
 interface FieldDef {
   key: ProfileFieldKey;
-  label: string;
+  labelKey: MessageKey;
   type?: 'text' | 'email' | 'date' | 'tel' | 'grade';
   placeholder?: string;
   wide?: boolean;
 }
 
 const FIELDS: Record<ProfileFieldKey, FieldDef> = {
-  fullName:           { key: 'fullName',           label: 'Full name', placeholder: 'Your full name', wide: true },
-  email:              { key: 'email',              label: 'Email', type: 'email' },
-  phone:              { key: 'phone',              label: 'WhatsApp / Phone', type: 'tel', placeholder: '08xxx or +628xxx' },
-  city:               { key: 'city',               label: 'City', placeholder: 'e.g. Jakarta' },
-  province:           { key: 'province',           label: 'Province', placeholder: 'e.g. DKI Jakarta' },
-  country:            { key: 'country',            label: 'Country' },
-  dateOfBirth:        { key: 'dateOfBirth',        label: 'Date of birth', type: 'date' },
-  supervisorName:     { key: 'supervisorName',     label: 'Teacher / Supervisor name' },
-  supervisorEmail:    { key: 'supervisorEmail',    label: 'Teacher / Supervisor email', type: 'email' },
-  supervisorWhatsapp: { key: 'supervisorWhatsapp', label: 'Teacher / Supervisor WhatsApp', type: 'tel' },
-  supervisorPhone:    { key: 'supervisorPhone',    label: 'Teacher / Supervisor phone', type: 'tel' },
-  schoolName:         { key: 'schoolName',         label: 'School name', wide: true },
-  schoolEmail:        { key: 'schoolEmail',        label: 'School email', type: 'email' },
-  schoolAddress:      { key: 'schoolAddress',      label: 'School address', wide: true },
-  schoolWhatsapp:     { key: 'schoolWhatsapp',     label: 'School WhatsApp', type: 'tel' },
-  schoolPhone:        { key: 'schoolPhone',        label: 'School phone', type: 'tel' },
-  parentName:         { key: 'parentName',         label: 'Parent name', wide: true },
-  parentWhatsapp:     { key: 'parentWhatsapp',     label: 'Parent WhatsApp', type: 'tel' },
-  parentPhone:        { key: 'parentPhone',        label: 'Parent phone', type: 'tel' },
-  grade:              { key: 'grade',              label: 'Grade', type: 'grade' },
-  nisn:               { key: 'nisn',               label: 'NISN', placeholder: 'National Student Number' },
-  npsn:               { key: 'npsn',               label: 'NPSN', placeholder: 'National School Number' },
+  fullName:           { key: 'fullName',           labelKey: 'pf.fullName', wide: true },
+  email:              { key: 'email',              labelKey: 'pf.email', type: 'email' },
+  phone:              { key: 'phone',              labelKey: 'pf.phone', type: 'tel', placeholder: '08xxx or +628xxx' },
+  city:               { key: 'city',               labelKey: 'pf.city' },
+  province:           { key: 'province',           labelKey: 'pf.province' },
+  country:            { key: 'country',            labelKey: 'pf.country' },
+  dateOfBirth:        { key: 'dateOfBirth',        labelKey: 'pf.dateOfBirth', type: 'date' },
+  supervisorName:     { key: 'supervisorName',     labelKey: 'pf.supervisorName' },
+  supervisorEmail:    { key: 'supervisorEmail',    labelKey: 'pf.supervisorEmail', type: 'email' },
+  supervisorWhatsapp: { key: 'supervisorWhatsapp', labelKey: 'pf.supervisorWhatsapp', type: 'tel' },
+  supervisorPhone:    { key: 'supervisorPhone',    labelKey: 'pf.supervisorPhone', type: 'tel' },
+  schoolName:         { key: 'schoolName',         labelKey: 'pf.schoolName', wide: true },
+  schoolEmail:        { key: 'schoolEmail',        labelKey: 'pf.schoolEmail', type: 'email' },
+  schoolAddress:      { key: 'schoolAddress',      labelKey: 'pf.schoolAddress', wide: true },
+  schoolWhatsapp:     { key: 'schoolWhatsapp',     labelKey: 'pf.schoolWhatsapp', type: 'tel' },
+  schoolPhone:        { key: 'schoolPhone',        labelKey: 'pf.schoolPhone', type: 'tel' },
+  parentName:         { key: 'parentName',         labelKey: 'pf.parentName', wide: true },
+  parentWhatsapp:     { key: 'parentWhatsapp',     labelKey: 'pf.parentWhatsapp', type: 'tel' },
+  parentPhone:        { key: 'parentPhone',        labelKey: 'pf.parentPhone', type: 'tel' },
+  grade:              { key: 'grade',              labelKey: 'pf.grade', type: 'grade' },
+  nisn:               { key: 'nisn',               labelKey: 'pf.nisn', placeholder: 'National Student Number' },
+  npsn:               { key: 'npsn',               labelKey: 'pf.npsn', placeholder: 'National School Number' },
 };
 
 // Always-rendered field order, applied to both the Required and Optional
@@ -140,6 +142,7 @@ export function ProfileCompletionDialog({
   onCompleted,
   contextLabel,
 }: Props) {
+  const t = useT();
   const [values, setValues] = useState<Record<string, string>>({});
   const [country, setCountry] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -220,10 +223,10 @@ export function ProfileCompletionDialog({
         }
       }
       await emcHttp.put<{ message: string }>('/users/me', payload);
-      toast.success('Details confirmed — continuing to registration');
+      toast.success(t('profileDlg.toastSaved'));
       onCompleted();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save your details');
+      toast.error(err instanceof Error ? err.message : t('profileDlg.toastFailed'));
     } finally {
       setSaving(false);
     }
@@ -234,7 +237,7 @@ export function ProfileCompletionDialog({
     if (k === 'country') {
       return (
         <div key={k} className={f.wide ? 'sm:col-span-2 space-y-1.5' : 'space-y-1.5'}>
-          <Label htmlFor={`pcd-${k}`}>{f.label}</Label>
+          <Label htmlFor={`pcd-${k}`}>{t(f.labelKey)}</Label>
           <CountrySelect id={`pcd-${k}`} value={country} onChange={setCountry} />
         </div>
       );
@@ -242,14 +245,14 @@ export function ProfileCompletionDialog({
     if (f.type === 'grade') {
       return (
         <div key={k} className={f.wide ? 'sm:col-span-2 space-y-1.5' : 'space-y-1.5'}>
-          <Label htmlFor={`pcd-${k}`}>{f.label}</Label>
+          <Label htmlFor={`pcd-${k}`}>{t(f.labelKey)}</Label>
           <Select value={values[k] || ''} onValueChange={(v) => set(k, v)}>
             <SelectTrigger id={`pcd-${k}`} className="w-full">
-              <SelectValue placeholder="Pick a grade" />
+              <SelectValue placeholder={t('profileDlg.pickGrade')} />
             </SelectTrigger>
             <SelectContent>
               {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
-                <SelectItem key={g} value={String(g)}>Grade {g}</SelectItem>
+                <SelectItem key={g} value={String(g)}>{t('dashboard.heroGrade', { n: g })}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -258,7 +261,7 @@ export function ProfileCompletionDialog({
     }
     return (
       <div key={k} className={f.wide ? 'sm:col-span-2 space-y-1.5' : 'space-y-1.5'}>
-        <Label htmlFor={`pcd-${k}`}>{f.label}</Label>
+        <Label htmlFor={`pcd-${k}`}>{t(f.labelKey)}</Label>
         <Input
           id={`pcd-${k}`}
           type={f.type ?? 'text'}
@@ -274,20 +277,18 @@ export function ProfileCompletionDialog({
     <Dialog open={open} onOpenChange={(v) => { if (!v) onCancel(); }}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Confirm your details</DialogTitle>
+          <DialogTitle>{t('profileDlg.title')}</DialogTitle>
           <DialogDescription>
-            {contextLabel ? (
-              <>Review the details below for <span className="font-medium text-foreground">{contextLabel}</span>. We&apos;ve pre-filled everything from your profile — fields marked Required must be filled before payment; optional fields can be added later.</>
-            ) : (
-              <>Review the details below before registering. Fields marked Required must be filled before payment; optional fields can be added later.</>
-            )}
+            {contextLabel
+              ? t('profileDlg.descContext', { context: contextLabel })
+              : t('profileDlg.desc')}
           </DialogDescription>
         </DialogHeader>
 
         {required.length > 0 && (
           <section className="space-y-2">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-foreground">
-              Required
+              {t('profileDlg.required')}
             </h3>
             <div className="grid gap-4 sm:grid-cols-2">{required.map(renderField)}</div>
           </section>
@@ -296,7 +297,7 @@ export function ProfileCompletionDialog({
         {optional.length > 0 && (
           <section className="space-y-2 border-t pt-4">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Optional
+              {t('profileDlg.optional')}
             </h3>
             <div className="grid gap-4 sm:grid-cols-2">{optional.map(renderField)}</div>
           </section>
@@ -304,11 +305,11 @@ export function ProfileCompletionDialog({
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="button" onClick={handleSave} disabled={!canSave}>
             {saving && <Loader2 className="size-4 animate-spin" />}
-            Confirm and continue
+            {t('profileDlg.continue')}
           </Button>
         </DialogFooter>
       </DialogContent>
