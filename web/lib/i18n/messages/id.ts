@@ -117,6 +117,12 @@ export const id: Partial<Record<MessageKey, string>> = {
   'dashboard.activityTimeline': 'Rangkaian Kegiatan',
   'dashboard.timelineSubtitle': 'Perjalananmu di {name}.',
   'dashboard.status': 'Status',
+  'dashboard.heroParticipantId': 'ID Peserta',
+  'dashboard.heroCategory': 'Kategori',
+  'dashboard.heroTestCenter': 'Test Center',
+  'dashboard.heroTrack': 'Jalur',
+  'dashboard.heroStatus': 'Status',
+  'dashboard.heroGrade': 'Kelas {n}',
   'dashboard.nextAction': 'Aksi Berikutnya',
   'dashboard.competitionPath': 'Jalur Kompetisi',
   'dashboard.gradeLevels': 'Jenjang Kelas',
@@ -136,4 +142,32 @@ export const id: Partial<Record<MessageKey, string>> = {
   'dashboard.hintDocuments': 'Unggah dokumen yang diperlukan kompetisi ini.',
   'dashboard.hintPayment': 'Bayar biaya pendaftaran untuk melanjutkan.',
   'dashboard.hintApproval': 'Penyelenggara sedang meninjau pendaftaranmu — tidak perlu tindakan.',
+
+  // ── Registration status enum ───────────────────────────────────────
+  'status.notRegistered': 'Belum terdaftar',
+  'status.pending_payment': 'Menunggu pembayaran',
+  'status.pending_review': 'Menunggu tinjauan',
+  'status.registered': 'Terdaftar',
+  'status.paid': 'Lunas',
+  'status.approved': 'Disetujui',
+  'status.rejected': 'Ditolak',
+  'status.completed': 'Selesai',
+  'status.submitted': 'Terkirim',
+
+  // ── Competition in-page tabs ───────────────────────────────────────
+  'tabs.overview': 'Ringkasan',
+  'tabs.announcements': 'Pengumuman',
+  'tabs.materials': 'Materi',
+  'tabs.store': 'Toko',
+  'tabs.certificates': 'Sertifikat',
+  'tabs.feedback': 'Masukan',
+
+  // ── Komodo creature card ───────────────────────────────────────────
+  'creature.title': 'Makhluk Komodo',
+  'creature.addDob': 'Tambahkan tanggal lahirmu untuk melihat makhlukmu',
+  'creature.addDobBody':
+    'Komodo mengelompokkan peserta berdasarkan usia. Setelah kami tahu tanggal lahirmu, makhlukmu terbuka untuk setiap babak.',
+  'creature.completeProfile': 'Lengkapi profil',
+  'creature.outOfBracket': 'Di luar kelompok',
+  'creature.ageAtCutoff': 'Usia {age} saat batas',
 };

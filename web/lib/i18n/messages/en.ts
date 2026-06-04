@@ -117,6 +117,13 @@ export const en = {
   'dashboard.activityTimeline': 'Activity timeline',
   'dashboard.timelineSubtitle': 'Your journey through {name}.',
   'dashboard.status': 'Status',
+  // hero stat labels
+  'dashboard.heroParticipantId': 'Participant ID',
+  'dashboard.heroCategory': 'Category',
+  'dashboard.heroTestCenter': 'Test Center',
+  'dashboard.heroTrack': 'Track',
+  'dashboard.heroStatus': 'Status',
+  'dashboard.heroGrade': 'Grade {n}',
   'dashboard.nextAction': 'Next action',
   'dashboard.competitionPath': 'Competition path',
   'dashboard.gradeLevels': 'Grade levels',
@@ -139,6 +146,34 @@ export const en = {
   'dashboard.hintDocuments': 'Upload the documents this competition requires.',
   'dashboard.hintPayment': 'Pay your registration fee to continue.',
   'dashboard.hintApproval': 'An organizer is reviewing your registration — no action needed.',
+
+  // ── Registration status enum ───────────────────────────────────────
+  'status.notRegistered': 'Not registered',
+  'status.pending_payment': 'Pending payment',
+  'status.pending_review': 'Pending review',
+  'status.registered': 'Registered',
+  'status.paid': 'Paid',
+  'status.approved': 'Approved',
+  'status.rejected': 'Rejected',
+  'status.completed': 'Completed',
+  'status.submitted': 'Submitted',
+
+  // ── Competition in-page tabs ───────────────────────────────────────
+  'tabs.overview': 'Overview',
+  'tabs.announcements': 'Announcements',
+  'tabs.materials': 'Materials',
+  'tabs.store': 'Store',
+  'tabs.certificates': 'Certificates',
+  'tabs.feedback': 'Feedback',
+
+  // ── Komodo creature card ───────────────────────────────────────────
+  'creature.title': 'Komodo creature',
+  'creature.addDob': 'Add your date of birth to see your creature',
+  'creature.addDobBody':
+    "Komodo brackets students by age. Once we know your birthday, you'll unlock your creature for every round.",
+  'creature.completeProfile': 'Complete profile',
+  'creature.outOfBracket': 'Out of bracket',
+  'creature.ageAtCutoff': 'Age {age} at cutoff',
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -20,17 +20,25 @@ export interface CompetitionPortalConfig {
   /** Two-stop gradient for the brand panel left half. */
   gradient: readonly [string, string];
   /**
-   * Dashboard hero treatment. `'tricolor'` = white card with a multi-colour
-   * wordmark + math-symbol watermark (EMC); `'gradient'` (default) = an
-   * accent-gradient hero. Drives the hero + the active-stage accent colour.
+   * Dashboard hero treatment:
+   *  - `'tricolor'` — white card, multi-colour wordmark + math watermark (EMC)
+   *  - `'komodo'`   — deep-purple gradient, lime accents + mascot watermark
+   *  - `'gradient'` (default) — a clean accent-gradient hero
    */
-  heroStyle?: 'tricolor' | 'gradient';
+  heroStyle?: 'tricolor' | 'komodo' | 'gradient';
   /** Three-colour palette used when `heroStyle === 'tricolor'`. */
   tricolor?: { blue: string; pink: string; orange: string };
   /**
-   * Colour used for the "current" timeline node, active-stage border, and the
-   * Next-action CTA. Defaults to `accent`. EMC overrides this to its orange so
-   * the dashboard matches emc.competzy.com rather than the generic purple.
+   * Hero headline. Overrides `wordmark` as the big H1 in the dashboard hero —
+   * e.g. Komodo's "Komodo 2026/2027 — Your Journey to Bali". Falls back to
+   * `wordmark` when unset.
+   */
+  heroTitle?: string;
+  /** Emoji mascot rendered as a faded watermark on the `'komodo'` hero. */
+  mascot?: string;
+  /**
+   * Highlight colour for active nodes / badges / the Next-action CTA. Defaults
+   * to `accent`. EMC = orange; Komodo = lime (see `compTheme`).
    */
   activeAccent?: string;
 }
@@ -70,10 +78,14 @@ export const competitionRegistry: Record<string, CompetitionPortalConfig> = {
     slug: 'komodo',
     shortName: 'Komodo',
     wordmark: 'International Math Competition',
-    tagline: 'Compete with the world in mathematics',
-    accent: '#C2410C',
-    accentDark: '#9A3412',
-    gradient: ['#C2410C', '#9A3412'] as const,
+    heroTitle: 'Komodo 2026/2027 — Your Journey to Bali',
+    tagline: 'A playing ground for agile young minds.',
+    accent: '#5627FF',
+    accentDark: '#3A1290',
+    gradient: ['#1E0550', '#3A1290'] as const,
+    heroStyle: 'komodo',
+    activeAccent: '#B8FF00',
+    mascot: '🦎',
   },
 };
 

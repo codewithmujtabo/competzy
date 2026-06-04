@@ -17,6 +17,7 @@ import {
 import { emcHttp, HttpError } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import {
@@ -63,26 +64,62 @@ function hexA(hex: string, alpha: number): string {
 }
 
 // Per-competition presentation theme derived from the registry config — the
-// single source of truth for the dashboard's accent colours. EMC reads its
-// orange/blue from the tricolor palette; every other competition uses its
-// registry accent + gradient. `done` stays green across all competitions
-// (mockup parity).
+// single source of truth for the dashboard's accent colours. Mirrors the
+// mockup's two-accent system:
+//   • `fill`       — the highlight BACKGROUND (lime for Komodo, orange for EMC,
+//                    the registry accent otherwise); paired with `fillInk` for
+//                    readable text/icons on top (lime needs dark ink).
+//   • `structural` — borders, section text, active-card outline, progress bars
+//                    (purple for Komodo, blue for EMC, the accent otherwise).
+// `done` stays green across all competitions.
 interface CompTheme {
-  active: string; // current node ring, active-stage border, CTA accent
-  activeSoft: string; // tinted active-stage background
-  done: string; // completed node / "Done" badge
-  panelGradient: string; // the Next-action card background
+  fill: string;
+  fillInk: string;
+  structural: string;
+  structuralSoft: string;
+  done: string;
+  panelGradient: string;
+  heroStyle: 'tricolor' | 'komodo' | 'gradient';
 }
 
 const DONE_GREEN = '#16A34A';
 
 function compTheme(config: CompetitionPortalConfig): CompTheme {
-  const active = config.activeAccent ?? config.accent;
-  const panelGradient =
-    config.heroStyle === 'tricolor'
-      ? 'linear-gradient(160deg, #0D47C4 0%, #1B6EF3 100%)'
-      : `linear-gradient(160deg, ${config.gradient[0]} 0%, ${config.gradient[1]} 100%)`;
-  return { active, activeSoft: hexA(active, 0.1), done: DONE_GREEN, panelGradient };
+  const done = DONE_GREEN;
+  if (config.heroStyle === 'tricolor') {
+    // EMC — orange fill (white ink), blue structural.
+    return {
+      fill: '#FF6B00',
+      fillInk: '#ffffff',
+      structural: '#1B6EF3',
+      structuralSoft: hexA('#1B6EF3', 0.1),
+      done,
+      panelGradient: 'linear-gradient(160deg, #0D47C4 0%, #1B6EF3 100%)',
+      heroStyle: 'tricolor',
+    };
+  }
+  if (config.heroStyle === 'komodo') {
+    // Komodo — lime fill (dark ink), violet structural, deep-purple panel.
+    return {
+      fill: '#B8FF00',
+      fillInk: '#1A0880',
+      structural: '#5627FF',
+      structuralSoft: hexA('#5627FF', 0.1),
+      done,
+      panelGradient: 'linear-gradient(160deg, #1A0880 0%, #5627FF 100%)',
+      heroStyle: 'komodo',
+    };
+  }
+  const a = config.activeAccent ?? config.accent;
+  return {
+    fill: a,
+    fillInk: '#ffffff',
+    structural: a,
+    structuralSoft: hexA(a, 0.1),
+    done,
+    panelGradient: `linear-gradient(160deg, ${config.gradient[0]} 0%, ${config.gradient[1]} 100%)`,
+    heroStyle: config.heroStyle ?? 'gradient',
+  };
 }
 
 type StepStatus = 'done' | 'current' | 'upcoming';
@@ -191,8 +228,8 @@ function StepNode({
   if (status === 'current') {
     return (
       <span
-        className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 bg-background text-sm font-semibold"
-        style={{ borderColor: theme.active, color: theme.active, boxShadow: `0 0 0 4px ${hexA(theme.active, 0.16)}` }}
+        className="flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+        style={{ background: theme.fill, color: theme.fillInk, boxShadow: `0 0 0 5px ${hexA(theme.fill, 0.2)}` }}
       >
         {order}
       </span>
@@ -815,7 +852,7 @@ function StepBadge({ status, theme }: { status: StepStatus; theme: CompTheme }) 
     return (
       <span
         className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-        style={{ background: theme.activeSoft, color: theme.active }}
+        style={{ background: theme.fill, color: theme.fillInk }}
       >
         <AlertCircle className="size-3" />
         {t('dashboard.badgeActionNeeded')}
@@ -880,7 +917,7 @@ function Stepper({
                 className={cn(s.status === 'current' && 'rounded-xl border p-4 shadow-sm')}
                 style={
                   s.status === 'current'
-                    ? { borderColor: hexA(theme.active, 0.5), background: hexA(theme.active, 0.04) }
+                    ? { borderColor: theme.structural, background: hexA(theme.structural, 0.04) }
                     : undefined
                 }
               >
@@ -911,7 +948,7 @@ function Stepper({
                 {hint && (
                   <p
                     className="mt-2 rounded-md px-3 py-2 text-xs leading-relaxed"
-                    style={{ background: hexA(theme.active, 0.06), color: theme.active }}
+                    style={{ background: hexA(theme.structural, 0.06), color: theme.structural }}
                   >
                     {hint}
                   </p>
@@ -1002,6 +1039,14 @@ function HeroStats({
   );
 }
 
+// Translate a registration status enum (or "not registered") for display.
+function statusLabel(status: string | null, t: ReturnType<typeof useT>): string {
+  if (!status) return t('status.notRegistered');
+  const key = `status.${status}` as MessageKey;
+  const out = t(key);
+  return out === key ? status.replace(/_/g, ' ') : out;
+}
+
 function CompetitionHero({
   config,
   reg,
@@ -1011,11 +1056,14 @@ function CompetitionHero({
   reg: RegistrationRow | null;
   grade: string | null;
 }) {
-  const status = reg ? reg.status.replace(/_/g, ' ') : 'Not registered';
+  const t = useT();
+  const status = statusLabel(reg?.status ?? null, t);
   const participantId = reg?.registrationNumber ?? '—';
-  const category = grade ? `Grade ${grade}` : '—';
+  const category = grade ? t('dashboard.heroGrade', { n: grade }) : '—';
+  const title = config.heroTitle ?? config.wordmark;
 
-  if (config.slug === 'emc') {
+  // ── EMC — white card, tricolor wordmark, math watermark ──────────────
+  if (config.heroStyle === 'tricolor') {
     return (
       <Card className="relative gap-0 overflow-hidden p-7 sm:p-9">
         <span
@@ -1040,16 +1088,59 @@ function CompetitionHero({
         </p>
         <HeroStats
           stats={[
-            { k: 'Participant ID', v: participantId, color: EMC_TRI.blue },
-            { k: 'Category', v: category, color: EMC_TRI.pink },
-            { k: 'Test Center', v: '—', color: EMC_TRI.orange },
-            { k: 'Status', v: status, color: EMC_TRI.blue },
+            { k: t('dashboard.heroParticipantId'), v: participantId, color: EMC_TRI.blue },
+            { k: t('dashboard.heroCategory'), v: category, color: EMC_TRI.pink },
+            { k: t('dashboard.heroTestCenter'), v: '—', color: EMC_TRI.orange },
+            { k: t('dashboard.heroStatus'), v: status, color: EMC_TRI.blue },
           ]}
         />
       </Card>
     );
   }
 
+  // ── Komodo — deep-purple gradient, lime eyebrow + status, mascot ─────
+  if (config.heroStyle === 'komodo') {
+    return (
+      <Card
+        className="relative gap-0 overflow-hidden border-0 p-7 text-white sm:p-9"
+        style={{
+          background:
+            'radial-gradient(900px 320px at 88% -50%, #4B1FA0 0%, transparent 60%), linear-gradient(120deg, #1E0550 0%, #3A1290 100%)',
+        }}
+      >
+        {config.mascot && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -bottom-8 right-6 select-none text-[140px] leading-none opacity-10"
+            style={{ transform: 'rotate(-12deg)' }}
+          >
+            {config.mascot}
+          </span>
+        )}
+        <span
+          className="inline-block rounded-md px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em]"
+          style={{ background: '#B8FF00', color: '#1A0880' }}
+        >
+          {config.shortName} · International Math Competition
+        </span>
+        <h1 className="relative mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
+          {title}
+        </h1>
+        <p className="mt-1 text-sm italic text-white/70">“{config.tagline}”</p>
+        <HeroStats
+          light
+          stats={[
+            { k: t('dashboard.heroParticipantId'), v: participantId },
+            { k: t('dashboard.heroCategory'), v: category },
+            { k: t('dashboard.heroTrack'), v: '—' },
+            { k: t('dashboard.heroStatus'), v: status },
+          ]}
+        />
+      </Card>
+    );
+  }
+
+  // ── Default — clean accent-gradient hero ─────────────────────────────
   return (
     <Card
       className="relative gap-0 overflow-hidden border-0 p-7 text-white sm:p-9"
@@ -1058,16 +1149,14 @@ function CompetitionHero({
       <span className="inline-block rounded-full bg-white/15 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-white/90 ring-1 ring-white/25">
         {config.shortName} 2026
       </span>
-      <h1 className="mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
-        {config.wordmark}
-      </h1>
+      <h1 className="mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
       <p className="mt-1 text-sm italic text-white/80">{config.tagline}</p>
       <HeroStats
         light
         stats={[
-          { k: 'Participant ID', v: participantId },
-          { k: 'Category', v: category },
-          { k: 'Status', v: status },
+          { k: t('dashboard.heroParticipantId'), v: participantId },
+          { k: t('dashboard.heroCategory'), v: category },
+          { k: t('dashboard.heroStatus'), v: status },
         ]}
       />
     </Card>
@@ -1114,7 +1203,7 @@ function RoundsProgressCard({
                   paid
                     ? { background: theme.done, color: '#fff' }
                     : reg
-                      ? { border: `2px solid ${theme.active}`, color: theme.active }
+                      ? { border: `2px solid ${theme.structural}`, color: theme.structural }
                       : undefined
                 }
               >
@@ -1170,26 +1259,27 @@ function CompetitionSidePanel({
   // the competition accent (orange for EMC) + white text rather than the
   // page's default primary button — it has to pop against the gradient.
   const ctaCls =
-    'flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-[filter] hover:brightness-110';
+    'flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm transition-[filter] hover:brightness-110';
+  const ctaStyle = { background: theme.fill, color: theme.fillInk };
   const cta = (() => {
     if (!current) return null;
     if (current.stepKey === 'registration' || current.checkType === 'profile') {
       return (
-        <button type="button" className={ctaCls} style={{ background: theme.active }} onClick={onCompleteProfile}>
+        <button type="button" className={ctaCls} style={ctaStyle} onClick={onCompleteProfile}>
           {t('dashboard.fillRegForm')}
         </button>
       );
     }
     if (current.checkType === 'payment') {
       return (
-        <Link href={competitionPaths(slug).pay} className={ctaCls} style={{ background: theme.active }}>
+        <Link href={competitionPaths(slug).pay} className={ctaCls} style={ctaStyle}>
           {t('dashboard.payRegistrationFee')}
         </Link>
       );
     }
     if (current.checkType === 'documents') {
       return (
-        <Link href="/account/documents" className={ctaCls} style={{ background: theme.active }}>
+        <Link href="/account/documents" className={ctaCls} style={ctaStyle}>
           {t('dashboard.uploadDocuments')}
         </Link>
       );
@@ -1236,7 +1326,7 @@ function CompetitionSidePanel({
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full transition-all"
-            style={{ width: `${pct}%`, background: theme.active }}
+            style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${theme.structural}, ${theme.fill})` }}
           />
         </div>
         <ul className="mt-4 space-y-2.5">
@@ -1251,7 +1341,7 @@ function CompetitionSidePanel({
                   s.status === 'done'
                     ? { background: theme.done, color: '#fff' }
                     : s.status === 'current'
-                      ? { border: `2px solid ${theme.active}`, color: theme.active }
+                      ? { background: theme.fill, color: theme.fillInk }
                       : undefined
                 }
               >
@@ -1280,7 +1370,7 @@ function CompetitionSidePanel({
                     'flex items-center justify-between rounded-lg px-3 py-2 text-sm',
                     active ? 'font-semibold' : 'text-muted-foreground',
                   )}
-                  style={active ? { background: theme.activeSoft, color: theme.active } : undefined}
+                  style={active ? { background: theme.structuralSoft, color: theme.structural } : undefined}
                 >
                   <span>{l.label}</span>
                   <span className="text-xs">{l.range}</span>

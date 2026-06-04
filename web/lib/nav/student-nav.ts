@@ -30,14 +30,22 @@ export const STUDENT_BRAND: { name: string; tagline: string; icon: LucideIcon } 
 export const STUDENT_NAV: NavSection[] = [
   {
     items: [
-      { label: 'All Competitions', href: '/competitions', icon: LayoutGrid, exact: true },
+      {
+        label: 'All Competitions',
+        labelKey: 'nav.allCompetitions',
+        href: '/competitions',
+        icon: LayoutGrid,
+        exact: true,
+      },
     ],
   },
   {
     label: 'My Account',
+    labelKey: 'nav.myAccount',
     items: [
       {
         label: 'Profile',
+        labelKey: 'nav.profile',
         href: '/account/profile',
         icon: User,
         // Documents/Records/Family are tabs of Profile — keep Profile lit there.
@@ -45,13 +53,14 @@ export const STUDENT_NAV: NavSection[] = [
       },
       {
         label: 'My Competitions',
+        labelKey: 'nav.myCompetitions',
         href: '/account/competitions',
         icon: Trophy,
         // Stay lit while viewing a specific competition portal.
         activePrefixes: ['/competitions/'],
       },
-      { label: 'My Achievements', href: '/account/achievements', icon: Award },
-      { label: 'Announcements', href: '/account/announcements', icon: Megaphone },
+      { label: 'My Achievements', labelKey: 'nav.myAchievements', href: '/account/achievements', icon: Award },
+      { label: 'Announcements', labelKey: 'nav.announcements', href: '/account/announcements', icon: Megaphone },
     ],
   },
 ];

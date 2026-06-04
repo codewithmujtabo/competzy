@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { creatureInfo, type CreatureKey } from '@/lib/competitions/komodo-creatures';
+import { useT } from '@/lib/i18n/context';
 
 export interface CreatureRow {
   roundId: string;
@@ -41,6 +42,7 @@ function fmtDate(iso: string): string {
  * "complete your profile" CTA if the student has no DOB.
  */
 export function CreatureCard({ rounds }: Props) {
+  const t = useT();
   if (rounds.length === 0) return null;
 
   // The hero is the first round — typically Round 1, the season opener.
@@ -52,18 +54,13 @@ export function CreatureCard({ rounds }: Props) {
         <div className="flex items-center gap-2">
           <Sparkles className="size-4" />
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#FFE459]/80">
-            Komodo creature
+            {t('creature.title')}
           </p>
         </div>
-        <h3 className="font-serif text-xl font-semibold tracking-tight">
-          Add your date of birth to see your creature
-        </h3>
-        <p className="text-sm text-[#FFE459]/85">
-          Komodo brackets students by age. Once we know your birthday, you&apos;ll
-          unlock your creature for every round.
-        </p>
+        <h3 className="font-serif text-xl font-semibold tracking-tight">{t('creature.addDob')}</h3>
+        <p className="text-sm text-[#FFE459]/85">{t('creature.addDobBody')}</p>
         <Button asChild variant="secondary" size="sm" className="mt-2 w-fit">
-          <Link href="/account/profile">Complete profile</Link>
+          <Link href="/account/profile">{t('creature.completeProfile')}</Link>
         </Button>
       </Card>
     );
@@ -90,10 +87,10 @@ export function CreatureCard({ rounds }: Props) {
           )}
           <div className="min-w-0 flex-1">
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#FFE459]/80">
-              Komodo creature · {hero.roundName}
+              {t('creature.title')} · {hero.roundName}
             </p>
             <h3 className="mt-1 font-serif text-3xl font-semibold tracking-tight text-[#FFE459]">
-              {hero.creature ? hero.creature.name : 'Out of bracket'}
+              {hero.creature ? hero.creature.name : t('creature.outOfBracket')}
             </h3>
             <p className="mt-1 text-sm text-[#FFE459]/90">
               {hero.creature ? (
@@ -145,7 +142,7 @@ export function CreatureCard({ rounds }: Props) {
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="shrink-0 text-muted-foreground">
-                    Out of bracket
+                    {t('creature.outOfBracket')}
                   </Badge>
                 )}
               </li>

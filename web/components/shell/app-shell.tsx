@@ -6,6 +6,8 @@ import type { LucideIcon } from 'lucide-react';
 import { Bell, LogOut, Moon, Settings, Sun } from 'lucide-react';
 
 import { useTheme } from '@/lib/theme/context';
+import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import {
@@ -39,7 +41,10 @@ import {
 import { ImpersonationBanner } from '@/components/impersonation-banner';
 
 export interface NavItem {
+  /** Plain fallback label (operator portals). */
   label: string;
+  /** When set, the label is translated via `useT()` (student/parent nav). */
+  labelKey?: MessageKey;
   href: string;
   icon: LucideIcon;
   /** Match the pathname exactly instead of by prefix. */
@@ -62,6 +67,8 @@ export interface NavItem {
 export interface NavSection {
   /** Optional small heading shown above the group. */
   label?: string;
+  /** When set, the heading is translated via `useT()`. */
+  labelKey?: MessageKey;
   items: NavItem[];
 }
 
@@ -125,6 +132,9 @@ export function AppShell({
 }: AppShellProps) {
   const pathname = usePathname() ?? '';
   const { theme, toggle } = useTheme();
+  const t = useT();
+  const navLabel = (item: { labelKey?: MessageKey; label: string }) =>
+    item.labelKey ? t(item.labelKey) : item.label;
   const isMobile = useIsMobile();
   const BrandIcon = brand.icon;
 
@@ -151,25 +161,30 @@ export function AppShell({
 
         <SidebarContent>
           {nav.map((section, i) => (
-            <SidebarGroup key={section.label ?? i}>
-              {section.label && <SidebarGroupLabel>{section.label}</SidebarGroupLabel>}
+            <SidebarGroup key={section.label ?? section.labelKey ?? i}>
+              {(section.label || section.labelKey) && (
+                <SidebarGroupLabel>
+                  {section.labelKey ? t(section.labelKey) : section.label}
+                </SidebarGroupLabel>
+              )}
               <SidebarGroupContent>
                 <SidebarMenu>
                   {section.items.map((item) => {
                     const active = isActive(pathname, item);
                     const Icon = item.icon;
+                    const label = navLabel(item);
                     return (
                       <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
+                        <SidebarMenuButton asChild isActive={active} tooltip={label}>
                           {item.external ? (
                             <a href={item.href} target="_blank" rel="noreferrer">
                               <Icon />
-                              <span>{item.label}</span>
+                              <span>{label}</span>
                             </a>
                           ) : (
                             <Link href={item.href}>
                               <Icon />
-                              <span>{item.label}</span>
+                              <span>{label}</span>
                             </Link>
                           )}
                         </SidebarMenuButton>

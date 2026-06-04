@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { competitionPaths } from '@/lib/competitions/registry';
+import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 import { cn } from '@/lib/utils';
 
 /**
@@ -13,24 +15,25 @@ import { cn } from '@/lib/utils';
  */
 export function CompetitionTabs({ slug }: { slug: string }) {
   const pathname = usePathname() ?? '';
+  const t = useT();
   const p = competitionPaths(slug);
-  const tabs = [
-    { label: 'Overview', href: p.dashboard },
-    { label: 'Announcements', href: p.announcements },
-    { label: 'Materials', href: p.materials },
-    { label: 'Store', href: p.store },
-    { label: 'Certificates', href: p.certificate },
-    { label: 'Feedback', href: p.feedback },
+  const tabs: { labelKey: MessageKey; href: string }[] = [
+    { labelKey: 'tabs.overview', href: p.dashboard },
+    { labelKey: 'tabs.announcements', href: p.announcements },
+    { labelKey: 'tabs.materials', href: p.materials },
+    { labelKey: 'tabs.store', href: p.store },
+    { labelKey: 'tabs.certificates', href: p.certificate },
+    { labelKey: 'tabs.feedback', href: p.feedback },
   ];
   return (
     <div className="border-b bg-background/95 px-4 sm:px-6 lg:px-10">
       <nav className="-mb-px flex gap-1 overflow-x-auto">
-        {tabs.map((t) => {
-          const active = pathname === t.href || pathname.startsWith(t.href + '/');
+        {tabs.map((tab) => {
+          const active = pathname === tab.href || pathname.startsWith(tab.href + '/');
           return (
             <Link
-              key={t.href}
-              href={t.href}
+              key={tab.href}
+              href={tab.href}
               className={cn(
                 'whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors',
                 active
@@ -38,7 +41,7 @@ export function CompetitionTabs({ slug }: { slug: string }) {
                   : 'border-transparent text-muted-foreground hover:text-foreground',
               )}
             >
-              {t.label}
+              {t(tab.labelKey)}
             </Link>
           );
         })}
