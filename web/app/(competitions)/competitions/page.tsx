@@ -23,6 +23,7 @@ import {
 import { toast } from 'sonner';
 
 import { emcHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { getCompetitionConfig } from '@/lib/competitions/registry';
 import { cn } from '@/lib/utils';
@@ -146,6 +147,7 @@ function CompetitionCard({
   isFav: boolean;
   onToggleFav: (compId: string) => void;
 }) {
+  const t = useT();
   const hasPortal = comp.slug ? getCompetitionConfig(comp.slug) : null;
   const body = (
     <Card
@@ -178,7 +180,7 @@ function CompetitionCard({
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {comp.isInternational && (
           <Badge className="font-normal bg-sky-100 text-sky-800 hover:bg-sky-100 dark:bg-sky-950 dark:text-sky-200">
-            International
+            {t('catalog.international')}
           </Badge>
         )}
         {comp.category && (
@@ -190,7 +192,7 @@ function CompetitionCard({
       </div>
       <div className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
         <CalendarDays className="size-3.5" />
-        <span>Registration closes {fmtDate(comp.regCloseDate)}</span>
+        <span>{t('catalog.registrationCloses', { date: fmtDate(comp.regCloseDate) })}</span>
       </div>
       <div className="mt-5 flex items-center justify-between">
         {hasPortal ? (
@@ -198,7 +200,7 @@ function CompetitionCard({
             Open portal <ArrowRight className="size-4" />
           </span>
         ) : (
-          <span className="text-xs text-muted-foreground">Portal coming soon</span>
+          <span className="text-xs text-muted-foreground">{t('catalog.portalComingSoon')}</span>
         )}
       </div>
     </Card>
@@ -249,6 +251,7 @@ function KpiTile({
 }
 
 export default function CompetitionCatalogPage() {
+  const t = useT();
   const { user, loading: authLoading, logout } = useCompetitionAuth();
   const router = useRouter();
 
@@ -353,23 +356,23 @@ export default function CompetitionCatalogPage() {
               <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 backdrop-blur-sm ring-1 ring-white/25">
                 <Sparkles className="size-3.5 text-[#FFE459]" />
                 <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#FFE459]">
-                  Welcome back
+                  {t('catalog.welcomeBack')}
                 </span>
               </div>
               <h1 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-[#FFE459] sm:text-4xl">
-                Hey {firstName}!
+                {t('catalog.greeting', { name: firstName })}
               </h1>
               <p className="mt-2 max-w-prose text-sm text-[#FFE459]/90">
                 {summary?.continueTask
                   ? `${summary.continueTask.label} — pick up where you left off below.`
-                  : 'Pick a competition to register or check on your progress.'}
+                  : t('catalog.subtitle')}
               </p>
               {isStudent && me && completion < 100 && (
                 <Link
                   href="/account/profile"
                   className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[#FFE459]/90 underline-offset-4 hover:underline"
                 >
-                  Complete your profile <ArrowRight className="size-3" />
+                  {t('catalog.completeProfile')} <ArrowRight className="size-3" />
                 </Link>
               )}
             </div>
@@ -381,7 +384,7 @@ export default function CompetitionCatalogPage() {
                     Profile
                   </p>
                   <p className="mt-1 font-serif text-lg font-semibold text-[#FFE459]">
-                    {completion === 100 ? 'All set 🎉' : 'Almost there'}
+                    {completion === 100 ? t('catalog.profileAllSet') : t('catalog.profileAlmost')}
                   </p>
                   <p className="text-xs text-[#FFE459]/80">{completion}% complete</p>
                 </div>
@@ -394,41 +397,33 @@ export default function CompetitionCatalogPage() {
         {isStudent && (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiTile
-              label="Registrations"
+              label={t('catalog.kpiRegistrations')}
               value={summary?.counts.registrations ?? 0}
-              hint={
-                summary?.counts.registrations
-                  ? `${summary.counts.registrations} competition${summary.counts.registrations === 1 ? '' : 's'} joined`
-                  : 'Join your first competition'
-              }
+              hint={t('catalog.kpiRegistrationsHint')}
               icon={ClipboardCheck}
               gradient="bg-gradient-to-br from-[#3D087B] via-[#6B1AB8] to-[#1F0454]"
               ink="text-[#FFE459]"
             />
             <KpiTile
-              label="Certificates"
+              label={t('catalog.kpiCertificates')}
               value={summary?.counts.certificates ?? 0}
-              hint={
-                summary?.counts.certificates
-                  ? 'Earned & verified'
-                  : 'Finish an exam to earn one'
-              }
+              hint={t('catalog.kpiCertificatesHint')}
               icon={Award}
               gradient="bg-gradient-to-br from-[#F43B86] via-[#FF6BA8] to-[#8A1A6B]"
               ink="text-[#FFF4E8]"
             />
             <KpiTile
-              label="Best score"
+              label={t('catalog.kpiBestScore')}
               value={summary?.bestScore ? summary.bestScore.value : '—'}
-              hint={summary?.bestScore ? summary.bestScore.compName : 'Sit your first exam'}
+              hint={summary?.bestScore ? summary.bestScore.compName : t('catalog.kpiBestScoreHint')}
               icon={Trophy}
               gradient="bg-gradient-to-br from-[#FFE459] via-[#FFD93D] to-[#FFC93C]"
               ink="text-[#11052C]"
             />
             <KpiTile
-              label="Saved"
+              label={t('catalog.kpiSaved')}
               value={summary?.counts.savedComps ?? favIds.size}
-              hint="Competitions you bookmarked"
+              hint={t('catalog.kpiSavedHint')}
               icon={Heart}
               gradient="bg-gradient-to-br from-[#11052C] via-[#1F0454] to-[#3D087B]"
               ink="text-[#FFE459]"
@@ -445,7 +440,7 @@ export default function CompetitionCatalogPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary/80">
-                  Continue where you left off
+                  {t('catalog.continueTitle')}
                 </p>
                 <p className="mt-0.5 truncate font-serif text-base font-medium text-foreground">
                   {summary.continueTask.label}
@@ -470,19 +465,19 @@ export default function CompetitionCatalogPage() {
         <div>
           <div className="mb-3 flex items-end justify-between">
             <div>
-              <h2 className="font-serif text-xl font-semibold text-foreground">All competitions</h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">Tap one to learn more.</p>
+              <h2 className="font-serif text-xl font-semibold text-foreground">{t('catalog.allCompetitions')}</h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">{t('catalog.allCompetitionsHint')}</p>
             </div>
           </div>
           {!comps ? (
             <Card className="items-center gap-3 p-10 text-center">
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Loading competitions…</p>
+              <p className="text-sm text-muted-foreground">{t('catalog.loading')}</p>
             </Card>
           ) : comps.length === 0 ? (
             <Card className="items-center gap-2 p-10 text-center">
               <Trophy className="size-7 text-muted-foreground" />
-              <h2 className="font-serif text-lg font-medium text-foreground">No competitions yet</h2>
+              <h2 className="font-serif text-lg font-medium text-foreground">{t('catalog.empty')}</h2>
               <p className="text-sm text-muted-foreground">
                 Competitions will appear here once an organizer publishes them.
               </p>
@@ -506,10 +501,10 @@ export default function CompetitionCatalogPage() {
           <div>
             <div className="mb-3 flex items-end justify-between">
               <div>
-                <h2 className="font-serif text-xl font-semibold text-foreground">Your achievements</h2>
+                <h2 className="font-serif text-xl font-semibold text-foreground">{t('catalog.achievementsTitle')}</h2>
                 <p className="mt-0.5 text-sm text-muted-foreground">
                   {summary.recentCertificates.length > 0
-                    ? 'Recently earned — tap a certificate to verify.'
+                    ? t('catalog.achievementsHint')
                     : 'Finish a competition exam to earn your first certificate.'}
                 </p>
               </div>
@@ -517,7 +512,7 @@ export default function CompetitionCatalogPage() {
             {summary.recentCertificates.length === 0 ? (
               <Card className="items-center gap-2 p-10 text-center">
                 <Award className="size-7 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">No certificates yet — start a competition above.</p>
+                <p className="text-sm text-muted-foreground">{t('catalog.achievementsEmpty')}</p>
               </Card>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

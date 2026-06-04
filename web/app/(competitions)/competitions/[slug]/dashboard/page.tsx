@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { emcHttp, HttpError } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
+import { useT } from '@/lib/i18n/context';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import {
@@ -153,16 +154,16 @@ const STATUS_COPY: Record<string, { title: string; body: string }> = {
 };
 
 // Guidance shown under the step the participant is currently on.
-function currentHint(checkType: CheckType): string {
+function currentHint(checkType: CheckType, t: ReturnType<typeof useT>): string {
   switch (checkType) {
     case 'profile':
-      return 'Complete your profile to move forward.';
+      return t('dashboard.hintProfile');
     case 'documents':
-      return 'Upload the documents this competition requires.';
+      return t('dashboard.hintDocuments');
     case 'payment':
-      return 'Pay your registration fee to continue.';
+      return t('dashboard.hintPayment');
     case 'approval':
-      return 'An organizer is reviewing your registration — no action needed.';
+      return t('dashboard.hintApproval');
     case 'none':
       return '';
   }
@@ -620,6 +621,7 @@ function RoundsPanel({
   onRegister: (roundId: string, meta?: Record<string, unknown>) => void;
   userCountry: string | null;
 }) {
+  const t = useT();
   const byRound = new Map(regs.filter((r) => r.roundId).map((r) => [r.roundId, r]));
   const [globalRound, setGlobalRound] = useState<Round | null>(null);
   const intl = isInternationalStudent(userCountry);
@@ -640,9 +642,11 @@ function RoundsPanel({
     // paragraph push the whole row past the viewport on mobile. Containing it
     // here keeps the panel inside its column.
     <Card className="gap-0 overflow-hidden p-5 sm:p-7">
-      <h2 className="font-serif text-xl font-medium text-foreground">Competition rounds</h2>
+      <h2 className="font-serif text-xl font-medium text-foreground">
+        {t('dashboard.competitionRounds')}
+      </h2>
       <p className="mt-1 mb-5 text-sm text-muted-foreground">
-        Register and pay for each round of {wordmark} you want to enter.
+        {t('dashboard.roundsSubtitle', { name: wordmark })}
       </p>
       {/* Vertical list — one full-width row per round so the round name never
           truncates and there's room for the description, gating notes, and
@@ -705,24 +709,24 @@ function RoundsPanel({
 
                 <dl className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
                   <div className="flex gap-1.5">
-                    <dt className="font-mono uppercase tracking-wide text-[10px]">Mode</dt>
+                    <dt className="font-mono uppercase tracking-wide text-[10px]">{t('dashboard.mode')}</dt>
                     <dd className="text-foreground">{round.roundType}</dd>
                   </div>
                   {examDate && (
                     <div className="flex gap-1.5">
-                      <dt className="font-mono uppercase tracking-wide text-[10px]">Exam</dt>
+                      <dt className="font-mono uppercase tracking-wide text-[10px]">{t('dashboard.exam')}</dt>
                       <dd className="text-foreground">{examDate}</dd>
                     </div>
                   )}
                   {deadline && !reg && state.kind !== 'missed' && (
                     <div className="flex gap-1.5">
-                      <dt className="font-mono uppercase tracking-wide text-[10px]">Closes</dt>
+                      <dt className="font-mono uppercase tracking-wide text-[10px]">{t('dashboard.closes')}</dt>
                       <dd className="text-foreground">{deadline}</dd>
                     </div>
                   )}
                   <div className="flex gap-1.5">
-                    <dt className="font-mono uppercase tracking-wide text-[10px]">Fee</dt>
-                    <dd className="text-foreground">{price ?? 'Free'}</dd>
+                    <dt className="font-mono uppercase tracking-wide text-[10px]">{t('dashboard.fee')}</dt>
+                    <dd className="text-foreground">{price ?? t('dashboard.free')}</dd>
                   </div>
                 </dl>
               </div>
@@ -734,7 +738,7 @@ function RoundsPanel({
                   <StatusPill status={reg.status} />
                 ) : state.kind === 'missed' ? (
                   <span className="self-start rounded-full bg-muted px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground sm:self-end">
-                    Missed
+                    {t('dashboard.missed')}
                   </span>
                 ) : null}
 
@@ -747,8 +751,8 @@ function RoundsPanel({
                     <Button size="sm" asChild className="w-full sm:w-auto">
                       <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
                         {intlEligible
-                          ? `Pay ${usd(round.feeInternational ?? 0)}`
-                          : 'Pay round fee'}
+                          ? t('dashboard.pay', { amount: usd(round.feeInternational ?? 0) })
+                          : t('dashboard.payRoundFee')}
                       </Link>
                     </Button>
                   ) : (
@@ -758,7 +762,7 @@ function RoundsPanel({
                   )
                 ) : state.kind === 'missed' ? (
                   <p className="text-xs text-muted-foreground sm:text-right">
-                    You didn’t register before this round closed.
+                    {t('dashboard.missedNote')}
                   </p>
                 ) : state.kind === 'locked' ? (
                   <p className="text-xs text-muted-foreground sm:text-right">{state.note}</p>
@@ -773,7 +777,7 @@ function RoundsPanel({
                         : onRegister(round.id)
                     }
                   >
-                    {registering === round.id ? 'Registering…' : 'Register for this round'}
+                    {registering === round.id ? t('dashboard.registering') : t('dashboard.registerRound')}
                   </Button>
                 )}
               </div>
@@ -798,11 +802,12 @@ function RoundsPanel({
 // Status badge per timeline stage (mockup parity). Active uses the
 // competition accent (orange for EMC) so it reads as "act now".
 function StepBadge({ status, theme }: { status: StepStatus; theme: CompTheme }) {
+  const t = useT();
   if (status === 'done') {
     return (
       <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
         <CheckCircle2 className="size-3" />
-        Done
+        {t('dashboard.badgeDone')}
       </span>
     );
   }
@@ -813,14 +818,14 @@ function StepBadge({ status, theme }: { status: StepStatus; theme: CompTheme }) 
         style={{ background: theme.activeSoft, color: theme.active }}
       >
         <AlertCircle className="size-3" />
-        Action needed
+        {t('dashboard.badgeActionNeeded')}
       </span>
     );
   }
   return (
     <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
       <Clock className="size-3" />
-      Upcoming
+      {t('dashboard.badgeUpcoming')}
     </span>
   );
 }
@@ -842,11 +847,12 @@ function Stepper({
   theme: CompTheme;
   onCompleteProfile: () => void;
 }) {
+  const t = useT();
   return (
     <ol className="mt-1">
       {steps.map((s, i) => {
         const last = i === steps.length - 1;
-        const hint = s.status === 'current' ? currentHint(s.checkType) : '';
+        const hint = s.status === 'current' ? currentHint(s.checkType, t) : '';
         const showAccess = s.stepKey === 'external_access' && s.status !== 'upcoming';
         const showExam =
           (s.stepKey === 'exam' || s.stepKey.startsWith('round')) && s.status !== 'upcoming';
@@ -917,24 +923,24 @@ function Stepper({
                   <div className="mt-3 flex flex-wrap gap-2">
                     {showRegForm && (
                       <Button size="sm" onClick={onCompleteProfile}>
-                        Fill registration form
+                        {t('dashboard.fillRegForm')}
                       </Button>
                     )}
                     {showPay && (
                       <Button asChild size="sm" variant={showRegForm ? 'outline' : 'default'}>
-                        <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
+                        <Link href={competitionPaths(slug).pay}>{t('dashboard.payRegistrationFee')}</Link>
                       </Button>
                     )}
                   </div>
                 )}
                 {showProfile && (
                   <Button size="sm" className="mt-3" onClick={onCompleteProfile}>
-                    Complete registration form
+                    {t('dashboard.completeRegForm')}
                   </Button>
                 )}
                 {showDocs && (
                   <Button asChild size="sm" className="mt-3">
-                    <Link href="/account/documents">Upload documents</Link>
+                    <Link href="/account/documents">{t('dashboard.uploadDocuments')}</Link>
                   </Button>
                 )}
               </div>
@@ -1080,6 +1086,7 @@ function RoundsProgressCard({
   regs: RegistrationRow[];
   theme: CompTheme;
 }) {
+  const t = useT();
   const byRound = new Map(
     regs.filter((r) => r.roundId).map((r) => [r.roundId as string, r]),
   );
@@ -1087,10 +1094,10 @@ function RoundsProgressCard({
   return (
     <Card className="gap-0 p-5">
       <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-        Competition path
+        {t('dashboard.competitionPath')}
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
-        {joined} of {rounds.length} rounds joined
+        {t('dashboard.roundsJoined', { joined, total: rounds.length })}
       </p>
       <ul className="mt-3 space-y-2.5">
         {rounds.map((r) => {
@@ -1115,7 +1122,7 @@ function RoundsProgressCard({
               </span>
               <span className="min-w-0 flex-1 truncate text-foreground">{r.roundName}</span>
               <span className="shrink-0 text-xs capitalize text-muted-foreground">
-                {reg ? reg.status.replace(/_/g, ' ') : 'Not joined'}
+                {reg ? reg.status.replace(/_/g, ' ') : t('dashboard.notJoined')}
               </span>
             </li>
           );
@@ -1149,6 +1156,7 @@ function CompetitionSidePanel({
   theme: CompTheme;
   onCompleteProfile: () => void;
 }) {
+  const t = useT();
   const current = steps.find((s) => s.status === 'current');
   const done = steps.filter((s) => s.status === 'done').length;
   const total = steps.length;
@@ -1168,21 +1176,21 @@ function CompetitionSidePanel({
     if (current.stepKey === 'registration' || current.checkType === 'profile') {
       return (
         <button type="button" className={ctaCls} style={{ background: theme.active }} onClick={onCompleteProfile}>
-          Fill registration form
+          {t('dashboard.fillRegForm')}
         </button>
       );
     }
     if (current.checkType === 'payment') {
       return (
         <Link href={competitionPaths(slug).pay} className={ctaCls} style={{ background: theme.active }}>
-          Pay registration fee
+          {t('dashboard.payRegistrationFee')}
         </Link>
       );
     }
     if (current.checkType === 'documents') {
       return (
         <Link href="/account/documents" className={ctaCls} style={{ background: theme.active }}>
-          Upload documents
+          {t('dashboard.uploadDocuments')}
         </Link>
       );
     }
@@ -1206,16 +1214,16 @@ function CompetitionSidePanel({
         >
           <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
             <Zap className="size-3.5" />
-            Next action
+            {t('dashboard.nextAction')}
           </p>
           <h3 className="mt-2 font-serif text-lg font-semibold leading-snug">{current.title}</h3>
           {current.description && <p className="mt-1 text-sm text-white/80">{current.description}</p>}
           {cta && <div className="mt-4">{cta}</div>}
           {days != null && (
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <Countdown num={days} lbl="Days" />
-              <Countdown num={Math.floor(days / 7)} lbl="Weeks" />
-              <Countdown num={`H-${days}`} lbl="To event" />
+              <Countdown num={days} lbl={t('dashboard.cdDays')} />
+              <Countdown num={Math.floor(days / 7)} lbl={t('dashboard.cdWeeks')} />
+              <Countdown num={`H-${days}`} lbl={t('dashboard.cdToEvent')} />
             </div>
           )}
         </Card>
@@ -1223,7 +1231,7 @@ function CompetitionSidePanel({
 
       <Card className="gap-0 p-5">
         <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          Competition path
+          {t('dashboard.competitionPath')}
         </p>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
           <div
@@ -1260,7 +1268,7 @@ function CompetitionSidePanel({
       {bracket && (
         <Card className="gap-0 p-5">
           <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Grade levels
+            {t('dashboard.gradeLevels')}
           </p>
           <ul className="mt-3 space-y-2">
             {levels.map((l) => {
@@ -1287,6 +1295,7 @@ function CompetitionSidePanel({
 }
 
 export default function CompetitionDashboardPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -1569,7 +1578,7 @@ export default function CompetitionDashboardPage() {
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="size-4" />
-              All competitions
+              {t('dashboard.backToAll')}
             </Link>
           )}
           <CompetitionHero config={config} reg={reg ?? null} grade={userGrade} />
@@ -1589,20 +1598,19 @@ export default function CompetitionDashboardPage() {
         {compError || (!compLoading && !comp?.id) ? (
           <Card className="items-center gap-3 p-10 text-center">
             <p className="text-sm font-medium text-foreground">
-              This competition isn’t available to your account.
+              {t('dashboard.notAvailableTitle')}
             </p>
             <p className="max-w-md text-sm text-muted-foreground">
-              {compError ??
-                'Check the catalog for competitions you can register for. If you think this is a mistake, contact the organizer.'}
+              {compError ?? t('dashboard.notAvailableBody')}
             </p>
             <Button asChild variant="outline" size="sm">
-              <Link href="/competitions">Browse competitions</Link>
+              <Link href="/competitions">{t('dashboard.browseCompetitions')}</Link>
             </Button>
           </Card>
         ) : !regs || rounds === null ? (
           <Card className="items-center gap-3 p-10 text-center">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Loading your registration…</p>
+            <p className="text-sm text-muted-foreground">{t('dashboard.loadingRegistration')}</p>
           </Card>
         ) : rounds.length > 0 ? (
           <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
@@ -1617,15 +1625,13 @@ export default function CompetitionDashboardPage() {
                 userCountry={userCountry}
               />
               <Card className="gap-0 p-7">
-                <h2 className="font-serif text-xl font-medium text-foreground">Your exams</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Exams unlock once you’ve registered and paid for their round.
-                </p>
+                <h2 className="font-serif text-xl font-medium text-foreground">{t('dashboard.yourExams')}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{t('dashboard.examsHint')}</p>
                 <ExamBlock compId={comp?.id ?? null} slug={slug} />
               </Card>
               <Card className="gap-0 p-7">
                 <h2 className="font-serif text-xl font-medium text-foreground">
-                  Your certificates
+                  {t('dashboard.yourCertificates')}
                 </h2>
                 <CertificateBlock compId={comp?.id ?? null} />
               </Card>
@@ -1652,10 +1658,10 @@ export default function CompetitionDashboardPage() {
                   )}
                 </div>
                 <h2 className="mt-2 font-serif text-xl font-medium text-foreground">
-                  Activity timeline
+                  {t('dashboard.activityTimeline')}
                 </h2>
                 <p className="mt-1 mb-4 text-sm text-muted-foreground">
-                  Your journey through {config.wordmark}.
+                  {t('dashboard.timelineSubtitle', { name: config.wordmark })}
                 </p>
                 <Stepper
                   steps={progress.steps}
@@ -1695,7 +1701,7 @@ export default function CompetitionDashboardPage() {
               </p>
               {reg.status === 'pending_payment' && (
                 <Button asChild className="mt-4 w-fit">
-                  <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
+                  <Link href={competitionPaths(slug).pay}>{t('dashboard.payRegistrationFee')}</Link>
                 </Button>
               )}
             </Card>
@@ -1703,13 +1709,11 @@ export default function CompetitionDashboardPage() {
         ) : (
           <Card className="gap-0 p-8 text-center">
             <h2 className="font-serif text-xl font-medium text-foreground">
-              Welcome to {config.wordmark}
+              {t('dashboard.welcomeTo', { name: config.wordmark })}
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              You don’t have a registration yet. Enroll now to claim your spot.
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">{t('dashboard.noRegistration')}</p>
             <Button className="mx-auto mt-5 w-fit" onClick={enrollNow} disabled={enroll || !comp?.id}>
-              {enroll ? 'Enrolling…' : `Register for ${config.shortName} 2026`}
+              {enroll ? t('dashboard.enrolling') : t('dashboard.registerFor', { name: `${config.shortName} 2026` })}
             </Button>
             {!comp?.id && (
               <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
