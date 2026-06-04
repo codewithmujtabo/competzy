@@ -62,6 +62,10 @@ export default function CompetitionPayPage() {
   // Payment.
   const [paying, setPaying] = useState(false);
   const [polling, setPolling] = useState(false);
+  // Set when the verify poll gives up (~2.7 min) without a settled status, so
+  // we can replace the silent stop with an explainer instead of leaving the
+  // student on a spinner that vanished.
+  const [timedOut, setTimedOut] = useState(false);
   const [settled, setSettled] = useState(false);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -169,6 +173,7 @@ export default function CompetitionPayPage() {
     if (!reg) return;
     setPaying(true);
     setErr(null);
+    setTimedOut(false);
     try {
       const appliedCode = voucher?.valid ? code.trim() : undefined;
       const res = await emcHttp.post<{
@@ -190,6 +195,7 @@ export default function CompetitionPayPage() {
           if (tries > 40) {
             if (pollTimer.current) clearInterval(pollTimer.current);
             setPolling(false);
+            setTimedOut(true);
             return;
           }
           void checkStatus();
@@ -367,13 +373,42 @@ export default function CompetitionPayPage() {
                 </Button>
               </div>
             ) : (
-              <Button className="mt-6 w-full" size="lg" onClick={pay} disabled={paying}>
-                {paying
-                  ? 'Starting payment…'
-                  : usdEquivalent != null
-                    ? `Pay ${formatAmount(amountDue)} (~$${usdEquivalent} USD)`
-                    : `Pay ${formatAmount(amountDue)}`}
-              </Button>
+              <>
+                {timedOut && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="mt-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                  >
+                    <p className="font-medium">Still processing your payment.</p>
+                    <p className="mt-1 text-xs">
+                      If you’ve already paid, it can take a few minutes to confirm. Use
+                      “I’ve paid — check now”, or head to{' '}
+                      <Link href="/account/competitions" className="font-medium underline">
+                        My Competitions
+                      </Link>{' '}
+                      — we’ll update your status there automatically.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-3"
+                      onClick={() => void checkStatus()}
+                    >
+                      I’ve paid — check now
+                    </Button>
+                  </div>
+                )}
+                <Button className="mt-6 w-full" size="lg" onClick={pay} disabled={paying}>
+                  {paying
+                    ? 'Starting payment…'
+                    : timedOut
+                      ? 'Try payment again'
+                      : usdEquivalent != null
+                        ? `Pay ${formatAmount(amountDue)} (~$${usdEquivalent} USD)`
+                        : `Pay ${formatAmount(amountDue)}`}
+                </Button>
+              </>
             )}
           </Card>
         )}

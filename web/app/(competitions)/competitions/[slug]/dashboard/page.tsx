@@ -4,7 +4,16 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { ArrowLeft, CalendarDays, Check, Loader2 } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  Zap,
+} from 'lucide-react';
 import { emcHttp, HttpError } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
@@ -43,6 +52,36 @@ interface RegistrationRow {
 
 function rupiah(n: number): string {
   return `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
+}
+
+// rgba() from a #rrggbb hex + alpha — for tinted accent backgrounds/rings.
+function hexA(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const n = parseInt(h.length === 3 ? h.replace(/(.)/g, '$1$1') : h, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+// Per-competition presentation theme derived from the registry config — the
+// single source of truth for the dashboard's accent colours. EMC reads its
+// orange/blue from the tricolor palette; every other competition uses its
+// registry accent + gradient. `done` stays green across all competitions
+// (mockup parity).
+interface CompTheme {
+  active: string; // current node ring, active-stage border, CTA accent
+  activeSoft: string; // tinted active-stage background
+  done: string; // completed node / "Done" badge
+  panelGradient: string; // the Next-action card background
+}
+
+const DONE_GREEN = '#16A34A';
+
+function compTheme(config: CompetitionPortalConfig): CompTheme {
+  const active = config.activeAccent ?? config.accent;
+  const panelGradient =
+    config.heroStyle === 'tricolor'
+      ? 'linear-gradient(160deg, #0D47C4 0%, #1B6EF3 100%)'
+      : `linear-gradient(160deg, ${config.gradient[0]} 0%, ${config.gradient[1]} 100%)`;
+  return { active, activeSoft: hexA(active, 0.1), done: DONE_GREEN, panelGradient };
 }
 
 type StepStatus = 'done' | 'current' | 'upcoming';
@@ -129,17 +168,31 @@ function currentHint(checkType: CheckType): string {
   }
 }
 
-function StepNode({ status, order }: { status: StepStatus; order: number }) {
+function StepNode({
+  status,
+  order,
+  theme,
+}: {
+  status: StepStatus;
+  order: number;
+  theme: CompTheme;
+}) {
   if (status === 'done') {
     return (
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+      <span
+        className="flex size-8 shrink-0 items-center justify-center rounded-full text-white"
+        style={{ background: theme.done }}
+      >
         <Check className="size-4" />
       </span>
     );
   }
   if (status === 'current') {
     return (
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-background text-sm font-semibold text-primary">
+      <span
+        className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 bg-background text-sm font-semibold"
+        style={{ borderColor: theme.active, color: theme.active, boxShadow: `0 0 0 4px ${hexA(theme.active, 0.16)}` }}
+      >
         {order}
       </span>
     );
@@ -687,24 +740,17 @@ function RoundsPanel({
 
                 {reg ? (
                   reg.status === 'pending_payment' ? (
-                    intlEligible ? (
-                      <Button size="sm" asChild className="w-full sm:w-auto">
-                        <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
-                          Pay {usd(round.feeInternational ?? 0)} (IDR-equivalent)
-                        </Link>
-                      </Button>
-                    ) : intl ? (
-                      <p className="break-words text-xs text-muted-foreground">
-                        International payment is offline for now. Contact the organizer to settle your{' '}
-                        {round.feeInternational != null ? usd(round.feeInternational) : 'round'} fee.
-                      </p>
-                    ) : (
-                      <Button size="sm" asChild className="w-full sm:w-auto">
-                        <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
-                          Pay round fee
-                        </Link>
-                      </Button>
-                    )
+                    // International students pay via the same Midtrans flow — the
+                    // pay page computes the right amount (the round's USD price
+                    // converted to IDR when set, else the local IDR fee), so we
+                    // always route to it rather than dead-ending anyone.
+                    <Button size="sm" asChild className="w-full sm:w-auto">
+                      <Link href={`${competitionPaths(slug).pay}?registrationId=${reg.id}`}>
+                        {intlEligible
+                          ? `Pay ${usd(round.feeInternational ?? 0)}`
+                          : 'Pay round fee'}
+                      </Link>
+                    </Button>
                   ) : (
                     <p className="text-xs text-muted-foreground sm:text-right">
                       {STATUS_COPY[reg.status]?.body ?? `Status: ${reg.status.replace(/_/g, ' ')}`}
@@ -749,22 +795,32 @@ function RoundsPanel({
   );
 }
 
-// Status badge per timeline stage (mockup parity).
-function StepBadge({ status }: { status: StepStatus }) {
-  const map = {
-    done: { label: 'Done', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' },
-    current: { label: 'Action needed', cls: 'bg-primary/10 text-primary' },
-    upcoming: { label: 'Upcoming', cls: 'bg-muted text-muted-foreground' },
-  } as const;
-  const m = map[status];
+// Status badge per timeline stage (mockup parity). Active uses the
+// competition accent (orange for EMC) so it reads as "act now".
+function StepBadge({ status, theme }: { status: StepStatus; theme: CompTheme }) {
+  if (status === 'done') {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+        <CheckCircle2 className="size-3" />
+        Done
+      </span>
+    );
+  }
+  if (status === 'current') {
+    return (
+      <span
+        className="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+        style={{ background: theme.activeSoft, color: theme.active }}
+      >
+        <AlertCircle className="size-3" />
+        Action needed
+      </span>
+    );
+  }
   return (
-    <span
-      className={cn(
-        'shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-        m.cls,
-      )}
-    >
-      {m.label}
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <Clock className="size-3" />
+      Upcoming
     </span>
   );
 }
@@ -775,6 +831,7 @@ function Stepper({
   credential,
   compId,
   slug,
+  theme,
   onCompleteProfile,
 }: {
   steps: FlowProgressStep[];
@@ -782,6 +839,7 @@ function Stepper({
   credential: AffiliatedCredential | null;
   compId: string | null;
   slug: string;
+  theme: CompTheme;
   onCompleteProfile: () => void;
 }) {
   return (
@@ -803,15 +861,22 @@ function Stepper({
         return (
           <li key={s.id} className="flex gap-4">
             <div className="flex flex-col items-center pt-1">
-              <StepNode status={s.status} order={s.stepOrder} />
-              {!last && <span className="w-px flex-1 bg-border" />}
+              <StepNode status={s.status} order={s.stepOrder} theme={theme} />
+              {!last && (
+                <span
+                  className="w-px flex-1"
+                  style={{ background: s.status === 'done' ? theme.done : 'var(--border)' }}
+                />
+              )}
             </div>
             <div className={cn('flex-1', !last && 'pb-5')}>
               <div
-                className={cn(
-                  s.status === 'current' &&
-                    'rounded-xl border border-primary/50 bg-primary/[0.03] p-4 shadow-sm',
-                )}
+                className={cn(s.status === 'current' && 'rounded-xl border p-4 shadow-sm')}
+                style={
+                  s.status === 'current'
+                    ? { borderColor: hexA(theme.active, 0.5), background: hexA(theme.active, 0.04) }
+                    : undefined
+                }
               >
                 <div className="flex items-start justify-between gap-3">
                   <p
@@ -822,7 +887,7 @@ function Stepper({
                   >
                     {s.title}
                   </p>
-                  <StepBadge status={s.status} />
+                  <StepBadge status={s.status} theme={theme} />
                 </div>
                 {(s.startsOn || s.endsOn || s.location) && (
                   <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -838,7 +903,10 @@ function Stepper({
                   </p>
                 )}
                 {hint && (
-                  <p className="mt-2 rounded-md bg-primary/5 px-3 py-2 text-xs leading-relaxed text-primary">
+                  <p
+                    className="mt-2 rounded-md px-3 py-2 text-xs leading-relaxed"
+                    style={{ background: hexA(theme.active, 0.06), color: theme.active }}
+                  >
                     {hint}
                   </p>
                 )}
@@ -946,9 +1014,9 @@ function CompetitionHero({
       <Card className="relative gap-0 overflow-hidden p-7 sm:p-9">
         <span
           aria-hidden
-          className="pointer-events-none absolute right-6 top-1/2 hidden -translate-y-1/2 select-none bg-gradient-to-br from-[#1B6EF3] via-[#E91E8C] to-[#FF6B00] bg-clip-text text-5xl font-black tracking-[0.18em] text-transparent opacity-[0.08] lg:block"
+          className="pointer-events-none absolute right-5 top-1/2 hidden max-w-[42%] -translate-y-1/2 select-none bg-gradient-to-br from-[#1B6EF3] via-[#E91E8C] to-[#FF6B00] bg-clip-text text-right text-5xl font-black leading-snug tracking-[0.18em] text-transparent opacity-[0.13] sm:block lg:text-6xl"
         >
-          ∑ ∂ ∫ π ∞ √
+          ∑ ∂ ∫ π ∞ √ Δ ∇
         </span>
         <span
           className="inline-block rounded-full px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-white"
@@ -1003,7 +1071,15 @@ function CompetitionHero({
 // Komodo / multi-round side panel — the rounds equivalent of the flow view's
 // "Competition path": how many rounds the student has joined + each round's
 // status, from the per-round registrations.
-function RoundsProgressCard({ rounds, regs }: { rounds: Round[]; regs: RegistrationRow[] }) {
+function RoundsProgressCard({
+  rounds,
+  regs,
+  theme,
+}: {
+  rounds: Round[];
+  regs: RegistrationRow[];
+  theme: CompTheme;
+}) {
   const byRound = new Map(
     regs.filter((r) => r.roundId).map((r) => [r.roundId as string, r]),
   );
@@ -1025,12 +1101,15 @@ function RoundsProgressCard({ rounds, regs }: { rounds: Round[]; regs: Registrat
               <span
                 className={cn(
                   'flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',
-                  paid
-                    ? 'bg-primary text-primary-foreground'
-                    : reg
-                      ? 'border-2 border-primary text-primary'
-                      : 'bg-muted text-muted-foreground',
+                  !paid && !reg && 'bg-muted text-muted-foreground',
                 )}
+                style={
+                  paid
+                    ? { background: theme.done, color: '#fff' }
+                    : reg
+                      ? { border: `2px solid ${theme.active}`, color: theme.active }
+                      : undefined
+                }
               >
                 {paid ? <Check className="size-3" /> : ''}
               </span>
@@ -1048,9 +1127,9 @@ function RoundsProgressCard({ rounds, regs }: { rounds: Round[]; regs: Registrat
 
 function Countdown({ num, lbl }: { num: number | string; lbl: string }) {
   return (
-    <div className="rounded-lg bg-white/10 p-2 text-center">
-      <p className="font-serif text-lg font-bold leading-none">{num}</p>
-      <p className="mt-1 text-[9px] uppercase tracking-wide text-white/60">{lbl}</p>
+    <div className="rounded-xl bg-white/10 px-2 py-3 text-center">
+      <p className="font-serif text-2xl font-extrabold leading-none">{num}</p>
+      <p className="mt-1.5 text-[9px] font-semibold uppercase tracking-wider text-white/60">{lbl}</p>
     </div>
   );
 }
@@ -1061,11 +1140,13 @@ function CompetitionSidePanel({
   steps,
   grade,
   slug,
+  theme,
   onCompleteProfile,
 }: {
   steps: FlowProgressStep[];
   grade: string | null;
   slug: string;
+  theme: CompTheme;
   onCompleteProfile: () => void;
 }) {
   const current = steps.find((s) => s.status === 'current');
@@ -1077,27 +1158,32 @@ function CompetitionSidePanel({
     ? Math.max(0, Math.ceil((new Date(target).getTime() - Date.now()) / 86400000))
     : null;
 
+  // The Next-action CTA sits on the dark gradient card, so it's styled with
+  // the competition accent (orange for EMC) + white text rather than the
+  // page's default primary button — it has to pop against the gradient.
+  const ctaCls =
+    'flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-[filter] hover:brightness-110';
   const cta = (() => {
     if (!current) return null;
     if (current.stepKey === 'registration' || current.checkType === 'profile') {
       return (
-        <Button className="w-full" onClick={onCompleteProfile}>
+        <button type="button" className={ctaCls} style={{ background: theme.active }} onClick={onCompleteProfile}>
           Fill registration form
-        </Button>
+        </button>
       );
     }
     if (current.checkType === 'payment') {
       return (
-        <Button asChild className="w-full">
-          <Link href={competitionPaths(slug).pay}>Pay registration fee</Link>
-        </Button>
+        <Link href={competitionPaths(slug).pay} className={ctaCls} style={{ background: theme.active }}>
+          Pay registration fee
+        </Link>
       );
     }
     if (current.checkType === 'documents') {
       return (
-        <Button asChild className="w-full">
-          <Link href="/account/documents">Upload documents</Link>
-        </Button>
+        <Link href="/account/documents" className={ctaCls} style={{ background: theme.active }}>
+          Upload documents
+        </Link>
       );
     }
     return null;
@@ -1114,9 +1200,13 @@ function CompetitionSidePanel({
   return (
     <div className="space-y-4 lg:sticky lg:top-20">
       {current && (
-        <Card className="gap-0 overflow-hidden border-0 bg-gradient-to-br from-[#1F0454] via-[#3D087B] to-[#5627FF] p-6 text-white">
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
-            ⚡ Next action
+        <Card
+          className="gap-0 overflow-hidden border-0 p-6 text-white"
+          style={{ background: theme.panelGradient }}
+        >
+          <p className="flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
+            <Zap className="size-3.5" />
+            Next action
           </p>
           <h3 className="mt-2 font-serif text-lg font-semibold leading-snug">{current.title}</h3>
           {current.description && <p className="mt-1 text-sm text-white/80">{current.description}</p>}
@@ -1136,7 +1226,10 @@ function CompetitionSidePanel({
           Competition path
         </p>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+          <div
+            className="h-full rounded-full transition-all"
+            style={{ width: `${pct}%`, background: theme.active }}
+          />
         </div>
         <ul className="mt-4 space-y-2.5">
           {steps.map((s) => (
@@ -1144,12 +1237,15 @@ function CompetitionSidePanel({
               <span
                 className={cn(
                   'flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold',
-                  s.status === 'done'
-                    ? 'bg-primary text-primary-foreground'
-                    : s.status === 'current'
-                      ? 'border-2 border-primary text-primary'
-                      : 'bg-muted text-muted-foreground',
+                  s.status === 'upcoming' && 'bg-muted text-muted-foreground',
                 )}
+                style={
+                  s.status === 'done'
+                    ? { background: theme.done, color: '#fff' }
+                    : s.status === 'current'
+                      ? { border: `2px solid ${theme.active}`, color: theme.active }
+                      : undefined
+                }
               >
                 {s.status === 'done' ? <Check className="size-3" /> : s.stepOrder}
               </span>
@@ -1174,8 +1270,9 @@ function CompetitionSidePanel({
                   key={l.key}
                   className={cn(
                     'flex items-center justify-between rounded-lg px-3 py-2 text-sm',
-                    active ? 'bg-primary/10 font-semibold text-primary' : 'text-muted-foreground',
+                    active ? 'font-semibold' : 'text-muted-foreground',
                   )}
+                  style={active ? { background: theme.activeSoft, color: theme.active } : undefined}
                 >
                   <span>{l.label}</span>
                   <span className="text-xs">{l.range}</span>
@@ -1193,6 +1290,7 @@ export default function CompetitionDashboardPage() {
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
+  const theme = compTheme(config);
 
   const { user } = useCompetitionAuth();
   // `compError` surfaces a clear failure when the competition can't be
@@ -1536,7 +1634,7 @@ export default function CompetitionDashboardPage() {
               {creatureRounds && creatureRounds.length > 0 && (
                 <CreatureCard rounds={creatureRounds} />
               )}
-              <RoundsProgressCard rounds={rounds} regs={regs} />
+              <RoundsProgressCard rounds={rounds} regs={regs} theme={theme} />
             </div>
           </div>
         ) : reg ? (
@@ -1565,6 +1663,7 @@ export default function CompetitionDashboardPage() {
                   credential={access?.credential ?? null}
                   compId={comp?.id ?? null}
                   slug={slug}
+                  theme={theme}
                   onCompleteProfile={() => setRegFormOpen(true)}
                 />
               </Card>
@@ -1572,6 +1671,7 @@ export default function CompetitionDashboardPage() {
                 steps={progress.steps}
                 grade={userGrade}
                 slug={slug}
+                theme={theme}
                 onCompleteProfile={() => setRegFormOpen(true)}
               />
             </div>

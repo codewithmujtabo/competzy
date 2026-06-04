@@ -195,7 +195,7 @@ export function RegistrationFormDialog({
         country: form.country,
         nisn: form.nisn,
       });
-      toast.success('Registration details saved');
+      toast.success('Details saved — next, complete your payment to confirm your spot.');
       onSaved();
       onClose();
     } catch (e) {

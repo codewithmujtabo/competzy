@@ -19,6 +19,20 @@ export interface CompetitionPortalConfig {
   accentDark: string;
   /** Two-stop gradient for the brand panel left half. */
   gradient: readonly [string, string];
+  /**
+   * Dashboard hero treatment. `'tricolor'` = white card with a multi-colour
+   * wordmark + math-symbol watermark (EMC); `'gradient'` (default) = an
+   * accent-gradient hero. Drives the hero + the active-stage accent colour.
+   */
+  heroStyle?: 'tricolor' | 'gradient';
+  /** Three-colour palette used when `heroStyle === 'tricolor'`. */
+  tricolor?: { blue: string; pink: string; orange: string };
+  /**
+   * Colour used for the "current" timeline node, active-stage border, and the
+   * Next-action CTA. Defaults to `accent`. EMC overrides this to its orange so
+   * the dashboard matches emc.competzy.com rather than the generic purple.
+   */
+  activeAccent?: string;
 }
 
 export const competitionRegistry: Record<string, CompetitionPortalConfig> = {
@@ -27,9 +41,12 @@ export const competitionRegistry: Record<string, CompetitionPortalConfig> = {
     shortName: 'EMC',
     wordmark: 'Mathematics Competition',
     tagline: 'Rejuvenate your brain with math',
-    accent: '#5627FF',
-    accentDark: '#3a1bb8',
-    gradient: ['#5627FF', '#3a1bb8'] as const,
+    accent: '#1B6EF3',
+    accentDark: '#1456c4',
+    gradient: ['#1B6EF3', '#0D47C4'] as const,
+    heroStyle: 'tricolor',
+    tricolor: { blue: '#1B6EF3', pink: '#E91E8C', orange: '#FF6B00' },
+    activeAccent: '#FF6B00',
   },
   ispo: {
     slug: 'ispo',
