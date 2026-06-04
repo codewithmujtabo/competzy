@@ -43,12 +43,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 
-const STATUSES = [
-  { key: 'all', label: 'All' },
-  { key: 'pending_review', label: 'Pending Review' },
-  { key: 'approved', label: 'Approved' },
-  { key: 'rejected', label: 'Rejected' },
+const STATUSES: { key: string; labelKey: MessageKey }[] = [
+  { key: 'all', labelKey: 'adm.reg.tabAll' },
+  { key: 'pending_review', labelKey: 'adm.reg.tabPending' },
+  { key: 'approved', labelKey: 'adm.reg.tabApproved' },
+  { key: 'rejected', labelKey: 'adm.reg.tabRejected' },
 ];
 
 const STATUS_STYLE: Record<string, string> = {
@@ -85,6 +87,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function RegistrationsPage() {
+  const t = useT();
   const [items, setItems] = useState<PendingRegistration[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -180,9 +183,9 @@ export default function RegistrationsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Admin"
-        title="Registrations"
-        subtitle="Review competition registrations and approve or reject pending applications."
+        eyebrow={t('adm.eyebrow')}
+        title={t('opnav.registrations')}
+        subtitle={t('adm.reg.subtitle')}
       />
 
       <div className="flex flex-wrap items-end gap-3">
@@ -190,7 +193,7 @@ export default function RegistrationsPage() {
           <TabsList>
             {STATUSES.map((s) => (
               <TabsTrigger key={s.key} value={s.key}>
-                {s.label}
+                {t(s.labelKey)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -199,10 +202,10 @@ export default function RegistrationsPage() {
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Select value={compId} onValueChange={setCompId}>
             <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder="All competitions" />
+              <SelectValue placeholder={t('adm.reg.allCompetitions')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All competitions</SelectItem>
+              <SelectItem value="all">{t('adm.reg.allCompetitions')}</SelectItem>
               {comps.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
@@ -213,10 +216,10 @@ export default function RegistrationsPage() {
 
           <Select value={year} onValueChange={setYear}>
             <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="All years" />
+              <SelectValue placeholder={t('adm.reg.allYears')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All years</SelectItem>
+              <SelectItem value="all">{t('adm.reg.allYears')}</SelectItem>
               {YEARS.map((y) => (
                 <SelectItem key={y} value={String(y)}>
                   {y}
@@ -228,7 +231,7 @@ export default function RegistrationsPage() {
           <Input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search name, email, school, #…"
+            placeholder={t('adm.reg.search')}
             className="w-[240px]"
           />
         </div>
@@ -239,13 +242,13 @@ export default function RegistrationsPage() {
           <Table className="w-full table-fixed min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>School / Grade</TableHead>
-                <TableHead>Competition</TableHead>
-                <TableHead className="w-24">Fee</TableHead>
-                <TableHead className="w-32">Status</TableHead>
-                <TableHead className="w-28">Submitted</TableHead>
-                <TableHead className="w-48 text-right">Actions</TableHead>
+                <TableHead>{t('adm.reg.colStudent')}</TableHead>
+                <TableHead>{t('adm.reg.colSchoolGrade')}</TableHead>
+                <TableHead>{t('adm.reg.colCompetition')}</TableHead>
+                <TableHead className="w-24">{t('adm.reg.colFee')}</TableHead>
+                <TableHead className="w-32">{t('adm.reg.colStatus')}</TableHead>
+                <TableHead className="w-28">{t('adm.reg.colSubmitted')}</TableHead>
+                <TableHead className="w-48 text-right">{t('adm.reg.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -260,7 +263,7 @@ export default function RegistrationsPage() {
               ) : items.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
-                    No registrations match these filters.
+                    {t('adm.reg.noResults')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -328,10 +331,10 @@ export default function RegistrationsPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => setViewing(r)}
-                          title="View full details"
+                          title={t('adm.reg.viewDetails')}
                         >
                           <Eye className="size-3.5" />
-                          View
+                          {t('adm.reg.view')}
                         </Button>
                         {r.status === 'pending_review' && (
                           <>
@@ -340,7 +343,7 @@ export default function RegistrationsPage() {
                               disabled={busy === r.registrationId}
                               onClick={() => handleApprove(r.registrationId)}
                             >
-                              {busy === r.registrationId ? '…' : 'Approve'}
+                              {busy === r.registrationId ? '…' : t('adm.reg.approve')}
                             </Button>
                             <Button
                               size="sm"
@@ -352,7 +355,7 @@ export default function RegistrationsPage() {
                                 setReason('');
                               }}
                             >
-                              Reject
+                              {t('adm.reg.reject')}
                             </Button>
                           </>
                         )}
@@ -442,15 +445,15 @@ export default function RegistrationsPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject registration</DialogTitle>
+            <DialogTitle>{t('adm.reg.rejectTitle')}</DialogTitle>
             <DialogDescription>
-              The student will be notified with the reason you provide below.
+              {t('adm.reg.rejectDescription')}
             </DialogDescription>
           </DialogHeader>
           <textarea
             rows={3}
             autoFocus
-            placeholder="Reason for rejection (required)…"
+            placeholder={t('adm.reg.rejectReason')}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             className="flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -463,14 +466,14 @@ export default function RegistrationsPage() {
                 setReason('');
               }}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
               disabled={!reason.trim() || busy === rejectId}
               onClick={handleRejectSubmit}
             >
-              {busy === rejectId ? 'Rejecting…' : 'Reject registration'}
+              {busy === rejectId ? t('adm.reg.rejecting') : t('adm.reg.rejectTitle')}
             </Button>
           </DialogFooter>
         </DialogContent>

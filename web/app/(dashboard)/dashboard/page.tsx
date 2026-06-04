@@ -28,6 +28,7 @@ import {
 import { toast } from 'sonner';
 
 import { useAuth } from '@/lib/auth/context';
+import { useT } from '@/lib/i18n/context';
 import { adminHttp } from '@/lib/api/client';
 import { StatCard } from '@/components/shell/stat-card';
 import { ChartCard } from '@/components/shell/chart-card';
@@ -142,6 +143,7 @@ function StatSkeleton() {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const t = useT();
   const [kpi, setKpi] = useState<Kpi | null>(null);
 
   useEffect(() => {
@@ -184,21 +186,19 @@ export default function DashboardPage() {
               </span>
             </div>
             <h1 className="mt-3 font-serif text-4xl font-semibold tracking-tight text-[#fff4e8] sm:text-5xl">
-              Hello, {user?.full_name?.split(' ')[0] || 'Admin'}.
+              {t('adm.greeting', { name: user?.full_name?.split(' ')[0] || 'Admin' })}
             </h1>
-            <p className="mt-2 max-w-prose text-[15px] text-[#fff4e8]/85">
-              Here&apos;s how Competzy is performing across every competition. Tap a card to dive in.
-            </p>
+            <p className="mt-2 max-w-prose text-[15px] text-[#fff4e8]/85">{t('adm.dashSubtitle')}</p>
           </div>
           {kpi && (
             <div className="relative shrink-0 rounded-2xl bg-[#fff4e8]/15 px-5 py-4 text-right backdrop-blur-sm ring-1 ring-[#fff4e8]/30">
               <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#fff4e8]/80">
-                Live · last 90d
+                {t('adm.live90d')}
               </p>
               <p className="mt-1 font-serif text-3xl font-semibold text-[#fff4e8]">
                 {kpi.totals.totalRegistrations.toLocaleString('en-US')}
               </p>
-              <p className="text-xs text-[#fff4e8]/80">total registrations</p>
+              <p className="text-xs text-[#fff4e8]/80">{t('adm.totalRegistrations')}</p>
             </div>
           )}
         </div>
@@ -209,30 +209,30 @@ export default function DashboardPage() {
         {kpi ? (
           <>
             <StatCard
-              label="Registrations"
+              label={t('adm.kpiRegistrations')}
               value={kpi.totals.totalRegistrations.toLocaleString('en-US')}
               icon={ClipboardList}
-              hint={`${kpi.totals.freeRegistrations} free`}
+              hint={t('adm.free', { n: kpi.totals.freeRegistrations })}
               accent="sky"
             />
             <StatCard
-              label="Paid Rate"
+              label={t('adm.kpiPaidRate')}
               value={`${(kpi.paidRate * 100).toFixed(1)}%`}
               icon={Percent}
-              hint={`${kpi.totals.paidRegistrations} paid`}
+              hint={t('adm.paid', { n: kpi.totals.paidRegistrations })}
               accent="berry"
             />
             <StatCard
-              label="Revenue · 90d"
+              label={t('adm.kpiRevenue90d')}
               value={fmtRp(kpi.totals.revenueRp)}
               icon={Wallet}
               accent="solar"
             />
             <StatCard
-              label="Avg Time to Pay"
+              label={t('adm.kpiAvgTimeToPay')}
               value={kpi.avgTimeToPaymentHours != null ? `${kpi.avgTimeToPaymentHours.toFixed(1)} h` : '—'}
               icon={Clock}
-              hint="Registration → settlement"
+              hint={t('adm.regToSettlement')}
               accent="sunshine"
             />
           </>
@@ -250,8 +250,8 @@ export default function DashboardPage() {
       <div className="grid gap-5 lg:grid-cols-3">
         <ChartCard
           className="lg:col-span-2 border-0 shadow-[0_18px_40px_-24px_rgba(75,194,236,0.3)] ring-1 ring-[#4BC2EC]/20"
-          title="Registrations"
-          description="Daily new registrations over the last 90 days"
+          title={t('adm.chartRegistrations')}
+          description={t('adm.chartRegDesc')}
         >
           {kpi ? (
             <ResponsiveContainer width="100%" height={260}>
@@ -299,8 +299,8 @@ export default function DashboardPage() {
 
         <ChartCard
           className="border-0 shadow-[0_18px_40px_-24px_rgba(190,101,169,0.3)] ring-1 ring-[#BE65A9]/20"
-          title="Top competitions"
-          description="By registrations · last 90 days"
+          title={t('adm.topCompetitions')}
+          description={t('adm.topCompDesc')}
           bodyClassName="py-2"
         >
           {!kpi ? (
@@ -310,7 +310,7 @@ export default function DashboardPage() {
               <Skeleton className="h-8 w-full" />
             </div>
           ) : kpi.topCompetitions.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">No registrations yet.</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">{t('adm.noRegistrationsYet')}</p>
           ) : (
             <ol className="space-y-2">
               {kpi.topCompetitions.map((c, i) => {
