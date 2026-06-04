@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Plus, Search, X } from 'lucide-react';
 import { schoolsApi } from '@/lib/api';
 import type { School } from '@/types';
+import { useT } from '@/lib/i18n/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Pager } from '@/components/shell/pager';
 import { Card } from '@/components/ui/card';
@@ -33,6 +34,7 @@ const LIMIT = 20;
 const FORM_DEFAULTS = { npsn: '', name: '', city: '', province: '', address: '' };
 
 export default function SchoolsPage() {
+  const t = useT();
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -79,9 +81,9 @@ export default function SchoolsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Management"
-        title="Schools"
-        subtitle="The directory of schools registered on Competzy."
+        eyebrow={t('adm.management')}
+        title={t('opnav.schools')}
+        subtitle={t('adm.sch.subtitle')}
         actions={
           <Button
             onClick={() => {
@@ -90,7 +92,7 @@ export default function SchoolsPage() {
             }}
           >
             <Plus className="size-4" />
-            Add school
+            {t('adm.sch.addSchool')}
           </Button>
         }
       />
@@ -107,13 +109,13 @@ export default function SchoolsPage() {
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="w-72 pl-9"
-            placeholder="Search name, city, NPSN…"
+            placeholder={t('adm.sch.search')}
             value={searchVal}
             onChange={(e) => setSearchVal(e.target.value)}
           />
         </div>
         <Button type="submit" variant="outline">
-          Search
+          {t('acc.search')}
         </Button>
         {search && (
           <Button
@@ -126,7 +128,7 @@ export default function SchoolsPage() {
             }}
           >
             <X className="size-4" />
-            Clear
+            {t('common.clear')}
           </Button>
         )}
       </form>
@@ -136,11 +138,11 @@ export default function SchoolsPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>NPSN</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>City</TableHead>
-                <TableHead>Province</TableHead>
-                <TableHead>Added</TableHead>
+                <TableHead>{t('adm.colNpsn')}</TableHead>
+                <TableHead>{t('adm.colName')}</TableHead>
+                <TableHead>{t('adm.colCity')}</TableHead>
+                <TableHead>{t('adm.colProvince')}</TableHead>
+                <TableHead>{t('adm.colAdded')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -155,7 +157,7 @@ export default function SchoolsPage() {
               ) : schools.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-32 text-center text-sm text-muted-foreground">
-                    No schools found.
+                    {t('adm.sch.noSchools')}
                   </TableCell>
                 </TableRow>
               ) : (

@@ -14,6 +14,7 @@ export const en = {
   'common.signUp': 'Sign Up',
   'common.getStarted': 'Get Started',
   'common.cancel': 'Cancel',
+  'common.clear': 'Clear',
   'common.save': 'Save',
   'common.loading': 'Loading…',
   'common.back': 'Back',
@@ -331,6 +332,41 @@ export const en = {
   'adm.reg.rejectDescription': 'The student will be notified with the reason you provide below.',
   'adm.reg.rejecting': 'Rejecting…',
   'adm.reg.noResults': 'No registrations match these filters.',
+  // shared admin column headers
+  'adm.management': 'Management',
+  'adm.colName': 'Name',
+  'adm.colEmail': 'Email',
+  'adm.colRole': 'Role',
+  'adm.colSchool': 'School',
+  'adm.colJoined': 'Joined',
+  'adm.colNpsn': 'NPSN',
+  'adm.colCity': 'City',
+  'adm.colProvince': 'Province',
+  'adm.colAdded': 'Added',
+  'adm.colStatus': 'Status',
+  'adm.colCoordinator': 'Coordinator',
+  'adm.colLetter': 'Letter',
+  // users page
+  'adm.usr.subtitle': 'Browse everyone registered on Competzy across all roles.',
+  'adm.usr.search': 'Search name or email…',
+  'adm.usr.noUsers': 'No users found.',
+  'adm.usr.impersonate': 'Impersonate',
+  // schools page
+  'adm.sch.subtitle': 'The directory of schools registered on Competzy.',
+  'adm.sch.search': 'Search name, city, NPSN…',
+  'adm.sch.noSchools': 'No schools found.',
+  'adm.sch.addSchool': 'Add school',
+  // pending schools page
+  'adm.pend.eyebrow': 'Verification queue',
+  'adm.pend.title': 'School Applications',
+  'adm.pend.subtitle':
+    'Approve schools so their coordinator can access the school portal — bulk registration, bulk payment, and reports.',
+  'adm.pend.noPending': 'No pending school applications.',
+  'adm.pend.rejectTitle': 'Reject {name}',
+  'adm.pend.reApprove': 'Reset rejection and re-approve',
+  // segments page
+  'adm.seg.eyebrow': 'Audience',
+  'adm.seg.subtitle': 'Pre-built cross-sell audiences — target any of these from the Send Notification page.',
 
   // ── Operator portal sidebar nav (admin/organizer/school/rep/QB) ────
   'opnav.dashboard': 'Dashboard',

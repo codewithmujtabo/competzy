@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Users } from 'lucide-react';
 import { adminHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,6 +18,7 @@ interface Segment {
 }
 
 export default function SegmentsPage() {
+  const t = useT();
   const [segments, setSegments] = useState<Segment[] | null>(null);
 
   useEffect(() => {
@@ -32,9 +34,9 @@ export default function SegmentsPage() {
   return (
     <div className="mx-auto max-w-[1100px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Audience"
-        title="Segments"
-        subtitle="Pre-built cross-sell audiences — target any of these from the Send Notification page."
+        eyebrow={t('adm.seg.eyebrow')}
+        title={t('opnav.segments')}
+        subtitle={t('adm.seg.subtitle')}
       />
 
       <div className="space-y-4">

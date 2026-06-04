@@ -14,6 +14,7 @@ export const id: Partial<Record<MessageKey, string>> = {
   'common.signUp': 'Daftar',
   'common.getStarted': 'Mulai',
   'common.cancel': 'Batal',
+  'common.clear': 'Bersihkan',
   'common.save': 'Simpan',
   'common.loading': 'Memuat…',
   'common.back': 'Kembali',
@@ -327,6 +328,41 @@ export const id: Partial<Record<MessageKey, string>> = {
   'adm.reg.rejectDescription': 'Siswa akan diberi tahu dengan alasan yang kamu tulis di bawah.',
   'adm.reg.rejecting': 'Menolak…',
   'adm.reg.noResults': 'Tidak ada pendaftaran yang cocok dengan filter ini.',
+  // shared admin column headers
+  'adm.management': 'Manajemen',
+  'adm.colName': 'Nama',
+  'adm.colEmail': 'Email',
+  'adm.colRole': 'Peran',
+  'adm.colSchool': 'Sekolah',
+  'adm.colJoined': 'Bergabung',
+  'adm.colNpsn': 'NPSN',
+  'adm.colCity': 'Kota',
+  'adm.colProvince': 'Provinsi',
+  'adm.colAdded': 'Ditambahkan',
+  'adm.colStatus': 'Status',
+  'adm.colCoordinator': 'Koordinator',
+  'adm.colLetter': 'Surat',
+  // users page
+  'adm.usr.subtitle': 'Telusuri semua yang terdaftar di Competzy dari semua peran.',
+  'adm.usr.search': 'Cari nama atau email…',
+  'adm.usr.noUsers': 'Tidak ada pengguna ditemukan.',
+  'adm.usr.impersonate': 'Menyamar',
+  // schools page
+  'adm.sch.subtitle': 'Direktori sekolah yang terdaftar di Competzy.',
+  'adm.sch.search': 'Cari nama, kota, NPSN…',
+  'adm.sch.noSchools': 'Tidak ada sekolah ditemukan.',
+  'adm.sch.addSchool': 'Tambah sekolah',
+  // pending schools page
+  'adm.pend.eyebrow': 'Antrean verifikasi',
+  'adm.pend.title': 'Aplikasi Sekolah',
+  'adm.pend.subtitle':
+    'Setujui sekolah agar koordinatornya bisa mengakses portal sekolah — pendaftaran massal, pembayaran massal, dan laporan.',
+  'adm.pend.noPending': 'Tidak ada aplikasi sekolah tertunda.',
+  'adm.pend.rejectTitle': 'Tolak {name}',
+  'adm.pend.reApprove': 'Atur ulang penolakan dan setujui ulang',
+  // segments page
+  'adm.seg.eyebrow': 'Audiens',
+  'adm.seg.subtitle': 'Audiens cross-sell siap pakai — targetkan dari halaman Kirim Notifikasi.',
 
   // ── Operator portal sidebar nav (admin/organizer/school/rep/QB) ────
   'opnav.dashboard': 'Dasbor',

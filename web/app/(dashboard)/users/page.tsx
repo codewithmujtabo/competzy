@@ -25,6 +25,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { useT } from '@/lib/i18n/context';
 import { UserEditDialog } from '@/components/user-edit-dialog';
 
 const ROLES = [
@@ -48,6 +49,7 @@ const ROLE_STYLE: Record<string, string> = {
 const LIMIT = 25;
 
 export default function UsersPage() {
+  const t = useT();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -99,9 +101,9 @@ export default function UsersPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Management"
-        title="Users"
-        subtitle="Browse everyone registered on Competzy across all roles."
+        eyebrow={t('adm.management')}
+        title={t('opnav.users')}
+        subtitle={t('adm.usr.subtitle')}
       />
 
       <div className="flex flex-wrap items-center gap-3">
@@ -117,13 +119,13 @@ export default function UsersPage() {
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="w-64 pl-9"
-              placeholder="Search name or email…"
+              placeholder={t('adm.usr.search')}
               value={searchVal}
               onChange={(e) => setSearchVal(e.target.value)}
             />
           </div>
           <Button type="submit" variant="outline">
-            Search
+            {t('acc.search')}
           </Button>
           {search && (
             <Button
@@ -136,7 +138,7 @@ export default function UsersPage() {
               }}
             >
               <X className="size-4" />
-              Clear
+              {t('common.clear')}
             </Button>
           )}
         </form>
@@ -164,12 +166,12 @@ export default function UsersPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>School</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('adm.colName')}</TableHead>
+                <TableHead>{t('adm.colEmail')}</TableHead>
+                <TableHead>{t('adm.colRole')}</TableHead>
+                <TableHead>{t('adm.colSchool')}</TableHead>
+                <TableHead>{t('adm.colJoined')}</TableHead>
+                <TableHead className="text-right">{t('adm.reg.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -184,7 +186,7 @@ export default function UsersPage() {
               ) : users.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
-                    No users found.
+                    {t('adm.usr.noUsers')}
                   </TableCell>
                 </TableRow>
               ) : (

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { ExternalLink } from 'lucide-react';
 import { adminHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +42,7 @@ interface PendingSchool {
 }
 
 export default function SchoolsPendingPage() {
+  const t = useT();
   const [schools, setSchools] = useState<PendingSchool[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<PendingSchool | null>(null);
@@ -91,9 +93,9 @@ export default function SchoolsPendingPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Verification queue"
-        title="School Applications"
-        subtitle="Approve schools so their coordinator can access the school portal — bulk registration, bulk payment, and reports."
+        eyebrow={t('adm.pend.eyebrow')}
+        title={t('adm.pend.title')}
+        subtitle={t('adm.pend.subtitle')}
       />
 
       <Card className="overflow-hidden p-0">
@@ -101,12 +103,12 @@ export default function SchoolsPendingPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>School</TableHead>
-                <TableHead>NPSN</TableHead>
-                <TableHead>Coordinator</TableHead>
-                <TableHead>Letter</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('adm.colSchool')}</TableHead>
+                <TableHead>{t('adm.colNpsn')}</TableHead>
+                <TableHead>{t('adm.colCoordinator')}</TableHead>
+                <TableHead>{t('adm.colLetter')}</TableHead>
+                <TableHead>{t('adm.colStatus')}</TableHead>
+                <TableHead className="text-right">{t('adm.reg.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -121,7 +123,7 @@ export default function SchoolsPendingPage() {
               ) : schools.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
-                    No pending school applications.
+                    {t('adm.pend.noPending')}
                   </TableCell>
                 </TableRow>
               ) : (
