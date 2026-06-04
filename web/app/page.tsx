@@ -23,6 +23,8 @@ import Link from 'next/link';
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Moon, Phone, Sun } from 'lucide-react';
 import { adminHttp } from '@/lib/api/client';
 import { useTheme } from '@/lib/theme/context';
+import { useT } from '@/lib/i18n/context';
+import { LocaleToggle } from '@/components/shell/locale-toggle';
 import type { AuthUser } from '@/types';
 import { destinationFor } from '@/lib/auth/role-destination';
 import {
@@ -67,6 +69,7 @@ function goTo(role: string, slug: string | null) {
 
 export default function UnifiedLogin() {
   const { theme, toggle } = useTheme();
+  const t = useT();
   const isDark = theme === 'dark';
 
   const [hydrating, setHydrating] = useState(true);
@@ -139,7 +142,7 @@ export default function UnifiedLogin() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       if (/invalid email or password/i.test(msg)) {
-        setError("That email and password don't match. Try again, or use Forgot password.");
+        setError(t('login.emailMismatch'));
       } else {
         setError(msg || 'Could not sign in. Please try again.');
       }
@@ -156,7 +159,7 @@ export default function UnifiedLogin() {
     try {
       await adminHttp.post('/auth/phone/send-otp', { phone });
       setOtpSent(true);
-      setOtpInfo('Code sent. Check your phone — it can take a moment.');
+      setOtpInfo(t('login.codeSent'));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not send the code. Please try again.');
     } finally {
@@ -202,7 +205,7 @@ export default function UnifiedLogin() {
       if (/no_account/i.test(msg)) {
         setError("That phone isn't linked to an account. Sign up first, then phone sign-in will work.");
       } else if (/invalid|expired/i.test(msg)) {
-        setError('That code is incorrect or has expired. Request a new one.');
+        setError(t('login.codeInvalid'));
       } else {
         setError(msg || 'Could not verify the code. Please try again.');
       }
@@ -213,15 +216,18 @@ export default function UnifiedLogin() {
 
   return (
     <div className="relative grid min-h-screen lg:grid-cols-2">
-      {/* Theme toggle — pinned to the top-right of the whole screen */}
-      <button
-        onClick={toggle}
-        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        className="absolute right-5 top-5 z-20 flex size-9 items-center justify-center rounded-lg border bg-card text-muted-foreground transition-colors hover:text-foreground"
-      >
-        {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-      </button>
+      {/* Language + theme toggles — pinned to the top-right of the whole screen */}
+      <div className="absolute right-5 top-5 z-20 flex items-center gap-2">
+        <LocaleToggle className="rounded-lg border bg-card px-2 py-1.5" />
+        <button
+          onClick={toggle}
+          aria-label={isDark ? t('common.lightMode') : t('common.darkMode')}
+          title={isDark ? t('common.lightMode') : t('common.darkMode')}
+          className="flex size-9 items-center justify-center rounded-lg border bg-card text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+        </button>
+      </div>
 
       {/* Form panel — LEFT */}
       <div className="relative flex items-center justify-center bg-background px-6 py-12">
@@ -252,12 +258,12 @@ export default function UnifiedLogin() {
               </a>
 
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
-                Competzy · Web Portal
+                {t('login.eyebrow')}
               </p>
-              <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">Welcome back.</h1>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                Sign in to continue to your workspace.
-              </p>
+              <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">
+                {t('login.welcomeBack')}
+              </h1>
+              <p className="mt-1.5 text-sm text-muted-foreground">{t('login.subtitle')}</p>
 
               <Tabs
                 value={mode}
@@ -266,10 +272,10 @@ export default function UnifiedLogin() {
               >
                 <TabsList className="w-full">
                   <TabsTrigger value="email" className="flex-1">
-                    Email
+                    {t('login.tabEmail')}
                   </TabsTrigger>
                   <TabsTrigger value="phone" className="flex-1">
-                    Phone
+                    {t('login.tabPhone')}
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -289,7 +295,7 @@ export default function UnifiedLogin() {
                 <form onSubmit={submitEmail} noValidate className="mt-5 space-y-4">
                   <div>
                     <Label htmlFor="login-email" className="mb-1.5 text-xs text-muted-foreground">
-                      Email
+                      {t('login.emailLabel')}
                     </Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -312,7 +318,7 @@ export default function UnifiedLogin() {
 
                   <div>
                     <Label htmlFor="login-pwd" className="mb-1.5 text-xs text-muted-foreground">
-                      Password
+                      {t('login.passwordLabel')}
                     </Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -339,7 +345,7 @@ export default function UnifiedLogin() {
 
                   <div className="flex items-center justify-end text-sm">
                     <Link href={forgotHref} className="font-medium text-primary hover:underline">
-                      Forgot password?
+                      {t('login.forgotPassword')}
                     </Link>
                   </div>
 
@@ -349,7 +355,7 @@ export default function UnifiedLogin() {
                     className="w-full"
                     disabled={!emailValid || password.length < 8 || submitting}
                   >
-                    {submitting ? 'Signing in…' : 'Sign in'}
+                    {submitting ? t('login.signingIn') : t('login.signInButton')}
                     {!submitting && <ArrowRight className="size-4" />}
                   </Button>
                 </form>
@@ -357,7 +363,7 @@ export default function UnifiedLogin() {
                 <form onSubmit={sendOtp} noValidate className="mt-5 space-y-4">
                   <div>
                     <Label htmlFor="login-phone" className="mb-1.5 text-xs text-muted-foreground">
-                      Phone number
+                      {t('login.phoneLabel')}
                     </Label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -387,7 +393,7 @@ export default function UnifiedLogin() {
                     ) : null}
                   </div>
                   <Button type="submit" size="lg" className="w-full" disabled={!phoneValid || submitting}>
-                    {submitting ? 'Sending code…' : 'Send code'}
+                    {submitting ? t('login.sendingCode') : t('login.sendCode')}
                     {!submitting && <ArrowRight className="size-4" />}
                   </Button>
                 </form>
@@ -398,7 +404,7 @@ export default function UnifiedLogin() {
                   </p>
                   <div>
                     <Label htmlFor="login-otp" className="mb-1.5 text-xs text-muted-foreground">
-                      6-digit code
+                      {t('login.otpLabel')}
                     </Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -417,7 +423,7 @@ export default function UnifiedLogin() {
                     </div>
                   </div>
                   <Button type="submit" size="lg" className="w-full" disabled={otpCode.length < 4 || submitting}>
-                    {submitting ? 'Verifying…' : 'Verify & sign in'}
+                    {submitting ? t('login.verifying') : t('login.verifyButton')}
                     {!submitting && <ArrowRight className="size-4" />}
                   </Button>
                   <div className="flex items-center justify-between text-sm">
@@ -431,7 +437,7 @@ export default function UnifiedLogin() {
                         setError('');
                       }}
                     >
-                      Use a different number
+                      {t('login.useDifferentNumber')}
                     </button>
                     <button
                       type="button"
@@ -439,30 +445,30 @@ export default function UnifiedLogin() {
                       onClick={resendOtp}
                       disabled={submitting}
                     >
-                      Resend code
+                      {t('login.resendCode')}
                     </button>
                   </div>
                 </form>
               )}
 
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                New to Competzy?{' '}
+                {t('login.newToCompetzy')}{' '}
                 <Link href={signUpHref} className="font-medium text-primary hover:underline">
-                  Sign Up
+                  {t('common.signUp')}
                 </Link>
               </p>
 
               <div className="mt-8 flex items-center justify-center gap-2 font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
                 <Link href="/privacy" className="hover:text-foreground">
-                  Privacy
+                  {t('login.footerPrivacy')}
                 </Link>
                 <span>·</span>
                 <Link href="/terms" className="hover:text-foreground">
-                  Terms
+                  {t('login.footerTerms')}
                 </Link>
                 <span>·</span>
                 <a href="mailto:hello@competzy.com" className="hover:text-foreground">
-                  Contact
+                  {t('login.footerContact')}
                 </a>
               </div>
               <p className="mt-2 text-center text-[11px] text-muted-foreground">

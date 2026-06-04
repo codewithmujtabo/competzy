@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { LocaleToggle } from '@/components/shell/locale-toggle';
 import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
@@ -201,6 +202,7 @@ export function AppShell({
             </span>
           )}
           <div className="ml-auto flex items-center gap-1">
+            <LocaleToggle className="mr-1" />
             <Button
               variant="ghost"
               size="icon"
