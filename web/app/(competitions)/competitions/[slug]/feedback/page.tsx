@@ -5,6 +5,7 @@ import { useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, MessageSquare } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
 import { Card } from '@/components/ui/card';
@@ -14,6 +15,7 @@ const TEXTAREA_CLS =
   'flex min-h-36 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50';
 
 export default function CompetitionFeedbackPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -51,7 +53,7 @@ export default function CompetitionFeedbackPage() {
         <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" asChild>
           <Link href={paths.dashboard}>
             <ArrowLeft className="size-4" />
-            Back to dashboard
+            {t('pay.back')}
           </Link>
         </Button>
 
@@ -59,31 +61,31 @@ export default function CompetitionFeedbackPage() {
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
             {config.shortName} 2026
           </p>
-          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">Send feedback</h1>
+          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">{t('comp.sendFeedback')}</h1>
         </div>
 
         {sent ? (
           <Card className="items-center gap-3 p-10 text-center">
             <CheckCircle2 className="size-10 text-emerald-600" />
-            <h2 className="font-serif text-xl font-medium text-foreground">Thank you!</h2>
+            <h2 className="font-serif text-xl font-medium text-foreground">{t('comp.thankYou')}</h2>
             <p className="text-sm text-muted-foreground">
-              Your feedback has reached the {config.wordmark} team.
+              {t('comp.feedbackSentBody', { name: config.wordmark })}
             </p>
             <Button className="mt-2" asChild>
-              <Link href={paths.dashboard}>Back to dashboard</Link>
+              <Link href={paths.dashboard}>{t('pay.back')}</Link>
             </Button>
           </Card>
         ) : (
           <Card className="gap-0 p-7">
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <MessageSquare className="size-4" />
-              Tell the organizers what’s working and what could be better.
+              {t('comp.feedbackPrompt')}
             </p>
             <textarea
               className={`${TEXTAREA_CLS} mt-4`}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Your suggestion or feedback…"
+              placeholder={t('comp.feedbackPlaceholder')}
             />
             {err && <p className="mt-2 text-sm text-destructive">{err}</p>}
             <Button
@@ -92,7 +94,7 @@ export default function CompetitionFeedbackPage() {
               onClick={submit}
               disabled={sending || !content.trim()}
             >
-              {sending ? 'Sending…' : 'Send feedback'}
+              {sending ? t('comp.sending') : t('comp.sendFeedback')}
             </Button>
           </Card>
         )}

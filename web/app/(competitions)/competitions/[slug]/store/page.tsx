@@ -9,6 +9,7 @@ import { emcHttp } from '@/lib/api/client';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { useCart } from '@/lib/competitions/use-cart';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -25,6 +26,7 @@ function rupiah(n: number) {
 }
 
 export default function CompetitionStorePage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -58,13 +60,13 @@ export default function CompetitionStorePage() {
           <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" asChild>
             <Link href={paths.dashboard}>
               <ArrowLeft className="size-4" />
-              Back to dashboard
+              {t('pay.back')}
             </Link>
           </Button>
           <Button variant="ghost" size="sm" asChild>
             <Link href={`${paths.store}/orders`}>
               <Receipt className="size-4" />
-              My orders
+              {t('comp.myOrders')}
             </Link>
           </Button>
         </div>
@@ -73,7 +75,7 @@ export default function CompetitionStorePage() {
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
             {config.shortName} 2026
           </p>
-          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">Official store</h1>
+          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">{t('comp.storeTitle')}</h1>
         </div>
 
         {/* Cart summary */}
@@ -81,7 +83,7 @@ export default function CompetitionStorePage() {
           <Card className="gap-0 p-5">
             <p className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
               <ShoppingCart className="size-3.5" />
-              Your cart · {cart.count} item{cart.count === 1 ? '' : 's'}
+              {t('comp.yourCart', { n: cart.count })}
             </p>
             <div className="mt-3 space-y-2">
               {cart.items.map((it) => (
@@ -114,10 +116,10 @@ export default function CompetitionStorePage() {
             </div>
             <div className="mt-4 flex items-center justify-between border-t pt-4">
               <span className="text-sm font-semibold text-foreground">
-                Total {rupiah(cart.total)}
+                {t('comp.total', { amount: rupiah(cart.total) })}
               </span>
               <Button asChild>
-                <Link href={`${paths.store}/checkout`}>Checkout</Link>
+                <Link href={`${paths.store}/checkout`}>{t('comp.checkout')}</Link>
               </Button>
             </div>
           </Card>
@@ -127,14 +129,12 @@ export default function CompetitionStorePage() {
         {!products ? (
           <Card className="items-center gap-3 p-10 text-center">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Loading the store…</p>
+            <p className="text-sm text-muted-foreground">{t('comp.loadingStore')}</p>
           </Card>
         ) : products.length === 0 ? (
           <Card className="gap-1 p-10 text-center">
-            <h2 className="font-serif text-lg font-medium text-foreground">No items yet</h2>
-            <p className="text-sm text-muted-foreground">
-              This competition’s store has no products on sale right now.
-            </p>
+            <h2 className="font-serif text-lg font-medium text-foreground">{t('comp.noItems')}</h2>
+            <p className="text-sm text-muted-foreground">{t('comp.storeEmptyBody')}</p>
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -166,11 +166,11 @@ export default function CompetitionStorePage() {
                     className="mt-3"
                     onClick={() => {
                       cart.add({ productId: p.id, name: p.name, price: p.price, image: p.image });
-                      toast.success(`${p.name} added to cart.`);
+                      toast.success(t('comp.addedToCart', { name: p.name }));
                     }}
                   >
                     <Plus className="size-3.5" />
-                    Add to cart
+                    {t('comp.addToCart')}
                   </Button>
                 </div>
               </Card>

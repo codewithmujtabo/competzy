@@ -290,6 +290,43 @@ export const id: Partial<Record<MessageKey, string>> = {
   'account.tabRecords': 'Rekaman',
   'account.tabFamily': 'Keluarga',
 
+  // ── Competition sub-pages (store / materials / feedback / …) ───────
+  'comp.download': 'Unduh',
+  'comp.downloadAttachment': 'Unduh lampiran',
+  // feedback
+  'comp.sendFeedback': 'Kirim masukan',
+  'comp.sending': 'Mengirim…',
+  'comp.thankYou': 'Terima kasih!',
+  'comp.feedbackSentBody': 'Masukanmu sudah sampai ke tim {name}.',
+  'comp.feedbackPrompt': 'Beri tahu penyelenggara apa yang sudah baik dan apa yang bisa diperbaiki.',
+  'comp.feedbackPlaceholder': 'Saran atau masukanmu…',
+  // materials
+  'comp.materialsTitle': 'Materi belajar',
+  'comp.noMaterials': 'Belum ada materi',
+  'comp.materialsBody': 'Materi belajar untuk {name} akan muncul di sini.',
+  // announcements (in-competition)
+  'comp.announcementsBody': 'Kabar tentang {name} akan muncul di sini.',
+  // certificates (in-competition)
+  'comp.certificatesTitle': 'Sertifikat',
+  'comp.yourCertificates': 'Sertifikatmu',
+  'comp.certsBody': 'Sertifikatmu terbit otomatis setelah kamu menyelesaikan ujian {name}.',
+  'comp.certOfAchievement': 'Sertifikat Penghargaan',
+  'comp.certOfParticipation': 'Sertifikat Partisipasi',
+  'comp.valid': 'Berlaku',
+  'comp.score': 'Nilai {score}',
+  'comp.issued': 'Terbit {date}',
+  // store
+  'comp.storeTitle': 'Toko resmi',
+  'comp.myOrders': 'Pesananku',
+  'comp.checkout': 'Bayar',
+  'comp.loadingStore': 'Memuat toko…',
+  'comp.noItems': 'Belum ada item',
+  'comp.addToCart': 'Tambah ke keranjang',
+  'comp.addedToCart': '{name} ditambahkan ke keranjang.',
+  'comp.yourCart': 'Keranjangmu · {n} item',
+  'comp.total': 'Total {amount}',
+  'comp.storeEmptyBody': 'Toko kompetisi ini belum punya produk yang dijual saat ini.',
+
   // ── Competition in-page tabs ───────────────────────────────────────
   'tabs.overview': 'Ringkasan',
   'tabs.announcements': 'Pengumuman',

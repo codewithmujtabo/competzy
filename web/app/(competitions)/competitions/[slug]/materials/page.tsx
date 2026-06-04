@@ -8,6 +8,7 @@ import { ArrowLeft, Download, FileText, Loader2 } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ interface Material {
 }
 
 export default function CompetitionMaterialsPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -62,7 +64,7 @@ export default function CompetitionMaterialsPage() {
         <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" asChild>
           <Link href={paths.dashboard}>
             <ArrowLeft className="size-4" />
-            Back to dashboard
+            {t('pay.back')}
           </Link>
         </Button>
 
@@ -70,7 +72,7 @@ export default function CompetitionMaterialsPage() {
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
             {config.shortName} 2026
           </p>
-          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">Study materials</h1>
+          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">{t('comp.materialsTitle')}</h1>
         </div>
 
         {!items ? (
@@ -80,9 +82,9 @@ export default function CompetitionMaterialsPage() {
         ) : items.length === 0 ? (
           <Card className="items-center gap-2 p-10 text-center">
             <FileText className="size-7 text-muted-foreground" />
-            <h2 className="font-serif text-lg font-medium text-foreground">No materials yet</h2>
+            <h2 className="font-serif text-lg font-medium text-foreground">{t('comp.noMaterials')}</h2>
             <p className="text-sm text-muted-foreground">
-              Study materials for {config.wordmark} will appear here.
+              {t('comp.materialsBody', { name: config.wordmark })}
             </p>
           </Card>
         ) : (
@@ -118,7 +120,7 @@ export default function CompetitionMaterialsPage() {
                           <Button asChild size="sm" variant="outline" className="shrink-0">
                             <a href={m.file} target="_blank" rel="noopener noreferrer">
                               <Download className="size-3.5" />
-                              Download
+                              {t('comp.download')}
                             </a>
                           </Button>
                         )}

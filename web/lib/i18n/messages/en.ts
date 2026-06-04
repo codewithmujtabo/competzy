@@ -294,6 +294,43 @@ export const en = {
   'account.tabRecords': 'Records',
   'account.tabFamily': 'Family',
 
+  // ── Competition sub-pages (store / materials / feedback / …) ───────
+  'comp.download': 'Download',
+  'comp.downloadAttachment': 'Download attachment',
+  // feedback
+  'comp.sendFeedback': 'Send feedback',
+  'comp.sending': 'Sending…',
+  'comp.thankYou': 'Thank you!',
+  'comp.feedbackSentBody': 'Your feedback has reached the {name} team.',
+  'comp.feedbackPrompt': "Tell the organizers what's working and what could be better.",
+  'comp.feedbackPlaceholder': 'Your suggestion or feedback…',
+  // materials
+  'comp.materialsTitle': 'Study materials',
+  'comp.noMaterials': 'No materials yet',
+  'comp.materialsBody': 'Study materials for {name} will appear here.',
+  // announcements (in-competition)
+  'comp.announcementsBody': 'News about {name} will appear here.',
+  // certificates (in-competition)
+  'comp.certificatesTitle': 'Certificates',
+  'comp.yourCertificates': 'Your certificates',
+  'comp.certsBody': 'Your certificate is issued automatically once you finish a {name} exam.',
+  'comp.certOfAchievement': 'Certificate of Achievement',
+  'comp.certOfParticipation': 'Certificate of Participation',
+  'comp.valid': 'Valid',
+  'comp.score': 'Score {score}',
+  'comp.issued': 'Issued {date}',
+  // store
+  'comp.storeTitle': 'Official store',
+  'comp.myOrders': 'My orders',
+  'comp.checkout': 'Checkout',
+  'comp.loadingStore': 'Loading the store…',
+  'comp.noItems': 'No items yet',
+  'comp.addToCart': 'Add to cart',
+  'comp.addedToCart': '{name} added to cart.',
+  'comp.yourCart': 'Your cart · {n} item(s)',
+  'comp.total': 'Total {amount}',
+  'comp.storeEmptyBody': "This competition's store has no products on sale right now.",
+
   // ── Competition in-page tabs ───────────────────────────────────────
   'tabs.overview': 'Overview',
   'tabs.announcements': 'Announcements',

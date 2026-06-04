@@ -12,6 +12,7 @@ import { ArrowLeft, Award, CheckCircle2, Download, Loader2, ShieldAlert } from '
 import { emcHttp } from '@/lib/api/client';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ interface MyCertificate {
 }
 
 export default function CompetitionCertificatesPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -62,7 +64,7 @@ export default function CompetitionCertificatesPage() {
         <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" asChild>
           <Link href={paths.dashboard}>
             <ArrowLeft className="size-4" />
-            Back to dashboard
+            {t('pay.back')}
           </Link>
         </Button>
 
@@ -71,7 +73,7 @@ export default function CompetitionCertificatesPage() {
             {config.shortName} 2026
           </p>
           <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">
-            Your certificates
+            {t('comp.yourCertificates')}
           </h1>
         </div>
 
@@ -82,9 +84,9 @@ export default function CompetitionCertificatesPage() {
         ) : items.length === 0 ? (
           <Card className="items-center gap-2 p-10 text-center">
             <Award className="size-7 text-muted-foreground" />
-            <h2 className="font-serif text-lg font-medium text-foreground">No certificates yet</h2>
+            <h2 className="font-serif text-lg font-medium text-foreground">{t('acc.noCerts')}</h2>
             <p className="text-sm text-muted-foreground">
-              Your certificate is issued automatically once you finish a {config.wordmark} exam.
+              {t('comp.certsBody', { name: config.wordmark })}
             </p>
           </Card>
         ) : (
@@ -93,8 +95,8 @@ export default function CompetitionCertificatesPage() {
               <Card key={c.id} className="gap-0 p-5">
                 <p className="font-medium text-foreground">
                   {c.type === 'achievement'
-                    ? 'Certificate of Achievement'
-                    : 'Certificate of Participation'}
+                    ? t('comp.certOfAchievement')
+                    : t('comp.certOfParticipation')}
                 </p>
                 {c.awardLabel && (
                   <p className="mt-0.5 text-sm font-medium text-primary">{c.awardLabel}</p>
@@ -116,7 +118,7 @@ export default function CompetitionCertificatesPage() {
                     ) : (
                       <CheckCircle2 className="size-3" aria-hidden="true" />
                     )}
-                    {c.revokedAt ? 'Revoked' : 'Valid'}
+                    {c.revokedAt ? t('acc.revoked') : t('comp.valid')}
                   </Badge>
                   {c.grade && (
                     <Badge variant="outline" className="text-[10px]">
@@ -125,17 +127,18 @@ export default function CompetitionCertificatesPage() {
                   )}
                   {c.score != null && (
                     <Badge variant="outline" className="text-[10px]">
-                      Score {c.score}
+                      {t('comp.score', { score: c.score })}
                       {c.scoreMax != null ? ` / ${c.scoreMax}` : ''}
                     </Badge>
                   )}
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Issued{' '}
-                  {new Date(c.issuedAt).toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
+                  {t('comp.issued', {
+                    date: new Date(c.issuedAt).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    }),
                   })}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -146,11 +149,11 @@ export default function CompetitionCertificatesPage() {
                       rel="noopener noreferrer"
                     >
                       <Download className="size-3.5" />
-                      Download
+                      {t('comp.download')}
                     </a>
                   </Button>
                   <Button asChild size="sm" variant="outline">
-                    <Link href={`/verify/${c.verificationCode}`}>Verify</Link>
+                    <Link href={`/verify/${c.verificationCode}`}>{t('acc.verify')}</Link>
                   </Button>
                 </div>
               </Card>

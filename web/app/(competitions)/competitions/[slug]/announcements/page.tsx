@@ -8,6 +8,7 @@ import { ArrowLeft, Download, Loader2, Megaphone, Star } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ function fmtDate(s: string | null) {
 }
 
 function AnnouncementCard({ a, featured }: { a: Announcement; featured?: boolean }) {
+  const t = useT();
   return (
     <Card className={`gap-0 p-6 ${featured ? 'border-amber-300 dark:border-amber-900' : ''}`}>
       <div className="flex flex-wrap items-center gap-2">
@@ -68,7 +70,7 @@ function AnnouncementCard({ a, featured }: { a: Announcement; featured?: boolean
         <Button asChild variant="outline" size="sm" className="mt-3 w-fit">
           <a href={a.file} target="_blank" rel="noopener noreferrer">
             <Download className="size-3.5" />
-            Download attachment
+            {t('comp.downloadAttachment')}
           </a>
         </Button>
       )}
@@ -77,6 +79,7 @@ function AnnouncementCard({ a, featured }: { a: Announcement; featured?: boolean
 }
 
 export default function CompetitionAnnouncementsPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -111,7 +114,7 @@ export default function CompetitionAnnouncementsPage() {
         <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" asChild>
           <Link href={paths.dashboard}>
             <ArrowLeft className="size-4" />
-            Back to dashboard
+            {t('pay.back')}
           </Link>
         </Button>
 
@@ -119,7 +122,7 @@ export default function CompetitionAnnouncementsPage() {
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
             {config.shortName} 2026
           </p>
-          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">Announcements</h1>
+          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">{t('acc.announcementsTitle')}</h1>
         </div>
 
         {!items ? (
@@ -129,9 +132,9 @@ export default function CompetitionAnnouncementsPage() {
         ) : items.length === 0 ? (
           <Card className="items-center gap-2 p-10 text-center">
             <Megaphone className="size-7 text-muted-foreground" />
-            <h2 className="font-serif text-lg font-medium text-foreground">No announcements yet</h2>
+            <h2 className="font-serif text-lg font-medium text-foreground">{t('acc.noAnnouncements')}</h2>
             <p className="text-sm text-muted-foreground">
-              News about {config.wordmark} will appear here.
+              {t('comp.announcementsBody', { name: config.wordmark })}
             </p>
           </Card>
         ) : (
