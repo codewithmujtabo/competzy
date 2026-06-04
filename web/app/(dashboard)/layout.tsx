@@ -40,52 +40,57 @@ import { AppShell, type NavSection } from '@/components/shell/app-shell';
 const NAV: NavSection[] = [
   {
     items: [
-      { label: 'Dashboard', href: '/dashboard', icon: LayoutGrid, exact: true },
+      { label: 'Dashboard', labelKey: 'opnav.dashboard', href: '/dashboard', icon: LayoutGrid, exact: true },
     ],
   },
   {
     label: 'Competitions',
+    labelKey: 'opnav.competitions',
     items: [
-      { label: 'Competitions', href: '/admin/competitions', icon: Trophy },
-      { label: 'Registrations', href: '/registrations', icon: ClipboardList },
-      { label: 'Test Centers', href: '/venues', icon: MapPin },
-      { label: 'Question Bank', href: '/question-bank', icon: Library },
+      { label: 'Competitions', labelKey: 'opnav.competitions', href: '/admin/competitions', icon: Trophy },
+      { label: 'Registrations', labelKey: 'opnav.registrations', href: '/registrations', icon: ClipboardList },
+      { label: 'Test Centers', labelKey: 'opnav.testCenters', href: '/venues', icon: MapPin },
+      { label: 'Question Bank', labelKey: 'opnav.questionBank', href: '/question-bank', icon: Library },
     ],
   },
   {
     label: 'People',
+    labelKey: 'opnav.people',
     items: [
-      { label: 'Schools', href: '/schools', icon: School },
-      { label: 'Pending Schools', href: '/schools-pending', icon: Clock },
-      { label: 'Country Reps', href: '/country-reps', icon: Globe },
-      { label: 'Users', href: '/users', icon: Users },
+      { label: 'Schools', labelKey: 'opnav.schools', href: '/schools', icon: School },
+      { label: 'Pending Schools', labelKey: 'opnav.pendingSchools', href: '/schools-pending', icon: Clock },
+      { label: 'Country Reps', labelKey: 'opnav.countryReps', href: '/country-reps', icon: Globe },
+      { label: 'Users', labelKey: 'opnav.users', href: '/users', icon: Users },
     ],
   },
   {
     label: 'Commerce',
+    labelKey: 'opnav.commerce',
     items: [
-      { label: 'Revenue', href: '/revenue', icon: Wallet },
-      { label: 'Products', href: '/products', icon: Package },
-      { label: 'Vouchers', href: '/vouchers', icon: Ticket },
-      { label: 'Orders', href: '/orders', icon: ShoppingBag },
+      { label: 'Revenue', labelKey: 'opnav.revenue', href: '/revenue', icon: Wallet },
+      { label: 'Products', labelKey: 'opnav.products', href: '/products', icon: Package },
+      { label: 'Vouchers', labelKey: 'opnav.vouchers', href: '/vouchers', icon: Ticket },
+      { label: 'Orders', labelKey: 'opnav.orders', href: '/orders', icon: ShoppingBag },
     ],
   },
   {
     label: 'Marketing',
+    labelKey: 'opnav.marketing',
     items: [
-      { label: 'Waitlist', href: '/admin/waitlist', icon: Mailbox },
-      { label: 'Send Notification', href: '/notifications', icon: Megaphone },
-      { label: 'Announcements', href: '/announcements', icon: Megaphone },
-      { label: 'Materials', href: '/materials', icon: BookOpen },
-      { label: 'Referrals', href: '/referrals', icon: Share2 },
-      { label: 'Segments', href: '/segments', icon: Layers },
-      { label: 'Suggestions', href: '/suggestions', icon: MessageSquare },
+      { label: 'Waitlist', labelKey: 'opnav.waitlist', href: '/admin/waitlist', icon: Mailbox },
+      { label: 'Send Notification', labelKey: 'opnav.sendNotification', href: '/notifications', icon: Megaphone },
+      { label: 'Announcements', labelKey: 'opnav.announcements', href: '/announcements', icon: Megaphone },
+      { label: 'Materials', labelKey: 'opnav.materials', href: '/materials', icon: BookOpen },
+      { label: 'Referrals', labelKey: 'opnav.referrals', href: '/referrals', icon: Share2 },
+      { label: 'Segments', labelKey: 'opnav.segments', href: '/segments', icon: Layers },
+      { label: 'Suggestions', labelKey: 'opnav.suggestions', href: '/suggestions', icon: MessageSquare },
     ],
   },
   {
     label: 'Operations',
+    labelKey: 'opnav.operations',
     items: [
-      { label: 'Maintenance', href: '/admin/maintenance', icon: Wrench },
+      { label: 'Maintenance', labelKey: 'opnav.maintenance', href: '/admin/maintenance', icon: Wrench },
     ],
   },
 ];

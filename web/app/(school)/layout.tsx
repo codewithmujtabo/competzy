@@ -24,28 +24,32 @@ import { SelectSchoolModal } from '@/components/select-school-modal';
 const ADMIN_NAV: NavSection[] = [
   {
     items: [
-      { label: 'Dashboard', href: '/school-dashboard', icon: LayoutGrid, exact: true },
+      { label: 'Dashboard', labelKey: 'opnav.dashboard', href: '/school-dashboard', icon: LayoutGrid, exact: true },
     ],
   },
   {
     label: 'Students',
+    labelKey: 'opnav.students',
     items: [
-      { label: 'Student Roster', href: '/school-students', icon: Users },
-      { label: 'Bulk Registration', href: '/bulk-registration', icon: Upload },
-      { label: 'Bulk Payment', href: '/bulk-payment', icon: CreditCard },
+      { label: 'Student Roster', labelKey: 'opnav.studentRoster', href: '/school-students', icon: Users },
+      { label: 'Bulk Registration', labelKey: 'opnav.bulkRegistration', href: '/bulk-registration', icon: Upload },
+      { label: 'Bulk Payment', labelKey: 'opnav.bulkPayment', href: '/bulk-payment', icon: CreditCard },
     ],
   },
   {
     label: 'Registrations',
+    labelKey: 'opnav.registrations',
     items: [
-      { label: 'All Registrations', href: '/school-registrations', icon: ClipboardList },
+      { label: 'All Registrations', labelKey: 'opnav.allRegistrations', href: '/school-registrations', icon: ClipboardList },
     ],
   },
   {
     label: 'Reports',
+    labelKey: 'opnav.reports',
     items: [
       {
         label: 'Achievement PDF',
+        labelKey: 'opnav.achievementPdf',
         href: '/api/schools/export/achievement.pdf',
         icon: Award,
         external: true,
@@ -61,30 +65,34 @@ const ADMIN_NAV: NavSection[] = [
 const TEACHER_NAV: NavSection[] = [
   {
     items: [
-      { label: 'Dashboard', href: '/school-dashboard', icon: LayoutGrid, exact: true },
+      { label: 'Dashboard', labelKey: 'opnav.dashboard', href: '/school-dashboard', icon: LayoutGrid, exact: true },
     ],
   },
   {
     label: 'My Roster',
+    labelKey: 'opnav.myRoster',
     items: [
-      { label: 'My Students', href: '/school-my-students', icon: Users },
-      { label: 'My Competitions', href: '/school-my-competitions', icon: Trophy },
-      { label: 'Bulk Registration', href: '/bulk-registration', icon: Upload },
-      { label: 'Bulk Payment', href: '/bulk-payment', icon: CreditCard },
+      { label: 'My Students', labelKey: 'opnav.myStudents', href: '/school-my-students', icon: Users },
+      { label: 'My Competitions', labelKey: 'opnav.myCompetitions', href: '/school-my-competitions', icon: Trophy },
+      { label: 'Bulk Registration', labelKey: 'opnav.bulkRegistration', href: '/bulk-registration', icon: Upload },
+      { label: 'Bulk Payment', labelKey: 'opnav.bulkPayment', href: '/bulk-payment', icon: CreditCard },
     ],
   },
   {
     label: 'Track',
+    labelKey: 'opnav.track',
     items: [
-      { label: 'Registrations', href: '/school-registrations', icon: ClipboardList },
-      { label: 'Deadlines', href: '/school-deadline', icon: CalendarClock },
+      { label: 'Registrations', labelKey: 'opnav.registrations', href: '/school-registrations', icon: ClipboardList },
+      { label: 'Deadlines', labelKey: 'opnav.deadlines', href: '/school-deadline', icon: CalendarClock },
     ],
   },
   {
     label: 'Reports',
+    labelKey: 'opnav.reports',
     items: [
       {
         label: 'Achievement PDF',
+        labelKey: 'opnav.achievementPdf',
         href: '/api/teachers/export/achievement.pdf',
         icon: Award,
         external: true,

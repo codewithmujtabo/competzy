@@ -24,27 +24,30 @@ import { AppShell, type NavSection } from '@/components/shell/app-shell';
 const NAV: NavSection[] = [
   {
     items: [
-      { label: 'Dashboard', href: '/rep-portal', icon: LayoutGrid, exact: true },
+      { label: 'Dashboard', labelKey: 'opnav.dashboard', href: '/rep-portal', icon: LayoutGrid, exact: true },
     ],
   },
   {
     label: 'My Roster',
+    labelKey: 'opnav.myRoster',
     items: [
-      { label: 'My Students', href: '/rep-portal/students', icon: Users },
-      { label: 'Bulk Registration', href: '/rep-portal/bulk-registration', icon: Upload },
-      { label: 'Bulk Payment', href: '/rep-portal/bulk-payment', icon: CreditCard },
+      { label: 'My Students', labelKey: 'opnav.myStudents', href: '/rep-portal/students', icon: Users },
+      { label: 'Bulk Registration', labelKey: 'opnav.bulkRegistration', href: '/rep-portal/bulk-registration', icon: Upload },
+      { label: 'Bulk Payment', labelKey: 'opnav.bulkPayment', href: '/rep-portal/bulk-payment', icon: CreditCard },
     ],
   },
   {
     label: 'Track',
+    labelKey: 'opnav.track',
     items: [
-      { label: 'Registrations', href: '/rep-portal/registrations', icon: ClipboardList },
-      { label: 'Deadlines', href: '/rep-portal/deadlines', icon: CalendarClock },
+      { label: 'Registrations', labelKey: 'opnav.registrations', href: '/rep-portal/registrations', icon: ClipboardList },
+      { label: 'Deadlines', labelKey: 'opnav.deadlines', href: '/rep-portal/deadlines', icon: CalendarClock },
     ],
   },
   {
     label: 'Reports',
-    items: [{ label: 'Achievements', href: '/rep-portal/achievements', icon: Award }],
+    labelKey: 'opnav.reports',
+    items: [{ label: 'Achievements', labelKey: 'opnav.achievements', href: '/rep-portal/achievements', icon: Award }],
   },
 ];
 

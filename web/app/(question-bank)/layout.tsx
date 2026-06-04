@@ -63,33 +63,35 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
     ? [
         {
           items: [
-            { label: 'Questions', href: '/question-bank/questions', icon: FileText, exact: true },
-            { label: 'Taxonomy', href: '/question-bank/taxonomy', icon: FolderTree },
-            { label: 'Exams', href: '/question-bank/exams', icon: ClipboardList },
+            { label: 'Questions', labelKey: 'opnav.questions', href: '/question-bank/questions', icon: FileText, exact: true },
+            { label: 'Taxonomy', labelKey: 'opnav.taxonomy', href: '/question-bank/taxonomy', icon: FolderTree },
+            { label: 'Exams', labelKey: 'opnav.exams', href: '/question-bank/exams', icon: ClipboardList },
           ],
         },
       ]
     : [
         {
           items: [
-            { label: 'Dashboard', href: '/question-bank', icon: LayoutGrid, exact: true },
-            { label: 'Taxonomy', href: '/question-bank/taxonomy', icon: FolderTree },
-            { label: 'Questions', href: '/question-bank/questions', icon: FileText },
-            { label: 'Review', href: '/question-bank/review', icon: ClipboardCheck },
-            { label: 'Exams', href: '/question-bank/exams', icon: ClipboardList },
-            { label: 'Grading', href: '/question-bank/grading', icon: PenLine },
-            { label: 'Results', href: '/question-bank/results', icon: ListChecks },
-            { label: 'Paper Exams', href: '/question-bank/paper', icon: FileSpreadsheet },
-            { label: 'Proctoring', href: '/question-bank/proctoring', icon: Video },
-            { label: 'Certificates', href: '/question-bank/certificates', icon: Award },
-            { label: 'Medalists', href: '/question-bank/medalists', icon: Medal },
+            { label: 'Dashboard', labelKey: 'opnav.dashboard', href: '/question-bank', icon: LayoutGrid, exact: true },
+            { label: 'Taxonomy', labelKey: 'opnav.taxonomy', href: '/question-bank/taxonomy', icon: FolderTree },
+            { label: 'Questions', labelKey: 'opnav.questions', href: '/question-bank/questions', icon: FileText },
+            { label: 'Review', labelKey: 'opnav.review', href: '/question-bank/review', icon: ClipboardCheck },
+            { label: 'Exams', labelKey: 'opnav.exams', href: '/question-bank/exams', icon: ClipboardList },
+            { label: 'Grading', labelKey: 'opnav.grading', href: '/question-bank/grading', icon: PenLine },
+            { label: 'Results', labelKey: 'opnav.results', href: '/question-bank/results', icon: ListChecks },
+            { label: 'Paper Exams', labelKey: 'opnav.paperExams', href: '/question-bank/paper', icon: FileSpreadsheet },
+            { label: 'Proctoring', labelKey: 'opnav.proctoring', href: '/question-bank/proctoring', icon: Video },
+            { label: 'Certificates', labelKey: 'opnav.certificates', href: '/question-bank/certificates', icon: Award },
+            { label: 'Medalists', labelKey: 'opnav.medalists', href: '/question-bank/medalists', icon: Medal },
           ],
         },
         {
           label: 'Portal',
+          labelKey: 'opnav.portal',
           items: [
             {
               label: isAdmin ? 'Back to Admin' : 'Back to Organizer',
+              labelKey: isAdmin ? 'opnav.backToAdmin' : 'opnav.backToOrganizer',
               href: portalHref,
               icon: ArrowLeft,
             },

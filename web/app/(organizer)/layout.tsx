@@ -13,15 +13,16 @@ import { AppShell, type NavSection } from '@/components/shell/app-shell';
 const NAV: NavSection[] = [
   {
     items: [
-      { label: 'Dashboard', href: '/organizer-dashboard', icon: LayoutGrid, exact: true },
+      { label: 'Dashboard', labelKey: 'opnav.dashboard', href: '/organizer-dashboard', icon: LayoutGrid, exact: true },
     ],
   },
   {
     label: 'Workspace',
+    labelKey: 'opnav.workspace',
     items: [
-      { label: 'My Competitions', href: '/organizer-competitions', icon: Trophy },
-      { label: 'Participants', href: '/participants', icon: Users },
-      { label: 'Question Bank', href: '/question-bank', icon: Library },
+      { label: 'My Competitions', labelKey: 'opnav.myCompetitions', href: '/organizer-competitions', icon: Trophy },
+      { label: 'Participants', labelKey: 'opnav.participants', href: '/participants', icon: Users },
+      { label: 'Question Bank', labelKey: 'opnav.questionBank', href: '/question-bank', icon: Library },
     ],
   },
 ];
