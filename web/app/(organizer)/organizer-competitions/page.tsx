@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Eye, Pencil, Plus } from 'lucide-react';
 import { organizerHttp } from '@/lib/auth/organizer-context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,7 @@ function fmtDate(d?: string) {
 }
 
 export default function OrganizerCompetitionsPage() {
+  const t = useT();
   const [comps, setComps] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -86,14 +88,14 @@ export default function OrganizerCompetitionsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="My competitions"
-        title="Competitions"
-        subtitle="Create, publish, and manage the competitions you organize."
+        eyebrow={t('org.eyebrowMyComps')}
+        title={t('opnav.competitions')}
+        subtitle={t('org.compSubtitle')}
         actions={
           <Button asChild>
             <Link href="/organizer-competitions/new">
               <Plus className="size-4" />
-              New competition
+              {t('org.newCompetition')}
             </Link>
           </Button>
         }
@@ -104,13 +106,13 @@ export default function OrganizerCompetitionsPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Registrations</TableHead>
-                <TableHead>Fee</TableHead>
-                <TableHead>Reg. closes</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t('adm.colName')}</TableHead>
+                <TableHead>{t('org.colCategory')}</TableHead>
+                <TableHead>{t('adm.colStatus')}</TableHead>
+                <TableHead>{t('org.colRegistrations')}</TableHead>
+                <TableHead>{t('org.colFee')}</TableHead>
+                <TableHead>{t('org.colRegCloses')}</TableHead>
+                <TableHead className="text-right">{t('adm.reg.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

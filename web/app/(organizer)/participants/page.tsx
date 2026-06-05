@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Download, KeyRound } from 'lucide-react';
 import { organizerHttp } from '@/lib/auth/organizer-context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -70,6 +71,7 @@ const STATUS_STYLE: Record<string, string> = {
 const ACTIONABLE = new Set(['pending_approval', 'pending_review']);
 
 export default function ParticipantsPage() {
+  const t = useT();
   const [comps, setComps] = useState<Competition[]>([]);
   const [selectedComp, setSelectedComp] = useState('');
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -156,16 +158,16 @@ export default function ParticipantsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Management"
-        title="Participants"
-        subtitle="Review and approve registrations for each of your competitions."
+        eyebrow={t('adm.management')}
+        title={t('opnav.participants')}
+        subtitle={t('org.partSubtitle')}
         actions={
           selectedComp ? (
             <div className="flex gap-2">
               {isAffiliated && (
                 <Button variant="outline" onClick={() => setBulkOpen(true)}>
                   <KeyRound className="size-4" />
-                  Bulk credentials
+                  {t('org.bulkCredentials')}
                 </Button>
               )}
               <Button
@@ -173,7 +175,7 @@ export default function ParticipantsPage() {
                 onClick={() => window.open(`/api/organizers/competitions/${selectedComp}/export`, '_blank')}
               >
                 <Download className="size-4" />
-                Export CSV
+                {t('org.exportCsv')}
               </Button>
             </div>
           ) : undefined
@@ -183,7 +185,7 @@ export default function ParticipantsPage() {
       <div className="max-w-md">
         <Select value={selectedComp || undefined} onValueChange={setSelectedComp}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select a competition…" />
+            <SelectValue placeholder={t('org.selectCompetition')} />
           </SelectTrigger>
           <SelectContent>
             {comps.map((c) => (
@@ -197,7 +199,7 @@ export default function ParticipantsPage() {
 
       {!selectedComp ? (
         <Card className="p-12 text-center text-sm text-muted-foreground">
-          Select a competition above to view its participants.
+          {t('org.selectCompToView')}
         </Card>
       ) : (
         <Card className="overflow-hidden p-0">
@@ -205,14 +207,14 @@ export default function ParticipantsPage() {
             <Table className="min-w-[1024px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>School</TableHead>
-                  <TableHead>Grade</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead>Registered</TableHead>
-                  {isAffiliated && <TableHead>Credentials</TableHead>}
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('adm.colName')}</TableHead>
+                  <TableHead>{t('adm.colSchool')}</TableHead>
+                  <TableHead>{t('org.colGrade')}</TableHead>
+                  <TableHead>{t('adm.colStatus')}</TableHead>
+                  <TableHead>{t('org.colPayment')}</TableHead>
+                  <TableHead>{t('org.colRegistered')}</TableHead>
+                  {isAffiliated && <TableHead>{t('org.colCredentials')}</TableHead>}
+                  <TableHead className="text-right">{t('adm.reg.colActions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

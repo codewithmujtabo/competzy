@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { CheckCircle2, ClipboardList, Wallet } from 'lucide-react';
 import { organizerHttp } from '@/lib/auth/organizer-context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { StatCard } from '@/components/shell/stat-card';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +35,7 @@ function fmtRp(n: number) {
 }
 
 export default function RevenuePage() {
+  const t = useT();
   const [data, setData] = useState<RevenueData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -48,9 +50,9 @@ export default function RevenuePage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Overview"
-        title="Revenue"
-        subtitle="Total revenue and registrations across all your competitions."
+        eyebrow={t('org.revenueEyebrow')}
+        title={t('opnav.revenue')}
+        subtitle={t('org.revenueSubtitle')}
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -89,7 +91,7 @@ export default function RevenuePage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Competition</TableHead>
+                <TableHead>{t('adm.reg.colCompetition')}</TableHead>
                 <TableHead className="text-right">Registrations</TableHead>
                 <TableHead className="text-right">Revenue</TableHead>
                 <TableHead className="w-[200px] text-right">Share</TableHead>
@@ -107,7 +109,7 @@ export default function RevenuePage() {
               ) : data.competitions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="h-32 text-center text-sm text-muted-foreground">
-                    No competitions yet.
+                    {t('org.noCompetitions')}
                   </TableCell>
                 </TableRow>
               ) : (

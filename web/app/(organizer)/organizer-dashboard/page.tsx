@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowRight, Flame, Trophy, Users, Wallet, ClipboardList } from 'lucide-react';
 import { organizerHttp, useOrganizer } from '@/lib/auth/organizer-context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { StatCard } from '@/components/shell/stat-card';
 import { ChartCard } from '@/components/shell/chart-card';
 import { Card } from '@/components/ui/card';
@@ -40,6 +41,7 @@ function fmtRp(n: number) {
 }
 
 export default function OrganizerDashboardPage() {
+  const t = useT();
   const { user } = useOrganizer();
   const [stats, setStats] = useState<Stats | null>(null);
   const [activity, setActivity] = useState<Activity[]>([]);
@@ -87,9 +89,9 @@ export default function OrganizerDashboardPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Welcome back"
+        eyebrow={t('org.welcomeBack')}
         title={user?.full_name || 'Organizer'}
-        subtitle="Your competitions, registrations, and revenue at a glance."
+        subtitle={t('org.dashSubtitle')}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
