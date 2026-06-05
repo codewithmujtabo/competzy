@@ -7,6 +7,7 @@ import { Copy, Pencil, Plus, Trash2 } from 'lucide-react';
 import { marketingHttp } from '@/lib/api/client';
 import { CompetitionPicker, useQuestionBank } from '@/lib/question-bank/context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Pager } from '@/components/shell/pager';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,7 @@ function rupiah(n: number) {
 }
 
 function ReferralsPage() {
+  const t = useT();
   const { selectedId, selected, competitions, loading: compsLoading } = useQuestionBank();
   const [rows, setRows] = useState<Referral[]>([]);
   const [total, setTotal] = useState(0);
@@ -176,9 +178,9 @@ function ReferralsPage() {
   if (!compsLoading && competitions.length === 0) {
     return (
       <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="Marketing" title="Referrals" />
+        <PageHeader eyebrow={t('opnav.marketing')} title={t('opnav.referrals')} />
         <Card className="p-12 text-center">
-          <p className="text-sm font-medium text-foreground">No native competitions yet</p>
+          <p className="text-sm font-medium text-foreground">{t('adm.noNativeComps')}</p>
           <p className="mt-1.5 text-sm text-muted-foreground">
             Affiliate referrals are available for native competitions only.
           </p>
@@ -190,9 +192,9 @@ function ReferralsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Marketing"
-        title="Referrals"
-        subtitle="Affiliate referral links — track the click → sign-up → registration → paid funnel."
+        eyebrow={t('opnav.marketing')}
+        title={t('opnav.referrals')}
+        subtitle={t('adm.ref.subtitle')}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -213,7 +215,7 @@ function ReferralsPage() {
       >
         <Input
           className="w-64"
-          placeholder="Search name, code or email…"
+          placeholder={t('adm.ref.search')}
           value={searchVal}
           onChange={(e) => setSearchVal(e.target.value)}
         />
@@ -227,7 +229,7 @@ function ReferralsPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Affiliate</TableHead>
+                <TableHead>{t('adm.ref.colAffiliate')}</TableHead>
                 <TableHead className="w-44">Code</TableHead>
                 <TableHead className="w-20 text-right">Clicks</TableHead>
                 <TableHead className="w-20 text-right">Sign-ups</TableHead>
@@ -249,7 +251,7 @@ function ReferralsPage() {
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
-                    No referrals yet — create the first one.
+                    {t('adm.ref.noReferrals')}
                   </TableCell>
                 </TableRow>
               ) : (

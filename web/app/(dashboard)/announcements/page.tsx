@@ -8,6 +8,7 @@ import { marketingHttp } from '@/lib/api/client';
 import { useQuestionBank } from '@/lib/question-bank/context';
 import { useAuth } from '@/lib/auth/context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,7 @@ function fmtDate(s: string | null) {
 }
 
 function AnnouncementsPage() {
+  const t = useT();
   const { competitions, loading: compsLoading } = useQuestionBank();
   // After the (question-bank) → (dashboard) move (PR #33), this page sits in
   // the admin route group — read the role from the admin auth context, not
@@ -207,9 +209,9 @@ function AnnouncementsPage() {
   if (!compsLoading && competitions.length === 0 && !isAdmin) {
     return (
       <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="Marketing" title="Announcements" />
+        <PageHeader eyebrow={t('opnav.marketing')} title={t('opnav.announcements')} />
         <Card className="p-12 text-center">
-          <p className="text-sm font-medium text-foreground">No competitions to manage</p>
+          <p className="text-sm font-medium text-foreground">{t('adm.noNativeComps')}</p>
         </Card>
       </div>
     );
@@ -218,15 +220,15 @@ function AnnouncementsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Marketing"
-        title="Announcements"
-        subtitle="News posts shown in the competition portal — per-competition or platform-wide."
+        eyebrow={t('opnav.marketing')}
+        title={t('opnav.announcements')}
+        subtitle={t('adm.ann.subtitle')}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Select value={scope} onValueChange={setScope}>
           <SelectTrigger className="w-full sm:w-72">
-            <SelectValue placeholder="Select a scope…" />
+            <SelectValue placeholder={t('adm.selectScope')} />
           </SelectTrigger>
           <SelectContent>
             {competitions.map((c) => (
@@ -248,7 +250,7 @@ function AnnouncementsPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
+                <TableHead>{t('adm.colTitle')}</TableHead>
                 <TableHead className="w-28">Type</TableHead>
                 <TableHead className="w-32">Status</TableHead>
                 <TableHead className="w-32">Published</TableHead>
@@ -267,7 +269,7 @@ function AnnouncementsPage() {
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-32 text-center text-sm text-muted-foreground">
-                    No announcements for this scope yet.
+                    {t('adm.ann.noAnnouncements')}
                   </TableCell>
                 </TableRow>
               ) : (

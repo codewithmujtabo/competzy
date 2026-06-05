@@ -28,6 +28,7 @@ import {
 
 import { adminHttp } from '@/lib/api/client';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -256,6 +257,7 @@ function SiteCard({
 }
 
 export default function MaintenanceAdminPage() {
+  const t = useT();
   const [rows, setRows] = useState<MaintenanceRow[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -351,9 +353,9 @@ export default function MaintenanceAdminPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Operations"
-        title="Site maintenance"
-        subtitle="Per-site toggle for the public landing pages. Read-only disables form submissions; On replaces every page with the maintenance screen until an admin bypass cookie is present."
+        eyebrow={t('adm.operations')}
+        title={t('adm.maint.title')}
+        subtitle={t('adm.maint.subtitle')}
       />
 
       {/* ── Per-site toggle — Main + Competitions Pages ────────────── */}

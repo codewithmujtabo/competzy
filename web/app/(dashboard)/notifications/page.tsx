@@ -6,6 +6,7 @@ import { Check, Loader2, Megaphone, Search } from 'lucide-react';
 import { schoolsApi, competitionsApi, notificationsApi } from '@/lib/api';
 import type { School, Competition } from '@/types';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ const TYPES = [
 ];
 
 export default function NotificationsPage() {
+  const t = useT();
   const [allSchools, setAllSchools] = useState<School[]>([]);
   const [allComps, setAllComps] = useState<Competition[]>([]);
   const [provinces, setProvinces] = useState<string[]>([]);
@@ -133,9 +135,9 @@ export default function NotificationsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Broadcast"
-        title="Send Notification"
-        subtitle="Announce a competition or send a reminder to selected schools."
+        eyebrow={t('adm.broadcast')}
+        title={t('opnav.sendNotification')}
+        subtitle={t('adm.notif.subtitle')}
       />
 
       <div className="grid gap-5 lg:grid-cols-[1fr_380px]">

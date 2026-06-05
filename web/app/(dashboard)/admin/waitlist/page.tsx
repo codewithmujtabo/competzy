@@ -21,6 +21,7 @@ import {
 
 import { adminHttp } from '@/lib/api/client';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Pager } from '@/components/shell/pager';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -179,6 +180,7 @@ function downloadCSV(rows: WaitlistEntry[]): void {
 }
 
 export default function WaitlistAdminPage() {
+  const t = useT();
   // Filters
   const [comp, setComp] = useState<string>('all');
   const [voucher, setVoucher] = useState<'all' | 'won' | 'open'>('all');
@@ -325,9 +327,9 @@ export default function WaitlistAdminPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Marketing"
-        title="Waitlist"
-        subtitle="Pre-registration signups forwarded from the competzy-web subdomains. Run voucher draws or export the audience for outreach."
+        eyebrow={t('opnav.marketing')}
+        title={t('opnav.waitlist')}
+        subtitle={t('adm.wait.subtitle')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={handleExport}>
