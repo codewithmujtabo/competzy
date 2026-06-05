@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useSchool, schoolHttp } from '@/lib/auth/school-context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -25,6 +26,7 @@ interface Student {
 }
 
 export default function MyStudentsPage() {
+  const t = useT();
   const { user } = useSchool();
   const [students, setStudents] = useState<Student[]>([]);
   const [stats, setStats] = useState({ totalStudents: 0, totalRegistrations: 0 });
@@ -47,8 +49,8 @@ export default function MyStudentsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="School"
-        title="My Students"
+        eyebrow={t('sch.eyebrow')}
+        title={t('opnav.myStudents')}
         subtitle={`${stats.totalStudents} student${stats.totalStudents === 1 ? '' : 's'} · ${stats.totalRegistrations} total registration${stats.totalRegistrations === 1 ? '' : 's'}.`}
       />
 
@@ -57,11 +59,11 @@ export default function MyStudentsPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Grade</TableHead>
-                <TableHead>NISN</TableHead>
-                <TableHead className="text-right">Registrations</TableHead>
+                <TableHead>{t('adm.colName')}</TableHead>
+                <TableHead>{t('adm.colEmail')}</TableHead>
+                <TableHead>{t('org.colGrade')}</TableHead>
+                <TableHead>{t('adm.colNisn')}</TableHead>
+                <TableHead className="text-right">{t('org.colRegistrations')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,7 +78,7 @@ export default function MyStudentsPage() {
               ) : students.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-32 text-center text-sm text-muted-foreground">
-                    No students linked to your classes yet. Ask your school administrator to add them.
+                    {t('sch.noMyStudents')}
                   </TableCell>
                 </TableRow>
               ) : (

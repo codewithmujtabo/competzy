@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Check, CreditCard, Loader2, PartyPopper } from 'lucide-react';
 import { schoolHttp, useSchool } from '@/lib/auth/school-context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ function fmtRp(n: number) {
 }
 
 export default function BulkPaymentPage() {
+  const t = useT();
   const { user, loading: authLoading } = useSchool();
   const router = useRouter();
   const filterCompId = useSearchParams().get('competitionId');
@@ -155,7 +157,7 @@ export default function BulkPaymentPage() {
   if (batchResult) {
     return (
       <div className="mx-auto max-w-[640px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="School" title="Bulk Payment" />
+        <PageHeader eyebrow={t('sch.eyebrow')} title={t('opnav.bulkPayment')} />
         <Card className="gap-0 p-9 text-center">
           <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <CreditCard className="size-7" />
@@ -185,7 +187,7 @@ export default function BulkPaymentPage() {
   if (confirmed) {
     return (
       <div className="mx-auto max-w-[640px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="School" title="Bulk Payment" />
+        <PageHeader eyebrow={t('sch.eyebrow')} title={t('opnav.bulkPayment')} />
         <Card className="gap-0 p-9 text-center">
           <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
             <PartyPopper className="size-7" />
@@ -217,9 +219,9 @@ export default function BulkPaymentPage() {
   return (
     <div className="mx-auto max-w-[1100px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="School"
-        title="Bulk Payment"
-        subtitle="Pay for multiple students in a single Midtrans transaction."
+        eyebrow={t('sch.eyebrow')}
+        title={t('opnav.bulkPayment')}
+        subtitle={t('sch.bulkPaySubtitle')}
       />
 
       {loading ? (

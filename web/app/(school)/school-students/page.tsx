@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useSchool, schoolHttp } from '@/lib/auth/school-context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -25,6 +26,7 @@ interface Student {
 }
 
 export default function SchoolStudentsPage() {
+  const t = useT();
   const { user } = useSchool();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,13 +45,9 @@ export default function SchoolStudentsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="School"
-        title={isTeacher ? 'My Students' : 'Student Roster'}
-        subtitle={
-          isTeacher
-            ? 'Students linked to your classes and their competition activity.'
-            : 'Every student registered under your school.'
-        }
+        eyebrow={t('sch.eyebrow')}
+        title={isTeacher ? t('opnav.myStudents') : t('opnav.studentRoster')}
+        subtitle={isTeacher ? t('sch.studentsSubTeacher') : t('sch.studentsSubAdmin')}
       />
 
       <Card className="overflow-hidden p-0">
@@ -57,11 +55,11 @@ export default function SchoolStudentsPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Grade</TableHead>
-                <TableHead>NISN</TableHead>
-                <TableHead className="text-right">Registrations</TableHead>
+                <TableHead>{t('adm.colName')}</TableHead>
+                <TableHead>{t('adm.colEmail')}</TableHead>
+                <TableHead>{t('org.colGrade')}</TableHead>
+                <TableHead>{t('adm.colNisn')}</TableHead>
+                <TableHead className="text-right">{t('org.colRegistrations')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,9 +74,7 @@ export default function SchoolStudentsPage() {
               ) : students.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-32 text-center text-sm text-muted-foreground">
-                    {isTeacher
-                      ? 'No students linked to your classes yet.'
-                      : 'No students registered at your school yet.'}
+                    {isTeacher ? t('sch.noStudentsClasses') : t('sch.noStudentsSchool')}
                   </TableCell>
                 </TableRow>
               ) : (

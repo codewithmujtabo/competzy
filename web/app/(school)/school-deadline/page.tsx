@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useSchool, schoolHttp } from '@/lib/auth/school-context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,6 +28,7 @@ interface Deadline {
 }
 
 export default function DeadlinesPage() {
+  const t = useT();
   const { user } = useSchool();
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,9 +45,9 @@ export default function DeadlinesPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="School"
-        title="Upcoming Deadlines"
-        subtitle="Competitions with a registration deadline in the next 30 days."
+        eyebrow={t('sch.eyebrow')}
+        title={t('sch.deadlineTitle')}
+        subtitle={t('sch.deadlineSubtitle')}
       />
 
       <Card className="overflow-hidden p-0">

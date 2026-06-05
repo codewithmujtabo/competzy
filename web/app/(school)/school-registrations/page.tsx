@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Download } from 'lucide-react';
 import { schoolHttp, useSchool } from '@/lib/auth/school-context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Pager } from '@/components/shell/pager';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -60,6 +61,7 @@ const STATUS_TABS = [
 const LIMIT = 25;
 
 export default function SchoolRegistrationsPage() {
+  const t = useT();
   const { user } = useSchool();
   const isAdmin = user?.role === 'school_admin';
 
@@ -159,9 +161,9 @@ export default function SchoolRegistrationsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="School"
-        title="Registrations"
-        subtitle={`${total} registration${total === 1 ? '' : 's'} across your competitions.`}
+        eyebrow={t('sch.eyebrow')}
+        title={t('opnav.registrations')}
+        subtitle={t('sch.regSubtitle', { n: total })}
         actions={
           regs.length > 0 ? (
             <Button variant="outline" onClick={exportCsv}>
@@ -218,11 +220,11 @@ export default function SchoolRegistrationsPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>Competition</TableHead>
-                <TableHead>Grade</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Registered</TableHead>
+                <TableHead>{t('adm.reg.colStudent')}</TableHead>
+                <TableHead>{t('adm.reg.colCompetition')}</TableHead>
+                <TableHead>{t('org.colGrade')}</TableHead>
+                <TableHead>{t('adm.colStatus')}</TableHead>
+                <TableHead>{t('org.colRegistered')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

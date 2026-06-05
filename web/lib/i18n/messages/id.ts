@@ -343,6 +343,8 @@ export const id: Partial<Record<MessageKey, string>> = {
   'adm.colCoordinator': 'Koordinator',
   'adm.colLetter': 'Surat',
   'adm.colImage': 'Gambar',
+  'adm.colNisn': 'NISN',
+  'adm.colNote': 'Catatan',
   'adm.colCode': 'Kode',
   'adm.colPrice': 'Harga',
   'adm.noNativeComps': 'Belum ada kompetisi native',
@@ -417,6 +419,21 @@ export const id: Partial<Record<MessageKey, string>> = {
   'adm.maint.title': 'Pemeliharaan Situs',
   'adm.maint.subtitle': 'Sakelar per-situs untuk halaman publik. Read-only menonaktifkan pengiriman formulir; On mengganti setiap halaman dengan layar pemeliharaan hingga cookie bypass admin ada.',
   'adm.maint.noChanges': 'Belum ada perubahan pemeliharaan tercatat.',
+
+  // ── School portal ──────────────────────────────────────────────────
+  'sch.eyebrow': 'Sekolah',
+  'sch.dashMonitor': 'Pantau siswamu dan pendaftaran kompetisi mereka.',
+  'sch.studentsSubTeacher': 'Siswa yang tertaut ke kelasmu dan aktivitas kompetisinya.',
+  'sch.studentsSubAdmin': 'Setiap siswa yang terdaftar di sekolahmu.',
+  'sch.noStudentsClasses': 'Belum ada siswa yang tertaut ke kelasmu.',
+  'sch.noStudentsSchool': 'Belum ada siswa yang terdaftar di sekolahmu.',
+  'sch.noMyStudents': 'Belum ada siswa yang tertaut ke kelasmu. Minta administrator sekolahmu menambahkannya.',
+  'sch.regSubtitle': '{n} pendaftaran di seluruh kompetisimu.',
+  'sch.myCompSubtitle': 'Kompetisi yang diikuti siswamu.',
+  'sch.deadlineTitle': 'Tenggat Mendatang',
+  'sch.deadlineSubtitle': 'Kompetisi dengan tenggat pendaftaran dalam 30 hari ke depan.',
+  'sch.bulkRegSubtitle': 'Daftarkan banyak siswa untuk kompetisi dari satu berkas CSV.',
+  'sch.bulkPaySubtitle': 'Bayar untuk beberapa siswa dalam satu transaksi Midtrans.',
 
   // ── Organizer portal ───────────────────────────────────────────────
   'org.welcomeBack': 'Selamat datang kembali',

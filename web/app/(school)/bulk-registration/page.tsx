@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Check, Download, FileText, Loader2, Upload, X } from 'lucide-react';
 import { schoolHttp, schoolFetch, useSchool } from '@/lib/auth/school-context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,7 @@ const rowHasIssue = (row: CsvRow) => !row['full_name']?.trim() || !row['email']?
 const STEPS = ['Select competition', 'Upload & preview', 'Processing', 'Results'];
 
 export default function BulkRegistrationPage() {
+  const t = useT();
   const { user, loading: authLoading } = useSchool();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -259,9 +261,9 @@ export default function BulkRegistrationPage() {
   return (
     <div className="mx-auto max-w-[1000px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="School"
-        title="Bulk Registration"
-        subtitle="Register many students for a competition from a single CSV file."
+        eyebrow={t('sch.eyebrow')}
+        title={t('opnav.bulkRegistration')}
+        subtitle={t('sch.bulkRegSubtitle')}
       />
 
       {/* Step indicator */}

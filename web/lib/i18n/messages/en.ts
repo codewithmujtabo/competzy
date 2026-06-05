@@ -347,6 +347,8 @@ export const en = {
   'adm.colCoordinator': 'Coordinator',
   'adm.colLetter': 'Letter',
   'adm.colImage': 'Image',
+  'adm.colNisn': 'NISN',
+  'adm.colNote': 'Note',
   'adm.colCode': 'Code',
   'adm.colPrice': 'Price',
   'adm.noNativeComps': 'No native competitions yet',
@@ -421,6 +423,21 @@ export const en = {
   'adm.maint.title': 'Site maintenance',
   'adm.maint.subtitle': 'Per-site toggle for the public landing pages. Read-only disables form submissions; On replaces every page with the maintenance screen until an admin bypass cookie is present.',
   'adm.maint.noChanges': 'No maintenance changes recorded yet.',
+
+  // ── School portal ──────────────────────────────────────────────────
+  'sch.eyebrow': 'School',
+  'sch.dashMonitor': 'Monitor your students and their competition registrations.',
+  'sch.studentsSubTeacher': 'Students linked to your classes and their competition activity.',
+  'sch.studentsSubAdmin': 'Every student registered under your school.',
+  'sch.noStudentsClasses': 'No students linked to your classes yet.',
+  'sch.noStudentsSchool': 'No students registered at your school yet.',
+  'sch.noMyStudents': 'No students linked to your classes yet. Ask your school administrator to add them.',
+  'sch.regSubtitle': '{n} registrations across your competitions.',
+  'sch.myCompSubtitle': 'Competitions your students are registered for.',
+  'sch.deadlineTitle': 'Upcoming Deadlines',
+  'sch.deadlineSubtitle': 'Competitions with a registration deadline in the next 30 days.',
+  'sch.bulkRegSubtitle': 'Register many students for a competition from a single CSV file.',
+  'sch.bulkPaySubtitle': 'Pay for multiple students in a single Midtrans transaction.',
 
   // ── Organizer portal ───────────────────────────────────────────────
   'org.welcomeBack': 'Welcome back',

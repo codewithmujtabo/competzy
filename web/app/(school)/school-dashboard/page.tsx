@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useSchool, schoolHttp } from '@/lib/auth/school-context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { StatCard } from '@/components/shell/stat-card';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -70,6 +71,7 @@ const TEACHER_QUICK: QuickLink[] = [
 ];
 
 export default function SchoolDashboardPage() {
+  const t = useT();
   const { user } = useSchool();
   const [school, setSchool] = useState<SchoolInfo | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -111,12 +113,12 @@ export default function SchoolDashboardPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Welcome back"
+        eyebrow={t('org.welcomeBack')}
         title={user?.full_name || 'School'}
         subtitle={
           isAdmin && school
             ? `${school.name} — ${[school.city, school.province].filter(Boolean).join(', ')}`
-            : 'Monitor your students and their competition registrations.'
+            : t('sch.dashMonitor')
         }
       />
 
