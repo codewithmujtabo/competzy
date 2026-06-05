@@ -15,22 +15,29 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 
 const ROUND_TYPES = ['Online', 'On-site', 'Hybrid'];
-const GATING_RULES = [
-  { value: 'registered', label: 'registered for it' },
-  { value: 'paid', label: 'paid for it' },
-  { value: 'completed', label: 'completed it' },
+const ROUND_TYPE_KEY: Record<string, MessageKey> = {
+  Online: 'rb.typeOnline',
+  'On-site': 'rb.typeOnsite',
+  Hybrid: 'rb.typeHybrid',
+};
+const GATING_RULES: { value: string; labelKey: MessageKey }[] = [
+  { value: 'registered', labelKey: 'rb.ruleRegistered' },
+  { value: 'paid', labelKey: 'rb.rulePaid' },
+  { value: 'completed', labelKey: 'rb.ruleCompleted' },
 ];
-const ROUND_CATEGORIES = [
-  { value: 'online', label: 'Online round' },
-  { value: 'fast_track', label: 'Fast Track (catch-up)' },
-  { value: 'local', label: 'Local round (a country)' },
-  { value: 'global', label: 'Global round (final)' },
+const ROUND_CATEGORIES: { value: string; labelKey: MessageKey }[] = [
+  { value: 'online', labelKey: 'rb.catOnline' },
+  { value: 'fast_track', labelKey: 'rb.catFastTrack' },
+  { value: 'local', labelKey: 'rb.catLocal' },
+  { value: 'global', labelKey: 'rb.catGlobal' },
 ];
-const EXAM_MODES = [
-  { value: 'online', label: 'Online — on the platform' },
-  { value: 'offline', label: 'Offline — printed, scores imported' },
+const EXAM_MODES: { value: string; labelKey: MessageKey }[] = [
+  { value: 'online', labelKey: 'rb.examOnline' },
+  { value: 'offline', labelKey: 'rb.examOffline' },
 ];
 
 export interface RoundDraft {
@@ -193,23 +200,19 @@ const roundFinished = (r: RoundDraft): boolean =>
 function activationAdvice(
   round: RoundDraft,
   all: RoundDraft[],
-): { tone: 'warn' | 'info'; text: string } | null {
+): { tone: 'warn' | 'info'; key: MessageKey; vars?: Record<string, string | number> } | null {
   if (round.roundCategory === 'fast_track') {
     const openOnline = all.filter(
       (r) => r.roundCategory === 'online' && registrationOpen(r),
     );
     const onlineCount = all.filter((r) => r.roundCategory === 'online').length;
     if (round.isActive && openOnline.length > 0) {
-      return {
-        tone: 'warn',
-        text: `${openOnline.length} online round${openOnline.length > 1 ? 's are' : ' is'} still open for registration. Fast Track is normally kept off until students can no longer enter the online rounds.`,
-      };
+      return openOnline.length > 1
+        ? { tone: 'warn', key: 'rb.adviceFtWarnMany', vars: { count: openOnline.length } }
+        : { tone: 'warn', key: 'rb.adviceFtWarnOne' };
     }
     if (!round.isActive && onlineCount > 0 && openOnline.length === 0) {
-      return {
-        tone: 'info',
-        text: 'Every online round has closed registration — you can turn Fast Track on now.',
-      };
+      return { tone: 'info', key: 'rb.adviceFtInfo' };
     }
     return null;
   }
@@ -217,16 +220,12 @@ function activationAdvice(
     const others = all.filter((r) => r.tempId !== round.tempId);
     const unfinished = others.filter((r) => !roundFinished(r));
     if (round.isActive && unfinished.length > 0) {
-      return {
-        tone: 'warn',
-        text: `${unfinished.length} other round${unfinished.length > 1 ? 's have' : ' has'} not finished yet. The Global Round is normally kept off until every earlier round is done.`,
-      };
+      return unfinished.length > 1
+        ? { tone: 'warn', key: 'rb.adviceGlobalWarnMany', vars: { count: unfinished.length } }
+        : { tone: 'warn', key: 'rb.adviceGlobalWarnOne' };
     }
     if (!round.isActive && others.length > 0 && unfinished.length === 0) {
-      return {
-        tone: 'info',
-        text: 'Every other round has finished — you can open the Global Round now.',
-      };
+      return { tone: 'info', key: 'rb.adviceGlobalInfo' };
     }
     return null;
   }
@@ -245,6 +244,7 @@ export function RoundsBuilder({
   rounds: RoundDraft[];
   onChange: (rounds: RoundDraft[]) => void;
 }) {
+  const t = useT();
   const update = (i: number, patch: Partial<RoundDraft>) =>
     onChange(rounds.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
 
@@ -274,11 +274,7 @@ export function RoundsBuilder({
   return (
     <div className="space-y-3">
       {rounds.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          No rounds — this competition uses a single registration and fee. Add
-          rounds for a multi-stage competition where students register and pay
-          per round.
-        </p>
+        <p className="text-sm text-muted-foreground">{t('rb.emptyHint')}</p>
       )}
       {rounds.map((r, i) => (
         <RoundCard
@@ -295,17 +291,17 @@ export function RoundsBuilder({
       ))}
       <Button type="button" variant="outline" onClick={add}>
         <Plus className="size-4" />
-        Add round
+        {t('rb.addRound')}
       </Button>
     </div>
   );
 }
 
-const DATE_FIELDS = [
-  ['startDate', 'Starts'],
-  ['registrationDeadline', 'Reg. deadline'],
-  ['examDate', 'Exam date'],
-  ['resultsDate', 'Results'],
+const DATE_FIELDS: readonly (readonly [keyof RoundDraft, MessageKey])[] = [
+  ['startDate', 'rb.dateStarts'],
+  ['registrationDeadline', 'rb.dateRegDeadline'],
+  ['examDate', 'rb.dateExam'],
+  ['resultsDate', 'rb.dateResults'],
 ] as const;
 
 function RoundCard({
@@ -327,6 +323,7 @@ function RoundCard({
   onRemove: () => void;
   onMove: (dir: -1 | 1) => void;
 }) {
+  const t = useT();
   const [newDoc, setNewDoc] = useState('');
   const others = all.filter((r) => r.tempId !== round.tempId);
   const advice = activationAdvice(round, all);
@@ -343,12 +340,12 @@ function RoundCard({
     <Card className="space-y-3 border-dashed p-4">
       <div className="flex items-center gap-2">
         <Badge variant="secondary" className="shrink-0 font-mono">
-          Round {index + 1}
+          {t('rb.roundLabel', { n: index + 1 })}
         </Badge>
         <Input
           value={round.roundName}
           onChange={(e) => onChange({ roundName: e.target.value })}
-          placeholder="Round name — e.g. Online Round 1"
+          placeholder={t('rb.roundNamePlaceholder')}
           className="h-8 flex-1"
         />
         <Button
@@ -358,7 +355,7 @@ function RoundCard({
           className="size-8"
           disabled={isFirst}
           onClick={() => onMove(-1)}
-          aria-label="Move round up"
+          aria-label={t('rb.moveUp')}
         >
           <ChevronUp className="size-4" />
         </Button>
@@ -369,7 +366,7 @@ function RoundCard({
           className="size-8"
           disabled={isLast}
           onClick={() => onMove(1)}
-          aria-label="Move round down"
+          aria-label={t('rb.moveDown')}
         >
           <ChevronDown className="size-4" />
         </Button>
@@ -379,7 +376,7 @@ function RoundCard({
           size="icon"
           className="size-8 text-destructive hover:text-destructive"
           onClick={onRemove}
-          aria-label="Remove round"
+          aria-label={t('rb.removeRound')}
         >
           <X className="size-4" />
         </Button>
@@ -398,13 +395,10 @@ function RoundCard({
               htmlFor={`round-active-${round.tempId}`}
               className="text-xs font-medium text-foreground"
             >
-              {round.isActive ? 'Visible to students' : 'Hidden from students'}
+              {round.isActive ? t('rb.visible') : t('rb.hidden')}
             </Label>
             <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
-              Turn off to hide this round from students — they won’t see it or be
-              able to register. Use it to stage a round: keep Fast Track off while
-              the online rounds are still open, or the Global Round off until they
-              finish.
+              {t('rb.visibilityHint')}
             </p>
           </div>
         </div>
@@ -417,29 +411,29 @@ function RoundCard({
                 : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200')
             }
           >
-            {advice.text}
+            {t(advice.key, advice.vars)}
           </p>
         )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
-          <Label className="mb-1 text-xs text-muted-foreground">Type</Label>
+          <Label className="mb-1 text-xs text-muted-foreground">{t('rb.type')}</Label>
           <Select value={round.roundType} onValueChange={(v) => onChange({ roundType: v })}>
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {ROUND_TYPES.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
+              {ROUND_TYPES.map((rt) => (
+                <SelectItem key={rt} value={rt}>
+                  {t(ROUND_TYPE_KEY[rt])}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div>
-          <Label className="mb-1 text-xs text-muted-foreground">Fee (IDR — local)</Label>
+          <Label className="mb-1 text-xs text-muted-foreground">{t('rb.feeIdr')}</Label>
           <Input
             type="number"
             value={round.fee}
@@ -448,7 +442,7 @@ function RoundCard({
         </div>
         <div>
           <Label className="mb-1 text-xs text-muted-foreground">
-            International fee (USD) <span className="text-muted-foreground/70">— optional</span>
+            {t('rb.feeUsd')} <span className="text-muted-foreground/70">{t('rb.optional')}</span>
           </Label>
           <Input
             type="number"
@@ -459,23 +453,23 @@ function RoundCard({
               const next = raw === '' ? null : Number(raw);
               onChange({ feeInternational: next != null && Number.isFinite(next) ? next : null });
             }}
-            placeholder="e.g. 20"
+            placeholder={t('rb.feeUsdPlaceholder')}
           />
         </div>
       </div>
 
       <div>
-        <Label className="mb-1 text-xs text-muted-foreground">Location</Label>
+        <Label className="mb-1 text-xs text-muted-foreground">{t('rb.location')}</Label>
         <Input
           value={round.location}
           onChange={(e) => onChange({ location: e.target.value })}
-          placeholder="Online / a city"
+          placeholder={t('rb.locationPlaceholder')}
         />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <Label className="mb-1 text-xs text-muted-foreground">Category</Label>
+          <Label className="mb-1 text-xs text-muted-foreground">{t('rb.category')}</Label>
           <Select
             value={round.roundCategory}
             onValueChange={(v) => onChange({ roundCategory: v })}
@@ -486,16 +480,14 @@ function RoundCard({
             <SelectContent>
               {ROUND_CATEGORIES.map((c) => (
                 <SelectItem key={c.value} value={c.value}>
-                  {c.label}
+                  {t(c.labelKey)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div>
-          <Label className="mb-1 text-xs text-muted-foreground">
-            Qualifying score — medal threshold
-          </Label>
+          <Label className="mb-1 text-xs text-muted-foreground">{t('rb.qualifyingScore')}</Label>
           <Input
             type="number"
             value={round.qualifyingScore ?? ''}
@@ -504,21 +496,21 @@ function RoundCard({
                 qualifyingScore: e.target.value === '' ? null : parseInt(e.target.value, 10),
               })
             }
-            placeholder="e.g. 16 — blank for none"
+            placeholder={t('rb.qualifyingPlaceholder')}
           />
         </div>
         {round.roundCategory === 'local' && (
           <>
             <div>
-              <Label className="mb-1 text-xs text-muted-foreground">Country</Label>
+              <Label className="mb-1 text-xs text-muted-foreground">{t('rb.country')}</Label>
               <Input
                 value={round.country}
                 onChange={(e) => onChange({ country: e.target.value })}
-                placeholder="e.g. Malaysia"
+                placeholder={t('rb.countryPlaceholder')}
               />
             </div>
             <div>
-              <Label className="mb-1 text-xs text-muted-foreground">Exam mode</Label>
+              <Label className="mb-1 text-xs text-muted-foreground">{t('rb.examMode')}</Label>
               <Select value={round.examMode} onValueChange={(v) => onChange({ examMode: v })}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -526,7 +518,7 @@ function RoundCard({
                 <SelectContent>
                   {EXAM_MODES.map((m) => (
                     <SelectItem key={m.value} value={m.value}>
-                      {m.label}
+                      {t(m.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -537,12 +529,12 @@ function RoundCard({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-4">
-        {DATE_FIELDS.map(([key, label]) => (
+        {DATE_FIELDS.map(([key, labelKey]) => (
           <div key={key}>
-            <Label className="mb-1 text-xs text-muted-foreground">{label}</Label>
+            <Label className="mb-1 text-xs text-muted-foreground">{t(labelKey)}</Label>
             <Input
               type="date"
-              value={round[key]}
+              value={round[key] as string}
               onChange={(e) => onChange({ [key]: e.target.value } as Partial<RoundDraft>)}
             />
           </div>
@@ -551,25 +543,21 @@ function RoundCard({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <Label className="mb-1 text-xs text-muted-foreground">
-            Age cutoff date — age-grouped competitions only
-          </Label>
+          <Label className="mb-1 text-xs text-muted-foreground">{t('rb.ageCutoff')}</Label>
           <Input
             type="date"
             value={round.ageCutoffDate}
             onChange={(e) => onChange({ ageCutoffDate: e.target.value })}
           />
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-            For Komodo and other age-grouped competitions: the date the
-            student&apos;s age is measured against to pick their creature
-            bracket. Leave blank for grade-based competitions.
+            {t('rb.ageCutoffHint')}
           </p>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
-          <Label className="mb-1 text-xs text-muted-foreground">Access</Label>
+          <Label className="mb-1 text-xs text-muted-foreground">{t('rb.access')}</Label>
           <Select
             value={round.gatingMode}
             onValueChange={(v) => onChange({ gatingMode: v as RoundDraft['gatingMode'] })}
@@ -578,37 +566,37 @@ function RoundCard({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="open">Open entry</SelectItem>
-              <SelectItem value="prerequisite">Requires another round</SelectItem>
-              <SelectItem value="qualified">Requires a medal (Global Round)</SelectItem>
-              <SelectItem value="unqualified">Catch-up — until the student qualifies</SelectItem>
+              <SelectItem value="open">{t('rb.accessOpen')}</SelectItem>
+              <SelectItem value="prerequisite">{t('rb.accessPrereq')}</SelectItem>
+              <SelectItem value="qualified">{t('rb.accessQualified')}</SelectItem>
+              <SelectItem value="unqualified">{t('rb.accessUnqualified')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         {round.gatingMode === 'prerequisite' && (
           <>
             <div>
-              <Label className="mb-1 text-xs text-muted-foreground">Prerequisite round</Label>
+              <Label className="mb-1 text-xs text-muted-foreground">{t('rb.prereqRound')}</Label>
               <Select
                 value={round.requiresTempId ?? undefined}
                 onValueChange={(v) => onChange({ requiresTempId: v })}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a round" />
+                  <SelectValue placeholder={t('rb.selectRound')} />
                 </SelectTrigger>
                 <SelectContent>
                   {others.map((o) => (
                     <SelectItem key={o.tempId} value={o.tempId}>
-                      {`Round ${all.findIndex((x) => x.tempId === o.tempId) + 1}${
-                        o.roundName ? ` — ${o.roundName}` : ''
-                      }`}
+                      {`${t('rb.roundLabel', {
+                        n: all.findIndex((x) => x.tempId === o.tempId) + 1,
+                      })}${o.roundName ? ` — ${o.roundName}` : ''}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="mb-1 text-xs text-muted-foreground">Student must have…</Label>
+              <Label className="mb-1 text-xs text-muted-foreground">{t('rb.studentMustHave')}</Label>
               <Select
                 value={round.gatingRule}
                 onValueChange={(v) => onChange({ gatingRule: v as RoundDraft['gatingRule'] })}
@@ -619,7 +607,7 @@ function RoundCard({
                 <SelectContent>
                   {GATING_RULES.map((g) => (
                     <SelectItem key={g.value} value={g.value}>
-                      {g.label}
+                      {t(g.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -630,14 +618,12 @@ function RoundCard({
       </div>
 
       <div>
-        <Label className="mb-1 text-xs text-muted-foreground">
-          Required documents for this round
-        </Label>
+        <Label className="mb-1 text-xs text-muted-foreground">{t('rb.reqDocsRound')}</Label>
         <div className="flex gap-2">
           <Input
             value={newDoc}
             onChange={(e) => setNewDoc(e.target.value)}
-            placeholder="e.g. Student ID"
+            placeholder={t('rb.reqDocPlaceholder')}
             className="h-8"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -647,7 +633,7 @@ function RoundCard({
             }}
           />
           <Button type="button" variant="outline" size="sm" onClick={addDoc}>
-            Add
+            {t('rb.add')}
           </Button>
         </div>
         {round.requiredDocs.length > 0 && (
@@ -661,7 +647,7 @@ function RoundCard({
                     onChange({ requiredDocs: round.requiredDocs.filter((d) => d !== doc) })
                   }
                   className="text-muted-foreground hover:text-foreground"
-                  aria-label={`Remove ${doc}`}
+                  aria-label={t('cf.removeDoc', { doc })}
                 >
                   <X className="size-3" />
                 </button>

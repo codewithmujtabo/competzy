@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { adminHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Pager } from '@/components/shell/pager';
 import { Card } from '@/components/ui/card';
@@ -61,6 +62,7 @@ interface TestCenter {
 }
 
 function ActiveBadge({ active }: { active: boolean }) {
+  const t = useT();
   return (
     <Badge
       variant="outline"
@@ -70,7 +72,7 @@ function ActiveBadge({ active }: { active: boolean }) {
           : 'border-transparent bg-muted font-mono text-[10px] text-muted-foreground'
       }
     >
-      {active ? 'Active' : 'Inactive'}
+      {active ? t('ven.active') : t('ven.inactive')}
     </Badge>
   );
 }
@@ -79,6 +81,7 @@ function ActiveBadge({ active }: { active: boolean }) {
 const AREA_DEFAULTS = { province: '', part: '', groupName: '', code: '', isActive: true };
 
 function AreasPanel() {
+  const t = useT();
   const [rows, setRows] = useState<Area[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -102,7 +105,7 @@ function AreasPanel() {
       setRows(r.areas ?? []);
       setTotal(r.pagination?.total ?? 0);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load areas');
+      toast.error(e instanceof Error ? e.message : t('ven.toastLoadAreas'));
     } finally {
       setLoading(false);
     }
@@ -135,25 +138,25 @@ function AreasPanel() {
     try {
       if (editingId) await adminHttp.put(`/admin/venues/areas/${editingId}`, form);
       else await adminHttp.post('/admin/venues/areas', form);
-      toast.success(editingId ? 'Area saved.' : 'Area added.');
+      toast.success(editingId ? t('ven.areaSaved') : t('ven.areaAdded'));
       setOpen(false);
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save area');
+      toast.error(e instanceof Error ? e.message : t('ven.toastSaveArea'));
     } finally {
       setSaving(false);
     }
   };
 
   const remove = async (a: Area) => {
-    if (!confirm(`Delete area "${a.province}"?`)) return;
+    if (!confirm(t('ven.confirmDeleteArea', { name: a.province }))) return;
     setBusy(a.id);
     try {
       await adminHttp.delete(`/admin/venues/areas/${a.id}`);
-      toast.success('Area removed.');
+      toast.success(t('ven.areaRemoved'));
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to delete area');
+      toast.error(e instanceof Error ? e.message : t('ven.toastDeleteArea'));
     } finally {
       setBusy(null);
     }
@@ -172,17 +175,17 @@ function AreasPanel() {
         >
           <Input
             className="w-64"
-            placeholder="Search province or code…"
+            placeholder={t('ven.searchAreaPlaceholder')}
             value={searchVal}
             onChange={(e) => setSearchVal(e.target.value)}
           />
           <Button type="submit" variant="outline">
-            Search
+            {t('ven.search')}
           </Button>
         </form>
         <Button onClick={openAdd}>
           <Plus className="size-4" />
-          Add area
+          {t('ven.addArea')}
         </Button>
       </div>
 
@@ -191,12 +194,12 @@ function AreasPanel() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Province</TableHead>
-                <TableHead>Part</TableHead>
-                <TableHead>Group</TableHead>
-                <TableHead className="w-28">Code</TableHead>
-                <TableHead className="w-24">Status</TableHead>
-                <TableHead className="w-24 text-right">Actions</TableHead>
+                <TableHead>{t('ven.colProvince')}</TableHead>
+                <TableHead>{t('ven.colPart')}</TableHead>
+                <TableHead>{t('ven.colGroup')}</TableHead>
+                <TableHead className="w-28">{t('adm.colCode')}</TableHead>
+                <TableHead className="w-24">{t('adm.colStatus')}</TableHead>
+                <TableHead className="w-24 text-right">{t('acp.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -211,7 +214,7 @@ function AreasPanel() {
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-28 text-center text-sm text-muted-foreground">
-                    No areas yet.
+                    {t('ven.emptyAreas')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -256,13 +259,13 @@ function AreasPanel() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit area' : 'Add area'}</DialogTitle>
-            <DialogDescription>A geographic region grouping test centers.</DialogDescription>
+            <DialogTitle>{editingId ? t('ven.editArea') : t('ven.addAreaTitle')}</DialogTitle>
+            <DialogDescription>{t('ven.areaDesc')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Label className="mb-1.5 text-xs text-muted-foreground">
-                Province <span className="text-destructive">*</span>
+                {t('ven.fldProvince')} <span className="text-destructive">*</span>
               </Label>
               <Input
                 value={form.province}
@@ -271,18 +274,18 @@ function AreasPanel() {
               />
             </div>
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Part</Label>
+              <Label className="mb-1.5 text-xs text-muted-foreground">{t('ven.fldPart')}</Label>
               <Input value={form.part} onChange={(e) => setForm((f) => ({ ...f, part: e.target.value }))} />
             </div>
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Group</Label>
+              <Label className="mb-1.5 text-xs text-muted-foreground">{t('ven.fldGroup')}</Label>
               <Input
                 value={form.groupName}
                 onChange={(e) => setForm((f) => ({ ...f, groupName: e.target.value }))}
               />
             </div>
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Code</Label>
+              <Label className="mb-1.5 text-xs text-muted-foreground">{t('adm.colCode')}</Label>
               <Input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} />
             </div>
             <div className="flex items-end">
@@ -293,16 +296,16 @@ function AreasPanel() {
                   onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
                   className="size-4 accent-primary"
                 />
-                Active
+                {t('ven.active')}
               </label>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={save} disabled={saving || !form.province.trim()}>
-              {saving ? 'Saving…' : editingId ? 'Save area' : 'Add area'}
+              {saving ? t('cf.saving') : editingId ? t('ven.saveArea') : t('ven.addArea')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -323,6 +326,7 @@ const TC_DEFAULTS = {
 };
 
 function TestCentersPanel() {
+  const t = useT();
   const [rows, setRows] = useState<TestCenter[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -347,7 +351,7 @@ function TestCentersPanel() {
       setRows(r.testCenters ?? []);
       setTotal(r.pagination?.total ?? 0);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load test centers');
+      toast.error(e instanceof Error ? e.message : t('ven.toastLoadTc'));
     } finally {
       setLoading(false);
     }
@@ -389,25 +393,25 @@ function TestCentersPanel() {
       const body = { ...form, areaId: form.areaId === NO_AREA ? null : form.areaId };
       if (editingId) await adminHttp.put(`/admin/venues/test-centers/${editingId}`, body);
       else await adminHttp.post('/admin/venues/test-centers', body);
-      toast.success(editingId ? 'Test center saved.' : 'Test center added.');
+      toast.success(editingId ? t('ven.tcSaved') : t('ven.tcAdded'));
       setOpen(false);
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save test center');
+      toast.error(e instanceof Error ? e.message : t('ven.toastSaveTc'));
     } finally {
       setSaving(false);
     }
   };
 
   const remove = async (tc: TestCenter) => {
-    if (!confirm(`Delete test center "${tc.name}"?`)) return;
+    if (!confirm(t('ven.confirmDeleteTc', { name: tc.name }))) return;
     setBusy(tc.id);
     try {
       await adminHttp.delete(`/admin/venues/test-centers/${tc.id}`);
-      toast.success('Test center removed.');
+      toast.success(t('ven.tcRemoved'));
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to delete test center');
+      toast.error(e instanceof Error ? e.message : t('ven.toastDeleteTc'));
     } finally {
       setBusy(null);
     }
@@ -426,17 +430,17 @@ function TestCentersPanel() {
         >
           <Input
             className="w-64"
-            placeholder="Search name, code or city…"
+            placeholder={t('ven.searchTcPlaceholder')}
             value={searchVal}
             onChange={(e) => setSearchVal(e.target.value)}
           />
           <Button type="submit" variant="outline">
-            Search
+            {t('ven.search')}
           </Button>
         </form>
         <Button onClick={() => openDialog(null)}>
           <Plus className="size-4" />
-          Add test center
+          {t('ven.addTc')}
         </Button>
       </div>
 
@@ -445,12 +449,12 @@ function TestCentersPanel() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Area</TableHead>
-                <TableHead>City</TableHead>
-                <TableHead className="w-28">Code</TableHead>
-                <TableHead className="w-24">Status</TableHead>
-                <TableHead className="w-24 text-right">Actions</TableHead>
+                <TableHead>{t('adm.colName')}</TableHead>
+                <TableHead>{t('ven.colArea')}</TableHead>
+                <TableHead>{t('adm.colCity')}</TableHead>
+                <TableHead className="w-28">{t('adm.colCode')}</TableHead>
+                <TableHead className="w-24">{t('adm.colStatus')}</TableHead>
+                <TableHead className="w-24 text-right">{t('acp.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -465,7 +469,7 @@ function TestCentersPanel() {
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-28 text-center text-sm text-muted-foreground">
-                    No test centers yet.
+                    {t('ven.emptyTc')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -515,13 +519,13 @@ function TestCentersPanel() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit test center' : 'Add test center'}</DialogTitle>
-            <DialogDescription>A physical venue where students sit exams.</DialogDescription>
+            <DialogTitle>{editingId ? t('ven.editTc') : t('ven.addTcTitle')}</DialogTitle>
+            <DialogDescription>{t('ven.tcDesc')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Label className="mb-1.5 text-xs text-muted-foreground">
-                Name <span className="text-destructive">*</span>
+                {t('adm.colName')} <span className="text-destructive">*</span>
               </Label>
               <Input
                 value={form.name}
@@ -530,7 +534,7 @@ function TestCentersPanel() {
               />
             </div>
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Area</Label>
+              <Label className="mb-1.5 text-xs text-muted-foreground">{t('ven.colArea')}</Label>
               <Select
                 value={form.areaId}
                 onValueChange={(v) => setForm((f) => ({ ...f, areaId: v }))}
@@ -539,7 +543,7 @@ function TestCentersPanel() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NO_AREA}>No area</SelectItem>
+                  <SelectItem value={NO_AREA}>{t('ven.noArea')}</SelectItem>
                   {areas.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.province}
@@ -549,19 +553,19 @@ function TestCentersPanel() {
               </Select>
             </div>
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Code</Label>
+              <Label className="mb-1.5 text-xs text-muted-foreground">{t('adm.colCode')}</Label>
               <Input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} />
             </div>
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">City</Label>
+              <Label className="mb-1.5 text-xs text-muted-foreground">{t('adm.colCity')}</Label>
               <Input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
             </div>
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Phone</Label>
+              <Label className="mb-1.5 text-xs text-muted-foreground">{t('ven.fldPhone')}</Label>
               <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
             </div>
             <div className="sm:col-span-2">
-              <Label className="mb-1.5 text-xs text-muted-foreground">Address</Label>
+              <Label className="mb-1.5 text-xs text-muted-foreground">{t('ven.fldAddress')}</Label>
               <Input
                 value={form.address}
                 onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
@@ -575,16 +579,16 @@ function TestCentersPanel() {
                   onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
                   className="size-4 accent-primary"
                 />
-                Active
+                {t('ven.active')}
               </label>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={save} disabled={saving || !form.name.trim()}>
-              {saving ? 'Saving…' : editingId ? 'Save test center' : 'Add test center'}
+              {saving ? t('cf.saving') : editingId ? t('ven.saveTc') : t('ven.addTc')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -594,18 +598,19 @@ function TestCentersPanel() {
 }
 
 export default function VenuesPage() {
+  const t = useT();
   const [tab, setTab] = useState('areas');
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Management"
-        title="Venues"
-        subtitle="Geographic areas and the physical test centers where students sit exams."
+        eyebrow={t('adm.management')}
+        title={t('opnav.testCenters')}
+        subtitle={t('ven.subtitle')}
       />
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="areas">Areas</TabsTrigger>
-          <TabsTrigger value="test-centers">Test Centers</TabsTrigger>
+          <TabsTrigger value="areas">{t('ven.tabAreas')}</TabsTrigger>
+          <TabsTrigger value="test-centers">{t('ven.tabTestCenters')}</TabsTrigger>
         </TabsList>
       </Tabs>
       {tab === 'areas' ? <AreasPanel /> : <TestCentersPanel />}

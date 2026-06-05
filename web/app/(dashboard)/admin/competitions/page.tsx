@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { ListChecks, Pencil, Plus, Trash2 } from 'lucide-react';
 import { competitionsApi } from '@/lib/api';
 import { adminHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import type { Competition } from '@/types';
 import { FlowEditorDialog } from '@/components/flow-editor-dialog';
 import { CompetitionLogoUploader } from '@/components/competition-logo-uploader';
@@ -49,7 +50,6 @@ import {
 } from '@/components/ui/select';
 
 const CATEGORIES = ['Science', 'Math', 'Art', 'Sports', 'Technology', 'Literature', 'Music'];
-const FILTERS = [{ key: 'all', label: 'All' }, ...CATEGORIES.map((c) => ({ key: c, label: c }))];
 const LIMIT = 15;
 
 const FORM_DEFAULTS = {
@@ -107,6 +107,8 @@ function Field({
 }
 
 export default function CompetitionsPage() {
+  const t = useT();
+  const FILTERS = [{ key: 'all', label: t('acp.all') }, ...CATEGORIES.map((c) => ({ key: c, label: c }))];
   const [comps, setComps] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
@@ -138,7 +140,7 @@ export default function CompetitionsPage() {
       setComps(Array.isArray(r?.competitions) ? r.competitions : []);
       setTotal(r?.pagination?.total ?? 0);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load competitions');
+      toast.error(e instanceof Error ? e.message : t('acp.toastLoadFail'));
       setComps([]);
       setTotal(0);
     } finally {
@@ -196,43 +198,43 @@ export default function CompetitionsPage() {
       };
       if (editId) {
         await competitionsApi.update(editId, payload);
-        toast.success('Competition updated.');
+        toast.success(t('acp.toastUpdated'));
       } else {
         await competitionsApi.create(payload);
-        toast.success('Competition created.');
+        toast.success(t('acp.toastCreated'));
       }
       setShowForm(false);
       setEditId(null);
       setForm({ ...FORM_DEFAULTS });
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save competition');
+      toast.error(e instanceof Error ? e.message : t('cf.toastSaveFailed'));
     } finally {
       setSaving(false);
     }
   };
 
   const remove = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    if (!confirm(t('acp.confirmDelete', { name }))) return;
     try {
       await competitionsApi.delete(id);
-      toast.success('Competition deleted.');
+      toast.success(t('acp.toastDeleted'));
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to delete competition');
+      toast.error(e instanceof Error ? e.message : t('acp.toastDeleteFail'));
     }
   };
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Management"
-        title="Competitions"
-        subtitle="Create and manage the competitions listed on Competzy."
+        eyebrow={t('adm.management')}
+        title={t('opnav.competitions')}
+        subtitle={t('acp.subtitle')}
         actions={
           <Button onClick={openAdd}>
             <Plus className="size-4" />
-            New competition
+            {t('acp.newCompetition')}
           </Button>
         }
       />
@@ -258,13 +260,13 @@ export default function CompetitionsPage() {
           <Table className="w-full table-fixed min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead className="w-[200px]">Category</TableHead>
-                <TableHead className="w-36">Organizer</TableHead>
-                <TableHead className="w-24">Fee</TableHead>
-                <TableHead className="w-28">Reg. closes</TableHead>
-                <TableHead className="w-28">Event date</TableHead>
-                <TableHead className="w-[200px] text-right">Actions</TableHead>
+                <TableHead>{t('adm.colName')}</TableHead>
+                <TableHead className="w-[200px]">{t('acp.colCategory')}</TableHead>
+                <TableHead className="w-36">{t('acp.colOrganizer')}</TableHead>
+                <TableHead className="w-24">{t('acp.colFee')}</TableHead>
+                <TableHead className="w-28">{t('acp.colRegCloses')}</TableHead>
+                <TableHead className="w-28">{t('acp.colEventDate')}</TableHead>
+                <TableHead className="w-[200px] text-right">{t('acp.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -279,7 +281,7 @@ export default function CompetitionsPage() {
               ) : comps.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
-                    No competitions found.
+                    {t('acp.empty')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -307,7 +309,7 @@ export default function CompetitionsPage() {
                           variant="outline"
                           className="border-transparent bg-emerald-100 font-mono text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
                         >
-                          Free
+                          {t('acp.free')}
                         </Badge>
                       ) : (
                         <span className="text-sm tabular-nums">Rp {c.fee.toLocaleString('id-ID')}</span>
@@ -327,11 +329,11 @@ export default function CompetitionsPage() {
                           onClick={() => setFlowComp({ id: c.id, name: c.name })}
                         >
                           <ListChecks className="size-3.5" />
-                          Flow
+                          {t('acp.flow')}
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => openEdit(c)}>
                           <Pencil className="size-3.5" />
-                          Edit
+                          {t('acp.edit')}
                         </Button>
                         <Button
                           size="sm"
@@ -355,29 +357,27 @@ export default function CompetitionsPage() {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editId ? 'Edit competition' : 'New competition'}</DialogTitle>
+            <DialogTitle>{editId ? t('acp.dlgEditTitle') : t('acp.dlgNewTitle')}</DialogTitle>
             <DialogDescription>
-              {editId
-                ? 'Update the competition details below.'
-                : 'Add a new competition to the Competzy catalog.'}
+              {editId ? t('acp.dlgEditDesc') : t('acp.dlgNewDesc')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 sm:grid-cols-6">
-            <Field label="Name" required className="sm:col-span-4">
+            <Field label={t('acp.fldName')} required className="sm:col-span-4">
               <Input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="Olimpiade Matematika Nasional"
               />
             </Field>
-            <Field label="Category" className="sm:col-span-2">
+            <Field label={t('acp.fldCategory')} className="sm:col-span-2">
               <Select
                 value={form.category || undefined}
                 onValueChange={(v) => setForm((f) => ({ ...f, category: v }))}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select…" />
+                  <SelectValue placeholder={t('acp.selectPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map((c) => (
@@ -389,7 +389,7 @@ export default function CompetitionsPage() {
               </Select>
             </Field>
 
-            <Field label="Organizer name" required className="sm:col-span-4">
+            <Field label={t('acp.fldOrganizerName')} required className="sm:col-span-4">
               <Input
                 value={form.organizer_name}
                 onChange={(e) => setForm((f) => ({ ...f, organizer_name: e.target.value }))}
@@ -397,9 +397,9 @@ export default function CompetitionsPage() {
               />
             </Field>
             <Field
-              label="Base fee (IDR)"
+              label={t('acp.fldBaseFee')}
               className="sm:col-span-2"
-              hint="Fallback only — used when no rounds exist or a round leaves its fee blank. Per-round fees override this."
+              hint={t('acp.fldBaseFeeHint')}
             >
               <Input
                 type="number"
@@ -407,7 +407,7 @@ export default function CompetitionsPage() {
                 onChange={(e) => setForm((f) => ({ ...f, fee: e.target.value }))}
               />
             </Field>
-            <Field label="Owner (organizer account)" required className="sm:col-span-6">
+            <Field label={t('acp.fldOwner')} required className="sm:col-span-6">
               <Select
                 value={form.organizer_id || undefined}
                 onValueChange={(v) => setForm((f) => ({ ...f, organizer_id: v }))}
@@ -415,7 +415,7 @@ export default function CompetitionsPage() {
                 <SelectTrigger className="w-full">
                   <SelectValue
                     placeholder={
-                      organizers.length === 0 ? 'No organizer accounts found' : 'Select an organizer…'
+                      organizers.length === 0 ? t('acp.noOrganizers') : t('acp.selectOrganizer')
                     }
                   />
                 </SelectTrigger>
@@ -427,32 +427,30 @@ export default function CompetitionsPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Controls which organizer account can manage this competition in their portal.
-              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">{t('acp.fldOwnerHint')}</p>
             </Field>
-            <Field label="Grade level" className="sm:col-span-6">
+            <Field label={t('acp.fldGradeLevel')} className="sm:col-span-6">
               <GradeMultiSelect
                 value={form.grade_level}
                 onChange={(v) => setForm((f) => ({ ...f, grade_level: v }))}
               />
             </Field>
 
-            <Field label="Reg. opens" className="sm:col-span-2">
+            <Field label={t('acp.fldRegOpens')} className="sm:col-span-2">
               <Input
                 type="date"
                 value={form.reg_open_date}
                 onChange={(e) => setForm((f) => ({ ...f, reg_open_date: e.target.value }))}
               />
             </Field>
-            <Field label="Reg. closes" className="sm:col-span-2">
+            <Field label={t('acp.fldRegCloses')} className="sm:col-span-2">
               <Input
                 type="date"
                 value={form.reg_close_date}
                 onChange={(e) => setForm((f) => ({ ...f, reg_close_date: e.target.value }))}
               />
             </Field>
-            <Field label="Event date" className="sm:col-span-2">
+            <Field label={t('acp.fldEventDate')} className="sm:col-span-2">
               <Input
                 type="date"
                 value={form.competition_date}
@@ -460,7 +458,7 @@ export default function CompetitionsPage() {
               />
             </Field>
 
-            <Field label="Competition type" className="sm:col-span-2">
+            <Field label={t('acp.fldType')} className="sm:col-span-2">
               <Select
                 value={form.kind}
                 onValueChange={(v) =>
@@ -471,13 +469,13 @@ export default function CompetitionsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="native">Native — on Competzy</SelectItem>
-                  <SelectItem value="affiliated">Affiliated — external</SelectItem>
+                  <SelectItem value="native">{t('acp.typeNative')}</SelectItem>
+                  <SelectItem value="affiliated">{t('acp.typeAffiliated')}</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
             <Field
-              label={form.kind === 'affiliated' ? 'Affiliated competition URL' : 'Post-payment redirect URL'}
+              label={form.kind === 'affiliated' ? t('acp.fldAffiliatedUrl') : t('acp.fldPostPaymentUrl')}
               required={form.kind === 'affiliated'}
               className="sm:col-span-4"
             >
@@ -491,24 +489,24 @@ export default function CompetitionsPage() {
               />
             </Field>
 
-            <Field label="Description" className="sm:col-span-6">
+            <Field label={t('acp.fldDescription')} className="sm:col-span-6">
               <textarea
                 rows={3}
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Describe the competition…"
+                placeholder={t('acp.descPlaceholder')}
                 className="flex min-h-20 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               />
             </Field>
 
-            <Field label="Competition rounds" className="sm:col-span-6">
+            <Field label={t('acp.fldRounds')} className="sm:col-span-6">
               <RoundsBuilder
                 rounds={form.rounds}
                 onChange={(rounds) => setForm((f) => ({ ...f, rounds }))}
               />
             </Field>
 
-            <Field label="Logo" className="sm:col-span-6">
+            <Field label={t('acp.fldLogo')} className="sm:col-span-6">
               {editId ? (
                 <CompetitionLogoUploader
                   endpoint={`/admin/competitions/${editId}/logo`}
@@ -517,22 +515,20 @@ export default function CompetitionsPage() {
                   onUploaded={setLogoUrl}
                 />
               ) : (
-                <p className="text-[11px] text-muted-foreground">
-                  Create the competition first, then reopen it to upload a logo.
-                </p>
+                <p className="text-[11px] text-muted-foreground">{t('acp.logoHint')}</p>
               )}
             </Field>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowForm(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={save}
               disabled={saving || !form.name || !form.organizer_name || !form.organizer_id}
             >
-              {saving ? 'Saving…' : editId ? 'Save changes' : 'Create competition'}
+              {saving ? t('cf.saving') : editId ? t('acp.saveChanges') : t('acp.createCompetition')}
             </Button>
           </DialogFooter>
         </DialogContent>
