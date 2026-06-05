@@ -20,6 +20,7 @@ import {
 import { certificatesHttp } from '@/lib/api/client';
 import { useQuestionBank, CompetitionPicker } from '@/lib/question-bank/context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Pager } from '@/components/shell/pager';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -73,6 +74,7 @@ const scoreText = (c: Pick<Certificate, 'score' | 'scoreMax'>) =>
   c.score == null ? '—' : `${c.score}${c.scoreMax != null ? ` / ${c.scoreMax}` : ''}`;
 
 export default function CertificatesPage() {
+  const t = useT();
   const { competitions, selectedId, loading: compsLoading } = useQuestionBank();
 
   const [rows, setRows] = useState<Certificate[]>([]);
@@ -206,7 +208,7 @@ export default function CertificatesPage() {
   if (!compsLoading && competitions.length === 0) {
     return (
       <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="Results" title="Certificates" />
+        <PageHeader eyebrow={t('opnav.results')} title={t('opnav.certificates')} />
         <Card className="p-12 text-center">
           <p className="text-sm font-medium text-foreground">No competitions to manage</p>
         </Card>
@@ -217,9 +219,9 @@ export default function CertificatesPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Results"
-        title="Certificates"
-        subtitle="Certificates are issued automatically when a student finishes an exam. Add an award label, adjust the score, or revoke."
+        eyebrow={t('opnav.results')}
+        title={t('opnav.certificates')}
+        subtitle={t('qb.certsSubtitle')}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-2">

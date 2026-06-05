@@ -7,6 +7,7 @@ import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { questionBankHttp } from '@/lib/auth/question-bank-context';
 import { CompetitionPicker, useQuestionBank } from '@/lib/question-bank/context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,7 @@ const STATUS_STYLE: Record<string, string> = {
 const ALL = '__all__';
 
 export default function QuestionsListPage() {
+  const t = useT();
   const router = useRouter();
   const { selectedId, competitions, loading: compsLoading } = useQuestionBank();
   const [rows, setRows] = useState<QuestionRow[]>([]);
@@ -120,7 +122,7 @@ export default function QuestionsListPage() {
   if (!compsLoading && competitions.length === 0) {
     return (
       <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="Question Bank" title="Questions" />
+        <PageHeader eyebrow={t('opnav.questionBank')} title={t('opnav.questions')} />
         <Card className="p-12 text-center">
           <p className="text-sm font-medium text-foreground">No native competitions yet</p>
           <p className="mt-1.5 text-sm text-muted-foreground">
@@ -134,9 +136,9 @@ export default function QuestionsListPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Question Bank"
-        title="Questions"
-        subtitle="Author multiple-choice and short-answer questions, then submit them for review."
+        eyebrow={t('opnav.questionBank')}
+        title={t('opnav.questions')}
+        subtitle={t('qb.questionsSubtitle')}
         actions={
           <Button
             disabled={!selectedId}

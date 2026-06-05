@@ -7,6 +7,7 @@ import { ClipboardCheck } from 'lucide-react';
 import { questionBankHttp } from '@/lib/auth/question-bank-context';
 import { CompetitionPicker, useQuestionBank } from '@/lib/question-bank/context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,6 +31,7 @@ interface QuestionRow {
 }
 
 export default function ReviewQueuePage() {
+  const t = useT();
   const router = useRouter();
   const { selectedId, competitions, loading: compsLoading } = useQuestionBank();
   const [rows, setRows] = useState<QuestionRow[]>([]);
@@ -53,7 +55,7 @@ export default function ReviewQueuePage() {
   if (!compsLoading && competitions.length === 0) {
     return (
       <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="Question Bank" title="Review" />
+        <PageHeader eyebrow={t('opnav.questionBank')} title={t('opnav.review')} />
         <Card className="p-12 text-center">
           <p className="text-sm font-medium text-foreground">No native competitions yet</p>
           <p className="mt-1.5 text-sm text-muted-foreground">
@@ -67,9 +69,9 @@ export default function ReviewQueuePage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Question Bank"
-        title="Review"
-        subtitle="Questions submitted for review. Open one to approve it or send it back."
+        eyebrow={t('opnav.questionBank')}
+        title={t('opnav.review')}
+        subtitle={t('qb.reviewSubtitle')}
       />
 
       <CompetitionPicker className="w-full sm:w-72" />

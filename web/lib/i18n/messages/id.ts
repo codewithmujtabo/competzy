@@ -435,6 +435,19 @@ export const id: Partial<Record<MessageKey, string>> = {
   'sch.bulkRegSubtitle': 'Daftarkan banyak siswa untuk kompetisi dari satu berkas CSV.',
   'sch.bulkPaySubtitle': 'Bayar untuk beberapa siswa dalam satu transaksi Midtrans.',
 
+  // ── Question-bank portal ───────────────────────────────────────────
+  'qb.dashSubtitle': 'Tulis dan tinjau bank soal untuk kompetisi native-mu.',
+  'qb.taxSubtitle': 'Atur bank soal ke dalam mata pelajaran, topik, dan subtopik. Soal ditandai berdasarkan itu.',
+  'qb.questionsSubtitle': 'Tulis soal pilihan ganda dan isian singkat, lalu ajukan untuk ditinjau.',
+  'qb.reviewSubtitle': 'Soal yang diajukan untuk ditinjau. Buka satu untuk menyetujui atau mengembalikannya.',
+  'qb.examsSubtitle': 'Susun ujian dari soal yang disetujui. Siswa mengerjakannya di portal kompetisi.',
+  'qb.gradingSubtitle': 'Percobaan ujian dengan jawaban isian singkat yang menunggu penilaian manual.',
+  'qb.resultsSubtitle': 'Setiap percobaan ujian yang selesai. Buka satu untuk melihat jawaban siswa.',
+  'qb.paperSubtitle': 'Catat dan nilai hasil siswa yang mengerjakan ujian di kertas.',
+  'qb.proctoringSubtitle': 'Tangkapan webcam yang diambil selama percobaan ujian online.',
+  'qb.certsSubtitle': 'Sertifikat diterbitkan otomatis saat siswa menyelesaikan ujian. Tambahkan label penghargaan, sesuaikan nilai, atau cabut.',
+  'qb.medalistsSubtitle': 'Peserta bernilai dan status medalinya. Medali ditentukan otomatis dari nilai; timpa di sini bila perlu.',
+
   // ── Country-rep portal ─────────────────────────────────────────────
   'rep.eyebrow': 'Perwakilan Negara',
   'rep.dashSubtitle': 'Kelola siswa negaramu di setiap babak yang bisa kamu akses — babak lokalmu plus babak online dan global Komodo. Pilih babak di bawah untuk mengganti tampilan halaman.',

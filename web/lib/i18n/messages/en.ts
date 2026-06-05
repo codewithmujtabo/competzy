@@ -439,6 +439,19 @@ export const en = {
   'sch.bulkRegSubtitle': 'Register many students for a competition from a single CSV file.',
   'sch.bulkPaySubtitle': 'Pay for multiple students in a single Midtrans transaction.',
 
+  // ── Question-bank portal ───────────────────────────────────────────
+  'qb.dashSubtitle': 'Author and review the question bank for your native competitions.',
+  'qb.taxSubtitle': 'Organise the bank into subjects, topics and subtopics. Questions are tagged against them.',
+  'qb.questionsSubtitle': 'Author multiple-choice and short-answer questions, then submit them for review.',
+  'qb.reviewSubtitle': 'Questions submitted for review. Open one to approve it or send it back.',
+  'qb.examsSubtitle': 'Assemble exams from approved questions. Students sit them in the competition portal.',
+  'qb.gradingSubtitle': 'Exam attempts with short-answer responses awaiting a manual grade.',
+  'qb.resultsSubtitle': 'Every finished exam attempt. Open one to see how the student answered.',
+  'qb.paperSubtitle': 'Record and grade the results of students who sat an exam on paper.',
+  'qb.proctoringSubtitle': 'Webcam snapshots captured during online exam attempts.',
+  'qb.certsSubtitle': 'Certificates are issued automatically when a student finishes an exam. Add an award label, adjust the score, or revoke.',
+  'qb.medalistsSubtitle': 'Scored entrants and their medal status. Medals are auto-decided from the score; override one here when needed.',
+
   // ── Country-rep portal ─────────────────────────────────────────────
   'rep.eyebrow': 'Country Representative',
   'rep.dashSubtitle': "Manage your country's students across every round you have access to — your local round plus Komodo's online and global rounds. Pick a round below to switch the rest of the page.",

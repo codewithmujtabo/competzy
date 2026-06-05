@@ -7,6 +7,7 @@ import { PenLine } from 'lucide-react';
 import { questionBankHttp } from '@/lib/auth/question-bank-context';
 import { CompetitionPicker, useQuestionBank } from '@/lib/question-bank/context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ function fmtDate(s: string) {
 }
 
 export default function GradingQueuePage() {
+  const t = useT();
   const router = useRouter();
   const { selectedId, competitions, loading: compsLoading } = useQuestionBank();
   const [rows, setRows] = useState<QueueRow[]>([]);
@@ -56,7 +58,7 @@ export default function GradingQueuePage() {
   if (!compsLoading && competitions.length === 0) {
     return (
       <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="Question Bank" title="Grading" />
+        <PageHeader eyebrow={t('opnav.questionBank')} title={t('opnav.grading')} />
         <Card className="p-12 text-center">
           <p className="text-sm font-medium text-foreground">No native competitions yet</p>
           <p className="mt-1.5 text-sm text-muted-foreground">
@@ -70,9 +72,9 @@ export default function GradingQueuePage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Question Bank"
-        title="Grading"
-        subtitle="Exam attempts with short-answer responses awaiting a manual grade."
+        eyebrow={t('opnav.questionBank')}
+        title={t('opnav.grading')}
+        subtitle={t('qb.gradingSubtitle')}
       />
 
       <CompetitionPicker className="w-full sm:w-72" />

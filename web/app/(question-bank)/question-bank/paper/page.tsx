@@ -7,6 +7,7 @@ import { Plus, Search, Trash2 } from 'lucide-react';
 import { questionBankHttp } from '@/lib/auth/question-bank-context';
 import { CompetitionPicker, useQuestionBank } from '@/lib/question-bank/context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -64,6 +65,7 @@ interface Student {
 }
 
 export default function PaperExamsPage() {
+  const t = useT();
   const router = useRouter();
   const { selectedId, competitions, loading: compsLoading } = useQuestionBank();
   const [exams, setExams] = useState<ExamLite[]>([]);
@@ -174,7 +176,7 @@ export default function PaperExamsPage() {
   if (!compsLoading && competitions.length === 0) {
     return (
       <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="Question Bank" title="Paper Exams" />
+        <PageHeader eyebrow={t('opnav.questionBank')} title={t('opnav.paperExams')} />
         <Card className="p-12 text-center">
           <p className="text-sm font-medium text-foreground">No native competitions yet</p>
           <p className="mt-1.5 text-sm text-muted-foreground">
@@ -188,9 +190,9 @@ export default function PaperExamsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Question Bank"
-        title="Paper Exams"
-        subtitle="Record and grade the results of students who sat an exam on paper."
+        eyebrow={t('opnav.questionBank')}
+        title={t('opnav.paperExams')}
+        subtitle={t('qb.paperSubtitle')}
         actions={
           <Button disabled={!examId} onClick={openAdd}>
             <Plus className="size-4" />

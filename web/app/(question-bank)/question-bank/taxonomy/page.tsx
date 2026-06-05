@@ -6,6 +6,7 @@ import { Check, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { questionBankHttp } from '@/lib/auth/question-bank-context';
 import { CompetitionPicker, useQuestionBank } from '@/lib/question-bank/context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -218,6 +219,7 @@ function TaxonomyColumn({
 }
 
 export default function TaxonomyPage() {
+  const t = useT();
   const { selectedId, competitions, loading: compsLoading } = useQuestionBank();
 
   const [subjects, setSubjects] = useState<TaxItem[]>([]);
@@ -304,9 +306,9 @@ export default function TaxonomyPage() {
   if (!compsLoading && competitions.length === 0) {
     return (
       <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="Question Bank" title="Taxonomy" />
+        <PageHeader eyebrow={t('opnav.questionBank')} title={t('opnav.taxonomy')} />
         <Card className="p-12 text-center">
-          <p className="text-sm font-medium text-foreground">No native competitions yet</p>
+          <p className="text-sm font-medium text-foreground">{t('adm.noNativeComps')}</p>
           <p className="mt-1.5 text-sm text-muted-foreground">
             The question bank is available for native competitions only.
           </p>
@@ -318,9 +320,9 @@ export default function TaxonomyPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Question Bank"
-        title="Taxonomy"
-        subtitle="Organise the bank into subjects, topics and subtopics. Questions are tagged against them."
+        eyebrow={t('opnav.questionBank')}
+        title={t('opnav.taxonomy')}
+        subtitle={t('qb.taxSubtitle')}
       />
 
       <CompetitionPicker />

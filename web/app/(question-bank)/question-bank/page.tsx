@@ -6,6 +6,7 @@ import { CheckCircle2, ClipboardCheck, FileText, FolderTree, Layers, PencilLine 
 import { questionBankHttp } from '@/lib/auth/question-bank-context';
 import { CompetitionPicker, useQuestionBank } from '@/lib/question-bank/context';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { StatCard } from '@/components/shell/stat-card';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +17,7 @@ interface QuestionRow {
 }
 
 export default function QuestionBankDashboard() {
+  const t = useT();
   const { selectedId, selected, competitions, loading: compsLoading } = useQuestionBank();
   const [rows, setRows] = useState<QuestionRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,9 +44,9 @@ export default function QuestionBankDashboard() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Question Bank"
-        title="Dashboard"
-        subtitle="Author and review the question bank for your native competitions."
+        eyebrow={t('opnav.questionBank')}
+        title={t('opnav.dashboard')}
+        subtitle={t('qb.dashSubtitle')}
       />
 
       {!compsLoading && competitions.length === 0 ? (
