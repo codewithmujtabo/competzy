@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { ImageIcon, Package, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { commerceHttp } from '@/lib/api/client';
 import { CompetitionPicker, useQuestionBank } from '@/lib/question-bank/context';
+import { useT } from '@/lib/i18n/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Pager } from '@/components/shell/pager';
 import { Card } from '@/components/ui/card';
@@ -55,6 +56,7 @@ function rupiah(n: number) {
 }
 
 function ProductsPage() {
+  const t = useT();
   const { selectedId, competitions, loading: compsLoading } = useQuestionBank();
   const [rows, setRows] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
@@ -179,9 +181,9 @@ function ProductsPage() {
   if (!compsLoading && competitions.length === 0) {
     return (
       <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="Commerce" title="Products" />
+        <PageHeader eyebrow={t('adm.commerce')} title={t('opnav.products')} />
         <Card className="p-12 text-center">
-          <p className="text-sm font-medium text-foreground">No native competitions yet</p>
+          <p className="text-sm font-medium text-foreground">{t('adm.noNativeComps')}</p>
           <p className="mt-1.5 text-sm text-muted-foreground">
             A merchandise catalog is available for native competitions only.
           </p>
@@ -193,16 +195,16 @@ function ProductsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Commerce"
-        title="Products"
-        subtitle="The merchandise catalog students can order from this competition's store."
+        eyebrow={t('adm.commerce')}
+        title={t('opnav.products')}
+        subtitle={t('adm.prod.subtitle')}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <CompetitionPicker className="w-full sm:w-72" />
         <Button onClick={openAdd} disabled={!selectedId}>
           <Plus className="size-4" />
-          Add product
+          {t('adm.prod.add')}
         </Button>
       </div>
 
@@ -216,12 +218,12 @@ function ProductsPage() {
       >
         <Input
           className="w-64"
-          placeholder="Search name or code…"
+          placeholder={t('adm.prod.search')}
           value={searchVal}
           onChange={(e) => setSearchVal(e.target.value)}
         />
         <Button type="submit" variant="outline">
-          Search
+          {t('acc.search')}
         </Button>
       </form>
 
@@ -230,12 +232,12 @@ function ProductsPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-16">Image</TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead className="w-28">Code</TableHead>
-                <TableHead className="w-36">Price</TableHead>
-                <TableHead className="w-24">Status</TableHead>
-                <TableHead className="w-24 text-right">Actions</TableHead>
+                <TableHead className="w-16">{t('adm.colImage')}</TableHead>
+                <TableHead>{t('adm.prod.colProduct')}</TableHead>
+                <TableHead className="w-28">{t('adm.colCode')}</TableHead>
+                <TableHead className="w-36">{t('adm.colPrice')}</TableHead>
+                <TableHead className="w-24">{t('adm.colStatus')}</TableHead>
+                <TableHead className="w-24 text-right">{t('adm.reg.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -250,7 +252,7 @@ function ProductsPage() {
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
-                    No products yet — add the first one.
+                    {t('adm.prod.noProducts')}
                   </TableCell>
                 </TableRow>
               ) : (

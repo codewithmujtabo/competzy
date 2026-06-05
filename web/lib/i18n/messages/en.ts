@@ -346,6 +346,10 @@ export const en = {
   'adm.colStatus': 'Status',
   'adm.colCoordinator': 'Coordinator',
   'adm.colLetter': 'Letter',
+  'adm.colImage': 'Image',
+  'adm.colCode': 'Code',
+  'adm.colPrice': 'Price',
+  'adm.noNativeComps': 'No native competitions yet',
   // users page
   'adm.usr.subtitle': 'Browse everyone registered on Competzy across all roles.',
   'adm.usr.search': 'Search name or email…',
@@ -367,6 +371,31 @@ export const en = {
   // segments page
   'adm.seg.eyebrow': 'Audience',
   'adm.seg.subtitle': 'Pre-built cross-sell audiences — target any of these from the Send Notification page.',
+
+  // ── Admin commerce (products / vouchers / orders) ──────────────────
+  'adm.commerce': 'Commerce',
+  'adm.prod.subtitle': "The merchandise catalog students can order from this competition's store.",
+  'adm.prod.search': 'Search name or code…',
+  'adm.prod.colProduct': 'Product',
+  'adm.prod.noProducts': 'No products yet — add the first one.',
+  'adm.prod.add': 'Add product',
+  'adm.prod.edit': 'Edit product',
+  'adm.vou.subtitle': 'Batches of discount codes that reduce the registration fee — often issued to a school.',
+  'adm.vou.colBatch': 'Batch',
+  'adm.vou.noBatches': 'No voucher batches yet — create the first one.',
+  'adm.vou.new': 'New voucher batch',
+  'adm.vou.edit': 'Edit voucher batch',
+  'adm.vou.colDiscounted': 'Discounted fee',
+  'adm.vou.colUsage': 'Usage',
+  'adm.ord.subtitle': 'Merchandise orders placed by students — review, ship and mark delivered.',
+  'adm.ord.colOrder': 'Order',
+  'adm.ord.colCustomer': 'Customer',
+  'adm.ord.colItems': 'Items',
+  'adm.ord.colItem': 'Item',
+  'adm.ord.colTotal': 'Total',
+  'adm.ord.colPlaced': 'Placed',
+  'adm.ord.noOrdersStatus': 'No orders with status “{status}”.',
+  'adm.ord.noOrders': 'No orders yet.',
 
   // ── Operator portal sidebar nav (admin/organizer/school/rep/QB) ────
   'opnav.dashboard': 'Dashboard',

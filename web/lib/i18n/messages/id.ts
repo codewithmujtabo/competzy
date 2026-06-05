@@ -342,6 +342,10 @@ export const id: Partial<Record<MessageKey, string>> = {
   'adm.colStatus': 'Status',
   'adm.colCoordinator': 'Koordinator',
   'adm.colLetter': 'Surat',
+  'adm.colImage': 'Gambar',
+  'adm.colCode': 'Kode',
+  'adm.colPrice': 'Harga',
+  'adm.noNativeComps': 'Belum ada kompetisi native',
   // users page
   'adm.usr.subtitle': 'Telusuri semua yang terdaftar di Competzy dari semua peran.',
   'adm.usr.search': 'Cari nama atau email…',
@@ -363,6 +367,31 @@ export const id: Partial<Record<MessageKey, string>> = {
   // segments page
   'adm.seg.eyebrow': 'Audiens',
   'adm.seg.subtitle': 'Audiens cross-sell siap pakai — targetkan dari halaman Kirim Notifikasi.',
+
+  // ── Admin commerce (products / vouchers / orders) ──────────────────
+  'adm.commerce': 'Niaga',
+  'adm.prod.subtitle': 'Katalog merchandise yang bisa dipesan siswa dari toko kompetisi ini.',
+  'adm.prod.search': 'Cari nama atau kode…',
+  'adm.prod.colProduct': 'Produk',
+  'adm.prod.noProducts': 'Belum ada produk — tambahkan yang pertama.',
+  'adm.prod.add': 'Tambah produk',
+  'adm.prod.edit': 'Ubah produk',
+  'adm.vou.subtitle': 'Kumpulan kode diskon yang mengurangi biaya pendaftaran — sering diberikan ke sekolah.',
+  'adm.vou.colBatch': 'Batch',
+  'adm.vou.noBatches': 'Belum ada batch voucher — buat yang pertama.',
+  'adm.vou.new': 'Batch voucher baru',
+  'adm.vou.edit': 'Ubah batch voucher',
+  'adm.vou.colDiscounted': 'Biaya diskon',
+  'adm.vou.colUsage': 'Penggunaan',
+  'adm.ord.subtitle': 'Pesanan merchandise dari siswa — tinjau, kirim, dan tandai terkirim.',
+  'adm.ord.colOrder': 'Pesanan',
+  'adm.ord.colCustomer': 'Pelanggan',
+  'adm.ord.colItems': 'Item',
+  'adm.ord.colItem': 'Item',
+  'adm.ord.colTotal': 'Total',
+  'adm.ord.colPlaced': 'Dipesan',
+  'adm.ord.noOrdersStatus': 'Tidak ada pesanan dengan status “{status}”.',
+  'adm.ord.noOrders': 'Belum ada pesanan.',
 
   // ── Operator portal sidebar nav (admin/organizer/school/rep/QB) ────
   'opnav.dashboard': 'Dasbor',

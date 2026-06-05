@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { PackageCheck, Truck, XCircle } from 'lucide-react';
 import { commerceHttp } from '@/lib/api/client';
 import { CompetitionPicker, useQuestionBank } from '@/lib/question-bank/context';
+import { useT } from '@/lib/i18n/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Pager } from '@/components/shell/pager';
 import { Card } from '@/components/ui/card';
@@ -93,6 +94,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function OrdersPage() {
+  const t = useT();
   const { selectedId, competitions, loading: compsLoading } = useQuestionBank();
   const [rows, setRows] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
@@ -171,9 +173,9 @@ function OrdersPage() {
   if (!compsLoading && competitions.length === 0) {
     return (
       <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="Commerce" title="Orders" />
+        <PageHeader eyebrow={t('adm.commerce')} title={t('opnav.orders')} />
         <Card className="p-12 text-center">
-          <p className="text-sm font-medium text-foreground">No native competitions yet</p>
+          <p className="text-sm font-medium text-foreground">{t('adm.noNativeComps')}</p>
           <p className="mt-1.5 text-sm text-muted-foreground">
             Merchandise orders are available for native competitions only.
           </p>
@@ -185,9 +187,9 @@ function OrdersPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Commerce"
-        title="Orders"
-        subtitle="Merchandise orders placed by students — review, ship and mark delivered."
+        eyebrow={t('adm.commerce')}
+        title={t('opnav.orders')}
+        subtitle={t('adm.ord.subtitle')}
       />
 
       <CompetitionPicker className="w-full sm:w-72" />
@@ -213,12 +215,12 @@ function OrdersPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-28">Order</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead className="w-20">Items</TableHead>
-                <TableHead className="w-36">Total</TableHead>
-                <TableHead className="w-40">Placed</TableHead>
-                <TableHead className="w-28">Status</TableHead>
+                <TableHead className="w-28">{t('adm.ord.colOrder')}</TableHead>
+                <TableHead>{t('adm.ord.colCustomer')}</TableHead>
+                <TableHead className="w-20">{t('adm.ord.colItems')}</TableHead>
+                <TableHead className="w-36">{t('adm.ord.colTotal')}</TableHead>
+                <TableHead className="w-40">{t('adm.ord.colPlaced')}</TableHead>
+                <TableHead className="w-28">{t('adm.colStatus')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -233,7 +235,7 @@ function OrdersPage() {
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
-                    No orders {tab !== 'all' ? `with status “${tab}”` : 'yet'}.
+                    {tab !== 'all' ? t('adm.ord.noOrdersStatus', { status: tab }) : t('adm.ord.noOrders')}
                   </TableCell>
                 </TableRow>
               ) : (

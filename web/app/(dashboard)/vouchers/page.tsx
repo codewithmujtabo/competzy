@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Pencil, Plus, Tags, Ticket, Trash2 } from 'lucide-react';
 import { commerceHttp } from '@/lib/api/client';
 import { CompetitionPicker, useQuestionBank } from '@/lib/question-bank/context';
+import { useT } from '@/lib/i18n/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -91,6 +92,7 @@ function rupiah(n: number) {
 }
 
 function VouchersPage() {
+  const t = useT();
   const { selectedId, competitions, loading: compsLoading } = useQuestionBank();
   const [rows, setRows] = useState<VoucherGroup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -226,9 +228,9 @@ function VouchersPage() {
   if (!compsLoading && competitions.length === 0) {
     return (
       <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
-        <PageHeader eyebrow="Commerce" title="Vouchers" />
+        <PageHeader eyebrow={t('adm.commerce')} title={t('opnav.vouchers')} />
         <Card className="p-12 text-center">
-          <p className="text-sm font-medium text-foreground">No native competitions yet</p>
+          <p className="text-sm font-medium text-foreground">{t('adm.noNativeComps')}</p>
           <p className="mt-1.5 text-sm text-muted-foreground">
             Registration-fee vouchers are available for native competitions only.
           </p>
@@ -240,16 +242,16 @@ function VouchersPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Commerce"
-        title="Vouchers"
-        subtitle="Batches of discount codes that reduce the registration fee — often issued to a school."
+        eyebrow={t('adm.commerce')}
+        title={t('opnav.vouchers')}
+        subtitle={t('adm.vou.subtitle')}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <CompetitionPicker className="w-full sm:w-72" />
         <Button onClick={openAdd} disabled={!selectedId}>
           <Plus className="size-4" />
-          New voucher batch
+          {t('adm.vou.new')}
         </Button>
       </div>
 
@@ -258,12 +260,12 @@ function VouchersPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Batch</TableHead>
-                <TableHead className="w-28">Code</TableHead>
-                <TableHead className="w-40">Discounted fee</TableHead>
-                <TableHead className="w-28">Usage</TableHead>
-                <TableHead className="w-24">Status</TableHead>
-                <TableHead className="w-44 text-right">Actions</TableHead>
+                <TableHead>{t('adm.vou.colBatch')}</TableHead>
+                <TableHead className="w-28">{t('adm.colCode')}</TableHead>
+                <TableHead className="w-40">{t('adm.vou.colDiscounted')}</TableHead>
+                <TableHead className="w-28">{t('adm.vou.colUsage')}</TableHead>
+                <TableHead className="w-24">{t('adm.colStatus')}</TableHead>
+                <TableHead className="w-44 text-right">{t('adm.reg.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -278,7 +280,7 @@ function VouchersPage() {
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
-                    No voucher batches yet — create the first one.
+                    {t('adm.vou.noBatches')}
                   </TableCell>
                 </TableRow>
               ) : (
