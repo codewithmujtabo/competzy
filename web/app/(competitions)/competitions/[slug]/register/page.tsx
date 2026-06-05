@@ -12,6 +12,7 @@ import { useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Phone, User } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { CompetzyBrandPanel } from '@/components/auth/competzy-brand-panel';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
@@ -24,6 +25,7 @@ import { CountrySelect } from '@/components/ui/country-select';
 type SignupResponse = { token: string; user: { id: string; role: string } };
 
 export default function CompetitionRegisterPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -112,17 +114,13 @@ export default function CompetitionRegisterPage() {
         } catch (regErr) {
           const msg = regErr instanceof Error ? regErr.message : '';
           if (!/already exists/i.test(msg)) {
-            setWarning(
-              `Account created, but we couldn’t auto-enroll you in this competition: ${msg || 'unknown error'}. You can register from the dashboard.`,
-            );
+            setWarning(t('creg.warnEnroll', { msg: msg || t('creg.unknownError') }));
             setTimeout(() => window.location.assign(paths.dashboard), 1200);
             return;
           }
         }
       } else {
-        setWarning(
-          `Account created, but this competition isn’t configured yet. Open the dashboard to continue.`,
-        );
+        setWarning(t('creg.warnNotConfigured'));
         setTimeout(() => window.location.assign(paths.dashboard), 1500);
         return;
       }
@@ -133,9 +131,9 @@ export default function CompetitionRegisterPage() {
         setEmailTaken(true);
         setError('');
       } else if (/at least 6 characters|password must be at least/i.test(msg)) {
-        setError('Password is too short. Use at least 8 characters.');
+        setError(t('creg.errPwdShort'));
       } else {
-        setError(msg || 'Could not create your account. Please try again.');
+        setError(msg || t('creg.errDefault'));
       }
     } finally {
       setSubmit(false);
@@ -153,14 +151,10 @@ export default function CompetitionRegisterPage() {
       <div className="relative flex items-center justify-center bg-background px-6 py-12">
         <div className="w-full max-w-md">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
-            Competzy · Create account
+            {t('creg.eyebrow')}
           </p>
-          <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">
-            Join the championship.
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Create your Competzy account — we’ll take you straight to your competition next.
-          </p>
+          <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">{t('creg.title')}</h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">{t('creg.subtitle')}</p>
 
           {error && (
             <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -169,11 +163,11 @@ export default function CompetitionRegisterPage() {
           )}
           {emailTaken && (
             <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              That email is already registered.{' '}
+              {t('creg.emailTakenPre')}
               <Link href="/" className="font-semibold underline">
-                Sign in instead
-              </Link>{' '}
-              or use Forgot password.
+                {t('creg.signInInstead')}
+              </Link>
+              {t('creg.emailTakenPost')}
             </div>
           )}
           {warning && (
@@ -185,7 +179,7 @@ export default function CompetitionRegisterPage() {
           <form onSubmit={submit} noValidate className="mt-6 space-y-4">
             <div>
               <Label htmlFor="reg-name" className="mb-1.5 text-xs text-muted-foreground">
-                Full name
+                {t('creg.fullName')}
               </Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -202,7 +196,7 @@ export default function CompetitionRegisterPage() {
 
             <div>
               <Label htmlFor="reg-email" className="mb-1.5 text-xs text-muted-foreground">
-                Email
+                {t('creg.email')}
               </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -221,13 +215,13 @@ export default function CompetitionRegisterPage() {
                 />
               </div>
               {email.length > 0 && !emailValid && (
-                <p className="mt-1 text-xs text-destructive">Please enter a valid email address.</p>
+                <p className="mt-1 text-xs text-destructive">{t('creg.emailInvalid')}</p>
               )}
             </div>
 
             <div>
               <Label htmlFor="reg-phone" className="mb-1.5 text-xs text-muted-foreground">
-                Phone (E.164, optional)
+                {t('creg.phone')}
               </Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -236,7 +230,7 @@ export default function CompetitionRegisterPage() {
                   type="tel"
                   inputMode="tel"
                   className="pl-9"
-                  placeholder="08xxxxxxxx or +628xxxxxxxx"
+                  placeholder={t('creg.phonePlaceholder')}
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   autoComplete="tel"
@@ -245,14 +239,15 @@ export default function CompetitionRegisterPage() {
               </div>
               {!phoneValid && (
                 <p className="mt-1 text-xs text-destructive">
-                  Use the international format, e.g. <code className="font-mono">+628123456789</code>.
+                  {t('creg.phoneInvalidPre')}
+                  <code className="font-mono">+628123456789</code>.
                 </p>
               )}
             </div>
 
             <div>
               <Label htmlFor="reg-pwd" className="mb-1.5 text-xs text-muted-foreground">
-                Password (min 8 characters)
+                {t('creg.password')}
               </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -270,25 +265,23 @@ export default function CompetitionRegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowPwd((v) => !v)}
-                  aria-label={showPwd ? 'Hide password' : 'Show password'}
+                  aria-label={showPwd ? t('creg.hidePassword') : t('creg.showPassword')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
               {passwordTooShort && (
-                <p className="mt-1 text-xs text-destructive">Password must be at least 8 characters.</p>
+                <p className="mt-1 text-xs text-destructive">{t('creg.passwordTooShort')}</p>
               )}
             </div>
 
             <div>
               <Label htmlFor="reg-country" className="mb-1.5 text-xs text-muted-foreground">
-                Country
+                {t('creg.country')}
               </Label>
               <CountrySelect id="reg-country" value={country} onChange={setCountry} />
-              <p className="mt-1 text-xs text-muted-foreground">
-                You can add your province and city later from your profile.
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{t('creg.countryHint')}</p>
             </div>
 
             <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
@@ -300,28 +293,28 @@ export default function CompetitionRegisterPage() {
                 className="mt-0.5 size-4 shrink-0 accent-primary"
               />
               <span>
-                I agree to the Competzy{' '}
+                {t('creg.consentPre')}
                 <Link href="/terms" className="text-primary underline">
-                  Terms of Service
-                </Link>{' '}
-                and{' '}
-                <Link href="/privacy" className="text-primary underline">
-                  Privacy Policy
+                  {t('creg.terms')}
                 </Link>
-                , and consent to processing of my data.
+                {t('creg.consentMid')}
+                <Link href="/privacy" className="text-primary underline">
+                  {t('creg.privacy')}
+                </Link>
+                {t('creg.consentPost')}
               </span>
             </label>
 
             <Button type="submit" size="lg" className="w-full" disabled={!canSubmit}>
-              {submitting ? 'Creating account…' : compLoading ? 'Loading…' : 'Create account'}
+              {submitting ? t('creg.creating') : compLoading ? t('creg.loading') : t('creg.createAccount')}
               {!submitting && !compLoading && <ArrowRight className="size-4" />}
             </Button>
           </form>
 
           <p className="mt-5 text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
+            {t('creg.haveAccount')}
             <Link href={paths.login} className="font-medium text-primary hover:underline">
-              Sign in
+              {t('creg.signIn')}
             </Link>
           </p>
         </div>
