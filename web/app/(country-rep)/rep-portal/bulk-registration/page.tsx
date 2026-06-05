@@ -5,6 +5,7 @@ import { useRef, useState, type ChangeEvent } from 'react';
 import { toast } from 'sonner';
 import { ArrowLeft, FileText, Upload, X } from 'lucide-react';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -68,6 +69,7 @@ function csvRowToPayload(row: CsvRow): RepRegisterPayload {
 }
 
 export default function RepBulkRegistrationPage() {
+  const t = useT();
   const { ctx, loading, refresh } = useRepContext();
   const { ctx: full, selectedRoundId } = useRep();
   const round = ctx?.selectedRound;
@@ -183,9 +185,9 @@ export default function RepBulkRegistrationPage() {
   return (
     <div className="mx-auto max-w-[1000px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : 'Country Representative'}
-        title="Bulk Registration"
-        subtitle="Register many students for the selected round from a CSV file or by pasting from a spreadsheet."
+        eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : t('rep.eyebrow')}
+        title={t('opnav.bulkRegistration')}
+        subtitle={t('rep.bulkRegSubtitle')}
         actions={
           <Button asChild variant="outline">
             <Link href="/rep-portal/students">

@@ -439,6 +439,16 @@ export const en = {
   'sch.bulkRegSubtitle': 'Register many students for a competition from a single CSV file.',
   'sch.bulkPaySubtitle': 'Pay for multiple students in a single Midtrans transaction.',
 
+  // ── Country-rep portal ─────────────────────────────────────────────
+  'rep.eyebrow': 'Country Representative',
+  'rep.dashSubtitle': "Manage your country's students across every round you have access to — your local round plus Komodo's online and global rounds. Pick a round below to switch the rest of the page.",
+  'rep.studentsSubtitle': "The students you've registered for the selected round.",
+  'rep.bulkRegSubtitle': 'Register many students for the selected round from a CSV file or by pasting from a spreadsheet.',
+  'rep.bulkPaySubtitle': 'Settle one Midtrans transaction for every unpaid student in the selected round.',
+  'rep.regSubtitle': 'Track every registration for the selected round by status.',
+  'rep.deadlinesSubtitle': 'Key dates and outstanding action items for the selected round.',
+  'rep.achievementsSubtitle': 'Current-cohort results and historical Competzy records for the students in the selected round.',
+
   // ── Organizer portal ───────────────────────────────────────────────
   'org.welcomeBack': 'Welcome back',
   'org.dashSubtitle': 'Your competitions, registrations, and revenue at a glance.',

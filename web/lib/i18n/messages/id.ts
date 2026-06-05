@@ -435,6 +435,16 @@ export const id: Partial<Record<MessageKey, string>> = {
   'sch.bulkRegSubtitle': 'Daftarkan banyak siswa untuk kompetisi dari satu berkas CSV.',
   'sch.bulkPaySubtitle': 'Bayar untuk beberapa siswa dalam satu transaksi Midtrans.',
 
+  // ── Country-rep portal ─────────────────────────────────────────────
+  'rep.eyebrow': 'Perwakilan Negara',
+  'rep.dashSubtitle': 'Kelola siswa negaramu di setiap babak yang bisa kamu akses — babak lokalmu plus babak online dan global Komodo. Pilih babak di bawah untuk mengganti tampilan halaman.',
+  'rep.studentsSubtitle': 'Siswa yang sudah kamu daftarkan untuk babak terpilih.',
+  'rep.bulkRegSubtitle': 'Daftarkan banyak siswa untuk babak terpilih dari berkas CSV atau dengan menempel dari spreadsheet.',
+  'rep.bulkPaySubtitle': 'Selesaikan satu transaksi Midtrans untuk setiap siswa yang belum membayar di babak terpilih.',
+  'rep.regSubtitle': 'Lacak setiap pendaftaran untuk babak terpilih berdasarkan status.',
+  'rep.deadlinesSubtitle': 'Tanggal penting dan tindakan yang perlu diselesaikan untuk babak terpilih.',
+  'rep.achievementsSubtitle': 'Hasil kohort saat ini dan rekaman Competzy historis untuk siswa di babak terpilih.',
+
   // ── Organizer portal ───────────────────────────────────────────────
   'org.welcomeBack': 'Selamat datang kembali',
   'org.dashSubtitle': 'Kompetisi, pendaftaran, dan pendapatanmu sekilas.',

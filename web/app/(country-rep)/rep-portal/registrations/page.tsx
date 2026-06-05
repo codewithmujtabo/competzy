@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Award, Search } from 'lucide-react';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -42,6 +43,7 @@ function matchesStatus(s: RepStudent, f: StatusFilter): boolean {
 }
 
 export default function RepRegistrationsPage() {
+  const t = useT();
   const { ctx, loading } = useRepContext();
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [search, setSearch] = useState('');
@@ -76,9 +78,9 @@ export default function RepRegistrationsPage() {
   return (
     <div className="mx-auto max-w-[1100px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : 'Country Representative'}
-        title="Registrations"
-        subtitle="Track every registration for the selected round by status."
+        eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : t('rep.eyebrow')}
+        title={t('opnav.registrations')}
+        subtitle={t('rep.regSubtitle')}
       />
 
       <RoundPicker />

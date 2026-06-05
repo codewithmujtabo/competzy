@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Award, Download, Trophy } from 'lucide-react';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,7 @@ interface AchievementPayload {
 }
 
 export default function RepAchievementsPage() {
+  const t = useT();
   const { selectedRoundId } = useRep();
   const [data, setData] = useState<AchievementPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,9 +95,9 @@ export default function RepAchievementsPage() {
   return (
     <div className="mx-auto max-w-[1100px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow={data ? `${data.competition.name} · ${data.country}` : 'Country Representative'}
-        title="Achievements"
-        subtitle="Current-cohort results and historical Competzy records for the students in the selected round."
+        eyebrow={data ? `${data.competition.name} · ${data.country}` : t('rep.eyebrow')}
+        title={t('opnav.achievements')}
+        subtitle={t('rep.achievementsSubtitle')}
         actions={
           data ? (
             <Button asChild>

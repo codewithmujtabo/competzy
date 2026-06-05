@@ -12,6 +12,7 @@ import {
   Users,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { StatCard } from '@/components/shell/stat-card';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -67,6 +68,7 @@ const QUICK_LINKS: QuickLink[] = [
 ];
 
 export default function RepDashboardPage() {
+  const t = useT();
   const { ctx, loading } = useRepContext();
   const { ctx: full } = useRep();
   const round = ctx?.selectedRound;
@@ -83,9 +85,9 @@ export default function RepDashboardPage() {
   return (
     <div className="mx-auto max-w-[1200px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : 'Country Representative'}
-        title="Dashboard"
-        subtitle="Manage your country's students across every round you have access to — your local round plus Komodo's online and global rounds. Pick a round below to switch the rest of the page."
+        eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : t('rep.eyebrow')}
+        title={t('opnav.dashboard')}
+        subtitle={t('rep.dashSubtitle')}
       />
 
       <RoundPicker />

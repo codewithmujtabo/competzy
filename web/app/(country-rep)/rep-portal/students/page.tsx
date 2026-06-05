@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Award, Search, Upload } from 'lucide-react';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,7 @@ import { rupiah, useRepContext } from '@/hooks/use-rep-context';
 import { RoundPicker, roundCategoryLabel, useRep } from '@/lib/rep/context';
 
 export default function RepStudentsPage() {
+  const t = useT();
   const { ctx, loading } = useRepContext();
   const { ctx: full } = useRep();
   const [search, setSearch] = useState('');
@@ -42,9 +44,9 @@ export default function RepStudentsPage() {
   return (
     <div className="mx-auto max-w-[1100px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : 'Country Representative'}
-        title="My Students"
-        subtitle="The students you've registered for the selected round."
+        eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : t('rep.eyebrow')}
+        title={t('opnav.myStudents')}
+        subtitle={t('rep.studentsSubtitle')}
         actions={
           round ? (
             <Button asChild>

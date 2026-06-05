@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { CheckCircle2, CreditCard } from 'lucide-react';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,7 @@ import { rupiah, useRepContext } from '@/hooks/use-rep-context';
 import { RoundPicker, roundCategoryLabel, useRep } from '@/lib/rep/context';
 
 export default function RepBulkPaymentPage() {
+  const t = useT();
   const { ctx, loading, refresh } = useRepContext();
   const { ctx: full, selectedRoundId } = useRep();
   const round = ctx?.selectedRound;
@@ -80,9 +82,9 @@ export default function RepBulkPaymentPage() {
   return (
     <div className="mx-auto max-w-[1000px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : 'Country Representative'}
-        title="Bulk Payment"
-        subtitle="Settle one Midtrans transaction for every unpaid student in the selected round."
+        eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : t('rep.eyebrow')}
+        title={t('opnav.bulkPayment')}
+        subtitle={t('rep.bulkPaySubtitle')}
       />
 
       <RoundPicker />

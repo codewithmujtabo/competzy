@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { CalendarClock, ClipboardList, CreditCard, Trophy, Upload } from 'lucide-react';
 import { PageHeader } from '@/components/shell/page-header';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,7 @@ function fmtDate(dateStr: string | null): string {
 }
 
 export default function RepDeadlinesPage() {
+  const t = useT();
   const { ctx, loading } = useRepContext();
   const round = ctx?.selectedRound;
   const students = ctx?.students ?? [];
@@ -43,9 +45,9 @@ export default function RepDeadlinesPage() {
   return (
     <div className="mx-auto max-w-[1000px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : 'Country Representative'}
-        title="Deadlines"
-        subtitle="Key dates and outstanding action items for the selected round."
+        eyebrow={ctx ? `${ctx.competition.name} · ${ctx.country}` : t('rep.eyebrow')}
+        title={t('opnav.deadlines')}
+        subtitle={t('rep.deadlinesSubtitle')}
       />
 
       <RoundPicker />
