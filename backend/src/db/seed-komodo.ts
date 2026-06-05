@@ -51,6 +51,7 @@ const AGE_CUTOFF = "2026-09-19";
 const ROUNDS: RoundInput[] = [
   {
     roundName: "Online Round 1",
+    roundNameId: "Babak Daring 1",
     roundType: "Online",
     roundCategory: "online",
     fee: 200000,
@@ -67,6 +68,7 @@ const ROUNDS: RoundInput[] = [
   },
   {
     roundName: "Online Round 2",
+    roundNameId: "Babak Daring 2",
     roundType: "Online",
     roundCategory: "online",
     fee: 200000,
@@ -83,6 +85,7 @@ const ROUNDS: RoundInput[] = [
   },
   {
     roundName: "Online Round 3",
+    roundNameId: "Babak Daring 3",
     roundType: "Online",
     roundCategory: "online",
     fee: 200000,
@@ -99,6 +102,7 @@ const ROUNDS: RoundInput[] = [
   },
   {
     roundName: "Fast Track",
+    roundNameId: "Jalur Cepat",
     roundType: "Online",
     roundCategory: "fast_track",
     fee: 200000,
@@ -115,6 +119,7 @@ const ROUNDS: RoundInput[] = [
   },
   {
     roundName: "Local Round — Malaysia",
+    roundNameId: "Babak Lokal — Malaysia",
     roundType: "On-site",
     roundCategory: "local",
     country: "Malaysia",
@@ -134,6 +139,7 @@ const ROUNDS: RoundInput[] = [
   },
   {
     roundName: "Bali Global Round",
+    roundNameId: "Babak Global Bali",
     roundType: "On-site",
     roundCategory: "global",
     fee: 500000,

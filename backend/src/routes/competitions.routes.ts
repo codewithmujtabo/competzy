@@ -210,7 +210,9 @@ router.get("/:id", async (req: Request, res: Response) => {
               qualifying_score,
               is_active,
               age_cutoff_date,
-              description
+              description,
+              round_name_id,
+              description_id
             FROM competition_rounds
             WHERE comp_id = $1
             ORDER BY round_order ASC, created_at ASC`,
@@ -255,6 +257,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       rounds: rounds.map((round) => ({
         id: round.id,
         roundName: round.round_name,
+        roundNameId: round.round_name_id ?? null,
         roundType: round.round_type,
         startDate: round.start_date,
         registrationDeadline: round.registration_deadline,
@@ -275,6 +278,7 @@ router.get("/:id", async (req: Request, res: Response) => {
         isActive: round.is_active !== false,
         ageCutoffDate: round.age_cutoff_date ?? null,
         description: round.description ?? null,
+        descriptionId: round.description_id ?? null,
       })),
       createdAt: c.created_at,
     });

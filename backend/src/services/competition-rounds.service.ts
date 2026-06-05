@@ -12,6 +12,8 @@ const VALID_EXAM_MODES = ["online", "offline"];
 
 export interface RoundInput {
   roundName?: string;
+  /** Optional Bahasa Indonesia translation of the round name (Phase 4 i18n). */
+  roundNameId?: string | null;
   roundType?: string | null;
   startDate?: string | null;
   registrationDeadline?: string | null;
@@ -49,6 +51,8 @@ export interface RoundInput {
    * a null value renders no description paragraph.
    */
   description?: string | null;
+  /** Optional Bahasa Indonesia translation of the description (Phase 4 i18n). */
+  descriptionId?: string | null;
 }
 
 /**
@@ -91,8 +95,8 @@ export async function replaceRounds(
          registration_deadline, exam_date, results_date,
          fee, fee_international, location, round_order, required_docs, gating,
          round_category, country, exam_mode, qualifying_score, is_active,
-         age_cutoff_date, description
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+         age_cutoff_date, description, round_name_id, description_id
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
        RETURNING id`,
       [
         compId,
@@ -118,6 +122,8 @@ export async function replaceRounds(
         r.isActive !== false,
         r.ageCutoffDate || null,
         r.description || null,
+        r.roundNameId?.trim() ? r.roundNameId.trim() : null,
+        r.descriptionId?.trim() ? r.descriptionId.trim() : null,
       ],
     );
     ids.push(inserted.rows[0].id as string);

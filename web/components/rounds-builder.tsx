@@ -44,6 +44,8 @@ export interface RoundDraft {
   /** Stable client-side id — gating prerequisites reference this, not an index. */
   tempId: string;
   roundName: string;
+  /** Optional Bahasa Indonesia translation of the round name (Phase 4 i18n). */
+  roundNameId: string;
   roundType: string;
   roundCategory: string;
   startDate: string;
@@ -85,6 +87,7 @@ export function emptyRound(): RoundDraft {
   return {
     tempId: uid(),
     roundName: '',
+    roundNameId: '',
     roundType: 'Online',
     roundCategory: 'online',
     startDate: '',
@@ -124,6 +127,7 @@ export function roundsToDrafts(rounds: unknown): RoundDraft[] {
     return {
       tempId,
       roundName: r?.roundName ?? '',
+      roundNameId: r?.roundNameId ?? '',
       roundType: ROUND_TYPES.includes(r?.roundType) ? r.roundType : 'Online',
       roundCategory: r?.roundCategory ?? 'online',
       startDate: dateInput(r?.startDate),
@@ -153,6 +157,7 @@ export function roundsToDrafts(rounds: unknown): RoundDraft[] {
 export function draftsToPayload(drafts: RoundDraft[]) {
   return drafts.map((r) => ({
     roundName: r.roundName,
+    roundNameId: r.roundNameId.trim() || null,
     roundType: r.roundType,
     roundCategory: r.roundCategory,
     startDate: r.startDate || null,
@@ -380,6 +385,31 @@ function RoundCard({
         >
           <X className="size-4" />
         </Button>
+      </div>
+
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            {t('rb.roundNameIdLabel')}
+            <span className="font-mono text-[9px] uppercase tracking-wide text-primary">ID</span>
+          </Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 text-[11px] text-muted-foreground"
+            disabled={!round.roundName.trim()}
+            onClick={() => onChange({ roundNameId: round.roundName })}
+          >
+            {t('rb.copyFromEnglish')}
+          </Button>
+        </div>
+        <Input
+          value={round.roundNameId}
+          onChange={(e) => onChange({ roundNameId: e.target.value })}
+          placeholder={t('rb.roundNameIdPlaceholder')}
+          className="h-8"
+        />
       </div>
 
       <div className="rounded-md border bg-muted/40 p-3">

@@ -447,6 +447,8 @@ function CertificateBlock({ compId }: { compId: string | null }) {
 interface Round {
   id: string;
   roundName: string;
+  /** Optional Bahasa Indonesia translation of the round name (Phase 4 i18n). */
+  roundNameId: string | null;
   roundType: string;
   roundCategory: string;
   examDate: string | null;
@@ -459,6 +461,8 @@ interface Round {
   isActive: boolean;
   /** Long-form round details the operator types into the rounds builder. */
   description: string | null;
+  /** Optional Bahasa Indonesia translation of the description (Phase 4 i18n). */
+  descriptionId: string | null;
 }
 
 function usd(n: number): string {
@@ -576,6 +580,7 @@ function GlobalRoundDialog({
   onClose: () => void;
   onConfirm: (meta: Record<string, unknown>) => void;
 }) {
+  const { locale } = useLocale();
   const [participantType, setParticipantType] = useState<'local' | 'international'>('local');
   const [pkg, setPkg] = useState('one_day');
 
@@ -583,7 +588,9 @@ function GlobalRoundDialog({
     <Dialog open={!!round} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{round?.roundName ?? 'Global Round'}</DialogTitle>
+          <DialogTitle>
+            {round ? pickText(round.roundName, round.roundNameId, locale) : 'Global Round'}
+          </DialogTitle>
           <DialogDescription>
             A few details before you register for the Grand Final.
           </DialogDescription>
@@ -664,6 +671,7 @@ function RoundsPanel({
   userCountry: string | null;
 }) {
   const t = useT();
+  const { locale } = useLocale();
   const byRound = new Map(regs.filter((r) => r.roundId).map((r) => [r.roundId, r]));
   const [globalRound, setGlobalRound] = useState<Round | null>(null);
   const intl = isInternationalStudent(userCountry);
@@ -729,7 +737,7 @@ function RoundsPanel({
               <div className="min-w-0 flex-1 space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <h4 className="text-base font-semibold text-foreground">
-                    {round.roundName || `Round ${i + 1}`}
+                    {pickText(round.roundName, round.roundNameId, locale) || `Round ${i + 1}`}
                   </h4>
                   {categoryLabel && (
                     <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -745,7 +753,7 @@ function RoundsPanel({
 
                 {round.description && (
                   <p className="whitespace-pre-line text-sm text-muted-foreground">
-                    {round.description}
+                    {pickText(round.description, round.descriptionId, locale)}
                   </p>
                 )}
 
@@ -1184,6 +1192,7 @@ function RoundsProgressCard({
   theme: CompTheme;
 }) {
   const t = useT();
+  const { locale } = useLocale();
   const byRound = new Map(
     regs.filter((r) => r.roundId).map((r) => [r.roundId as string, r]),
   );
@@ -1217,7 +1226,9 @@ function RoundsProgressCard({
               >
                 {paid ? <Check className="size-3" /> : ''}
               </span>
-              <span className="min-w-0 flex-1 truncate text-foreground">{r.roundName}</span>
+              <span className="min-w-0 flex-1 truncate text-foreground">
+                {pickText(r.roundName, r.roundNameId, locale)}
+              </span>
               <span className="shrink-0 text-xs capitalize text-muted-foreground">
                 {reg ? reg.status.replace(/_/g, ' ') : t('dashboard.notJoined')}
               </span>
@@ -1401,6 +1412,7 @@ function CompetitionSidePanel({
 
 export default function CompetitionDashboardPage() {
   const t = useT();
+  const { locale } = useLocale();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -1659,7 +1671,7 @@ export default function CompetitionDashboardPage() {
     if (!profileGate) return undefined;
     if (profileGate.roundId && rounds) {
       const r = rounds.find((rr) => rr.id === profileGate.roundId);
-      if (r) return `${config?.shortName ?? ''} — ${r.roundName}`.trim();
+      if (r) return `${config?.shortName ?? ''} — ${pickText(r.roundName, r.roundNameId, locale)}`.trim();
     }
     return config?.shortName;
   })();
