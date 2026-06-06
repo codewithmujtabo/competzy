@@ -833,6 +833,27 @@ export const id: Partial<Record<MessageKey, string>> = {
   'store.statusDelivered': 'Diterima',
   'store.statusCanceled': 'Dibatalkan',
 
+  // Public certificate verification (vfy.*)
+  'vfy.title': 'Verifikasi Sertifikat',
+  'vfy.checking': 'Memeriksa sertifikat…',
+  'vfy.notFound': 'Sertifikat tidak ditemukan',
+  'vfy.notFoundHint': 'Tidak ada sertifikat yang cocok dengan kode ini. Periksa tautan atau kode QR dan coba lagi.',
+  'vfy.unavailable': 'Verifikasi tidak tersedia',
+  'vfy.unavailableHint': 'Terjadi kesalahan. Silakan coba lagi sebentar.',
+  'vfy.revoked': 'Sertifikat ini telah dicabut — tidak lagi berlaku.',
+  'vfy.valid': 'Ini adalah sertifikat asli yang berlaku.',
+  'vfy.achievement': 'Sertifikat Penghargaan',
+  'vfy.participation': 'Sertifikat Partisipasi',
+  'vfy.awardedTo': 'Diberikan kepada',
+  'vfy.competition': 'Kompetisi',
+  'vfy.award': 'Penghargaan',
+  'vfy.grade': 'Kelas',
+  'vfy.score': 'Skor',
+  'vfy.issued': 'Diterbitkan',
+  'vfy.number': 'Nomor',
+  'vfy.downloadPdf': 'Unduh PDF sertifikat',
+  'vfy.verifiedBy': 'Diverifikasi oleh',
+
   // ── Question-bank portal ───────────────────────────────────────────
   'qb.dashSubtitle': 'Tulis dan tinjau bank soal untuk kompetisi native-mu.',
   'qb.taxSubtitle': 'Atur bank soal ke dalam mata pelajaran, topik, dan subtopik. Soal ditandai berdasarkan itu.',

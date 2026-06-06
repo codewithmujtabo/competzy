@@ -835,6 +835,27 @@ export const en = {
   'store.statusDelivered': 'Delivered',
   'store.statusCanceled': 'Canceled',
 
+  // Public certificate verification (vfy.*)
+  'vfy.title': 'Certificate Verification',
+  'vfy.checking': 'Checking certificate…',
+  'vfy.notFound': 'Certificate not found',
+  'vfy.notFoundHint': 'No certificate matches this code. Check the link or QR code and try again.',
+  'vfy.unavailable': 'Verification unavailable',
+  'vfy.unavailableHint': 'Something went wrong. Please try again in a moment.',
+  'vfy.revoked': 'This certificate has been revoked — it is no longer valid.',
+  'vfy.valid': 'This is a genuine, valid certificate.',
+  'vfy.achievement': 'Certificate of Achievement',
+  'vfy.participation': 'Certificate of Participation',
+  'vfy.awardedTo': 'Awarded to',
+  'vfy.competition': 'Competition',
+  'vfy.award': 'Award',
+  'vfy.grade': 'Grade',
+  'vfy.score': 'Score',
+  'vfy.issued': 'Issued',
+  'vfy.number': 'Number',
+  'vfy.downloadPdf': 'Download certificate PDF',
+  'vfy.verifiedBy': 'Verified by',
+
   // ── Question-bank portal ───────────────────────────────────────────
   'qb.dashSubtitle': 'Author and review the question bank for your native competitions.',
   'qb.taxSubtitle': 'Organise the bank into subjects, topics and subtopics. Questions are tagged against them.',
