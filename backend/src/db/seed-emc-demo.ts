@@ -306,7 +306,9 @@ async function announcement(
   title: string,
   body: string,
   compScoped: boolean,
-  featured: boolean
+  featured: boolean,
+  titleId?: string,
+  bodyId?: string
 ): Promise<void> {
   const compId = compScoped ? COMP : null;
   const found = await pool.query(
@@ -316,9 +318,9 @@ async function announcement(
   );
   if (found.rows[0]) return;
   await pool.query(
-    `INSERT INTO announcements (comp_id, title, body, type, is_active, is_featured, published_at)
-     VALUES ($1,$2,$3,'news',true,$4, now())`,
-    [compId, title, body, featured]
+    `INSERT INTO announcements (comp_id, title, body, type, is_active, is_featured, published_at, title_id, body_id)
+     VALUES ($1,$2,$3,'news',true,$4, now(), $5, $6)`,
+    [compId, title, body, featured, titleId ?? null, bodyId ?? null]
   );
 }
 
@@ -329,7 +331,9 @@ async function material(
   body: string,
   category: string,
   grades: string[],
-  compScoped: boolean
+  compScoped: boolean,
+  titleId?: string,
+  bodyId?: string
 ): Promise<void> {
   const compId = compScoped ? COMP : null;
   const found = await pool.query(
@@ -346,9 +350,9 @@ async function material(
   );
   await pool.query(
     `INSERT INTO materials
-       (comp_id, title, body, type, category, grades, file, is_active, published_at)
-     VALUES ($1,$2,$3,'file',$4,$5::jsonb,$6,true, now())`,
-    [compId, title, body, category, JSON.stringify(grades), filePath]
+       (comp_id, title, body, type, category, grades, file, is_active, published_at, title_id, body_id)
+     VALUES ($1,$2,$3,'file',$4,$5::jsonb,$6,true, now(), $7, $8)`,
+    [compId, title, body, category, JSON.stringify(grades), filePath, titleId ?? null, bodyId ?? null]
   );
 }
 
@@ -547,17 +551,48 @@ async function main() {
     "Round 1 schedule confirmed",
     "The first round is on June 14, 2026. Make sure your profile and documents are complete before exam day.",
     true,
-    true
+    true,
+    "Jadwal Babak 1 dikonfirmasi",
+    "Babak pertama diadakan pada 14 Juni 2026. Pastikan profil dan dokumen Anda lengkap sebelum hari ujian."
   );
   await announcement(
     "Welcome to the Competzy platform",
     "Competzy now hosts all your academic competitions in one place — explore the catalog and join a competition today.",
     false,
-    false
+    false,
+    "Selamat datang di platform Competzy",
+    "Competzy kini menampung semua kompetisi akademik Anda di satu tempat — jelajahi katalog dan ikuti kompetisi hari ini."
   );
-  await material(admin, "EMC 2025 Past Paper", "Last year's Round 1 paper with the full answer key.", "Past Papers", ["1", "2", "3", "4", "5", "6", "7", "8", "9"], true);
-  await material(admin, "Algebra Quick Reference", "A one-page summary of the algebra topics covered in the competition.", "Study Guides", ["7", "8", "9", "10", "11", "12"], true);
-  await material(admin, "Competition Day Checklist", "What to bring and how to prepare for any Competzy exam.", "Study Guides", [], false);
+  await material(
+    admin,
+    "EMC 2025 Past Paper",
+    "Last year's Round 1 paper with the full answer key.",
+    "Past Papers",
+    ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    true,
+    "Soal EMC 2025",
+    "Soal Babak 1 tahun lalu beserta kunci jawaban lengkap."
+  );
+  await material(
+    admin,
+    "Algebra Quick Reference",
+    "A one-page summary of the algebra topics covered in the competition.",
+    "Study Guides",
+    ["7", "8", "9", "10", "11", "12"],
+    true,
+    "Ringkasan Aljabar",
+    "Ringkasan satu halaman tentang topik aljabar yang diujikan dalam kompetisi."
+  );
+  await material(
+    admin,
+    "Competition Day Checklist",
+    "What to bring and how to prepare for any Competzy exam.",
+    "Study Guides",
+    [],
+    false,
+    "Daftar Periksa Hari Lomba",
+    "Apa yang harus dibawa dan bagaimana mempersiapkan diri untuk ujian Competzy apa pun."
+  );
   if (student) {
     await suggestion(student, "The practice exam timer was great — could you add a 5-minute warning?", practice);
     await suggestion(student, "Please publish the materials a bit earlier next round. Thank you!", null);

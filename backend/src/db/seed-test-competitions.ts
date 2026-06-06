@@ -120,8 +120,8 @@ interface CompSpec {
   // generic native lifecycle flow when present.
   flow?: FlowStageSpec[];
   products: { name: string; price: number; description: string }[];
-  announcements: { title: string; body: string }[];
-  materials: { title: string; body: string; category: string }[];
+  announcements: { title: string; body: string; titleId?: string; bodyId?: string }[];
+  materials: { title: string; body: string; category: string; titleId?: string; bodyId?: string }[];
   referrals: { name: string; email: string }[];
 }
 
@@ -237,11 +237,11 @@ const SPECS: CompSpec[] = [
       { name: "EMC Math Notebook Set", price: 45000, description: "A set of three grid notebooks." },
     ],
     announcements: [
-      { title: "EMC Round 1 is open", body: "Registration for EMC Round 1 is now open. Complete your profile and pay to lock in your seat." },
+      { title: "EMC Round 1 is open", body: "Registration for EMC Round 1 is now open. Complete your profile and pay to lock in your seat.", titleId: "EMC Babak 1 telah dibuka", bodyId: "Pendaftaran EMC Babak 1 kini dibuka. Lengkapi profil Anda dan bayar untuk mengamankan tempat Anda." },
     ],
     materials: [
-      { title: "EMC Past Paper 2025", body: "Last year's Round 1 paper with the full answer key.", category: "Past Papers" },
-      { title: "Algebra Quick Reference", body: "A one-page summary of the algebra topics on the exam.", category: "Study Guides" },
+      { title: "EMC Past Paper 2025", body: "Last year's Round 1 paper with the full answer key.", category: "Past Papers", titleId: "Soal EMC 2025", bodyId: "Soal Babak 1 tahun lalu beserta kunci jawaban lengkap." },
+      { title: "Algebra Quick Reference", body: "A one-page summary of the algebra topics on the exam.", category: "Study Guides", titleId: "Ringkasan Aljabar", bodyId: "Ringkasan satu halaman tentang topik aljabar yang diujikan." },
     ],
     referrals: [
       { name: "EMC Ambassador — Jakarta", email: "emc.ambassador@example.com" },
@@ -281,11 +281,11 @@ const SPECS: CompSpec[] = [
       { name: "ISPO Field Notebook", price: 40000, description: "Waterproof notebook for project notes." },
     ],
     announcements: [
-      { title: "ISPO project abstracts due soon", body: "Submit your project abstract before the registration deadline. Round 1 follows shortly after." },
+      { title: "ISPO project abstracts due soon", body: "Submit your project abstract before the registration deadline. Round 1 follows shortly after.", titleId: "Abstrak proyek ISPO segera ditutup", bodyId: "Kirim abstrak proyek Anda sebelum batas waktu pendaftaran. Babak 1 menyusul tak lama setelahnya." },
     ],
     materials: [
-      { title: "ISPO Project Guidelines", body: "How to structure and present a science project.", category: "Guides" },
-      { title: "Science Fair Rubric", body: "The criteria judges use to score projects.", category: "Guides" },
+      { title: "ISPO Project Guidelines", body: "How to structure and present a science project.", category: "Guides", titleId: "Panduan Proyek ISPO", bodyId: "Cara menyusun dan mempresentasikan proyek sains." },
+      { title: "Science Fair Rubric", body: "The criteria judges use to score projects.", category: "Guides", titleId: "Rubrik Pameran Sains", bodyId: "Kriteria yang digunakan juri untuk menilai proyek." },
     ],
     referrals: [
       { name: "ISPO Ambassador — Surabaya", email: "ispo.ambassador@example.com" },
@@ -325,10 +325,10 @@ const SPECS: CompSpec[] = [
       { name: "OSEBI Tote Bag", price: 35000, description: "Canvas tote with the OSEBI motif." },
     ],
     announcements: [
-      { title: "OSEBI categories announced", body: "Music, visual arts and literature categories are open. Pick yours during registration." },
+      { title: "OSEBI categories announced", body: "Music, visual arts and literature categories are open. Pick yours during registration.", titleId: "Kategori OSEBI diumumkan", bodyId: "Kategori musik, seni rupa, dan sastra telah dibuka. Pilih kategori Anda saat pendaftaran." },
     ],
     materials: [
-      { title: "OSEBI Submission Format", body: "File formats and sizes accepted for each category.", category: "Guides" },
+      { title: "OSEBI Submission Format", body: "File formats and sizes accepted for each category.", category: "Guides", titleId: "Format Pengumpulan OSEBI", bodyId: "Format dan ukuran berkas yang diterima untuk setiap kategori." },
     ],
     referrals: [
       { name: "OSEBI Ambassador — Yogyakarta", email: "osebi.ambassador@example.com" },
@@ -474,11 +474,11 @@ const SPECS: CompSpec[] = [
       { name: "Komodo Medal Display Box", price: 95000, description: "A wooden box to display your Komodo medal." },
     ],
     announcements: [
-      { title: "Komodo 2027 registration is open", body: "The Komodo International Math Competition is open for the 2027 season. Register for Online Round 1 to begin your journey to the Bali Global Round." },
+      { title: "Komodo 2027 registration is open", body: "The Komodo International Math Competition is open for the 2027 season. Register for Online Round 1 to begin your journey to the Bali Global Round.", titleId: "Pendaftaran Komodo 2027 telah dibuka", bodyId: "Komodo International Math Competition dibuka untuk musim 2027. Daftar Babak Daring 1 untuk memulai perjalanan Anda menuju Babak Global Bali." },
     ],
     materials: [
-      { title: "Komodo Sample Questions", body: "A set of practice questions covering all four rounds.", category: "Practice" },
-      { title: "How the Komodo Rounds Work", body: "A guide to the three online rounds and the Bali Global Round.", category: "Guides" },
+      { title: "Komodo Sample Questions", body: "A set of practice questions covering all four rounds.", category: "Practice", titleId: "Contoh Soal Komodo", bodyId: "Sekumpulan soal latihan yang mencakup keempat babak." },
+      { title: "How the Komodo Rounds Work", body: "A guide to the three online rounds and the Bali Global Round.", category: "Guides", titleId: "Cara Kerja Babak Komodo", bodyId: "Panduan tentang tiga babak daring dan Babak Global Bali." },
     ],
     referrals: [
       { name: "Komodo Ambassador — Singapore", email: "komodo.ambassador@example.com" },
@@ -687,9 +687,9 @@ async function seedCompetition(
   // Announcements + materials.
   for (const a of spec.announcements) {
     await pool.query(
-      `INSERT INTO announcements (comp_id, title, body, type, is_active, is_featured, published_at)
-       VALUES ($1,$2,$3,'news',true,true,now())`,
-      [spec.id, a.title, a.body]
+      `INSERT INTO announcements (comp_id, title, body, type, is_active, is_featured, published_at, title_id, body_id)
+       VALUES ($1,$2,$3,'news',true,true,now(),$4,$5)`,
+      [spec.id, a.title, a.body, a.titleId ?? null, a.bodyId ?? null]
     );
   }
   for (const m of spec.materials) {
@@ -700,9 +700,9 @@ async function seedCompetition(
       "image/jpeg"
     );
     await pool.query(
-      `INSERT INTO materials (comp_id, title, body, type, category, grades, file, is_active, published_at)
-       VALUES ($1,$2,$3,'file',$4,'[]'::jsonb,$5,true,now())`,
-      [spec.id, m.title, m.body, m.category, file]
+      `INSERT INTO materials (comp_id, title, body, type, category, grades, file, is_active, published_at, title_id, body_id)
+       VALUES ($1,$2,$3,'file',$4,'[]'::jsonb,$5,true,now(),$6,$7)`,
+      [spec.id, m.title, m.body, m.category, file, m.titleId ?? null, m.bodyId ?? null]
     );
   }
 
