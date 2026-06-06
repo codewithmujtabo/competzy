@@ -769,6 +769,38 @@ export const en = {
   'rs.tripPackage': 'Trip package',
   'rs.register': 'Register',
 
+  // Student exam flow (exam.*) — player + result
+  'exam.resultUnavailable': 'Result not available',
+  'exam.backToDashboard': 'Back to dashboard',
+  'exam.submitted': 'Exam submitted',
+  'exam.yourScore': 'Your score',
+  'exam.correct': 'Correct',
+  'exam.wrong': 'Wrong',
+  'exam.blank': 'Blank',
+  'exam.awaitingGrading':
+    'Some short-answer responses are still being graded — your final score may change once review is complete.',
+  'exam.failSetLanguage': 'Failed to set the language',
+  'exam.timeUp': 'Time is up — your exam was submitted.',
+  'exam.failSubmit': 'Failed to submit the exam',
+  'exam.failSaveAnswer': 'Failed to save your answer',
+  'exam.sessionNotFound': 'Exam session not found',
+  'exam.pickLanguage': 'Pick your exam language',
+  'exam.pickLanguageDesc':
+    'Choose the language you’d like to take this exam in. Your choice is locked for the duration of the attempt. Questions without a translation in your language fall back to English.',
+  'exam.examEyebrow': 'Exam',
+  'exam.proctorOn': 'Webcam proctoring is on',
+  'exam.proctorOff': 'No camera — your exam still continues',
+  'exam.proctored': 'Proctored',
+  'exam.noCamera': 'No camera',
+  'exam.answeredCount': '{answered} of {total} answered.',
+  'exam.shortAnswer': 'Short answer',
+  'exam.multipleChoice': 'Multiple choice',
+  'exam.typeAnswer': 'Type your answer…',
+  'exam.submitWarning': 'Submitting ends the exam — you can’t change answers afterwards.',
+  'exam.confirmSubmit': 'Submit your exam? You will not be able to change your answers.',
+  'exam.submitting': 'Submitting…',
+  'exam.submitExam': 'Submit exam',
+
   // ── Question-bank portal ───────────────────────────────────────────
   'qb.dashSubtitle': 'Author and review the question bank for your native competitions.',
   'qb.taxSubtitle': 'Organise the bank into subjects, topics and subtopics. Questions are tagged against them.',

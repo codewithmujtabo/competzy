@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Camera, CameraOff, Clock, Globe, Loader2 } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { LANGS, pickLang, type LangCode } from '@/lib/question-bank/languages';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ function fmt(s: number) {
 }
 
 export default function ExamPlayerPage() {
+  const t = useT();
   const router = useRouter();
   const { slug, sessionId } = useParams<{ slug: string; sessionId: string }>();
   const resultPath = `/competitions/${slug}/exam/${sessionId}/result`;
@@ -115,7 +117,7 @@ export default function ExamPlayerPage() {
         setSession((s) => (s ? { ...s, language: r.language ?? code } : s));
         setLangPickerOpen(false);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Failed to set the language');
+        toast.error(e instanceof Error ? e.message : t('exam.failSetLanguage'));
       }
     },
     [sessionId],
@@ -151,12 +153,12 @@ export default function ExamPlayerPage() {
       try {
         await captureSnapshot();
         await emcHttp.post(`/sessions/${sessionId}/submit`, {});
-        if (auto) toast.info('Time is up — your exam was submitted.');
+        if (auto) toast.info(t('exam.timeUp'));
         router.replace(resultPath);
       } catch (e) {
         submittedRef.current = false;
         setSubmitting(false);
-        toast.error(e instanceof Error ? e.message : 'Failed to submit the exam');
+        toast.error(e instanceof Error ? e.message : t('exam.failSubmit'));
       }
     },
     [sessionId, router, resultPath, captureSnapshot],
@@ -169,8 +171,8 @@ export default function ExamPlayerPage() {
       void submit(true);
       return;
     }
-    const t = setTimeout(() => setRemaining((r) => (r == null ? r : r - 1)), 1000);
-    return () => clearTimeout(t);
+    const tick = setTimeout(() => setRemaining((r) => (r == null ? r : r - 1)), 1000);
+    return () => clearTimeout(tick);
   }, [remaining, submit]);
 
   // Request the webcam once, report availability, and capture periodically.
@@ -223,7 +225,7 @@ export default function ExamPlayerPage() {
     try {
       await emcHttp.put(`/sessions/${sessionId}/periods/${periodId}`, body);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save your answer');
+      toast.error(e instanceof Error ? e.message : t('exam.failSaveAnswer'));
     }
   };
 
@@ -239,9 +241,9 @@ export default function ExamPlayerPage() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
         <Card className="p-10 text-center">
-          <p className="text-sm font-medium text-foreground">Exam session not found</p>
+          <p className="text-sm font-medium text-foreground">{t('exam.sessionNotFound')}</p>
           <Button variant="outline" className="mt-4" onClick={() => router.replace(`/competitions/${slug}/dashboard`)}>
-            Back to dashboard
+            {t('exam.backToDashboard')}
           </Button>
         </Card>
       </div>
@@ -264,12 +266,8 @@ export default function ExamPlayerPage() {
       <Dialog open={langPickerOpen} onOpenChange={(v) => !v && session.language && setLangPickerOpen(false)}>
         <DialogContent className="sm:max-w-md" showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Pick your exam language</DialogTitle>
-            <DialogDescription>
-              Choose the language you’d like to take this exam in. Your choice is locked
-              for the duration of the attempt. Questions without a translation in your
-              language fall back to English.
-            </DialogDescription>
+            <DialogTitle>{t('exam.pickLanguage')}</DialogTitle>
+            <DialogDescription>{t('exam.pickLanguageDesc')}</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-2 pt-2">
             {LANGS.map((l) => (
@@ -291,7 +289,7 @@ export default function ExamPlayerPage() {
       <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-6 py-3">
           <div className="min-w-0">
-            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-primary">Exam</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-primary">{t('exam.examEyebrow')}</p>
             <p className="truncate font-serif text-lg font-medium text-foreground">
               {session.examName}
             </p>
@@ -309,10 +307,10 @@ export default function ExamPlayerPage() {
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'border-amber-300/50 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
                 )}
-                title={cameraOn ? 'Webcam proctoring is on' : 'No camera — your exam still continues'}
+                title={cameraOn ? t('exam.proctorOn') : t('exam.proctorOff')}
               >
                 {cameraOn ? <Camera className="size-3.5" /> : <CameraOff className="size-3.5" />}
-                {cameraOn ? 'Proctored' : 'No camera'}
+                {cameraOn ? t('exam.proctored') : t('exam.noCamera')}
               </span>
             )}
             {remaining != null && (
@@ -334,7 +332,7 @@ export default function ExamPlayerPage() {
 
       <div className="mx-auto max-w-3xl space-y-4 p-6 lg:p-8">
         <p className="text-sm text-muted-foreground">
-          {answered} of {session.periods.length} answered.
+          {t('exam.answeredCount', { answered, total: session.periods.length })}
         </p>
 
         {session.periods.map((p) => (
@@ -344,7 +342,7 @@ export default function ExamPlayerPage() {
                 {p.number}
               </span>
               <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
-                {p.type === 'short' ? 'Short answer' : 'Multiple choice'}
+                {p.type === 'short' ? t('exam.shortAnswer') : t('exam.multipleChoice')}
               </span>
             </div>
             {/* Question stem is operator-authored HTML (TipTap output) — KaTeX
@@ -359,7 +357,7 @@ export default function ExamPlayerPage() {
               <textarea
                 rows={3}
                 className={TEXTAREA_CLS}
-                placeholder="Type your answer…"
+                placeholder={t('exam.typeAnswer')}
                 value={sa[p.id] ?? ''}
                 onChange={(e) => setSa((prev) => ({ ...prev, [p.id]: e.target.value }))}
                 onBlur={() => saveAnswer(p.id, { shortAnswer: sa[p.id] ?? '' })}
@@ -399,18 +397,16 @@ export default function ExamPlayerPage() {
         ))}
 
         <Card className="flex flex-wrap items-center justify-between gap-3 p-5">
-          <p className="text-sm text-muted-foreground">
-            Submitting ends the exam — you can&apos;t change answers afterwards.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('exam.submitWarning')}</p>
           <Button
             disabled={submitting}
             onClick={() => {
-              if (confirm('Submit your exam? You will not be able to change your answers.')) {
+              if (confirm(t('exam.confirmSubmit'))) {
                 void submit(false);
               }
             }}
           >
-            {submitting ? 'Submitting…' : 'Submit exam'}
+            {submitting ? t('exam.submitting') : t('exam.submitExam')}
           </Button>
         </Card>
       </div>

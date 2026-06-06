@@ -767,6 +767,38 @@ export const id: Partial<Record<MessageKey, string>> = {
   'rs.tripPackage': 'Paket perjalanan',
   'rs.register': 'Daftar',
 
+  // Student exam flow (exam.*) — player + result
+  'exam.resultUnavailable': 'Hasil tidak tersedia',
+  'exam.backToDashboard': 'Kembali ke dasbor',
+  'exam.submitted': 'Ujian terkirim',
+  'exam.yourScore': 'Skor Anda',
+  'exam.correct': 'Benar',
+  'exam.wrong': 'Salah',
+  'exam.blank': 'Kosong',
+  'exam.awaitingGrading':
+    'Beberapa jawaban esai masih dinilai — skor akhir Anda dapat berubah setelah peninjauan selesai.',
+  'exam.failSetLanguage': 'Gagal mengatur bahasa',
+  'exam.timeUp': 'Waktu habis — ujian Anda telah dikirim.',
+  'exam.failSubmit': 'Gagal mengirim ujian',
+  'exam.failSaveAnswer': 'Gagal menyimpan jawaban Anda',
+  'exam.sessionNotFound': 'Sesi ujian tidak ditemukan',
+  'exam.pickLanguage': 'Pilih bahasa ujian Anda',
+  'exam.pickLanguageDesc':
+    'Pilih bahasa yang Anda inginkan untuk mengerjakan ujian ini. Pilihan Anda terkunci selama percobaan berlangsung. Soal tanpa terjemahan dalam bahasa Anda akan ditampilkan dalam Bahasa Inggris.',
+  'exam.examEyebrow': 'Ujian',
+  'exam.proctorOn': 'Pengawasan webcam aktif',
+  'exam.proctorOff': 'Tanpa kamera — ujian Anda tetap berlanjut',
+  'exam.proctored': 'Diawasi',
+  'exam.noCamera': 'Tanpa kamera',
+  'exam.answeredCount': '{answered} dari {total} terjawab.',
+  'exam.shortAnswer': 'Esai singkat',
+  'exam.multipleChoice': 'Pilihan ganda',
+  'exam.typeAnswer': 'Ketik jawaban Anda…',
+  'exam.submitWarning': 'Mengirim akan mengakhiri ujian — Anda tidak dapat mengubah jawaban setelahnya.',
+  'exam.confirmSubmit': 'Kirim ujian Anda? Anda tidak akan dapat mengubah jawaban.',
+  'exam.submitting': 'Mengirim…',
+  'exam.submitExam': 'Kirim ujian',
+
   // ── Question-bank portal ───────────────────────────────────────────
   'qb.dashSubtitle': 'Tulis dan tinjau bank soal untuk kompetisi native-mu.',
   'qb.taxSubtitle': 'Atur bank soal ke dalam mata pelajaran, topik, dan subtopik. Soal ditandai berdasarkan itu.',
