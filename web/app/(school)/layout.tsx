@@ -154,7 +154,7 @@ function SchoolLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      brand={{ name: 'Competzy', tagline: isAdmin ? 'School Admin' : 'Teacher Portal', icon: GraduationCap }}
+      brand={{ name: 'Competzy', tagline: isAdmin ? 'School Admin' : 'Teacher Portal', taglineKey: isAdmin ? 'shell.tagSchoolAdmin' : 'shell.tagTeacher', icon: GraduationCap }}
       nav={isAdmin ? ADMIN_NAV : TEACHER_NAV}
       user={{
         name: user.full_name || 'School',

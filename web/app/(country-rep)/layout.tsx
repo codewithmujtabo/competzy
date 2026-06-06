@@ -70,7 +70,7 @@ function RepShell({ children }: { children: ReactNode }) {
 
   return (
     <AppShell
-      brand={{ name: 'Competzy', tagline: 'Country Representative', icon: Globe }}
+      brand={{ name: 'Competzy', tagline: 'Country Representative', taglineKey: 'shell.tagCountryRep', icon: Globe }}
       nav={NAV}
       user={{
         name: user.fullName || user.full_name || 'Representative',

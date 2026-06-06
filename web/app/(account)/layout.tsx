@@ -89,7 +89,7 @@ function ShelledAccount({ children }: { children: ReactNode }) {
 
   return (
     <AppShell
-      brand={isParticipant ? STUDENT_BRAND : { name: 'Competzy', tagline: 'Account Settings', icon: Trophy }}
+      brand={isParticipant ? STUDENT_BRAND : { name: 'Competzy', tagline: 'Account Settings', taglineKey: 'shell.tagAccountSettings', icon: Trophy }}
       nav={operatorNav}
       notificationsHref={isParticipant ? '/account/notifications' : undefined}
       profileHref="/account/profile"

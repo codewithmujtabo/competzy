@@ -8,9 +8,15 @@ import type { NavSection } from '@/components/shell/app-shell';
  * Komodo purple, …) lives in the page hero instead, so the global menu stays
  * constant even after you enter a competition.
  */
-export const STUDENT_BRAND: { name: string; tagline: string; icon: LucideIcon } = {
+export const STUDENT_BRAND: {
+  name: string;
+  tagline: string;
+  taglineKey: 'shell.tagMyAccount';
+  icon: LucideIcon;
+} = {
   name: 'Competzy',
   tagline: 'My Account',
+  taglineKey: 'shell.tagMyAccount',
   icon: Trophy,
 };
 

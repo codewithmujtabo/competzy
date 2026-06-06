@@ -115,7 +115,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <AppShell
-      brand={{ name: 'Competzy', tagline: 'Admin Panel', icon: GraduationCap }}
+      brand={{ name: 'Competzy', tagline: 'Admin Panel', taglineKey: 'shell.tagAdmin', icon: GraduationCap }}
       nav={NAV}
       user={{ name: user.full_name || 'Admin', email: user.email, role: 'Administrator' }}
       profileHref="/account/profile"

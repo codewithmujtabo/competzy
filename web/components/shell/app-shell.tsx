@@ -79,7 +79,7 @@ export interface AppShellUser {
 }
 
 export interface AppShellProps {
-  brand: { name: string; tagline: string; icon: LucideIcon };
+  brand: { name: string; tagline: string; taglineKey?: MessageKey; icon: LucideIcon };
   nav: NavSection[];
   user: AppShellUser;
   onSignOut: () => void;
@@ -153,7 +153,7 @@ export function AppShell({
             <div className="grid leading-tight group-data-[collapsible=icon]:hidden">
               <span className="font-serif text-lg font-semibold tracking-tight">{brand.name}</span>
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary/70">
-                {brand.tagline}
+                {brand.taglineKey ? t(brand.taglineKey) : brand.tagline}
               </span>
             </div>
           </div>
@@ -222,19 +222,19 @@ export function AppShell({
               variant="ghost"
               size="icon"
               onClick={toggle}
-              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={theme === 'dark' ? t('shell.lightMode') : t('shell.darkMode')}
+              title={theme === 'dark' ? t('shell.lightMode') : t('shell.darkMode')}
             >
               {theme === 'dark' ? <Sun className="size-[1.1rem]" /> : <Moon className="size-[1.1rem]" />}
             </Button>
             {notificationsHref ? (
-              <Button variant="ghost" size="icon" aria-label="Notifications" title="Notifications" asChild>
+              <Button variant="ghost" size="icon" aria-label={t('shell.notifications')} title={t('shell.notifications')} asChild>
                 <Link href={notificationsHref}>
                   <Bell className="size-[1.1rem]" />
                 </Link>
               </Button>
             ) : (
-              <Button variant="ghost" size="icon" aria-label="Notifications" title="Notifications">
+              <Button variant="ghost" size="icon" aria-label={t('shell.notifications')} title={t('shell.notifications')}>
                 <Bell className="size-[1.1rem]" />
               </Button>
             )}
@@ -249,7 +249,7 @@ export function AppShell({
                 <Button
                   variant="ghost"
                   className="ml-1 h-10 gap-2 rounded-full px-1.5 pr-2.5 data-[state=open]:bg-accent"
-                  aria-label="Account menu"
+                  aria-label={t('shell.accountMenu')}
                 >
                   <Avatar className="size-8">
                     <AvatarFallback className="bg-gradient-to-br from-primary to-[#7849ff] text-[12px] font-semibold text-primary-foreground">
@@ -278,7 +278,7 @@ export function AppShell({
                   <DropdownMenuItem asChild>
                     <Link href={profileHref}>
                       <Settings className="size-4" />
-                      Account Settings
+                      {t('shell.accountSettings')}
                     </Link>
                   </DropdownMenuItem>
                 )}
@@ -288,7 +288,7 @@ export function AppShell({
                   className="text-destructive focus:text-destructive"
                 >
                   <LogOut className="size-4" />
-                  Sign out
+                  {t('shell.signOut')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -54,7 +54,7 @@ function OrganizerLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      brand={{ name: 'Competzy', tagline: 'Organizer Portal', icon: GraduationCap }}
+      brand={{ name: 'Competzy', tagline: 'Organizer Portal', taglineKey: 'shell.tagOrganizer', icon: GraduationCap }}
       nav={NAV}
       user={{ name: user.full_name || 'Organizer', email: user.email, role: 'Organizer' }}
       profileHref="/account/profile"

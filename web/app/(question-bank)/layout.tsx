@@ -104,6 +104,7 @@ function QuestionBankLayoutInner({ children }: { children: React.ReactNode }) {
       brand={{
         name: 'Competzy',
         tagline: isQuestionMaker ? 'Question Maker' : 'Question Bank',
+        taglineKey: isQuestionMaker ? 'shell.tagQuestionMaker' : 'shell.tagQuestionBank',
         icon: Library,
       }}
       nav={nav}
