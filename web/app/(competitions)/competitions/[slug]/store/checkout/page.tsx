@@ -8,6 +8,7 @@ import { emcHttp } from '@/lib/api/client';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { useCart } from '@/lib/competitions/use-cart';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
+import { useT } from '@/lib/i18n/context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ function rupiah(n: number) {
 }
 
 export default function CompetitionCheckoutPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -71,7 +73,7 @@ export default function CompetitionCheckoutPage() {
   const placeOrder = async () => {
     if (!comp?.id || cart.items.length === 0) return;
     if (!name.trim() || !phone.trim() || !address.trim()) {
-      setErr('Please fill in your name, phone and address.');
+      setErr(t('store.fillFields'));
       return;
     }
     setErr(null);
@@ -109,10 +111,10 @@ export default function CompetitionCheckoutPage() {
           void checkStatus();
         }, 4000);
       } else {
-        setErr('Could not start payment — please try again.');
+        setErr(t('store.payStartFail'));
       }
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to place the order');
+      setErr(e instanceof Error ? e.message : t('store.placeFail'));
     } finally {
       setPlacing(false);
     }
@@ -126,7 +128,7 @@ export default function CompetitionCheckoutPage() {
         <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" asChild>
           <Link href={paths.store}>
             <ArrowLeft className="size-4" />
-            Back to store
+            {t('store.backToStore')}
           </Link>
         </Button>
 
@@ -134,7 +136,7 @@ export default function CompetitionCheckoutPage() {
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
             {config.shortName} 2026
           </p>
-          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">Checkout</h1>
+          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">{t('store.checkout')}</h1>
         </div>
 
         {err && (
@@ -146,15 +148,13 @@ export default function CompetitionCheckoutPage() {
         {settled ? (
           <Card className="items-center gap-3 p-10 text-center">
             <CheckCircle2 className="size-10 text-emerald-600" />
-            <h2 className="font-serif text-xl font-medium text-foreground">Order placed</h2>
-            <p className="text-sm text-muted-foreground">
-              Your payment is confirmed — track it under My orders.
-            </p>
+            <h2 className="font-serif text-xl font-medium text-foreground">{t('store.orderPlaced')}</h2>
+            <p className="text-sm text-muted-foreground">{t('store.orderConfirmed')}</p>
             <div className="mt-2 flex gap-2">
               <Button variant="outline" asChild>
-                <Link href={paths.store}>Back to store</Link>
+                <Link href={paths.store}>{t('store.backToStore')}</Link>
               </Button>
-              <Button onClick={() => router.replace(`${paths.store}/orders`)}>My orders</Button>
+              <Button onClick={() => router.replace(`${paths.store}/orders`)}>{t('store.myOrders')}</Button>
             </div>
           </Card>
         ) : !cart.ready ? (
@@ -163,16 +163,16 @@ export default function CompetitionCheckoutPage() {
           </Card>
         ) : cart.items.length === 0 ? (
           <Card className="gap-2 p-8 text-center">
-            <h2 className="font-serif text-xl font-medium text-foreground">Your cart is empty</h2>
+            <h2 className="font-serif text-xl font-medium text-foreground">{t('store.cartEmpty')}</h2>
             <Button variant="outline" className="mx-auto mt-3 w-fit" asChild>
-              <Link href={paths.store}>Browse the store</Link>
+              <Link href={paths.store}>{t('store.browseStore')}</Link>
             </Button>
           </Card>
         ) : (
           <Card className="gap-0 p-7">
             {/* Order summary */}
             <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-              Order summary
+              {t('store.orderSummary')}
             </p>
             <div className="mt-3 space-y-1.5 text-sm">
               {cart.items.map((it) => (
@@ -186,7 +186,7 @@ export default function CompetitionCheckoutPage() {
                 </div>
               ))}
               <div className="flex justify-between border-t pt-2 text-base font-semibold text-foreground">
-                <span>Total</span>
+                <span>{t('store.total')}</span>
                 <span>{rupiah(cart.total)}</span>
               </div>
             </div>
@@ -195,26 +195,26 @@ export default function CompetitionCheckoutPage() {
             <div className="mt-6 space-y-4 border-t pt-5">
               <div>
                 <Label className="mb-1.5 text-xs text-muted-foreground">
-                  Recipient name <span className="text-destructive">*</span>
+                  {t('store.recipientName')} <span className="text-destructive">*</span>
                 </Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div>
                 <Label className="mb-1.5 text-xs text-muted-foreground">
-                  Phone <span className="text-destructive">*</span>
+                  {t('store.phone')} <span className="text-destructive">*</span>
                 </Label>
                 <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+62…" />
               </div>
               <div>
                 <Label className="mb-1.5 text-xs text-muted-foreground">
-                  Shipping address <span className="text-destructive">*</span>
+                  {t('store.shippingAddress')} <span className="text-destructive">*</span>
                 </Label>
                 <textarea
                   className={TEXTAREA_CLS}
                   rows={3}
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Street, city, postal code"
+                  placeholder={t('store.addressPlaceholder')}
                 />
               </div>
             </div>
@@ -223,18 +223,16 @@ export default function CompetitionCheckoutPage() {
               <div className="mt-6 rounded-md bg-primary/5 px-4 py-3 text-sm text-primary">
                 <p className="flex items-center gap-2">
                   <Loader2 className="size-4 animate-spin" />
-                  Waiting for your payment to complete…
+                  {t('store.waitingPayment')}
                 </p>
-                <p className="mt-1 text-xs text-primary/80">
-                  Finish the payment in the tab that opened. This page updates automatically.
-                </p>
+                <p className="mt-1 text-xs text-primary/80">{t('store.waitingPaymentHint')}</p>
                 <Button size="sm" variant="outline" className="mt-3" onClick={() => void checkStatus()}>
-                  I’ve paid — check now
+                  {t('store.checkNow')}
                 </Button>
               </div>
             ) : (
               <Button className="mt-6 w-full" size="lg" onClick={placeOrder} disabled={placing}>
-                {placing ? 'Placing order…' : `Place order · ${rupiah(cart.total)}`}
+                {placing ? t('store.placingOrder') : t('store.placeOrder', { total: rupiah(cart.total) })}
               </Button>
             )}
           </Card>

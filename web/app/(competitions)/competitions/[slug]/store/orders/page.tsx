@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import { ArrowLeft, Loader2, ShoppingBag } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
+import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +33,14 @@ const STATUS_STYLE: Record<string, string> = {
   canceled: 'bg-muted text-muted-foreground',
 };
 
+const STATUS_KEY: Record<string, MessageKey> = {
+  ordered: 'store.statusOrdered',
+  paid: 'store.statusPaid',
+  shipped: 'store.statusShipped',
+  delivered: 'store.statusDelivered',
+  canceled: 'store.statusCanceled',
+};
+
 function rupiah(n: number) {
   return `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
 }
@@ -40,6 +50,7 @@ function fmtDate(s: string | null) {
 }
 
 export default function CompetitionStoreOrdersPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -56,7 +67,7 @@ export default function CompetitionStoreOrdersPage() {
       .get<StorefrontOrder[]>('/commerce/storefront/orders')
       .then(setOrders)
       .catch((e) => {
-        toast.error(e instanceof Error ? e.message : 'Failed to load your orders');
+        toast.error(e instanceof Error ? e.message : t('store.loadOrdersFail'));
         setOrders([]);
       });
   }, []);
@@ -69,7 +80,7 @@ export default function CompetitionStoreOrdersPage() {
         <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" asChild>
           <Link href={paths.store}>
             <ArrowLeft className="size-4" />
-            Back to store
+            {t('store.backToStore')}
           </Link>
         </Button>
 
@@ -77,7 +88,7 @@ export default function CompetitionStoreOrdersPage() {
           <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
             {config.shortName} 2026
           </p>
-          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">My orders</h1>
+          <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">{t('store.myOrders')}</h1>
         </div>
 
         {!orders ? (
@@ -87,12 +98,10 @@ export default function CompetitionStoreOrdersPage() {
         ) : orders.length === 0 ? (
           <Card className="items-center gap-2 p-10 text-center">
             <ShoppingBag className="size-7 text-muted-foreground" />
-            <h2 className="font-serif text-lg font-medium text-foreground">No orders yet</h2>
-            <p className="text-sm text-muted-foreground">
-              Items you order from the store will show up here.
-            </p>
+            <h2 className="font-serif text-lg font-medium text-foreground">{t('store.noOrders')}</h2>
+            <p className="text-sm text-muted-foreground">{t('store.noOrdersHint')}</p>
             <Button variant="outline" className="mt-2" asChild>
-              <Link href={paths.store}>Browse the store</Link>
+              <Link href={paths.store}>{t('store.browseStore')}</Link>
             </Button>
           </Card>
         ) : (
@@ -103,20 +112,22 @@ export default function CompetitionStoreOrdersPage() {
                   <p className="font-mono text-xs text-muted-foreground">{o.code}</p>
                   <Badge
                     variant="outline"
-                    className={`border-transparent font-mono text-[10px] capitalize ${STATUS_STYLE[o.status] ?? 'bg-muted text-muted-foreground'}`}
+                    className={`border-transparent font-mono text-[10px] ${STATUS_STYLE[o.status] ?? 'bg-muted text-muted-foreground'}`}
                   >
-                    {o.status}
+                    {STATUS_KEY[o.status] ? t(STATUS_KEY[o.status]) : o.status}
                   </Badge>
                 </div>
                 <div className="mt-2 flex items-end justify-between">
                   <div className="text-sm text-muted-foreground">
                     {o.compName && <p className="text-foreground">{o.compName}</p>}
                     <p>
-                      {o.itemCount ?? 0} item{o.itemCount === 1 ? '' : 's'} ·{' '}
-                      {fmtDate(o.orderedAt ?? o.createdAt)}
+                      {(o.itemCount ?? 0) === 1
+                        ? t('store.itemOne', { n: o.itemCount ?? 0 })
+                        : t('store.itemMany', { n: o.itemCount ?? 0 })}{' '}
+                      · {fmtDate(o.orderedAt ?? o.createdAt)}
                     </p>
                     {o.trackingNumber && (
-                      <p className="font-mono text-xs">Tracking: {o.trackingNumber}</p>
+                      <p className="font-mono text-xs">{t('store.tracking', { x: o.trackingNumber })}</p>
                     )}
                   </div>
                   <p className="text-base font-semibold text-foreground">{rupiah(o.total)}</p>
