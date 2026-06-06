@@ -69,6 +69,7 @@ interface SeedQuestion {
 // and (optionally) a gating prerequisite.
 interface RoundSpec {
   roundName: string;
+  roundNameId?: string; // optional Bahasa Indonesia translation of the round name
   roundType: string; // "Online" | "On-site"
   roundCategory?: string; // "online" (default) | "fast_track" | "local" | "global"
   fee: number;
@@ -355,6 +356,7 @@ const SPECS: CompSpec[] = [
     rounds: [
       {
         roundName: "Online Round 1",
+        roundNameId: "Babak Daring 1",
         roundType: "Online",
         roundCategory: "online",
         fee: 200000,
@@ -374,6 +376,7 @@ const SPECS: CompSpec[] = [
       },
       {
         roundName: "Online Round 2",
+        roundNameId: "Babak Daring 2",
         roundType: "Online",
         roundCategory: "online",
         fee: 200000,
@@ -393,6 +396,7 @@ const SPECS: CompSpec[] = [
       },
       {
         roundName: "Online Round 3",
+        roundNameId: "Babak Daring 3",
         roundType: "Online",
         roundCategory: "online",
         fee: 200000,
@@ -412,6 +416,7 @@ const SPECS: CompSpec[] = [
       },
       {
         roundName: "Fast Track",
+        roundNameId: "Jalur Cepat",
         roundType: "Online",
         roundCategory: "fast_track",
         fee: 200000,
@@ -434,6 +439,7 @@ const SPECS: CompSpec[] = [
       },
       {
         roundName: "Local Round — Malaysia",
+        roundNameId: "Babak Lokal — Malaysia",
         roundType: "On-site",
         roundCategory: "local",
         country: "Malaysia",
@@ -448,6 +454,7 @@ const SPECS: CompSpec[] = [
       },
       {
         roundName: "Bali Global Round",
+        roundNameId: "Babak Global Bali",
         roundType: "On-site",
         roundCategory: "global",
         fee: 500000,
@@ -616,6 +623,7 @@ async function seedCompetition(
   if (spec.rounds && spec.rounds.length > 0) {
     const roundInputs = spec.rounds.map((rd) => ({
       roundName: rd.roundName,
+      roundNameId: rd.roundNameId ?? null,
       roundType: rd.roundType,
       roundCategory: rd.roundCategory ?? "online",
       examDate: rd.examDate,
