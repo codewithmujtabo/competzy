@@ -26,6 +26,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^\+?\d{8,15}$/;
+
 /**
  * Field keys the dialog can prompt for. Must match the keys returned in the
  * `missingFields` array of a `409 PROFILE_INCOMPLETE` response and the JSON
@@ -195,9 +198,25 @@ export function ProfileCompletionDialog({
     setValues((cur) => ({ ...cur, [k]: v }));
   }
 
-  // Save is gated only on the REQUIRED fields. Optional ones can stay blank.
+  // Format check for a field's current value. Returns an error message key when
+  // the value is non-empty but malformed; null when empty or valid. Empty is
+  // handled by the required-field gate, not here — so optional fields only
+  // error on bad format, never on being blank.
+  function formatError(k: ProfileFieldKey): MessageKey | null {
+    const v = (values[k] || '').trim();
+    if (!v) return null;
+    const type = FIELDS[k]?.type;
+    if (type === 'email' && !EMAIL_RE.test(v)) return 'profileDlg.invalidEmail';
+    if (type === 'tel' && !PHONE_RE.test(v.replace(/[\s-]/g, ''))) return 'profileDlg.invalidPhone';
+    return null;
+  }
+
+  // Save is gated on the REQUIRED fields being filled AND every typed field
+  // (required or optional) being well-formed. Optional ones can stay blank.
+  const hasFormatError = [...required, ...optional].some((k) => formatError(k) !== null);
   const canSave =
     !saving &&
+    !hasFormatError &&
     required.every((k) => {
       if (k === 'country') return !!country;
       return !!(values[k] || '').trim();
@@ -259,16 +278,20 @@ export function ProfileCompletionDialog({
         </div>
       );
     }
+    const errKey = formatError(k);
     return (
       <div key={k} className={f.wide ? 'sm:col-span-2 space-y-1.5' : 'space-y-1.5'}>
         <Label htmlFor={`pcd-${k}`}>{t(f.labelKey)}</Label>
         <Input
           id={`pcd-${k}`}
           type={f.type ?? 'text'}
+          inputMode={f.type === 'tel' ? 'tel' : undefined}
           placeholder={f.placeholder}
           value={values[k] ?? ''}
           onChange={(e) => set(k, e.target.value)}
+          aria-invalid={!!errKey}
         />
+        {errKey && <p className="text-xs text-destructive">{t(errKey)}</p>}
       </div>
     );
   }

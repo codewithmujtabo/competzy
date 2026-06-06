@@ -79,6 +79,8 @@ export const en = {
   'catalog.continueTitle': 'Continue where you left off',
   'catalog.allCompetitions': 'All competitions',
   'catalog.allCompetitionsHint': 'Tap one to learn more.',
+  'catalog.intlHint': 'Showing international competitions available in your country.',
+  'catalog.emptyHint': 'Competitions will appear here once an organizer publishes them.',
   'catalog.loading': 'Loading competitions…',
   'catalog.empty': 'No competitions yet',
   'catalog.portalComingSoon': 'Portal coming soon',
@@ -991,6 +993,8 @@ export const en = {
   'profileDlg.toastSaved': 'Details confirmed — continuing to registration',
   'profileDlg.toastFailed': 'Failed to save your details',
   'profileDlg.pickGrade': 'Pick a grade',
+  'profileDlg.invalidEmail': 'Enter a valid email address.',
+  'profileDlg.invalidPhone': 'Use a valid phone number, e.g. 08123456789.',
 
   // ── Profile field labels (shared: dialog + account profile) ────────
   'pf.fullName': 'Full name',

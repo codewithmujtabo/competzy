@@ -593,6 +593,30 @@ function GlobalRoundDialog({
   const [participantType, setParticipantType] = useState<'local' | 'international'>('local');
   const [pkg, setPkg] = useState('one_day');
 
+  // Persist the participant type + trip package per round so a student who
+  // opens, closes, and re-opens the Global-Round dialog sees their last choice.
+  const storageKey = round ? `competzy.globalround.${round.id}` : null;
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) ?? '{}');
+      if (saved.participantType === 'local' || saved.participantType === 'international') {
+        setParticipantType(saved.participantType);
+      }
+      if (saved.package === 'one_day' || saved.package === 'three_day') setPkg(saved.package);
+    } catch {
+      /* ignore malformed storage */
+    }
+  }, [storageKey]);
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ participantType, package: pkg }));
+    } catch {
+      /* storage may be unavailable (private mode) — selection just won't persist */
+    }
+  }, [storageKey, participantType, pkg]);
+
   return (
     <Dialog open={!!round} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">

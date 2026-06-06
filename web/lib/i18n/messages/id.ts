@@ -79,6 +79,8 @@ export const id: Partial<Record<MessageKey, string>> = {
   'catalog.continueTitle': 'Lanjutkan dari yang terakhir',
   'catalog.allCompetitions': 'Semua kompetisi',
   'catalog.allCompetitionsHint': 'Ketuk salah satu untuk info lebih lanjut.',
+  'catalog.intlHint': 'Menampilkan kompetisi internasional yang tersedia di negara Anda.',
+  'catalog.emptyHint': 'Kompetisi akan muncul di sini setelah penyelenggara menerbitkannya.',
   'catalog.loading': 'Memuat kompetisi…',
   'catalog.empty': 'Belum ada kompetisi',
   'catalog.portalComingSoon': 'Portal segera hadir',
@@ -989,6 +991,8 @@ export const id: Partial<Record<MessageKey, string>> = {
   'profileDlg.toastSaved': 'Data dikonfirmasi — melanjutkan ke pendaftaran',
   'profileDlg.toastFailed': 'Gagal menyimpan datamu',
   'profileDlg.pickGrade': 'Pilih kelas',
+  'profileDlg.invalidEmail': 'Masukkan alamat email yang valid.',
+  'profileDlg.invalidPhone': 'Gunakan nomor telepon yang valid, mis. 08123456789.',
 
   // ── Profile field labels (shared: dialog + account profile) ────────
   'pf.fullName': 'Nama lengkap',

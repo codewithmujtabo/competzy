@@ -14,6 +14,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
+  Globe,
   Heart,
   Loader2,
   ShieldCheck,
@@ -478,11 +479,18 @@ export default function CompetitionCatalogPage() {
             <Card className="items-center gap-2 p-10 text-center">
               <Trophy className="size-7 text-muted-foreground" />
               <h2 className="font-serif text-lg font-medium text-foreground">{t('catalog.empty')}</h2>
-              <p className="text-sm text-muted-foreground">
-                Competitions will appear here once an organizer publishes them.
-              </p>
+              <p className="text-sm text-muted-foreground">{t('catalog.emptyHint')}</p>
             </Card>
           ) : (
+            <>
+              {!!me?.country &&
+                me.country.toUpperCase() !== 'ID' &&
+                comps.some((c) => c.isInternational) && (
+                  <div className="mb-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground">
+                    <Globe className="size-4 shrink-0 text-primary" />
+                    {t('catalog.intlHint')}
+                  </div>
+                )}
             <div className="grid gap-4 sm:grid-cols-2">
               {comps.map((c) => (
                 <CompetitionCard
@@ -493,6 +501,7 @@ export default function CompetitionCatalogPage() {
                 />
               ))}
             </div>
+            </>
           )}
         </div>
 
