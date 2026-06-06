@@ -745,6 +745,26 @@ export const id: Partial<Record<MessageKey, string>> = {
   'creg.errPwdShort': 'Kata sandi terlalu pendek. Gunakan minimal 8 karakter.',
   'creg.errDefault': 'Tidak dapat membuat akun Anda. Silakan coba lagi.',
 
+  // Round state notes (rs.*) — student-facing lock hints on the dashboard
+  'rs.lockedRegister': 'Terbuka setelah Anda mendaftar {round}.',
+  'rs.lockedPay': 'Terbuka setelah Anda membayar {round}.',
+  'rs.lockedComplete': 'Terbuka setelah Anda menyelesaikan {round}.',
+  'rs.anEarlierRound': 'babak sebelumnya',
+  'rs.lockedQualified': 'Terbuka setelah Anda meraih skor kelulusan di sebuah babak.',
+  'rs.lockedFastTrackNotNeeded': 'Anda sudah lolos — Jalur Cepat tidak diperlukan.',
+  'rs.catFastTrack': 'Jalur Cepat',
+  'rs.catLocal': 'Babak Lokal',
+  'rs.catGlobal': 'Babak Global',
+  'rs.pkgOneDay': 'Paket sehari',
+  'rs.pkgThreeDay': 'Paket 3 hari',
+  'rs.globalRound': 'Babak Global',
+  'rs.gfDetails': 'Beberapa detail sebelum Anda mendaftar Grand Final.',
+  'rs.participantType': 'Tipe peserta',
+  'rs.local': 'Lokal (Indonesia)',
+  'rs.international': 'Internasional',
+  'rs.tripPackage': 'Paket perjalanan',
+  'rs.register': 'Daftar',
+
   // ── Question-bank portal ───────────────────────────────────────────
   'qb.dashSubtitle': 'Tulis dan tinjau bank soal untuk kompetisi native-mu.',
   'qb.taxSubtitle': 'Atur bank soal ke dalam mata pelajaran, topik, dan subtopik. Soal ditandai berdasarkan itu.',

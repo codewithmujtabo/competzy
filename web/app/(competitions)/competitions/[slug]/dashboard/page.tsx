@@ -16,8 +16,10 @@ import {
 } from 'lucide-react';
 import { emcHttp, HttpError } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
-import { useT, useLocale } from '@/lib/i18n/context';
+import { useT, useLocale, type Locale } from '@/lib/i18n/context';
 import type { MessageKey } from '@/lib/i18n/messages/en';
+
+type TFunc = ReturnType<typeof useT>;
 import { pickText } from '@/lib/i18n/pick-text';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
@@ -479,15 +481,15 @@ function isInternationalStudent(country: string | null | undefined): boolean {
   return country.toUpperCase() !== 'ID';
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  fast_track: 'Fast Track',
-  local: 'Local Round',
-  global: 'Global Round',
+const CATEGORY_LABEL: Record<string, MessageKey> = {
+  fast_track: 'rs.catFastTrack',
+  local: 'rs.catLocal',
+  global: 'rs.catGlobal',
 };
 
-const PACKAGES = [
-  { value: 'one_day', label: 'One-day trip' },
-  { value: 'three_day', label: '3-day trip' },
+const PACKAGES: { value: string; labelKey: MessageKey }[] = [
+  { value: 'one_day', labelKey: 'rs.pkgOneDay' },
+  { value: 'three_day', labelKey: 'rs.pkgThreeDay' },
 ];
 
 function StatusPill({ status }: { status: string }) {
@@ -524,6 +526,8 @@ function roundState(
   reg: RegistrationRow | undefined,
   regs: RegistrationRow[],
   rounds: Round[],
+  t: TFunc,
+  locale: Locale,
 ): RoundState {
   if (reg) return { kind: 'registered' };
   if (
@@ -546,23 +550,27 @@ function roundState(
               prereqReg.status,
             )
           : prereqReg?.status === 'completed';
+    const roundLabel = prereq
+      ? pickText(prereq.roundName, prereq.roundNameId, locale)
+      : t('rs.anEarlierRound');
+    const noteKey: MessageKey =
+      rule === 'registered'
+        ? 'rs.lockedRegister'
+        : rule === 'paid'
+          ? 'rs.lockedPay'
+          : 'rs.lockedComplete';
     return ok
       ? { kind: 'open' }
-      : {
-          kind: 'locked',
-          note: `Opens once you ${
-            rule === 'registered' ? 'register for' : rule === 'paid' ? 'pay for' : 'complete'
-          } ${prereq?.roundName ?? 'an earlier round'}.`,
-        };
+      : { kind: 'locked', note: t(noteKey, { round: roundLabel }) };
   }
   if (mode === 'qualified') {
     return hasMedal(regs)
       ? { kind: 'open' }
-      : { kind: 'locked', note: 'Opens once you earn a qualifying score in a round.' };
+      : { kind: 'locked', note: t('rs.lockedQualified') };
   }
   if (mode === 'unqualified') {
     return hasMedal(regs)
-      ? { kind: 'locked', note: "You've already qualified — the Fast Track isn't needed." }
+      ? { kind: 'locked', note: t('rs.lockedFastTrackNotNeeded') }
       : { kind: 'open' };
   }
   return { kind: 'open' };
@@ -580,6 +588,7 @@ function GlobalRoundDialog({
   onClose: () => void;
   onConfirm: (meta: Record<string, unknown>) => void;
 }) {
+  const t = useT();
   const { locale } = useLocale();
   const [participantType, setParticipantType] = useState<'local' | 'international'>('local');
   const [pkg, setPkg] = useState('one_day');
@@ -589,34 +598,32 @@ function GlobalRoundDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {round ? pickText(round.roundName, round.roundNameId, locale) : 'Global Round'}
+            {round ? pickText(round.roundName, round.roundNameId, locale) : t('rs.globalRound')}
           </DialogTitle>
-          <DialogDescription>
-            A few details before you register for the Grand Final.
-          </DialogDescription>
+          <DialogDescription>{t('rs.gfDetails')}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Participant type</p>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t('rs.participantType')}</p>
             <div className="flex gap-2">
-              {(['local', 'international'] as const).map((t) => (
+              {(['local', 'international'] as const).map((pt) => (
                 <button
-                  key={t}
+                  key={pt}
                   type="button"
-                  onClick={() => setParticipantType(t)}
+                  onClick={() => setParticipantType(pt)}
                   className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
-                    participantType === t
+                    participantType === pt
                       ? 'border-primary bg-primary text-primary-foreground'
                       : 'border-input hover:bg-accent'
                   }`}
                 >
-                  {t === 'local' ? 'Local (Indonesian)' : 'International'}
+                  {pt === 'local' ? t('rs.local') : t('rs.international')}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Trip package</p>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">{t('rs.tripPackage')}</p>
             <div className="flex gap-2">
               {PACKAGES.map((p) => (
                 <button
@@ -629,7 +636,7 @@ function GlobalRoundDialog({
                       : 'border-input hover:bg-accent'
                   }`}
                 >
-                  {p.label}
+                  {t(p.labelKey)}
                 </button>
               ))}
             </div>
@@ -637,13 +644,13 @@ function GlobalRoundDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             disabled={!!round && registering === round.id}
             onClick={() => onConfirm({ participantType, package: pkg })}
           >
-            Register
+            {t('rs.register')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -704,8 +711,9 @@ function RoundsPanel({
       <ul className="space-y-3">
         {rounds.map((round, i) => {
           const reg = byRound.get(round.id);
-          const state = roundState(round, reg, regs, rounds);
-          const categoryLabel = CATEGORY_LABEL[round.roundCategory];
+          const state = roundState(round, reg, regs, rounds, t, locale);
+          const categoryKey = CATEGORY_LABEL[round.roundCategory];
+          const categoryLabel = categoryKey ? t(categoryKey) : undefined;
           const price = priceFor(round);
           const examDate = round.examDate
             ? new Date(round.examDate).toLocaleDateString('en-US', {

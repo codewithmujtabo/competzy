@@ -747,6 +747,26 @@ export const en = {
   'creg.errPwdShort': 'Password is too short. Use at least 8 characters.',
   'creg.errDefault': 'Could not create your account. Please try again.',
 
+  // Round state notes (rs.*) — student-facing lock hints on the dashboard
+  'rs.lockedRegister': 'Opens once you register for {round}.',
+  'rs.lockedPay': 'Opens once you pay for {round}.',
+  'rs.lockedComplete': 'Opens once you complete {round}.',
+  'rs.anEarlierRound': 'an earlier round',
+  'rs.lockedQualified': 'Opens once you earn a qualifying score in a round.',
+  'rs.lockedFastTrackNotNeeded': 'You’ve already qualified — the Fast Track isn’t needed.',
+  'rs.catFastTrack': 'Fast Track',
+  'rs.catLocal': 'Local Round',
+  'rs.catGlobal': 'Global Round',
+  'rs.pkgOneDay': 'One-day trip',
+  'rs.pkgThreeDay': '3-day trip',
+  'rs.globalRound': 'Global Round',
+  'rs.gfDetails': 'A few details before you register for the Grand Final.',
+  'rs.participantType': 'Participant type',
+  'rs.local': 'Local (Indonesian)',
+  'rs.international': 'International',
+  'rs.tripPackage': 'Trip package',
+  'rs.register': 'Register',
+
   // ── Question-bank portal ───────────────────────────────────────────
   'qb.dashSubtitle': 'Author and review the question bank for your native competitions.',
   'qb.taxSubtitle': 'Organise the bank into subjects, topics and subtopics. Questions are tagged against them.',
