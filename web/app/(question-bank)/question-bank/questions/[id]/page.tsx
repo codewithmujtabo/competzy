@@ -16,6 +16,8 @@ import { toast } from 'sonner';
 import { ArrowLeft, Copy, Loader2, Plus, Send, Trash2, X } from 'lucide-react';
 import { questionBankHttp } from '@/lib/auth/question-bank-context';
 import { useQuestionBank } from '@/lib/question-bank/context';
+import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 import {
   LANGS,
   LANG_COLS,
@@ -51,6 +53,11 @@ const RichTextEditor = dynamic(
 
 const NONE = '__none__';
 const LEVELS = ['easy', 'medium', 'hard'];
+const LEVEL_KEY: Record<string, MessageKey> = {
+  easy: 'qe.levelEasy',
+  medium: 'qe.levelMedium',
+  hard: 'qe.levelHard',
+};
 const COGNITIVE = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
 const GRADE_OPTIONS = Array.from({ length: 12 }, (_, i) => String(i + 1));
 
@@ -109,6 +116,7 @@ function newMcAnswer(): McAnswer {
 }
 
 export default function QuestionEditorPage() {
+  const t = useT();
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const isNew = id === 'new';
@@ -236,13 +244,13 @@ export default function QuestionEditorPage() {
       prev.map((a) => ({ ...a, contents: { ...a.contents, [activeCol]: a.contents.content } })),
     );
     setSaAnswers((prev) => ({ ...prev, [activeCol]: prev.content }));
-    toast.success(`Copied English into ${LANGS.find((l) => l.code === activeLang)?.label}.`);
+    toast.success(t('qe.copied', { lang: LANGS.find((l) => l.code === activeLang)?.label ?? '' }));
   };
 
   const addTopicTag = () => {
     if (!tagTopic) return;
-    if (topicTags.some((t) => t.topicId === tagTopic)) {
-      toast.info('That topic is already tagged.');
+    if (topicTags.some((tag) => tag.topicId === tagTopic)) {
+      toast.info(t('qe.topicAlreadyTagged'));
       return;
     }
     setTopicTags((prev) => [
@@ -255,24 +263,24 @@ export default function QuestionEditorPage() {
   };
 
   const addQuestionTag = (raw: string) => {
-    const t = raw.trim();
-    if (!t) return;
-    setQuestionTags((prev) => (prev.includes(t) ? prev : [...prev, t]));
+    const tag = raw.trim();
+    if (!tag) return;
+    setQuestionTags((prev) => (prev.includes(tag) ? prev : [...prev, tag]));
     setTagInput('');
   };
 
-  const removeQuestionTag = (t: string) =>
-    setQuestionTags((prev) => prev.filter((x) => x !== t));
+  const removeQuestionTag = (tag: string) =>
+    setQuestionTags((prev) => prev.filter((x) => x !== tag));
 
   const validate = (): string | null => {
-    if (!compId) return 'No competition selected.';
-    if (!contents.content.trim()) return 'The English question content is required.';
+    if (!compId) return t('qe.noCompSelected');
+    if (!contents.content.trim()) return t('qe.contentRequired');
     if (type === 'multiple_choice') {
       const filled = mcAnswers.filter((a) => a.contents.content.trim());
-      if (filled.length < 2) return 'A multiple-choice question needs at least 2 options.';
-      if (!filled.some((a) => a.isCorrect)) return 'Mark at least one option as correct.';
+      if (filled.length < 2) return t('qe.needTwoOptions');
+      if (!filled.some((a) => a.isCorrect)) return t('qe.markCorrect');
     } else if (!saAnswers.content.trim()) {
-      return 'The English answer key is required.';
+      return t('qe.answerKeyRequired');
     }
     return null;
   };
@@ -325,13 +333,13 @@ export default function QuestionEditorPage() {
         : await questionBankHttp.put<LoadedQuestion>(`/question-bank/questions/${id}`, payload);
       if (thenSubmit) {
         await questionBankHttp.post(`/question-bank/questions/${result.id}/submit`, {});
-        toast.success(`${result.code} submitted for review.`);
+        toast.success(t('qe.submittedForReview', { code: result.code }));
       } else {
-        toast.success(isNew ? `${result.code} created.` : `${result.code} saved.`);
+        toast.success(isNew ? t('qe.created', { code: result.code }) : t('qe.saved', { code: result.code }));
       }
       router.push('/question-bank/questions');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save the question');
+      toast.error(e instanceof Error ? e.message : t('qe.failSave'));
     } finally {
       setSaving(false);
     }
@@ -349,10 +357,10 @@ export default function QuestionEditorPage() {
     return (
       <div className="mx-auto max-w-[900px] space-y-6 p-6 lg:p-8">
         <Card className="p-12 text-center">
-          <p className="text-sm font-medium text-foreground">Question not found</p>
+          <p className="text-sm font-medium text-foreground">{t('qe.notFound')}</p>
           <Button variant="outline" className="mt-4" onClick={() => router.push('/question-bank/questions')}>
             <ArrowLeft className="size-4" />
-            Back to questions
+            {t('qe.backToQuestions')}
           </Button>
         </Card>
       </div>
@@ -369,16 +377,12 @@ export default function QuestionEditorPage() {
           onClick={() => router.push('/question-bank/questions')}
         >
           <ArrowLeft className="size-4" />
-          Questions
+          {t('qe.questions')}
         </Button>
         <PageHeader
-          eyebrow="Question Bank"
-          title={isNew ? 'New question' : loaded?.code ?? 'Question'}
-          subtitle={
-            isNew
-              ? 'Author a question in up to 6 languages, then save it as a draft or submit it for review.'
-              : 'Edit this draft question.'
-          }
+          eyebrow={t('opnav.questionBank')}
+          title={isNew ? t('qe.newQuestion') : loaded?.code ?? t('qe.question')}
+          subtitle={isNew ? t('qe.newSubtitle') : t('qe.editSubtitle')}
           actions={
             loaded && (
               <Badge
@@ -397,8 +401,7 @@ export default function QuestionEditorPage() {
 
       {readOnly && (
         <div className="rounded-lg border border-amber-300/50 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
-          This question is {loaded?.status} and is read-only. Send it back from the review screen
-          to edit it again.
+          {t('qe.readOnly', { status: loaded?.status ?? '' })}
         </div>
       )}
 
@@ -407,14 +410,14 @@ export default function QuestionEditorPage() {
         <Card className="space-y-4 p-6">
           <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Type</Label>
+              <Label className="mb-1.5 text-xs text-muted-foreground">{t('qe.type')}</Label>
               <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="multiple_choice">Multiple choice</SelectItem>
-                  <SelectItem value="short_answer">Short answer</SelectItem>
+                  <SelectItem value="multiple_choice">{t('qe.mc')}</SelectItem>
+                  <SelectItem value="short_answer">{t('qe.sa')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -426,7 +429,7 @@ export default function QuestionEditorPage() {
                   onChange={(e) => setIsBonus(e.target.checked)}
                   className="size-4 accent-primary"
                 />
-                Bonus question
+                {t('qe.bonus')}
               </label>
             </div>
           </div>
@@ -434,7 +437,7 @@ export default function QuestionEditorPage() {
           {/* Language tab strip — applies to stem + each MC answer + SA key. */}
           <div>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <Label className="text-xs text-muted-foreground">Language</Label>
+              <Label className="text-xs text-muted-foreground">{t('qe.language')}</Label>
               {activeLang !== 'en' && (
                 <Button
                   type="button"
@@ -442,10 +445,10 @@ export default function QuestionEditorPage() {
                   variant="ghost"
                   className="-mr-2 h-7 text-xs"
                   onClick={copyEnglishToActive}
-                  title="Copy English content into this tab"
+                  title={t('qe.copyTitle')}
                 >
                   <Copy className="size-3.5" />
-                  Copy from English
+                  {t('qe.copyFromEnglish')}
                 </Button>
               )}
             </div>
@@ -472,7 +475,7 @@ export default function QuestionEditorPage() {
 
           <div>
             <Label className="mb-1.5 text-xs text-muted-foreground">
-              Question content{' '}
+              {t('qe.questionContent')}{' '}
               {activeLang === 'en' && <span className="text-destructive">*</span>}
               <span className="ml-1 text-muted-foreground/60">
                 ({LANGS.find((l) => l.code === activeLang)?.label})
@@ -482,9 +485,7 @@ export default function QuestionEditorPage() {
               value={contents[activeCol]}
               onChange={(v) => setStem(activeCol, v)}
               placeholder={
-                activeLang === 'en'
-                  ? 'Type the question — supports inline math via the Σ button.'
-                  : 'Optional translation. Leave empty to fall back to English at exam time.'
+                activeLang === 'en' ? t('qe.stemPlaceholderEn') : t('qe.stemPlaceholderOther')
               }
               minHeight="min-h-[160px]"
             />
@@ -494,7 +495,7 @@ export default function QuestionEditorPage() {
         {/* Answers + Explanation */}
         <Card className="space-y-4 p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-            {type === 'multiple_choice' ? 'Answer options' : 'Answer key'}{' '}
+            {type === 'multiple_choice' ? t('qe.answerOptions') : t('qe.answerKey')}{' '}
             <span className="text-muted-foreground/70">
               · {LANGS.find((l) => l.code === activeLang)?.label}
             </span>
@@ -505,7 +506,7 @@ export default function QuestionEditorPage() {
                 <div key={i} className="rounded-lg border bg-card p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-                      Option {i + 1}
+                      {t('qe.option', { n: i + 1 })}
                     </span>
                     <div className="flex items-center gap-2">
                       <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
@@ -521,14 +522,14 @@ export default function QuestionEditorPage() {
                           }
                           className="size-4 accent-primary"
                         />
-                        Correct
+                        {t('qe.correct')}
                       </label>
                       <Button
                         type="button"
                         size="icon"
                         variant="ghost"
                         className="size-7 text-muted-foreground hover:text-destructive"
-                        aria-label="Remove option"
+                        aria-label={t('qe.removeOption')}
                         disabled={mcAnswers.length <= 2}
                         onClick={() => setMcAnswers((prev) => prev.filter((_, j) => j !== i))}
                       >
@@ -540,7 +541,7 @@ export default function QuestionEditorPage() {
                     value={a.contents[activeCol]}
                     onChange={(v) => setMcAnswerContent(i, activeCol, v)}
                     placeholder={
-                      activeLang === 'en' ? 'Option text — math allowed.' : 'Optional translation.'
+                      activeLang === 'en' ? t('qe.optionPlaceholderEn') : t('qe.optionPlaceholderOther')
                     }
                     minHeight="min-h-[60px]"
                   />
@@ -554,30 +555,30 @@ export default function QuestionEditorPage() {
                 onClick={() => setMcAnswers((prev) => [...prev, newMcAnswer()])}
               >
                 <Plus className="size-4" />
-                Add option
+                {t('qe.addOption')}
               </Button>
             </div>
           ) : (
             <div>
               <Label className="mb-1.5 text-xs text-muted-foreground">
-                Correct answer{' '}
+                {t('qe.correctAnswer')}{' '}
                 {activeLang === 'en' && <span className="text-destructive">*</span>}
               </Label>
               <Input
                 value={saAnswers[activeCol]}
                 onChange={(e) => setSa(activeCol, e.target.value)}
                 placeholder={
-                  activeLang === 'en' ? 'The expected answer' : 'Optional translation'
+                  activeLang === 'en' ? t('qe.saPlaceholderEn') : t('qe.saPlaceholderOther')
                 }
               />
             </div>
           )}
           <div>
-            <Label className="mb-1.5 text-xs text-muted-foreground">Explanation</Label>
+            <Label className="mb-1.5 text-xs text-muted-foreground">{t('qe.explanation')}</Label>
             <RichTextEditor
               value={explanation}
               onChange={setExplanation}
-              placeholder="Optional — shown after the question is answered. Supports inline math via the Σ button."
+              placeholder={t('qe.explanationPlaceholder')}
               minHeight="min-h-[100px]"
             />
           </div>
@@ -586,24 +587,25 @@ export default function QuestionEditorPage() {
         {/* Tags */}
         <Card className="space-y-4 p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-            Tags
+            {t('qe.tags')}
           </p>
           <p className="text-xs text-muted-foreground">
-            Free-text labels for filtering — e.g. <code className="font-mono">geometry</code>,{' '}
+            {t('qe.tagsHint')}
+            <code className="font-mono">geometry</code>,{' '}
             <code className="font-mono">aops-2018</code>, <code className="font-mono">tricky</code>.
           </p>
           {questionTags.length > 0 && (
             <ul className="flex flex-wrap gap-2">
-              {questionTags.map((t) => (
+              {questionTags.map((tag) => (
                 <li
-                  key={t}
+                  key={tag}
                   className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
                 >
-                  {t}
+                  {tag}
                   <button
                     type="button"
-                    aria-label={`Remove tag ${t}`}
-                    onClick={() => removeQuestionTag(t)}
+                    aria-label={t('qe.removeTag', { t: tag })}
+                    onClick={() => removeQuestionTag(tag)}
                     className="text-primary/70 hover:text-destructive"
                   >
                     <X className="size-3" />
@@ -622,11 +624,11 @@ export default function QuestionEditorPage() {
                   addQuestionTag(tagInput);
                 }
               }}
-              placeholder="Type a tag and press Enter"
+              placeholder={t('qe.tagPlaceholder')}
             />
             <Button type="button" variant="outline" onClick={() => addQuestionTag(tagInput)}>
               <Plus className="size-4" />
-              Add
+              {t('qe.add')}
             </Button>
           </div>
         </Card>
@@ -634,33 +636,33 @@ export default function QuestionEditorPage() {
         {/* Metadata */}
         <Card className="space-y-4 p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-            Classification
+            {t('qe.classification')}
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Difficulty level</Label>
+              <Label className="mb-1.5 text-xs text-muted-foreground">{t('qe.difficulty')}</Label>
               <Select value={level} onValueChange={setLevel}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE}>Not set</SelectItem>
+                  <SelectItem value={NONE}>{t('qe.notSet')}</SelectItem>
                   {LEVELS.map((l) => (
-                    <SelectItem key={l} value={l} className="capitalize">
-                      {l}
+                    <SelectItem key={l} value={l}>
+                      {t(LEVEL_KEY[l])}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Cognitive level</Label>
+              <Label className="mb-1.5 text-xs text-muted-foreground">{t('qe.cognitive')}</Label>
               <Select value={cognitive} onValueChange={setCognitive}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE}>Not set</SelectItem>
+                  <SelectItem value={NONE}>{t('qe.notSet')}</SelectItem>
                   {COGNITIVE.map((c) => (
                     <SelectItem key={c} value={c}>
                       {c}
@@ -671,7 +673,7 @@ export default function QuestionEditorPage() {
             </div>
           </div>
           <div>
-            <Label className="mb-1.5 text-xs text-muted-foreground">Grades</Label>
+            <Label className="mb-1.5 text-xs text-muted-foreground">{t('qe.grades')}</Label>
             <div className="flex flex-wrap gap-2">
               {GRADE_OPTIONS.map((g) => (
                 <label
@@ -694,30 +696,30 @@ export default function QuestionEditorPage() {
         {/* Topic tagging (existing taxonomy linker) */}
         <Card className="space-y-4 p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-            Topic taxonomy
+            {t('qe.topicTaxonomy')}
           </p>
           {topicTags.length > 0 && (
             <ul className="flex flex-wrap gap-2">
-              {topicTags.map((t) => {
-                const topic = topicById.get(t.topicId);
+              {topicTags.map((tt) => {
+                const topic = topicById.get(tt.topicId);
                 const subject = topic?.parentId ? subjectById.get(topic.parentId) : undefined;
-                const subtopic = t.subtopicId ? subtopicById.get(t.subtopicId) : undefined;
+                const subtopic = tt.subtopicId ? subtopicById.get(tt.subtopicId) : undefined;
                 return (
                   <li
-                    key={t.topicId}
+                    key={tt.topicId}
                     className="flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-xs"
                   >
                     <span className="text-foreground">
                       {subject?.name ? `${subject.name} › ` : ''}
-                      {topic?.name ?? t.topicId}
+                      {topic?.name ?? tt.topicId}
                       {subtopic?.name ? ` › ${subtopic.name}` : ''}
                     </span>
                     <button
                       type="button"
-                      aria-label="Remove tag"
+                      aria-label={t('qe.removeTagPlain')}
                       className="text-muted-foreground hover:text-destructive"
                       onClick={() =>
-                        setTopicTags((prev) => prev.filter((x) => x.topicId !== t.topicId))
+                        setTopicTags((prev) => prev.filter((x) => x.topicId !== tt.topicId))
                       }
                     >
                       <Trash2 className="size-3.5" />
@@ -737,7 +739,7 @@ export default function QuestionEditorPage() {
               }}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Subject" />
+                <SelectValue placeholder={t('qe.subject')} />
               </SelectTrigger>
               <SelectContent>
                 {subjects.map((s) => (
@@ -755,7 +757,7 @@ export default function QuestionEditorPage() {
               }}
             >
               <SelectTrigger className="w-full" disabled={!tagSubject}>
-                <SelectValue placeholder="Topic" />
+                <SelectValue placeholder={t('qe.topic')} />
               </SelectTrigger>
               <SelectContent>
                 {builderTopics.map((t) => (
@@ -767,10 +769,10 @@ export default function QuestionEditorPage() {
             </Select>
             <Select value={tagSubtopic} onValueChange={setTagSubtopic}>
               <SelectTrigger className="w-full" disabled={!tagTopic}>
-                <SelectValue placeholder="Subtopic" />
+                <SelectValue placeholder={t('qe.subtopic')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NONE}>No subtopic</SelectItem>
+                <SelectItem value={NONE}>{t('qe.noSubtopic')}</SelectItem>
                 {builderSubtopics.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.name}
@@ -780,13 +782,11 @@ export default function QuestionEditorPage() {
             </Select>
             <Button type="button" variant="outline" disabled={!tagTopic} onClick={addTopicTag}>
               <Plus className="size-4" />
-              Add
+              {t('qe.add')}
             </Button>
           </div>
           {subjects.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              No taxonomy yet — add subjects and topics on the Taxonomy page first.
-            </p>
+            <p className="text-xs text-muted-foreground">{t('qe.noTaxonomy')}</p>
           )}
         </Card>
       </fieldset>
@@ -794,14 +794,14 @@ export default function QuestionEditorPage() {
       {!readOnly && (
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="outline" onClick={() => router.push('/question-bank/questions')}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button variant="outline" disabled={saving} onClick={() => save(false)}>
-            {saving ? 'Saving…' : 'Save draft'}
+            {saving ? t('cf.saving') : t('qe.saveDraft')}
           </Button>
           <Button disabled={saving} onClick={() => save(true)}>
             <Send className="size-4" />
-            Save &amp; submit for review
+            {t('qe.saveSubmit')}
           </Button>
         </div>
       )}
