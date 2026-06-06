@@ -8,7 +8,8 @@ import { ArrowLeft, Download, Loader2, Megaphone, Star } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
-import { useT } from '@/lib/i18n/context';
+import { useT, useLocale } from '@/lib/i18n/context';
+import { pickText } from '@/lib/i18n/pick-text';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,9 @@ interface Announcement {
   id: string;
   compId: string | null;
   title: string;
+  titleId: string | null;
   body: string | null;
+  bodyId: string | null;
   type: string | null;
   image: string | null;
   file: string | null;
@@ -32,6 +35,8 @@ function fmtDate(s: string | null) {
 
 function AnnouncementCard({ a, featured }: { a: Announcement; featured?: boolean }) {
   const t = useT();
+  const { locale } = useLocale();
+  const title = pickText(a.title, a.titleId, locale);
   return (
     <Card className={`gap-0 p-6 ${featured ? 'border-amber-300 dark:border-amber-900' : ''}`}>
       <div className="flex flex-wrap items-center gap-2">
@@ -52,18 +57,18 @@ function AnnouncementCard({ a, featured }: { a: Announcement; featured?: boolean
         )}
         <span className="ml-auto text-xs text-muted-foreground">{fmtDate(a.publishedAt)}</span>
       </div>
-      <h2 className="mt-2 font-serif text-lg font-medium text-foreground">{a.title}</h2>
+      <h2 className="mt-2 font-serif text-lg font-medium text-foreground">{title}</h2>
       {a.image && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={a.image}
-          alt={a.title}
+          alt={title}
           className="mt-3 max-h-72 w-full rounded-md border bg-muted object-cover"
         />
       )}
       {a.body && (
         <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-          {a.body}
+          {pickText(a.body, a.bodyId, locale)}
         </p>
       )}
       {a.file && (

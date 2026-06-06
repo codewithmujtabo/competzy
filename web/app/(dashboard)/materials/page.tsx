@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { BilingualInput } from '@/components/ui/bilingual-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -48,7 +49,9 @@ interface Material {
   id: string;
   compId: string | null;
   title: string;
+  titleId: string | null;
   body: string | null;
+  bodyId: string | null;
   category: string | null;
   grades: string[];
   file: string | null;
@@ -58,8 +61,10 @@ interface Material {
 
 const DEFAULTS = {
   title: '',
+  titleId: '',
   category: '',
   body: '',
+  bodyId: '',
   grades: [] as string[],
   isActive: true,
   published: true,
@@ -127,8 +132,10 @@ function MaterialsPage() {
     setEditing(m);
     setForm({
       title: m.title,
+      titleId: m.titleId ?? '',
       category: m.category ?? '',
       body: m.body ?? '',
+      bodyId: m.bodyId ?? '',
       grades: m.grades ?? [],
       isActive: m.isActive,
       published: !!m.publishedAt,
@@ -162,7 +169,9 @@ function MaterialsPage() {
       const body = {
         compId: scope,
         title: form.title.trim(),
+        titleId: form.titleId.trim() || null,
         body: form.body.trim() || null,
+        bodyId: form.bodyId.trim() || null,
         category: form.category.trim() || null,
         grades: form.grades,
         isActive: form.isActive,
@@ -326,33 +335,31 @@ function MaterialsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label className="mb-1.5 text-xs text-muted-foreground">
-                  Title <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  value={form.title}
-                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label className="mb-1.5 text-xs text-muted-foreground">Category</Label>
-                <Input
-                  value={form.category}
-                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                  placeholder="Past Papers"
-                />
-              </div>
-            </div>
+            <BilingualInput
+              label="Title"
+              required
+              value={form.title}
+              valueId={form.titleId}
+              onChange={(v) => setForm((f) => ({ ...f, title: v }))}
+              onChangeId={(v) => setForm((f) => ({ ...f, titleId: v }))}
+            />
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Description</Label>
-              <textarea
-                className={TEXTAREA_CLS}
-                value={form.body}
-                onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+              <Label className="mb-1.5 text-xs text-muted-foreground">Category</Label>
+              <Input
+                value={form.category}
+                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                placeholder="Past Papers"
+                className="sm:max-w-[16rem]"
               />
             </div>
+            <BilingualInput
+              label="Description"
+              textarea
+              value={form.body}
+              valueId={form.bodyId}
+              onChange={(v) => setForm((f) => ({ ...f, body: v }))}
+              onChangeId={(v) => setForm((f) => ({ ...f, bodyId: v }))}
+            />
             <div>
               <Label className="mb-1.5 block text-xs text-muted-foreground">
                 Target grades{' '}

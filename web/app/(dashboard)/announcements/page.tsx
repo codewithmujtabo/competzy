@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { BilingualInput } from '@/components/ui/bilingual-input';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -47,7 +48,9 @@ interface Announcement {
   id: string;
   compId: string | null;
   title: string;
+  titleId: string | null;
   body: string | null;
+  bodyId: string | null;
   type: string | null;
   image: string | null;
   isActive: boolean;
@@ -58,8 +61,10 @@ interface Announcement {
 
 const DEFAULTS = {
   title: '',
+  titleId: '',
   type: '',
   body: '',
+  bodyId: '',
   isActive: true,
   isFeatured: false,
   published: true,
@@ -134,8 +139,10 @@ function AnnouncementsPage() {
     setEditing(a);
     setForm({
       title: a.title,
+      titleId: a.titleId ?? '',
       type: a.type ?? '',
       body: a.body ?? '',
+      bodyId: a.bodyId ?? '',
       isActive: a.isActive,
       isFeatured: a.isFeatured,
       published: !!a.publishedAt,
@@ -164,7 +171,9 @@ function AnnouncementsPage() {
       const body = {
         compId: scope,
         title: form.title.trim(),
+        titleId: form.titleId.trim() || null,
         body: form.body.trim() || null,
+        bodyId: form.bodyId.trim() || null,
         type: form.type.trim() || null,
         isActive: form.isActive,
         isFeatured: form.isFeatured,
@@ -333,34 +342,32 @@ function AnnouncementsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-[1fr_8rem]">
-              <div>
-                <Label className="mb-1.5 text-xs text-muted-foreground">
-                  Title <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  value={form.title}
-                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label className="mb-1.5 text-xs text-muted-foreground">Type</Label>
-                <Input
-                  value={form.type}
-                  onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
-                  placeholder="news"
-                />
-              </div>
-            </div>
+            <BilingualInput
+              label="Title"
+              required
+              value={form.title}
+              valueId={form.titleId}
+              onChange={(v) => setForm((f) => ({ ...f, title: v }))}
+              onChangeId={(v) => setForm((f) => ({ ...f, titleId: v }))}
+            />
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Body</Label>
-              <textarea
-                className={TEXTAREA_CLS}
-                value={form.body}
-                onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-                placeholder="The announcement text shown to students."
+              <Label className="mb-1.5 text-xs text-muted-foreground">Type</Label>
+              <Input
+                value={form.type}
+                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                placeholder="news"
+                className="sm:max-w-[12rem]"
               />
             </div>
+            <BilingualInput
+              label="Body"
+              textarea
+              value={form.body}
+              valueId={form.bodyId}
+              onChange={(v) => setForm((f) => ({ ...f, body: v }))}
+              onChangeId={(v) => setForm((f) => ({ ...f, bodyId: v }))}
+              placeholder="The announcement text shown to students."
+            />
             <div className="flex items-center gap-4">
               {imagePreview ? (
                 // eslint-disable-next-line @next/next/no-img-element

@@ -8,7 +8,8 @@ import { ArrowLeft, Download, FileText, Loader2 } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
-import { useT } from '@/lib/i18n/context';
+import { useT, useLocale } from '@/lib/i18n/context';
+import { pickText } from '@/lib/i18n/pick-text';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,9 @@ interface Material {
   id: string;
   compId: string | null;
   title: string;
+  titleId: string | null;
   body: string | null;
+  bodyId: string | null;
   category: string | null;
   grades: string[];
   file: string | null;
@@ -25,6 +28,7 @@ interface Material {
 
 export default function CompetitionMaterialsPage() {
   const t = useT();
+  const { locale } = useLocale();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -99,9 +103,13 @@ export default function CompetitionMaterialsPage() {
                     <Card key={m.id} className="gap-0 p-5">
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="font-medium text-foreground">{m.title}</p>
+                          <p className="font-medium text-foreground">
+                            {pickText(m.title, m.titleId, locale)}
+                          </p>
                           {m.body && (
-                            <p className="mt-0.5 text-sm text-muted-foreground">{m.body}</p>
+                            <p className="mt-0.5 text-sm text-muted-foreground">
+                              {pickText(m.body, m.bodyId, locale)}
+                            </p>
                           )}
                           <div className="mt-2 flex flex-wrap gap-1">
                             {m.compId === null && (

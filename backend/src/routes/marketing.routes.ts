@@ -315,7 +315,9 @@ async function mapAnnouncement(r: any) {
     id: r.id,
     compId: r.comp_id ?? null,
     title: r.title,
+    titleId: r.title_id ?? null,
     body: r.body ?? null,
+    bodyId: r.body_id ?? null,
     type: r.type ?? null,
     image: r.image ? await getSignedUrl(r.image) : null,
     file: r.file ? await getSignedUrl(r.file) : null,
@@ -427,8 +429,8 @@ router.post(
       const published = req.body?.published === true;
       const inserted = await pool.query(
         `INSERT INTO announcements
-           (comp_id, title, body, type, is_active, is_featured, published_at)
-         VALUES ($1,$2,$3,$4,$5,$6, ${published ? "now()" : "NULL"})
+           (comp_id, title, body, type, is_active, is_featured, published_at, title_id, body_id)
+         VALUES ($1,$2,$3,$4,$5,$6, ${published ? "now()" : "NULL"}, $7, $8)
          RETURNING *`,
         [
           scope.compId,
@@ -437,6 +439,8 @@ router.post(
           trim(req.body?.type),
           req.body?.isActive !== false,
           req.body?.isFeatured === true,
+          trim(req.body?.titleId) || null,
+          trim(req.body?.bodyId) || null,
         ]
       );
       await maybeNotify(req.body?.notify === true, published, scope.compId, title);
@@ -470,13 +474,15 @@ router.put(
       const updated = await pool.query(
         `UPDATE announcements
             SET title=$1, body=$2, type=$3, is_active=$4, is_featured=$5,
+                title_id=$6, body_id=$7,
                 published_at = ${published ? "COALESCE(published_at, now())" : "NULL"},
                 updated_at = now()
-          WHERE id=$6 AND deleted_at IS NULL
+          WHERE id=$8 AND deleted_at IS NULL
         RETURNING *`,
         [
           title, trim(req.body?.body), trim(req.body?.type),
-          req.body?.isActive !== false, req.body?.isFeatured === true, id,
+          req.body?.isActive !== false, req.body?.isFeatured === true,
+          trim(req.body?.titleId) || null, trim(req.body?.bodyId) || null, id,
         ]
       );
       await maybeNotify(req.body?.notify === true, published, scope.compId, title);
@@ -559,7 +565,9 @@ async function mapMaterial(r: any) {
     id: r.id,
     compId: r.comp_id ?? null,
     title: r.title,
+    titleId: r.title_id ?? null,
     body: r.body ?? null,
+    bodyId: r.body_id ?? null,
     type: r.type ?? null,
     category: r.category ?? null,
     grades: Array.isArray(r.grades) ? r.grades : [],
@@ -643,13 +651,14 @@ router.post(
       const published = req.body?.published === true;
       const inserted = await pool.query(
         `INSERT INTO materials
-           (comp_id, title, body, type, category, grades, is_active, published_at)
-         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7, ${published ? "now()" : "NULL"})
+           (comp_id, title, body, type, category, grades, is_active, published_at, title_id, body_id)
+         VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7, ${published ? "now()" : "NULL"}, $8, $9)
          RETURNING *`,
         [
           scope.compId, title, trim(req.body?.body), trim(req.body?.type),
           trim(req.body?.category), gradesJson(req.body?.grades),
           req.body?.isActive !== false,
+          trim(req.body?.titleId) || null, trim(req.body?.bodyId) || null,
         ]
       );
       res.status(201).json(await mapMaterial(inserted.rows[0]));
@@ -680,13 +689,15 @@ router.put(
       const updated = await pool.query(
         `UPDATE materials
             SET title=$1, body=$2, type=$3, category=$4, grades=$5::jsonb, is_active=$6,
+                title_id=$7, body_id=$8,
                 published_at = ${published ? "COALESCE(published_at, now())" : "NULL"},
                 updated_at = now()
-          WHERE id=$7 AND deleted_at IS NULL
+          WHERE id=$9 AND deleted_at IS NULL
         RETURNING *`,
         [
           title, trim(req.body?.body), trim(req.body?.type), trim(req.body?.category),
-          gradesJson(req.body?.grades), req.body?.isActive !== false, id,
+          gradesJson(req.body?.grades), req.body?.isActive !== false,
+          trim(req.body?.titleId) || null, trim(req.body?.bodyId) || null, id,
         ]
       );
       res.json(await mapMaterial(updated.rows[0]));
