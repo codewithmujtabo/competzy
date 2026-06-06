@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, Check, Loader2, RotateCcw, X } from 'lucide-react';
 import { questionBankHttp } from '@/lib/auth/question-bank-context';
+import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +27,11 @@ const TEXTAREA_CLS =
 const NONE = '__none__';
 const LEVELS = ['easy', 'medium', 'hard'];
 const COGNITIVE = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'];
+const LEVEL_KEY: Record<string, MessageKey> = {
+  easy: 'qe.levelEasy',
+  medium: 'qe.levelMedium',
+  hard: 'qe.levelHard',
+};
 
 const STATUS_STYLE: Record<string, string> = {
   draft: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
@@ -68,6 +75,7 @@ function fmtDate(s: string) {
 }
 
 export default function ReviewQuestionPage() {
+  const t = useT();
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
 
@@ -112,7 +120,7 @@ export default function ReviewQuestionPage() {
 
   const act = async (kind: 'approve' | 'send-back') => {
     if (kind === 'send-back' && !comment.trim()) {
-      toast.error('A comment is required to send a question back.');
+      toast.error(t('rv.commentRequired'));
       return;
     }
     setBusy(kind);
@@ -122,10 +130,10 @@ export default function ReviewQuestionPage() {
         level: level === NONE ? undefined : level,
         cognitive: cognitive === NONE ? undefined : cognitive,
       });
-      toast.success(kind === 'approve' ? 'Question approved.' : 'Question sent back to draft.');
+      toast.success(kind === 'approve' ? t('rv.approved') : t('rv.sentBack'));
       router.push('/question-bank/review');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Action failed');
+      toast.error(e instanceof Error ? e.message : t('rv.actionFailed'));
     } finally {
       setBusy(null);
     }
@@ -143,10 +151,10 @@ export default function ReviewQuestionPage() {
     return (
       <div className="mx-auto max-w-[900px] space-y-6 p-6 lg:p-8">
         <Card className="p-12 text-center">
-          <p className="text-sm font-medium text-foreground">Question not found</p>
+          <p className="text-sm font-medium text-foreground">{t('qe.notFound')}</p>
           <Button variant="outline" className="mt-4" onClick={() => router.push('/question-bank/review')}>
             <ArrowLeft className="size-4" />
-            Back to review queue
+            {t('rv.backToQueue')}
           </Button>
         </Card>
       </div>
@@ -166,12 +174,12 @@ export default function ReviewQuestionPage() {
           onClick={() => router.push('/question-bank/review')}
         >
           <ArrowLeft className="size-4" />
-          Review queue
+          {t('rv.reviewQueue')}
         </Button>
         <PageHeader
-          eyebrow="Question Bank · Review"
+          eyebrow={t('rv.eyebrow')}
           title={question.code}
-          subtitle={question.writerName ? `Written by ${question.writerName}` : undefined}
+          subtitle={question.writerName ? t('rv.writtenBy', { name: question.writerName }) : undefined}
           actions={
             <Badge
               variant="outline"
@@ -188,8 +196,7 @@ export default function ReviewQuestionPage() {
 
       {!reviewable && (
         <div className="rounded-lg border border-amber-300/50 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
-          This question is {question.status} — there is nothing to review. Only submitted questions
-          can be approved or sent back.
+          {t('rv.notReviewable', { status: question.status })}
         </div>
       )}
 
@@ -197,16 +204,16 @@ export default function ReviewQuestionPage() {
       <Card className="space-y-4 p-6">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="font-mono text-[10px]">
-            {isMC ? 'Multiple choice' : 'Short answer'}
+            {isMC ? t('qe.mc') : t('qe.sa')}
           </Badge>
           {question.isBonus && (
             <Badge variant="outline" className="font-mono text-[10px]">
-              Bonus
+              {t('rv.bonus')}
             </Badge>
           )}
           {question.level && (
-            <Badge variant="outline" className="font-mono text-[10px] capitalize">
-              {question.level}
+            <Badge variant="outline" className="font-mono text-[10px]">
+              {LEVEL_KEY[question.level] ? t(LEVEL_KEY[question.level]) : question.level}
             </Badge>
           )}
           {question.cognitive && (
@@ -227,7 +234,7 @@ export default function ReviewQuestionPage() {
 
         <div>
           <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-            {isMC ? 'Answer options' : 'Answer key'}
+            {isMC ? t('qe.answerOptions') : t('qe.answerKey')}
           </p>
           <ul className="space-y-1.5">
             {question.answers.map((a, i) => (
@@ -257,7 +264,7 @@ export default function ReviewQuestionPage() {
         {question.explanation && (
           <div>
             <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-              Explanation
+              {t('qe.explanation')}
             </p>
             <p className="whitespace-pre-wrap text-sm text-muted-foreground">
               {question.explanation}
@@ -268,20 +275,20 @@ export default function ReviewQuestionPage() {
         {question.topics.length > 0 && (
           <div>
             <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-              Topic tags
+              {t('rv.topicTags')}
             </p>
             <ul className="flex flex-wrap gap-2">
-              {question.topics.map((t) => {
-                const topic = topicById.get(t.topicId);
+              {question.topics.map((tt) => {
+                const topic = topicById.get(tt.topicId);
                 const subject = topic?.parentId ? subjectById.get(topic.parentId) : undefined;
-                const subtopic = t.subtopicId ? subtopicById.get(t.subtopicId) : undefined;
+                const subtopic = tt.subtopicId ? subtopicById.get(tt.subtopicId) : undefined;
                 return (
                   <li
-                    key={t.topicId}
+                    key={tt.topicId}
                     className="rounded-md border bg-card px-2.5 py-1.5 text-xs text-foreground"
                   >
                     {subject?.name ? `${subject.name} › ` : ''}
-                    {topic?.name ?? t.topicId}
+                    {topic?.name ?? tt.topicId}
                     {subtopic?.name ? ` › ${subtopic.name}` : ''}
                   </li>
                 );
@@ -295,16 +302,16 @@ export default function ReviewQuestionPage() {
       {proofreads.length > 0 && (
         <Card className="space-y-3 p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-            Review history
+            {t('rv.reviewHistory')}
           </p>
           <ul className="space-y-3">
             {proofreads.map((p) => (
               <li key={p.id} className="border-l-2 border-border pl-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">{p.reviewerName ?? 'Reviewer'}</span>
+                  <span className="font-medium text-foreground">{p.reviewerName ?? t('rv.reviewer')}</span>
                   <span>·</span>
                   <span className="font-mono">{fmtDate(p.createdAt)}</span>
-                  {p.level && <Badge variant="outline" className="font-mono text-[10px] capitalize">{p.level}</Badge>}
+                  {p.level && <Badge variant="outline" className="font-mono text-[10px]">{LEVEL_KEY[p.level] ? t(LEVEL_KEY[p.level]) : p.level}</Badge>}
                   {p.cognitive && <Badge variant="outline" className="font-mono text-[10px]">{p.cognitive}</Badge>}
                 </div>
                 {p.comment && <p className="mt-1 text-sm text-foreground">{p.comment}</p>}
@@ -318,35 +325,34 @@ export default function ReviewQuestionPage() {
       {reviewable && (
         <Card className="space-y-4 p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-            Your review
+            {t('rv.yourReview')}
           </p>
           <div>
             <Label className="mb-1.5 text-xs text-muted-foreground">
-              Comment{' '}
-              <span className="font-normal">(required to send back, optional to approve)</span>
+              {t('rv.comment')} <span className="font-normal">{t('rv.commentHint')}</span>
             </Label>
             <textarea
               rows={3}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Notes for the author…"
+              placeholder={t('rv.notesPlaceholder')}
               className={TEXTAREA_CLS}
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label className="mb-1.5 text-xs text-muted-foreground">
-                Difficulty assessment <span className="font-normal">(optional)</span>
+                {t('rv.difficultyAssessment')} <span className="font-normal">{t('rv.optional')}</span>
               </Label>
               <Select value={level} onValueChange={setLevel}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE}>Not assessed</SelectItem>
+                  <SelectItem value={NONE}>{t('rv.notAssessed')}</SelectItem>
                   {LEVELS.map((l) => (
-                    <SelectItem key={l} value={l} className="capitalize">
-                      {l}
+                    <SelectItem key={l} value={l}>
+                      {t(LEVEL_KEY[l])}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -354,14 +360,14 @@ export default function ReviewQuestionPage() {
             </div>
             <div>
               <Label className="mb-1.5 text-xs text-muted-foreground">
-                Cognitive assessment <span className="font-normal">(optional)</span>
+                {t('rv.cognitiveAssessment')} <span className="font-normal">{t('rv.optional')}</span>
               </Label>
               <Select value={cognitive} onValueChange={setCognitive}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE}>Not assessed</SelectItem>
+                  <SelectItem value={NONE}>{t('rv.notAssessed')}</SelectItem>
                   {COGNITIVE.map((c) => (
                     <SelectItem key={c} value={c}>
                       {c}
@@ -379,11 +385,11 @@ export default function ReviewQuestionPage() {
               onClick={() => act('send-back')}
             >
               <RotateCcw className="size-4" />
-              {busy === 'send-back' ? 'Sending back…' : 'Send back to draft'}
+              {busy === 'send-back' ? t('rv.sendingBack') : t('rv.sendBack')}
             </Button>
             <Button disabled={!!busy} onClick={() => act('approve')}>
               <Check className="size-4" />
-              {busy === 'approve' ? 'Approving…' : 'Approve question'}
+              {busy === 'approve' ? t('rv.approving') : t('rv.approveQuestion')}
             </Button>
           </div>
         </Card>
