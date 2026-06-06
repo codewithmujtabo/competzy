@@ -5,6 +5,8 @@ import { useRouter, useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
@@ -39,8 +41,16 @@ interface PendingRow {
 
 type StatusFilter = 'pending_review' | 'pending_payment' | 'paid' | 'rejected' | 'all';
 const FILTERS: StatusFilter[] = ['pending_review', 'pending_payment', 'paid', 'rejected', 'all'];
+const STATUS_KEY: Record<string, MessageKey> = {
+  pending_review: 'cap.statusPendingReview',
+  pending_payment: 'cap.statusPendingPayment',
+  paid: 'cap.statusPaid',
+  rejected: 'cap.statusRejected',
+  all: 'cap.statusAll',
+};
 
 export default function CompetitionAdminPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -70,9 +80,11 @@ export default function CompetitionAdminPage() {
       );
       setRows(data.pendingRegistrations);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to load');
+      setErr(e instanceof Error ? e.message : t('cap.failLoad'));
     }
   };
+
+  const statusLabel = (s: string) => (STATUS_KEY[s] ? t(STATUS_KEY[s]) : s.replace(/_/g, ' '));
 
   useEffect(() => {
     void refresh();
@@ -86,7 +98,7 @@ export default function CompetitionAdminPage() {
       await emcHttp.post(`/admin/registrations/${id}/${action}`, body);
       await refresh();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : `${action} failed`);
+      setErr(e instanceof Error ? e.message : t('cap.failLoad'));
     } finally {
       setBusy(null);
     }
@@ -105,16 +117,16 @@ export default function CompetitionAdminPage() {
         <header className="flex items-center justify-between">
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
-              {config.shortName} 2026 · Admin
+              {config.shortName} 2026 · {t('cap.admin')}
             </p>
-            <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">Registrations</h1>
+            <h1 className="mt-1 font-serif text-2xl font-medium text-foreground">{t('cap.registrations')}</h1>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/dashboard" className="text-sm font-medium text-primary hover:underline">
-              ← Full admin
+              ← {t('cap.fullAdmin')}
             </Link>
             <Button variant="ghost" size="sm" onClick={signOut}>
-              Sign out
+              {t('shell.signOut')}
             </Button>
           </div>
         </header>
@@ -122,8 +134,8 @@ export default function CompetitionAdminPage() {
         <Tabs value={status} onValueChange={(v) => setStatus(v as StatusFilter)}>
           <TabsList>
             {FILTERS.map((s) => (
-              <TabsTrigger key={s} value={s} className="capitalize">
-                {s.replace(/_/g, ' ')}
+              <TabsTrigger key={s} value={s}>
+                {statusLabel(s)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -137,12 +149,12 @@ export default function CompetitionAdminPage() {
 
         {!comp?.id ? (
           <Card className="p-8 text-center text-sm text-amber-600 dark:text-amber-400">
-            {config.shortName} 2026 isn’t configured. Run the latest backend migration first.
+            {t('cap.notConfigured', { name: config.shortName })}
           </Card>
         ) : rows === null ? (
           <Card className="items-center gap-3 p-10 text-center">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-sm text-muted-foreground">{t('cap.loading')}</p>
           </Card>
         ) : (
           <Card className="overflow-hidden p-0">
@@ -150,18 +162,18 @@ export default function CompetitionAdminPage() {
               <Table className="min-w-[1024px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>School</TableHead>
-                    <TableHead>Grade</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t('cap.colStudent')}</TableHead>
+                    <TableHead>{t('cap.colSchool')}</TableHead>
+                    <TableHead>{t('cap.colGrade')}</TableHead>
+                    <TableHead>{t('adm.colStatus')}</TableHead>
+                    <TableHead className="text-right">{t('acp.colActions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rows.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} className="h-28 text-center text-sm text-muted-foreground">
-                        No {status.replace(/_/g, ' ')} registrations for {config.shortName} 2026.
+                        {t('cap.empty', { status: statusLabel(status), name: config.shortName })}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -176,8 +188,8 @@ export default function CompetitionAdminPage() {
                         <TableCell className="text-sm">{r.student.school || '—'}</TableCell>
                         <TableCell className="text-sm">{r.student.grade || '—'}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="font-mono text-[10px] capitalize">
-                            {r.status.replace(/_/g, ' ')}
+                          <Badge variant="secondary" className="font-mono text-[10px]">
+                            {statusLabel(r.status)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -188,7 +200,7 @@ export default function CompetitionAdminPage() {
                                 disabled={busy === r.registrationId}
                                 onClick={() => act(r.registrationId, 'approve')}
                               >
-                                {busy === r.registrationId ? '…' : 'Approve'}
+                                {busy === r.registrationId ? '…' : t('cap.approve')}
                               </Button>
                               <Button
                                 size="sm"
@@ -197,7 +209,7 @@ export default function CompetitionAdminPage() {
                                 disabled={busy === r.registrationId}
                                 onClick={() => act(r.registrationId, 'reject')}
                               >
-                                Reject
+                                {t('cap.reject')}
                               </Button>
                             </div>
                           )}

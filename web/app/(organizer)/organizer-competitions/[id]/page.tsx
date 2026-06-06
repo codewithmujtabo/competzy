@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Download, ExternalLink, Loader2, Pencil, Trash2, Upload } from 'lucide-react';
 import { organizerCompetitionsApi } from '@/lib/api';
 import { organizerHttp } from '@/lib/api/client';
+import { useT } from '@/lib/i18n/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +76,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export default function CompetitionDetailPage() {
+  const t = useT();
   const params = useParams();
   const router = useRouter();
   const id = (Array.isArray(params.id) ? params.id[0] : params.id) ?? '';
@@ -92,19 +94,19 @@ export default function CompetitionDetailPage() {
     organizerCompetitionsApi
       .getOne(id)
       .then(setCompetition)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load competition'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('ocd.failLoad')))
       .finally(() => setLoading(false));
   }, [id]);
 
   const handleDelete = async () => {
-    if (!confirm(`Delete "${competition?.name}"? This cannot be undone.`)) return;
+    if (!confirm(t('ocd.confirmDelete', { name: competition?.name ?? '' }))) return;
     setDeleting(true);
     try {
       await organizerCompetitionsApi.delete(id);
-      toast.success('Competition deleted.');
+      toast.success(t('ocd.deleted'));
       router.push('/organizer-competitions');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete competition');
+      toast.error(err instanceof Error ? err.message : t('ocd.failDelete'));
       setDeleting(false);
     }
   };
@@ -122,9 +124,9 @@ export default function CompetitionDetailPage() {
       setCompetition((prev) => (prev ? { ...prev, csvTemplateUrl: result.csvTemplateUrl } : prev));
       setTemplateFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
-      toast.success('CSV template uploaded.');
+      toast.success(t('ocd.csvUploaded'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Upload failed');
+      toast.error(err instanceof Error ? err.message : t('ocd.uploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -141,9 +143,9 @@ export default function CompetitionDetailPage() {
   if (error || !competition) {
     return (
       <div className="mx-auto max-w-[1100px] space-y-4 p-6 lg:p-8">
-        <p className="text-sm text-destructive">{error || 'Competition not found.'}</p>
+        <p className="text-sm text-destructive">{error || t('ocd.notFound')}</p>
         <Button asChild variant="outline">
-          <Link href="/organizer-competitions">Back to competitions</Link>
+          <Link href="/organizer-competitions">{t('ocd.backToComps')}</Link>
         </Button>
       </div>
     );
@@ -152,19 +154,19 @@ export default function CompetitionDetailPage() {
   return (
     <div className="mx-auto max-w-[1100px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="My competitions"
+        eyebrow={t('ocd.eyebrow')}
         title={competition.name}
         actions={
           <>
             <Button asChild variant="outline">
               <Link href={`/organizer-competitions/${id}/edit`}>
                 <Pencil className="size-4" />
-                Edit
+                {t('ocd.edit')}
               </Link>
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
               <Trash2 className="size-4" />
-              {deleting ? 'Deleting…' : 'Delete'}
+              {deleting ? t('ocd.deleting') : t('ocd.delete')}
             </Button>
           </>
         }
@@ -180,51 +182,51 @@ export default function CompetitionDetailPage() {
         >
           {competition.registrationStatus}
         </Badge>
-        <span className="text-xs text-muted-foreground">Created {fmtDate(competition.createdAt)}</span>
+        <span className="text-xs text-muted-foreground">{t('ocd.created', { date: fmtDate(competition.createdAt) })}</span>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <Section title="Competition details">
+        <Section title={t('ocd.details')}>
           <dl className="grid grid-cols-2 gap-4">
-            <Row label="Category" value={competition.category || '—'} />
-            <Row label="Grade level" value={competition.gradeLevel || '—'} />
-            <Row label="Organizer" value={competition.organizerName || '—'} />
-            <Row label="International" value={competition.isInternational ? 'Yes' : 'No'} />
+            <Row label={t('cf.category')} value={competition.category || '—'} />
+            <Row label={t('cf.gradeLevel')} value={competition.gradeLevel || '—'} />
+            <Row label={t('ocd.organizer')} value={competition.organizerName || '—'} />
+            <Row label={t('ocd.international')} value={competition.isInternational ? t('cf.yes') : t('cf.no')} />
           </dl>
         </Section>
 
-        <Section title="Pricing & quota">
+        <Section title={t('ocd.pricingQuota')}>
           <dl className="grid grid-cols-3 gap-4">
-            <Row label="Fee" value={<span className="font-semibold">{fmtRp(competition.fee)}</span>} />
-            <Row label="Quota" value={competition.quota ? `${competition.quota}` : 'Unlimited'} />
+            <Row label={t('ocd.fee')} value={<span className="font-semibold">{competition.fee === 0 ? t('acp.free') : fmtRp(competition.fee)}</span>} />
+            <Row label={t('cf.quota')} value={competition.quota ? `${competition.quota}` : t('ocd.unlimited')} />
             <Row
-              label="Registrations"
+              label={t('ocd.registrations')}
               value={<span className="font-semibold">{competition.registrationCount || 0}</span>}
             />
           </dl>
         </Section>
       </div>
 
-      <Section title="Important dates">
+      <Section title={t('ocd.importantDates')}>
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Row label="Registration opens" value={fmtDate(competition.regOpenDate)} />
-          <Row label="Registration closes" value={fmtDate(competition.regCloseDate)} />
-          <Row label="Competition date" value={fmtDate(competition.competitionDate)} />
+          <Row label={t('ocd.regOpens')} value={fmtDate(competition.regOpenDate)} />
+          <Row label={t('ocd.regCloses')} value={fmtDate(competition.regCloseDate)} />
+          <Row label={t('ocd.compDate')} value={fmtDate(competition.competitionDate)} />
         </dl>
       </Section>
 
       {(competition.description || competition.detailedDescription) && (
-        <Section title="Description">
+        <Section title={t('ocd.description')}>
           <div className="space-y-4">
             {competition.description && (
               <Row
-                label="Short description"
+                label={t('cf.shortDesc')}
                 value={<span className="whitespace-pre-wrap">{competition.description}</span>}
               />
             )}
             {competition.detailedDescription && (
               <Row
-                label="Detailed description"
+                label={t('cf.detailedDesc')}
                 value={<span className="whitespace-pre-wrap">{competition.detailedDescription}</span>}
               />
             )}
@@ -233,7 +235,7 @@ export default function CompetitionDetailPage() {
       )}
 
       {competition.requiredDocs?.length > 0 && (
-        <Section title="Required documents">
+        <Section title={t('cf.requiredDocs')}>
           <div className="flex flex-wrap gap-2">
             {competition.requiredDocs.map((doc, i) => (
               <Badge key={i} variant="secondary" className="font-normal">
@@ -245,7 +247,7 @@ export default function CompetitionDetailPage() {
       )}
 
       {(competition.imageUrl || competition.posterUrl || competition.websiteUrl) && (
-        <Section title="Media & links">
+        <Section title={t('cf.mediaLinks')}>
           <div className="flex flex-col gap-2">
             {competition.imageUrl && (
               <a
@@ -254,7 +256,7 @@ export default function CompetitionDetailPage() {
                 rel="noopener noreferrer"
                 className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
               >
-                Thumbnail image <ExternalLink className="size-3.5" />
+                {t('ocd.thumbnail')} <ExternalLink className="size-3.5" />
               </a>
             )}
             {competition.posterUrl && (
@@ -264,7 +266,7 @@ export default function CompetitionDetailPage() {
                 rel="noopener noreferrer"
                 className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
               >
-                Poster <ExternalLink className="size-3.5" />
+                {t('ocd.poster')} <ExternalLink className="size-3.5" />
               </a>
             )}
             {competition.websiteUrl && (
@@ -274,7 +276,7 @@ export default function CompetitionDetailPage() {
                 rel="noopener noreferrer"
                 className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
               >
-                Official website <ExternalLink className="size-3.5" />
+                {t('ocd.website')} <ExternalLink className="size-3.5" />
               </a>
             )}
           </div>
@@ -282,37 +284,32 @@ export default function CompetitionDetailPage() {
       )}
 
       {competition.participantInstructions && (
-        <Section title="Participant instructions">
+        <Section title={t('ocd.participantInstructions')}>
           <p className="whitespace-pre-wrap text-sm text-foreground">
             {competition.participantInstructions}
           </p>
         </Section>
       )}
 
-      <Section title="CSV template for bulk registration">
-        <p className="mb-4 text-sm text-muted-foreground">
-          Upload a sample CSV showing teachers the columns and format to use when bulk-registering
-          students for this competition.
-        </p>
+      <Section title={t('ocd.csvTitle')}>
+        <p className="mb-4 text-sm text-muted-foreground">{t('ocd.csvDesc')}</p>
 
         {competition.csvTemplateUrl ? (
           <div className="mb-4 flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3">
             <Download className="size-4 text-muted-foreground" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">Template uploaded</p>
-              <p className="text-xs text-muted-foreground">
-                Teachers can download this to see the expected format.
-              </p>
+              <p className="text-sm font-medium text-foreground">{t('ocd.templateUploaded')}</p>
+              <p className="text-xs text-muted-foreground">{t('ocd.templateUploadedHint')}</p>
             </div>
             <Button asChild size="sm" variant="outline">
               <a href={competition.csvTemplateUrl} download>
-                Download
+                {t('ocd.download')}
               </a>
             </Button>
           </div>
         ) : (
           <div className="mb-4 rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
-            No template uploaded. Teachers use the standard format:{' '}
+            {t('ocd.noTemplate')}{' '}
             <code className="rounded bg-background px-1 py-0.5 font-mono">
               full_name, email, nisn, grade, school_name, phone
             </code>
@@ -329,7 +326,7 @@ export default function CompetitionDetailPage() {
           />
           <Button onClick={handleTemplateUpload} disabled={!templateFile || uploading}>
             <Upload className="size-4" />
-            {uploading ? 'Uploading…' : competition.csvTemplateUrl ? 'Replace' : 'Upload'}
+            {uploading ? t('ocd.uploading') : competition.csvTemplateUrl ? t('ocd.replace') : t('ocd.upload')}
           </Button>
         </div>
       </Section>

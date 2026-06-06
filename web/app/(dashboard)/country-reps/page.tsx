@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2 } from 'lucide-react';
 import { countryRepHttp } from '@/lib/api/client';
 import { competitionsApi } from '@/lib/api';
+import { useT } from '@/lib/i18n/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,6 +54,7 @@ interface CompOption {
 const FORM_DEFAULTS = { fullName: '', email: '', password: '', country: '', compId: '' };
 
 export default function CountryRepsPage() {
+  const t = useT();
   const [reps, setReps] = useState<Rep[]>([]);
   const [comps, setComps] = useState<CompOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +67,7 @@ export default function CountryRepsPage() {
     try {
       setReps(await countryRepHttp.get<Rep[]>('/country-representatives'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load representatives');
+      toast.error(e instanceof Error ? e.message : t('cr.failLoad'));
     } finally {
       setLoading(false);
     }
@@ -83,40 +85,40 @@ export default function CountryRepsPage() {
 
   const save = async () => {
     if (!form.fullName || !form.email || !form.password || !form.country || !form.compId) {
-      toast.error('All fields are required.');
+      toast.error(t('cr.allRequired'));
       return;
     }
     setSaving(true);
     try {
       await countryRepHttp.post('/country-representatives', form);
-      toast.success('Representative created.');
+      toast.success(t('cr.created'));
       setShowForm(false);
       setForm(FORM_DEFAULTS);
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create representative');
+      toast.error(e instanceof Error ? e.message : t('cr.failCreate'));
     } finally {
       setSaving(false);
     }
   };
 
   const remove = async (id: string, name: string) => {
-    if (!confirm(`Remove ${name}? Their account will be deactivated.`)) return;
+    if (!confirm(t('cr.confirmRemove', { name }))) return;
     try {
       await countryRepHttp.delete(`/country-representatives/${id}`);
-      toast.success('Representative removed.');
+      toast.success(t('cr.removed'));
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to remove representative');
+      toast.error(e instanceof Error ? e.message : t('cr.failRemove'));
     }
   };
 
   return (
     <div className="mx-auto max-w-[1100px] space-y-6 p-6 lg:p-8">
       <PageHeader
-        eyebrow="Schools & Users"
-        title="Country Representatives"
-        subtitle="Representatives manage a country's students for a competition's local round."
+        eyebrow={t('cr.eyebrow')}
+        title={t('cr.title')}
+        subtitle={t('cr.subtitle')}
         actions={
           <Button
             onClick={() => {
@@ -125,7 +127,7 @@ export default function CountryRepsPage() {
             }}
           >
             <Plus className="size-4" />
-            New representative
+            {t('cr.newRep')}
           </Button>
         }
       />
@@ -135,11 +137,11 @@ export default function CountryRepsPage() {
           <Table className="min-w-[1024px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead className="w-40">Country</TableHead>
-                <TableHead>Competition</TableHead>
-                <TableHead className="w-20 text-right">Actions</TableHead>
+                <TableHead>{t('adm.colName')}</TableHead>
+                <TableHead>{t('adm.colEmail')}</TableHead>
+                <TableHead className="w-40">{t('cr.colCountry')}</TableHead>
+                <TableHead>{t('cr.colCompetition')}</TableHead>
+                <TableHead className="w-20 text-right">{t('acp.colActions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -154,7 +156,7 @@ export default function CountryRepsPage() {
               ) : reps.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-28 text-center text-sm text-muted-foreground">
-                    No country representatives yet.
+                    {t('cr.empty')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -189,15 +191,12 @@ export default function CountryRepsPage() {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>New country representative</DialogTitle>
-            <DialogDescription>
-              Create the account and assign a competition + country. Share the password with the
-              representative.
-            </DialogDescription>
+            <DialogTitle>{t('cr.dialogTitle')}</DialogTitle>
+            <DialogDescription>{t('cr.dialogDesc')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="mb-1.5 text-xs text-muted-foreground">Full name</Label>
+              <Label className="mb-1.5 text-xs text-muted-foreground">{t('cr.fullName')}</Label>
               <Input
                 value={form.fullName}
                 onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
@@ -205,7 +204,7 @@ export default function CountryRepsPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <Label className="mb-1.5 text-xs text-muted-foreground">Email</Label>
+                <Label className="mb-1.5 text-xs text-muted-foreground">{t('cr.email')}</Label>
                 <Input
                   type="email"
                   value={form.email}
@@ -213,7 +212,7 @@ export default function CountryRepsPage() {
                 />
               </div>
               <div>
-                <Label className="mb-1.5 text-xs text-muted-foreground">Password</Label>
+                <Label className="mb-1.5 text-xs text-muted-foreground">{t('cr.password')}</Label>
                 <Input
                   value={form.password}
                   onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
@@ -222,7 +221,7 @@ export default function CountryRepsPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <Label className="mb-1.5 text-xs text-muted-foreground">Country</Label>
+                <Label className="mb-1.5 text-xs text-muted-foreground">{t('cr.country')}</Label>
                 <Input
                   value={form.country}
                   onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
@@ -230,13 +229,13 @@ export default function CountryRepsPage() {
                 />
               </div>
               <div>
-                <Label className="mb-1.5 text-xs text-muted-foreground">Competition</Label>
+                <Label className="mb-1.5 text-xs text-muted-foreground">{t('cr.competition')}</Label>
                 <Select
                   value={form.compId || undefined}
                   onValueChange={(v) => setForm((f) => ({ ...f, compId: v }))}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select…" />
+                    <SelectValue placeholder={t('acp.selectPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {comps.map((c) => (
@@ -251,10 +250,10 @@ export default function CountryRepsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowForm(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={save} disabled={saving}>
-              {saving ? 'Creating…' : 'Create representative'}
+              {saving ? t('cr.creating') : t('cr.createRep')}
             </Button>
           </DialogFooter>
         </DialogContent>
