@@ -25,13 +25,17 @@ import { replaceRounds, type RoundInput } from "../services/competition-rounds.s
 const COMP_ID = "comp-komodo";
 const COMP_SLUG = "komodo";
 
-// Local YYYY-MM-DD offset by `days` — not toISOString() (UTC can land a day off).
+// A calendar date offset by `days`, stored at NOON UTC so the day survives the
+// round-trip through the TIMESTAMPTZ columns in any timezone (a bare YYYY-MM-DD
+// is read as midnight in the DB session TZ and reads back one day early east of
+// UTC — see backend/src/lib/date-utils.ts).
 function ymd(days = 0): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate(),
   ).padStart(2, "0")}`;
+  return `${date}T12:00:00.000Z`;
 }
 
 // Numeric grades 1–12.

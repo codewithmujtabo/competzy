@@ -4,6 +4,7 @@
 // transaction.
 
 import type { PoolClient } from "pg";
+import { dateOnlyToNoonUtc } from "../lib/date-utils";
 
 const VALID_ROUND_TYPES = ["Online", "On-site", "Hybrid"];
 const VALID_RULES = ["registered", "paid", "completed"];
@@ -102,10 +103,10 @@ export async function replaceRounds(
         compId,
         r.roundName || `Round ${i + 1}`,
         roundType,
-        r.startDate || null,
-        r.registrationDeadline || null,
-        r.examDate || null,
-        r.resultsDate || null,
+        dateOnlyToNoonUtc(r.startDate),
+        dateOnlyToNoonUtc(r.registrationDeadline),
+        dateOnlyToNoonUtc(r.examDate),
+        dateOnlyToNoonUtc(r.resultsDate),
         r.fee || 0,
         // NUMERIC accepts null; the column means "no international price".
         r.feeInternational != null && Number.isFinite(Number(r.feeInternational))

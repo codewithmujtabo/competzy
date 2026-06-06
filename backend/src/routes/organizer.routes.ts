@@ -8,6 +8,7 @@ import * as pushService from "../services/push.service";
 import { storeFile } from "../services/storage.service";
 import { seedDefaultFlow } from "../services/competition-flow.service";
 import { replaceRounds } from "../services/competition-rounds.service";
+import { dateOnlyToNoonUtc } from "../lib/date-utils";
 
 const csvUpload = multer({
   storage: multer.memoryStorage(),
@@ -207,8 +208,8 @@ router.post("/competitions", audit({ action: "organizer.competition.create", res
         websiteUrl ?? null, registrationStatus ?? "Coming Soon",
         posterUrl ?? null, isInternational ?? false,
         detailedDescription ?? null, description ?? null,
-        fee ?? 0, quota ?? null, regOpenDate ?? null, regCloseDate ?? null,
-        competitionDate ?? null, requiredDocs ?? [], imageUrl ?? null,
+        fee ?? 0, quota ?? null, dateOnlyToNoonUtc(regOpenDate), dateOnlyToNoonUtc(regCloseDate),
+        dateOnlyToNoonUtc(competitionDate), requiredDocs ?? [], imageUrl ?? null,
         rounds?.length ?? 0, participantInstructions ?? null, req.userId,
         postPaymentRedirectUrl ?? null, kind, compSlug,
       ]
@@ -264,7 +265,7 @@ router.put("/competitions/:id", audit({ action: "organizer.competition.update", 
       [
         name, organizerName, category, gradeLevel, websiteUrl,
         registrationStatus, posterUrl, isInternational, detailedDescription,
-        description, fee, quota, regOpenDate, regCloseDate, competitionDate,
+        description, fee, quota, dateOnlyToNoonUtc(regOpenDate), dateOnlyToNoonUtc(regCloseDate), dateOnlyToNoonUtc(competitionDate),
         requiredDocs ?? [], imageUrl, rounds?.length ?? 0,
         participantInstructions ?? null, postPaymentRedirectUrl ?? null, kind, id,
       ]

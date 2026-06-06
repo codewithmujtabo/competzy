@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { pool } from "../config/database";
 import { dbErrorResponse } from "../lib/db-errors";
+import { dateOnlyToNoonUtc } from "../lib/date-utils";
 import { adminOnly } from "../middleware/admin.middleware";
 import { authMiddleware } from "../middleware/auth";
 import { audit } from "../middleware/audit";
@@ -89,9 +90,9 @@ router.post("/competitions", audit({ action: "admin.competition.create", resourc
     const organizerName   = req.body.organizerName   ?? req.body.organizer_name;
     const gradeLevel      = req.body.gradeLevel      ?? req.body.grade_level;
     const websiteUrl      = req.body.websiteUrl      ?? req.body.website_url;
-    const regOpenDate     = req.body.regOpenDate     ?? req.body.reg_open_date;
-    const regCloseDate    = req.body.regCloseDate    ?? req.body.reg_close_date;
-    const competitionDate = req.body.competitionDate ?? req.body.competition_date;
+    const regOpenDate     = dateOnlyToNoonUtc(req.body.regOpenDate     ?? req.body.reg_open_date);
+    const regCloseDate    = dateOnlyToNoonUtc(req.body.regCloseDate    ?? req.body.reg_close_date);
+    const competitionDate = dateOnlyToNoonUtc(req.body.competitionDate ?? req.body.competition_date);
     const postPaymentRedirectUrl = req.body.postPaymentRedirectUrl ?? req.body.post_payment_redirect_url;
     const kind: "native" | "affiliated" = req.body.kind === "affiliated" ? "affiliated" : "native";
     const organizerId: string | undefined = req.body.organizerId ?? req.body.organizer_id;
@@ -212,9 +213,9 @@ router.put("/competitions/:id", audit({ action: "admin.competition.update", reso
     const organizerName   = req.body.organizerName   ?? req.body.organizer_name;
     const gradeLevel      = req.body.gradeLevel      ?? req.body.grade_level;
     const websiteUrl      = req.body.websiteUrl      ?? req.body.website_url;
-    const regOpenDate     = req.body.regOpenDate     ?? req.body.reg_open_date;
-    const regCloseDate    = req.body.regCloseDate    ?? req.body.reg_close_date;
-    const competitionDate = req.body.competitionDate ?? req.body.competition_date;
+    const regOpenDate     = dateOnlyToNoonUtc(req.body.regOpenDate     ?? req.body.reg_open_date);
+    const regCloseDate    = dateOnlyToNoonUtc(req.body.regCloseDate    ?? req.body.reg_close_date);
+    const competitionDate = dateOnlyToNoonUtc(req.body.competitionDate ?? req.body.competition_date);
     const postPaymentRedirectUrl = req.body.postPaymentRedirectUrl ?? req.body.post_payment_redirect_url;
     const kind: "native" | "affiliated" = req.body.kind === "affiliated" ? "affiliated" : "native";
     const organizerId: string | undefined = req.body.organizerId ?? req.body.organizer_id;
