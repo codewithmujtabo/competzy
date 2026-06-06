@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import { ArrowLeft, Loader2, Save, Search } from 'lucide-react';
 import { questionBankHttp } from '@/lib/auth/question-bank-context';
 import { useQuestionBank } from '@/lib/question-bank/context';
+import { useT } from '@/lib/i18n/context';
+import type { MessageKey } from '@/lib/i18n/messages/en';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -69,8 +71,14 @@ interface LoadedExam {
 
 const LEVELS = ['easy', 'medium', 'hard'] as const;
 type Level = (typeof LEVELS)[number];
+const LEVEL_KEY: Record<Level, MessageKey> = {
+  easy: 'qe.levelEasy',
+  medium: 'qe.levelMedium',
+  hard: 'qe.levelHard',
+};
 
 export default function ExamEditorPage() {
+  const t = useT();
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const isNew = id === 'new';
@@ -226,7 +234,7 @@ export default function ExamEditorPage() {
 
   const saveBlueprint = async () => {
     if (!name.trim() || !code.trim()) {
-      toast.error('Name and code are required.');
+      toast.error(t('eb.nameCodeRequired'));
       return;
     }
     setSavingBlueprint(true);
@@ -236,7 +244,7 @@ export default function ExamEditorPage() {
           '/question-bank/exams',
           buildPayload(),
         );
-        toast.success(`${created.code} created.`);
+        toast.success(t('eb.created', { code: created.code }));
         router.push(`/question-bank/exams/${created.id}`);
       } else {
         const updated = await questionBankHttp.put<LoadedExam>(
@@ -244,10 +252,10 @@ export default function ExamEditorPage() {
           buildPayload(),
         );
         populate(updated);
-        toast.success('Exam saved.');
+        toast.success(t('eb.saved'));
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save the exam');
+      toast.error(e instanceof Error ? e.message : t('eb.failSave'));
     } finally {
       setSavingBlueprint(false);
     }
@@ -259,9 +267,9 @@ export default function ExamEditorPage() {
       await questionBankHttp.put(`/question-bank/exams/${id}/questions`, {
         questionIds: [...attached],
       });
-      toast.success('Question set saved.');
+      toast.success(t('eb.questionSetSaved'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save the question set');
+      toast.error(e instanceof Error ? e.message : t('eb.failSaveQuestionSet'));
     } finally {
       setSavingQuestions(false);
     }
@@ -287,10 +295,10 @@ export default function ExamEditorPage() {
     return (
       <div className="mx-auto max-w-[900px] space-y-6 p-6 lg:p-8">
         <Card className="p-12 text-center">
-          <p className="text-sm font-medium text-foreground">Exam not found</p>
+          <p className="text-sm font-medium text-foreground">{t('eb.notFound')}</p>
           <Button variant="outline" className="mt-4" onClick={() => router.push('/question-bank/exams')}>
             <ArrowLeft className="size-4" />
-            Back to exams
+            {t('eb.backToExams')}
           </Button>
         </Card>
       </div>
@@ -307,39 +315,35 @@ export default function ExamEditorPage() {
           onClick={() => router.push('/question-bank/exams')}
         >
           <ArrowLeft className="size-4" />
-          Exams
+          {t('eb.exams')}
         </Button>
         <PageHeader
-          eyebrow="Question Bank"
-          title={isNew ? 'New exam' : exam?.code ?? 'Exam'}
-          subtitle={
-            isNew
-              ? 'Define the exam, then attach approved questions.'
-              : 'Edit the blueprint and the question set.'
-          }
+          eyebrow={t('opnav.questionBank')}
+          title={isNew ? t('eb.newExam') : exam?.code ?? t('eb.exam')}
+          subtitle={isNew ? t('eb.newSubtitle') : t('eb.editSubtitle')}
         />
       </div>
 
       {/* Blueprint */}
       <Card className="space-y-4 p-6">
         <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-          Blueprint
+          {t('eb.blueprint')}
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label className="mb-1.5 text-xs text-muted-foreground">
-              Name <span className="text-destructive">*</span>
+              {t('eb.name')} <span className="text-destructive">*</span>
             </Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="EMC Round 1" />
           </div>
           <div>
             <Label className="mb-1.5 text-xs text-muted-foreground">
-              Code <span className="text-destructive">*</span>
+              {t('eb.code')} <span className="text-destructive">*</span>
             </Label>
             <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="EX-R1" />
           </div>
           <div>
-            <Label className="mb-1.5 text-xs text-muted-foreground">Year</Label>
+            <Label className="mb-1.5 text-xs text-muted-foreground">{t('eb.year')}</Label>
             <Input
               type="number"
               value={year}
@@ -348,44 +352,38 @@ export default function ExamEditorPage() {
             />
           </div>
           <div className="sm:col-span-2">
-            <Label className="mb-1.5 text-xs text-muted-foreground">
-              Round binding
-            </Label>
+            <Label className="mb-1.5 text-xs text-muted-foreground">{t('eb.roundBinding')}</Label>
             <Select value={roundId} onValueChange={setRoundId}>
               <SelectTrigger>
-                <SelectValue placeholder="Not tied to a round" />
+                <SelectValue placeholder={t('eb.notTiedRound')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Not tied to a round</SelectItem>
+                <SelectItem value="none">{t('eb.notTiedRound')}</SelectItem>
                 {compRounds.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
                     {r.roundName}
                     {r.roundCategory ? ` · ${r.roundCategory}` : ''}
-                    {r.isActive === false ? ' · inactive' : ''}
+                    {r.isActive === false ? ` · ${t('eb.inactive')}` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="mt-1 text-xs text-muted-foreground">
-              When set, only students who registered + paid for this round see
-              the exam. Leave on &ldquo;Not tied to a round&rdquo; for single-round
-              competitions.
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('eb.roundBindingHint')}</p>
           </div>
           <div>
-            <Label className="mb-1.5 text-xs text-muted-foreground">Exam date</Label>
+            <Label className="mb-1.5 text-xs text-muted-foreground">{t('eb.examDate')}</Label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
           <div>
-            <Label className="mb-1.5 text-xs text-muted-foreground">Start time</Label>
+            <Label className="mb-1.5 text-xs text-muted-foreground">{t('eb.startTime')}</Label>
             <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
           </div>
           <div>
-            <Label className="mb-1.5 text-xs text-muted-foreground">End time</Label>
+            <Label className="mb-1.5 text-xs text-muted-foreground">{t('eb.endTime')}</Label>
             <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
           </div>
           <div>
-            <Label className="mb-1.5 text-xs text-muted-foreground">Duration (minutes)</Label>
+            <Label className="mb-1.5 text-xs text-muted-foreground">{t('eb.duration')}</Label>
             <Input
               type="number"
               value={minutes}
@@ -395,7 +393,7 @@ export default function ExamEditorPage() {
           </div>
         </div>
         <div>
-          <Label className="mb-1.5 text-xs text-muted-foreground">Grades</Label>
+          <Label className="mb-1.5 text-xs text-muted-foreground">{t('qe.grades')}</Label>
           <div className="flex flex-wrap gap-2">
             {GRADE_OPTIONS.map((g) => (
               <label
@@ -421,7 +419,7 @@ export default function ExamEditorPage() {
               onChange={(e) => setChoice(e.target.checked)}
               className="size-4 accent-primary"
             />
-            Has multiple-choice questions
+            {t('eb.hasMc')}
           </label>
           <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
             <input
@@ -430,16 +428,16 @@ export default function ExamEditorPage() {
               onChange={(e) => setShort(e.target.checked)}
               className="size-4 accent-primary"
             />
-            Has short-answer questions
+            {t('eb.hasShort')}
           </label>
         </div>
         <div>
-          <Label className="mb-1.5 text-xs text-muted-foreground">Description</Label>
+          <Label className="mb-1.5 text-xs text-muted-foreground">{t('eb.description')}</Label>
           <textarea
             rows={2}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Optional — instructions shown to students."
+            placeholder={t('eb.descriptionPlaceholder')}
             className={TEXTAREA_CLS}
           />
         </div>
@@ -449,12 +447,9 @@ export default function ExamEditorPage() {
       {grades.length > 0 && (
         <Card className="space-y-3 p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-            Scoring per grade
+            {t('eb.scoringPerGrade')}
           </p>
-          <p className="text-xs text-muted-foreground">
-            Points awarded per correct answer and per wrong answer (use a negative value for a
-            penalty). Blank answers always score 0.
-          </p>
+          <p className="text-xs text-muted-foreground">{t('eb.scoringHint')}</p>
           <div className="space-y-2">
             {grades.map((g) => (
               <div key={g} className="flex flex-wrap items-center gap-3">
@@ -462,7 +457,7 @@ export default function ExamEditorPage() {
                   {g}
                 </Badge>
                 <div className="flex items-center gap-1.5">
-                  <Label className="text-xs text-muted-foreground">Correct</Label>
+                  <Label className="text-xs text-muted-foreground">{t('eb.correct')}</Label>
                   <Input
                     type="number"
                     className="h-8 w-24"
@@ -472,7 +467,7 @@ export default function ExamEditorPage() {
                   />
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Label className="text-xs text-muted-foreground">Wrong</Label>
+                  <Label className="text-xs text-muted-foreground">{t('eb.wrong')}</Label>
                   <Input
                     type="number"
                     className="h-8 w-24"
@@ -490,20 +485,16 @@ export default function ExamEditorPage() {
       {/* Per-difficulty question count — matches Komodo's blueprint UX. */}
       <Card className="space-y-3 p-6">
         <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-          Question count per difficulty
+          {t('eb.countPerDifficulty')}
         </p>
-        <p className="text-xs text-muted-foreground">
-          Target number of multiple-choice and short-answer questions at each difficulty
-          level. Used by the question-set picker below as a visual guide — leave a row
-          blank if the level isn’t used.
-        </p>
+        <p className="text-xs text-muted-foreground">{t('eb.countHint')}</p>
         <div className="grid grid-cols-[80px_1fr_1fr] items-end gap-3 text-xs">
-          <span className="font-mono uppercase tracking-wide text-muted-foreground">Level</span>
+          <span className="font-mono uppercase tracking-wide text-muted-foreground">{t('eb.level')}</span>
           <span className="font-mono uppercase tracking-wide text-muted-foreground">
-            Multiple choice
+            {t('eb.multipleChoice')}
           </span>
           <span className="font-mono uppercase tracking-wide text-muted-foreground">
-            Short answer
+            {t('eb.shortAnswer')}
           </span>
         </div>
         {LEVELS.map((lvl) => (
@@ -511,8 +502,8 @@ export default function ExamEditorPage() {
             key={lvl}
             className="grid grid-cols-[80px_1fr_1fr] items-center gap-3"
           >
-            <Badge variant="outline" className="w-fit justify-center font-mono text-[11px] capitalize">
-              {lvl}
+            <Badge variant="outline" className="w-fit justify-center font-mono text-[11px]">
+              {t(LEVEL_KEY[lvl])}
             </Badge>
             <Input
               type="number"
@@ -535,19 +526,17 @@ export default function ExamEditorPage() {
           </div>
         ))}
         {!choice && !short && (
-          <p className="text-xs text-amber-700 dark:text-amber-400">
-            Enable Multiple-choice and/or Short-answer at the top to set counts.
-          </p>
+          <p className="text-xs text-amber-700 dark:text-amber-400">{t('eb.enableHint')}</p>
         )}
       </Card>
 
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={() => router.push('/question-bank/exams')}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button onClick={saveBlueprint} disabled={savingBlueprint}>
           <Save className="size-4" />
-          {savingBlueprint ? 'Saving…' : isNew ? 'Create exam' : 'Save changes'}
+          {savingBlueprint ? t('cf.saving') : isNew ? t('eb.createExam') : t('eb.saveChanges')}
         </Button>
       </div>
 
@@ -557,15 +546,15 @@ export default function ExamEditorPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                Question set
+                {t('eb.questionSet')}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {attached.size} of {pool.length} approved questions selected.
+                {t('eb.selectedCount', { attached: attached.size, pool: pool.length })}
               </p>
             </div>
             <Button onClick={saveQuestions} disabled={savingQuestions}>
               <Save className="size-4" />
-              {savingQuestions ? 'Saving…' : 'Save question set'}
+              {savingQuestions ? t('cf.saving') : t('eb.saveQuestionSet')}
             </Button>
           </div>
 
@@ -573,7 +562,7 @@ export default function ExamEditorPage() {
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-9"
-              placeholder="Filter by code or content…"
+              placeholder={t('eb.filterPlaceholder')}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             />
@@ -581,8 +570,7 @@ export default function ExamEditorPage() {
 
           {pool.length === 0 ? (
             <p className="rounded-lg border border-dashed py-8 text-center text-xs text-muted-foreground">
-              No approved questions in this competition yet. Approve questions on the Review screen
-              first.
+              {t('eb.noApproved')}
             </p>
           ) : (
             <ul className="max-h-96 space-y-1 overflow-y-auto">
@@ -599,7 +587,7 @@ export default function ExamEditorPage() {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-[11px] text-muted-foreground">{q.code}</span>
                         <Badge variant="outline" className="font-mono text-[9px]">
-                          {q.type === 'short_answer' ? 'Short' : 'MC'}
+                          {q.type === 'short_answer' ? t('eb.badgeShort') : t('eb.badgeMc')}
                         </Badge>
                         {q.grades.map((g) => (
                           <Badge key={g} variant="outline" className="font-mono text-[9px]">
