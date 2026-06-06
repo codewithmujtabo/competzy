@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { questionBankHttp } from '@/lib/auth/question-bank-context';
+import { useT } from '@/lib/i18n/context';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +62,7 @@ interface Entry {
 const sum = (o: { choice?: number; short?: number }) => (o.choice ?? 0) + (o.short ?? 0);
 
 export default function PaperExamSheetPage() {
+  const t = useT();
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [paper, setPaper] = useState<PaperExam | null>(null);
@@ -117,7 +119,7 @@ export default function PaperExamSheetPage() {
         `/question-bank/paper-exams/${id}/answers`,
         { answers },
       );
-      toast.success('Answer sheet saved.');
+      toast.success(t('pp.sheetSaved'));
       setPaper(updated);
       const next: Record<string, Entry> = {};
       for (const a of updated.answers) {
@@ -129,7 +131,7 @@ export default function PaperExamSheetPage() {
       }
       setEntries(next);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save the answer sheet');
+      toast.error(e instanceof Error ? e.message : t('pp.failSave'));
     } finally {
       setSaving(false);
     }
@@ -147,10 +149,10 @@ export default function PaperExamSheetPage() {
     return (
       <div className="mx-auto max-w-[900px] space-y-6 p-6 lg:p-8">
         <Card className="p-12 text-center">
-          <p className="text-sm font-medium text-foreground">Paper exam not found</p>
+          <p className="text-sm font-medium text-foreground">{t('pp.notFound')}</p>
           <Button variant="outline" className="mt-4" onClick={() => router.push('/question-bank/paper')}>
             <ArrowLeft className="size-4" />
-            Back to paper exams
+            {t('pp.backToPaper')}
           </Button>
         </Card>
       </div>
@@ -167,13 +169,13 @@ export default function PaperExamSheetPage() {
           onClick={() => router.push('/question-bank/paper')}
         >
           <ArrowLeft className="size-4" />
-          Paper exams
+          {t('pp.paperExams')}
         </Button>
         <PageHeader
-          eyebrow={`Question Bank · ${paper.examCode}`}
+          eyebrow={`${t('opnav.questionBank')} · ${paper.examCode}`}
           title={paper.studentName}
           subtitle={[
-            paper.grade ? `Grade ${paper.grade}` : null,
+            paper.grade ? t('pp.grade', { g: paper.grade }) : null,
             paper.examName,
             paper.testCenterName,
           ]
@@ -182,7 +184,7 @@ export default function PaperExamSheetPage() {
           actions={
             <Button onClick={save} disabled={saving}>
               <Save className="size-4" />
-              {saving ? 'Saving…' : 'Save answer sheet'}
+              {saving ? t('cf.saving') : t('pp.saveSheet')}
             </Button>
           }
         />
@@ -191,14 +193,14 @@ export default function PaperExamSheetPage() {
       <Card className="flex flex-wrap items-center gap-6 p-5">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-            Total score
+            {t('pp.totalScore')}
           </p>
           <p className="font-serif text-2xl font-medium text-foreground">{paper.totalPoint ?? 0}</p>
         </div>
         <div className="flex gap-4 text-sm">
-          <span className="text-emerald-600 dark:text-emerald-400">{sum(paper.corrects)} correct</span>
-          <span className="text-red-600 dark:text-red-400">{sum(paper.wrongs)} wrong</span>
-          <span className="text-muted-foreground">{sum(paper.blanks)} blank</span>
+          <span className="text-emerald-600 dark:text-emerald-400">{t('pp.correctCount', { n: sum(paper.corrects) })}</span>
+          <span className="text-red-600 dark:text-red-400">{t('pp.wrongCount', { n: sum(paper.wrongs) })}</span>
+          <span className="text-muted-foreground">{t('pp.blankCount', { n: sum(paper.blanks) })}</span>
         </div>
       </Card>
 
@@ -212,16 +214,16 @@ export default function PaperExamSheetPage() {
                   Q{a.number}
                 </Badge>
                 <Badge variant="outline" className="font-mono text-[9px]">
-                  {a.type === 'short_answer' ? 'Short answer' : 'Multiple choice'}
+                  {a.type === 'short_answer' ? t('qe.sa') : t('qe.mc')}
                 </Badge>
                 {a.isCorrect === true && (
                   <Badge className="bg-emerald-600 font-mono text-[9px] text-white">
-                    Correct · {a.point ?? 0}
+                    {t('pp.correctPoint', { pt: a.point ?? 0 })}
                   </Badge>
                 )}
                 {a.isCorrect === false && (
                   <Badge variant="destructive" className="font-mono text-[9px]">
-                    Wrong · {a.point ?? 0}
+                    {t('pp.wrongPoint', { pt: a.point ?? 0 })}
                   </Badge>
                 )}
               </div>
@@ -231,22 +233,22 @@ export default function PaperExamSheetPage() {
                 <div className="space-y-3">
                   <div>
                     <Label className="mb-1.5 text-xs text-muted-foreground">
-                      Student's written answer
+                      {t('pp.writtenAnswer')}
                     </Label>
                     <Input
                       value={e.value}
                       onChange={(ev) => setEntry(a.id, { value: ev.target.value })}
-                      placeholder="What the student wrote on paper…"
+                      placeholder={t('pp.writtenPlaceholder')}
                     />
                   </div>
                   {a.answerKey && (
                     <p className="text-xs text-muted-foreground">
-                      <span className="font-medium">Answer key:</span> {a.answerKey}
+                      <span className="font-medium">{t('pp.answerKey')}</span> {a.answerKey}
                     </p>
                   )}
                   <div className="flex flex-wrap items-end gap-2">
                     <div>
-                      <Label className="mb-1 text-xs text-muted-foreground">Mark</Label>
+                      <Label className="mb-1 text-xs text-muted-foreground">{t('pp.mark')}</Label>
                       <div className="flex gap-1">
                         <Button
                           type="button"
@@ -254,7 +256,7 @@ export default function PaperExamSheetPage() {
                           variant={e.mark === 'correct' ? 'default' : 'outline'}
                           onClick={() => setEntry(a.id, { mark: 'correct' })}
                         >
-                          Correct
+                          {t('pp.correct')}
                         </Button>
                         <Button
                           type="button"
@@ -262,7 +264,7 @@ export default function PaperExamSheetPage() {
                           variant={e.mark === 'wrong' ? 'default' : 'outline'}
                           onClick={() => setEntry(a.id, { mark: 'wrong' })}
                         >
-                          Wrong
+                          {t('pp.wrong')}
                         </Button>
                         <Button
                           type="button"
@@ -270,13 +272,13 @@ export default function PaperExamSheetPage() {
                           variant={e.mark === 'none' ? 'default' : 'outline'}
                           onClick={() => setEntry(a.id, { mark: 'none' })}
                         >
-                          Ungraded
+                          {t('pp.ungraded')}
                         </Button>
                       </div>
                     </div>
                     {e.mark !== 'none' && (
                       <div>
-                        <Label className="mb-1 text-xs text-muted-foreground">Points</Label>
+                        <Label className="mb-1 text-xs text-muted-foreground">{t('pp.points')}</Label>
                         <Input
                           type="number"
                           className="h-9 w-24"
@@ -290,7 +292,7 @@ export default function PaperExamSheetPage() {
               ) : (
                 <div>
                   <Label className="mb-1.5 text-xs text-muted-foreground">
-                    Option the student marked
+                    {t('pp.optionMarked')}
                   </Label>
                   <Select
                     value={e.value || BLANK}
@@ -300,7 +302,7 @@ export default function PaperExamSheetPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={BLANK}>— blank / not answered —</SelectItem>
+                      <SelectItem value={BLANK}>{t('pp.blankOption')}</SelectItem>
                       {a.options.map((o) => (
                         <SelectItem key={o.id} value={o.id}>
                           {o.content}
@@ -309,9 +311,7 @@ export default function PaperExamSheetPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    Multiple-choice answers grade automatically on save.
-                  </p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">{t('pp.mcAutoGrade')}</p>
                 </div>
               )}
             </Card>
@@ -322,7 +322,7 @@ export default function PaperExamSheetPage() {
       <div className="flex justify-end">
         <Button onClick={save} disabled={saving}>
           <Save className="size-4" />
-          {saving ? 'Saving…' : 'Save answer sheet'}
+          {saving ? t('cf.saving') : t('pp.saveSheet')}
         </Button>
       </div>
     </div>
