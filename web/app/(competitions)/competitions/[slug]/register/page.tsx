@@ -42,6 +42,7 @@ export default function CompetitionRegisterPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [country, setCountry] = useState<string | null>(null);
   // Province + city moved into the profile editor — registration only asks for
@@ -56,6 +57,7 @@ export default function CompetitionRegisterPage() {
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const phoneValid = phone === '' || /^\+?\d{8,15}$/.test(phone.replace(/[\s-]/g, ''));
   const passwordTooShort = password.length > 0 && password.length < 8;
+  const passwordMismatch = confirmPassword.length > 0 && confirmPassword !== password;
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -81,7 +83,7 @@ export default function CompetitionRegisterPage() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!emailValid || password.length < 8 || !consent || !phoneValid) return;
+    if (!emailValid || password.length < 8 || password !== confirmPassword || !consent || !phoneValid) return;
     setError('');
     setEmailTaken(false);
     setWarning('');
@@ -141,7 +143,7 @@ export default function CompetitionRegisterPage() {
   };
 
   const canSubmit =
-    !submitting && consent && !!fullName.trim() && emailValid && !passwordTooShort && password.length >= 8 && phoneValid;
+    !submitting && consent && !!fullName.trim() && emailValid && !passwordTooShort && password.length >= 8 && password === confirmPassword && phoneValid;
 
   if (!config) return null;
 
@@ -240,7 +242,7 @@ export default function CompetitionRegisterPage() {
               {!phoneValid && (
                 <p className="mt-1 text-xs text-destructive">
                   {t('creg.phoneInvalidPre')}
-                  <code className="font-mono">+628123456789</code>.
+                  <code className="font-mono">08123456789</code>.
                 </p>
               )}
             </div>
@@ -273,6 +275,28 @@ export default function CompetitionRegisterPage() {
               </div>
               {passwordTooShort && (
                 <p className="mt-1 text-xs text-destructive">{t('creg.passwordTooShort')}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="reg-pwd2" className="mb-1.5 text-xs text-muted-foreground">
+                {t('creg.confirmPassword')}
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="reg-pwd2"
+                  type={showPwd ? 'text' : 'password'}
+                  className="pl-9"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  autoComplete="new-password"
+                  aria-invalid={passwordMismatch}
+                />
+              </div>
+              {passwordMismatch && (
+                <p className="mt-1 text-xs text-destructive">{t('creg.passwordMismatch')}</p>
               )}
             </div>
 
