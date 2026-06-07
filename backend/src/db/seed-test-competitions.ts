@@ -115,6 +115,9 @@ interface CompSpec {
   fee: number;
   description: string;
   tag: string; // code prefix, e.g. "EMC"
+  // Profile fields the student must have before they can register (the
+  // pre-payment "complete your details" gate). Empty = no gate.
+  requiredProfileFields?: string[];
   subjects: { name: string; topics: string[] }[];
   // Single-round competitions: one exam from these.
   examName?: string;
@@ -150,6 +153,15 @@ const SPECS: CompSpec[] = [
     description:
       "The Eduversal Mathematics Competition — a national math challenge spanning arithmetic, algebra and geometry for SD, SMP and SMA students.",
     tag: "EMC",
+    requiredProfileFields: [
+      "fullName",
+      "email",
+      "phone",
+      "dateOfBirth",
+      "country",
+      "city",
+      "schoolName",
+    ],
     subjects: [
       { name: "Arithmetic", topics: ["Fractions", "Percentages"] },
       { name: "Algebra", topics: ["Linear Equations", "Quadratics"] },
@@ -171,8 +183,8 @@ const SPECS: CompSpec[] = [
       },
       {
         key: "simulation",
-        title: "Online Simulation",
-        titleId: "Simulasi Daring",
+        title: "Exam Simulation",
+        titleId: "Simulasi Ujian",
         check: "none",
         description:
           "A practice run to learn the exam interface. Your simulation score does not affect any round.",
@@ -182,48 +194,51 @@ const SPECS: CompSpec[] = [
         location: "Online",
       },
       {
-        key: "round1",
-        title: "Round 1 · City / Regency Level",
-        titleId: "Babak 1 · Tingkat Kota/Kabupaten",
+        key: "city",
+        title: "City-Level Exam",
+        titleId: "Ujian Tingkat Kota",
         check: "none",
         description:
-          "The first qualifying round, online. Opens automatically after the simulation.",
+          "The city/regency qualifying round, held online.",
         descriptionId:
-          "Babak penyisihan pertama, daring. Terbuka otomatis setelah simulasi.",
+          "Babak penyisihan tingkat kota/kabupaten, daring.",
         startOffset: 70,
         location: "Online",
       },
       {
-        key: "round2",
-        title: "Round 2 · Provincial Level",
-        titleId: "Babak 2 · Tingkat Provinsi",
+        key: "provincial",
+        title: "Provincial-Level Exam",
+        titleId: "Ujian Tingkat Provinsi",
         check: "none",
-        description: "Provincial round — open to participants who pass Round 1.",
-        descriptionId: "Babak provinsi — terbuka untuk peserta yang lolos Babak 1.",
+        description: "The provincial round, for participants who pass the city level.",
+        descriptionId: "Babak provinsi, untuk peserta yang lolos tingkat kota.",
         startOffset: 84,
         location: "Online",
       },
       {
-        key: "round3",
-        title: "Round 3 · National Level",
-        titleId: "Babak 3 · Tingkat Nasional",
+        key: "national_reregistration",
+        title: "National Finalist Re-registration",
+        titleId: "Daftar Ulang Finalist Nasional",
         check: "none",
         description:
-          "The offline national final at a Test Center, for participants who pass Round 2.",
+          "National finalists confirm attendance and re-register for the national exam.",
         descriptionId:
-          "Final nasional luring di Test Center, untuk peserta yang lolos Babak 2.",
-        startOffset: 112,
-        location: "Offline · Test Center",
+          "Finalis nasional mengonfirmasi kehadiran dan mendaftar ulang untuk ujian nasional.",
+        startOffset: 100,
+        endOffset: 107,
+        location: "Online",
       },
       {
-        key: "announcement",
-        title: "Winners Announcement",
-        titleId: "Pengumuman Pemenang",
+        key: "national",
+        title: "National-Level Exam",
+        titleId: "Ujian Tingkat Nasional",
         check: "none",
-        description: "Champions announced and the closing ceremony.",
-        descriptionId: "Pengumuman juara dan upacara penutupan.",
-        startOffset: 133,
-        location: "Online · Zoom",
+        description:
+          "The offline national final at a Test Center, for national finalists.",
+        descriptionId:
+          "Final nasional luring di Test Center, untuk finalis nasional.",
+        startOffset: 112,
+        location: "Offline · Test Center",
       },
     ],
     examName: "EMC Round 1",
@@ -572,11 +587,13 @@ async function seedCompetition(
     `INSERT INTO competitions
        (id, name, organizer_name, category, grade_level, fee, quota,
         reg_open_date, reg_close_date, competition_date, required_docs,
-        description, slug, kind, registration_status, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,500,$7,$8,$9,'{}',$10,$11,'native','On Going',$12)`,
+        description, slug, kind, registration_status, created_by,
+        required_profile_fields)
+     VALUES ($1,$2,$3,$4,$5,$6,500,$7,$8,$9,'{}',$10,$11,'native','On Going',$12,$13::jsonb)`,
     [
       spec.id, spec.name, spec.organizer, spec.category, spec.gradeLevel, spec.fee,
       ymd(-30), ymd(30), ymd(45), spec.description, spec.slug, owner,
+      JSON.stringify(spec.requiredProfileFields ?? []),
     ]
   );
   // A custom dated flow (the mockup's contest stages) when the spec defines

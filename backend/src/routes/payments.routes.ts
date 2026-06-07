@@ -15,6 +15,14 @@ function isInternationalCountry(country: string | null | undefined): boolean {
   return country.toUpperCase() !== "ID";
 }
 
+// Post-payment status. Native competitions (EMC/ISPO/OSEBI/Komodo) skip the
+// organizer/admin review step — a settled payment confirms the registration
+// straight to 'paid'. Other kinds wait for review ('pending_review'). Used as
+// the SET expression inside `UPDATE registrations ...` so the per-competition
+// decision happens in one query without an extra round-trip.
+const SETTLE_STATUS_SQL =
+  "CASE WHEN (SELECT kind FROM competitions WHERE id = registrations.comp_id) = 'native' THEN 'paid' ELSE 'pending_review' END";
+
 const router: Router = Router();
 
 // ── T20: Parent ownership check ───────────────────────────────────────────────
@@ -305,7 +313,7 @@ router.post("/webhook", async (req: Request, res: Response) => {
     // credits the voucher / referral exactly once (the row only flips once).
     if (isSuccess) {
       const settled = await pool.query(
-        `UPDATE registrations SET status = 'pending_review', updated_at = now()
+        `UPDATE registrations SET status = ${SETTLE_STATUS_SQL}, updated_at = now()
           WHERE id = $1
             AND status NOT IN ('pending_review','approved','paid','completed')
         RETURNING id`,
@@ -484,14 +492,15 @@ router.post("/snap", async (req: Request, res: Response) => {
          RETURNING id`,
         [registrationId, req.userId, coveredOrderId, resolvedPayerUserId, resolvedPayerKind]
       );
-      await pool.query(
-        `UPDATE registrations SET status = 'pending_review', updated_at = now() WHERE id = $1`,
+      const coveredSettle = await pool.query(
+        `UPDATE registrations SET status = ${SETTLE_STATUS_SQL}, updated_at = now()
+          WHERE id = $1 RETURNING status`,
         [registrationId]
       );
       if (effectiveVoucher) {
         await redeemVoucher(row.comp_id, effectiveVoucher, coveredPayment.rows[0].id);
       }
-      res.status(201).json({ covered: true, status: "pending_review" });
+      res.status(201).json({ covered: true, status: coveredSettle.rows[0]?.status ?? "pending_review" });
       return;
     }
 
@@ -693,10 +702,10 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
         [order_id]
       );
       const settled = await pool.query(
-        `UPDATE registrations SET status = 'pending_review', updated_at = now()
+        `UPDATE registrations SET status = ${SETTLE_STATUS_SQL}, updated_at = now()
           WHERE id = $1
             AND status NOT IN ('pending_review','approved','paid','completed')
-        RETURNING id`,
+        RETURNING status`,
         [registrationId]
       );
       if ((settled.rowCount ?? 0) > 0) {
@@ -708,8 +717,14 @@ router.get("/verify/:registrationId", async (req: Request, res: Response) => {
           await creditReferralPaid(comp_id, referral_code);
         }
       }
-      console.log(`Verify endpoint: payment settled for registration ${registrationId} (order ${order_id}) → pending_review`);
-      res.json({ status: "pending_review" });
+      // Report the real current status (already-settled rows return no row).
+      const finalStatus =
+        settled.rows[0]?.status ??
+        (await pool.query("SELECT status FROM registrations WHERE id = $1", [registrationId]))
+          .rows[0]?.status ??
+        "pending_review";
+      console.log(`Verify endpoint: payment settled for registration ${registrationId} (order ${order_id}) → ${finalStatus}`);
+      res.json({ status: finalStatus });
       return;
     }
 
