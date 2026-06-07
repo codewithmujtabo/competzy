@@ -1718,6 +1718,20 @@ export default function CompetitionDashboardPage() {
   const isInternationalUser =
     !!userCountry && userCountry.toUpperCase() !== 'ID';
 
+  // Once the student has paid/confirmed any round, surface the exam card at the
+  // TOP of the multi-round column (mentor: "setelah bayar, upcoming exam dipindah
+  // ke paling atas"). Before payment it sits below the rounds catalog.
+  const hasActiveExam = (regs ?? []).some((r) =>
+    ['paid', 'approved', 'submitted', 'completed', 'pending_review'].includes(r.status),
+  );
+  const examsCard = (
+    <Card className="gap-0 p-7">
+      <h2 className="font-serif text-xl font-medium text-foreground">{t('dashboard.yourExams')}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{t('dashboard.examsHint')}</p>
+      <ExamBlock compId={comp?.id ?? null} slug={slug} />
+    </Card>
+  );
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6 lg:p-10">
         <header className="space-y-3">
@@ -1764,6 +1778,7 @@ export default function CompetitionDashboardPage() {
         ) : rounds.length > 0 ? (
           <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
             <div className="space-y-6">
+              {hasActiveExam && examsCard}
               <RoundsPanel
                 rounds={rounds}
                 regs={regs}
@@ -1773,11 +1788,7 @@ export default function CompetitionDashboardPage() {
                 onRegister={enrollRound}
                 userCountry={userCountry}
               />
-              <Card className="gap-0 p-7">
-                <h2 className="font-serif text-xl font-medium text-foreground">{t('dashboard.yourExams')}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{t('dashboard.examsHint')}</p>
-                <ExamBlock compId={comp?.id ?? null} slug={slug} />
-              </Card>
+              {!hasActiveExam && examsCard}
               <Card className="gap-0 p-7">
                 <h2 className="font-serif text-xl font-medium text-foreground">
                   {t('dashboard.yourCertificates')}
