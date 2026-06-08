@@ -188,12 +188,20 @@ export default function CompetitionsPage() {
   };
 
   const save = async () => {
-    if (!form.name || !form.organizer_name || !form.organizer_id) return;
+    if (!form.name || !form.organizer_name) return;
     setSaving(true);
     try {
       const payload = {
         ...form,
         fee: parseInt(form.fee, 10) || 0,
+        // Owner is optional. Only send organizer_id when it's a real organizer
+        // the admin actually picked; otherwise omit it so the backend preserves
+        // the existing created_by (which may be null, or an admin id that isn't
+        // in this organizer-only list). Sending '' would clobber created_by;
+        // sending a non-organizer id would 400.
+        organizer_id: organizers.some((o) => o.id === form.organizer_id)
+          ? form.organizer_id
+          : undefined,
         rounds: draftsToPayload(form.rounds),
       };
       if (editId) {
@@ -526,7 +534,7 @@ export default function CompetitionsPage() {
             </Button>
             <Button
               onClick={save}
-              disabled={saving || !form.name || !form.organizer_name || !form.organizer_id}
+              disabled={saving || !form.name || !form.organizer_name}
             >
               {saving ? t('cf.saving') : editId ? t('acp.saveChanges') : t('acp.createCompetition')}
             </Button>
