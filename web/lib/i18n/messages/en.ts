@@ -1364,6 +1364,8 @@ export const en = {
   'profileDlg.pickGrade': 'Pick a grade',
   'profileDlg.invalidEmail': 'Enter a valid email address.',
   'profileDlg.invalidPhone': 'Use a valid phone number, e.g. 08123456789.',
+  'profileDlg.npsnLabel': 'School NPSN',
+  'profileDlg.npsnHint': 'Enter your school NPSN and tap Find — school name, city, province and country fill in automatically.',
 
   // ── Profile field labels (shared: dialog + account profile) ────────
   'pf.fullName': 'Full name',

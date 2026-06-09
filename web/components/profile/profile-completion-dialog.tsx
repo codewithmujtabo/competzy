@@ -149,6 +149,7 @@ export function ProfileCompletionDialog({
   const [values, setValues] = useState<Record<string, string>>({});
   const [country, setCountry] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [npsnBusy, setNpsnBusy] = useState(false);
 
   // Split the rendered field list into Required (in missingFields) +
   // Optional (everything else from FIELD_ORDER that should always show).
@@ -186,6 +187,9 @@ export function ProfileCompletionDialog({
           }
           next[k] = typeof raw === 'string' ? raw : '';
         }
+        // NPSN isn't in FIELD_ORDER (it's a lookup field, not a prompted one)
+        // but we prefill + persist it so the school lookup round-trips.
+        next.npsn = typeof me.npsn === 'string' ? me.npsn : '';
         setValues(next);
       } catch {
         // Pre-fill is best-effort.
@@ -196,6 +200,40 @@ export function ProfileCompletionDialog({
 
   function set(k: ProfileFieldKey, v: string) {
     setValues((cur) => ({ ...cur, [k]: v }));
+  }
+
+  // Look the NPSN up and auto-fill School name + City + Province + Country.
+  // NPSN is the Indonesian national school number, so a hit always means
+  // country = ID. Mirrors the registration form's lookupNpsn.
+  async function lookupNpsn() {
+    const npsn = (values.npsn || '').trim();
+    if (!/^\d{6,12}$/.test(npsn)) {
+      toast.error(t('regform.toastNpsnFirst'));
+      return;
+    }
+    setNpsnBusy(true);
+    try {
+      const r = await emcHttp.get<{
+        name: string;
+        address: string | null;
+        city: string | null;
+        province: string | null;
+      }>(`/schools/by-npsn/${encodeURIComponent(npsn)}`);
+      setValues((cur) => ({
+        ...cur,
+        schoolName: r.name,
+        city: r.city ?? cur.city ?? '',
+        province: r.province ?? cur.province ?? '',
+      }));
+      setCountry('ID');
+      toast.success(t('regform.toastSchoolFound', { name: r.name }));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      if (/not found|404/i.test(msg)) toast.message(t('regform.toastNoSchool'));
+      else toast.error(t('regform.toastNpsnFailed'));
+    } finally {
+      setNpsnBusy(false);
+    }
   }
 
   // Format check for a field's current value. Returns an error message key when
@@ -241,6 +279,8 @@ export function ProfileCompletionDialog({
           payload[k] = (values[k] || '').trim();
         }
       }
+      // Persist NPSN (lookup field — not in the required/optional grid).
+      payload.npsn = (values.npsn || '').trim();
       await emcHttp.put<{ message: string }>('/users/me', payload);
       toast.success(t('profileDlg.toastSaved'));
       onCompleted();
@@ -307,6 +347,38 @@ export function ProfileCompletionDialog({
               : t('profileDlg.desc')}
           </DialogDescription>
         </DialogHeader>
+
+        {(required.includes('schoolName') || optional.includes('schoolName')) && (
+          <section className="space-y-1.5 rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <Label htmlFor="pcd-npsn-lookup">{t('profileDlg.npsnLabel')}</Label>
+            <div className="flex gap-2">
+              <Input
+                id="pcd-npsn-lookup"
+                inputMode="numeric"
+                placeholder={t('regform.npsnPlaceholder')}
+                value={values.npsn ?? ''}
+                onChange={(e) => set('npsn', e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void lookupNpsn();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                className="shrink-0"
+                disabled={npsnBusy}
+                onClick={() => void lookupNpsn()}
+              >
+                {npsnBusy && <Loader2 className="size-4 animate-spin" />}
+                {t('regform.find')}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">{t('profileDlg.npsnHint')}</p>
+          </section>
+        )}
 
         {required.length > 0 && (
           <section className="space-y-2">
