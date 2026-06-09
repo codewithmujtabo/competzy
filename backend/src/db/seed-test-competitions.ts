@@ -149,7 +149,7 @@ const SPECS: CompSpec[] = [
     category: "Mathematics",
     gradeLevel: ALL_GRADES.join(","),
     grades: ALL_GRADES,
-    fee: 50000,
+    fee: 65000,
     description:
       "The Eduversal Mathematics Competition — a national math challenge spanning arithmetic, algebra and geometry for SD, SMP and SMA students.",
     tag: "EMC",
