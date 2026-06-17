@@ -434,19 +434,17 @@ export default function CompetitionCatalogPage() {
 
         {/* Continue where you left off */}
         {isStudent && summary?.continueTask && (
-          <Card className="flex flex-wrap items-center justify-between gap-3 overflow-hidden border-primary/30 bg-primary/5 p-5">
-            <div className="flex min-w-0 flex-1 basis-[12rem] items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                {summary.continueTask.type === 'pay' ? <ClipboardCheck className="size-5" /> : <ShieldCheck className="size-5" />}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-primary/80">
-                  {t('catalog.continueTitle')}
-                </p>
-                <p className="mt-0.5 truncate font-serif text-base font-medium text-foreground">
-                  {summary.continueTask.label}
-                </p>
-              </div>
+          <Card className="flex-row flex-wrap items-center gap-x-4 gap-y-3 overflow-hidden border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/30">
+              {summary.continueTask.type === 'pay' ? <ClipboardCheck className="size-5" /> : <ShieldCheck className="size-5" />}
+            </span>
+            <div className="min-w-0 flex-1 basis-[14rem]">
+              <p className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-primary/70">
+                {t('catalog.continueTitle')}
+              </p>
+              <p className="mt-0.5 truncate text-base font-semibold leading-snug text-foreground">
+                {summary.continueTask.label}
+              </p>
             </div>
             <Button asChild size="sm" className="shrink-0">
               <Link
