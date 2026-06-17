@@ -338,7 +338,7 @@ export default function UnifiedLogin() {
                         aria-label={showPwd ? 'Hide password' : 'Show password'}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
-                        {showPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        {showPwd ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
                       </button>
                     </div>
                   </div>
