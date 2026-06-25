@@ -3,6 +3,15 @@ import { env } from "../config/env";
 
 const smtpConfigured = !!env.SMTP_USER && !!env.SMTP_PASS;
 
+// Loud warning at boot if production is missing SMTP — email verification,
+// password reset, and login OTP all silently stop delivering without it.
+if (!smtpConfigured && env.NODE_ENV === "production") {
+  console.warn(
+    "[email] WARNING: SMTP is NOT configured (SMTP_USER/SMTP_PASS missing) in production — " +
+      "email verification, password reset, and OTP emails will fail to send. Set the SMTP_* env vars.",
+  );
+}
+
 const transporter = smtpConfigured
   ? nodemailer.createTransport({
       host: env.SMTP_HOST,
