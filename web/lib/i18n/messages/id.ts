@@ -766,6 +766,19 @@ export const id: Partial<Record<MessageKey, string>> = {
   'creg.codeResent': 'Kode baru sedang dikirim.',
   'creg.devBypassNote': 'Mode dev (SMTP nonaktif): kode Anda {code}',
   'creg.errSendCode': 'Tidak dapat mengirim kode verifikasi. Silakan coba lagi.',
+  // Pemilih peran (siswa / guru / sekolah)
+  'creg.accountType': 'Jenis akun',
+  'creg.roleStudent': 'Siswa',
+  'creg.roleTeacher': 'Guru',
+  'creg.roleSchool': 'Sekolah',
+  'creg.coordinatorName': 'Nama lengkap koordinator',
+  'creg.schoolName': 'Nama sekolah',
+  'creg.npsn': 'NPSN (ID sekolah)',
+  'creg.npsnInvalid': 'Masukkan NPSN yang valid (angka saja).',
+  'creg.npsnTaken': 'Sekolah dengan NPSN ini sudah terdaftar. Hubungi admin untuk mereset pengajuan sebelumnya.',
+  'creg.subject': 'Mata pelajaran yang diampu',
+  'creg.staffNote': 'Admin akan meninjau dan menyetujui akun Anda sebelum portal terbuka.',
+  'creg.subtitleStaff': 'Buat akun Anda. Admin memverifikasinya sebelum portal Anda terbuka.',
 
   // Round state notes (rs.*) — student-facing lock hints on the dashboard
   'rs.lockedRegister': 'Terbuka setelah Anda mendaftar {round}.',

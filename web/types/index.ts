@@ -61,6 +61,9 @@ export interface AuthUser {
   // teacher
   subject?: string;
   department?: string;
+  npsn?: string;
+  teacherVerificationStatus?: 'pending_verification' | 'verified' | 'rejected';
+  teacherRejectionReason?: string;
   // super-admin / impersonation (from GET /auth/me)
   isSuperAdmin?: boolean;
   impersonating?: boolean;

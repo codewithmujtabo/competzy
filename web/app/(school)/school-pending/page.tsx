@@ -11,8 +11,13 @@ export default function SchoolPendingPage() {
   const router = useRouter();
   const { user, logout } = useSchool();
 
-  const isRejected = user?.schoolVerificationStatus === 'rejected';
-  const reason = user?.schoolRejectionReason;
+  // The same waiting room serves an unverified teacher and an unverified
+  // school coordinator — pick the status + copy off the account's role.
+  const isTeacher = user?.role === 'teacher';
+  const status = isTeacher ? user?.teacherVerificationStatus : user?.schoolVerificationStatus;
+  const isRejected = status === 'rejected';
+  const reason = isTeacher ? user?.teacherRejectionReason : user?.schoolRejectionReason;
+  const subjectNoun = isTeacher ? 'teacher account' : 'school';
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
@@ -35,7 +40,7 @@ export default function SchoolPendingPage() {
         {isRejected ? (
           <>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Your school application was rejected.
+              Your {subjectNoun} application was rejected.
             </p>
             {reason && (
               <p className="mt-3 rounded-lg bg-muted px-4 py-3 text-left text-sm text-foreground">
@@ -52,9 +57,9 @@ export default function SchoolPendingPage() {
           </>
         ) : (
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Your school is being reviewed. You’ll get an email once verified — usually within one
-            business day. The school portal (Bulk Registration, Bulk Payment, Reports) unlocks
-            immediately after.
+            Your {subjectNoun} is being reviewed by our team. You’ll get an email once it’s
+            approved — usually within one business day. The portal (roster, Bulk Registration,
+            Bulk Payment, Reports) unlocks immediately after.
           </p>
         )}
 

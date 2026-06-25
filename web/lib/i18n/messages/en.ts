@@ -768,6 +768,19 @@ export const en = {
   'creg.codeResent': 'A new code is on its way.',
   'creg.devBypassNote': 'Dev mode (SMTP off): your code is {code}',
   'creg.errSendCode': 'Could not send the verification code. Please try again.',
+  // Role selector (student / teacher / school)
+  'creg.accountType': 'Account type',
+  'creg.roleStudent': 'Student',
+  'creg.roleTeacher': 'Teacher',
+  'creg.roleSchool': 'School',
+  'creg.coordinatorName': 'Coordinator full name',
+  'creg.schoolName': 'School name',
+  'creg.npsn': 'NPSN (school ID)',
+  'creg.npsnInvalid': 'Enter a valid NPSN (digits only).',
+  'creg.npsnTaken': 'A school with this NPSN already exists. Contact an admin to reset the previous application.',
+  'creg.subject': 'Subject taught',
+  'creg.staffNote': 'An admin will review and approve your account before the portal unlocks.',
+  'creg.subtitleStaff': 'Create your account. An admin verifies it before your portal unlocks.',
 
   // Round state notes (rs.*) — student-facing lock hints on the dashboard
   'rs.lockedRegister': 'Opens once you register for {round}.',
