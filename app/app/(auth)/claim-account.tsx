@@ -14,7 +14,7 @@ import {
 import { useUser } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -39,20 +39,74 @@ export default function ClaimAccountScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Email-verification step. The phone is already OTP-verified, but the email
+  // here is editable + unproven, so we confirm it before creating the account.
+  const [step, setStep] = useState<"form" | "verify">("form");
+  const [code, setCode] = useState("");
+  const [sending, setSending] = useState(false);
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const [resendIn, setResendIn] = useState(0);
+  const [verifyError, setVerifyError] = useState("");
+  const RESEND_COOLDOWN_S = 30;
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const id = setInterval(() => setResendIn((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [resendIn]);
+
   function validate() {
     const e: Record<string, string> = {};
     if (!fullName.trim()) e.fullName = "Name is required";
     if (!email.trim()) e.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Enter a valid email";
     if (!password) e.password = "Password is required";
-    else if (password.length < 6) e.password = "Minimum 6 characters";
+    else if (password.length < 8) e.password = "Minimum 8 characters";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
 
-  async function handleClaim() {
+  async function sendCode(isResend = false) {
+    setSending(true);
+    setVerifyError("");
+    try {
+      const res = await authService.sendSignupCode(email.trim());
+      setDevCode(res.devBypass ? res.devCode ?? null : null);
+      setResendIn(RESEND_COOLDOWN_S);
+      if (!isResend) {
+        setCode("");
+        setStep("verify");
+      }
+    } catch (err: any) {
+      if (err?.status === 409) {
+        Alert.alert("Email Already Registered", "This email is in use. Try another email or sign in.");
+      } else if (isResend) {
+        setVerifyError(err?.message || "Could not resend the code.");
+      } else {
+        Alert.alert("Error", err?.message || "Could not send the verification code.");
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function handleSendCode() {
     if (!validate()) return;
+    void sendCode(false);
+  }
+
+  function handleResend() {
+    if (resendIn > 0 || sending) return;
+    void sendCode(true);
+  }
+
+  async function handleClaim() {
+    if (code.trim().length !== 6) {
+      setVerifyError("Enter the 6-digit code from your email.");
+      return;
+    }
     setLoading(true);
+    setVerifyError("");
     try {
       const { user } = await authService.signup({
         email: email.trim(),
@@ -62,21 +116,103 @@ export default function ClaimAccountScreen() {
         role: "student",
         roleData: {},
         consentAccepted: true,
+        verificationCode: code.trim(),
       });
       if (user) {
         fetchUser(user.id);
         router.replace("/(tabs)/competitions");
       }
     } catch (err: any) {
+      const codeBad =
+        err?.body?.code === "INVALID_VERIFICATION_CODE" ||
+        err?.body?.code === "EMAIL_NOT_VERIFIED" ||
+        /verification code|invalid or has expired/i.test(err?.message || "");
       const msg = err?.message?.toLowerCase() ?? "";
-      if (msg.includes("email already")) {
+      if (codeBad) {
+        setVerifyError("That code is invalid or has expired. Request a new one.");
+      } else if (msg.includes("email already")) {
         Alert.alert("Email Already Registered", "This email is in use. Try another email or sign in.");
+        setStep("form");
       } else {
         Alert.alert("Error", err?.message ?? "Failed to create account");
       }
     } finally {
       setLoading(false);
     }
+  }
+
+  // ─── Verify email step ───────────────────────────────────────────────────
+  if (step === "verify") {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
+      >
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + Spacing.xl }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={{ alignItems: "center", marginBottom: Spacing["2xl"] }}>
+            <View style={styles.badge}>
+              <Ionicons name="mail-outline" size={36} color={Brand.primary} />
+            </View>
+            <Text style={[Type.displayMd, { textAlign: "center", marginTop: Spacing.lg }]}>
+              Check your inbox
+            </Text>
+            <Text style={[Type.body, { color: TextColor.secondary, textAlign: "center", marginTop: Spacing.sm }]}>
+              We sent a 6-digit code to{"\n"}
+              <Text style={{ color: TextColor.primary, fontFamily: FontFamily.bodyBold }}>{email.trim()}</Text>
+            </Text>
+          </View>
+
+          {devCode ? (
+            <View style={{ alignSelf: "center", marginBottom: Spacing.lg }}>
+              <Pill label={`Dev code: ${devCode}`} tone="info" />
+            </View>
+          ) : null}
+
+          <Card>
+            <View style={{ gap: Spacing.lg }}>
+              <AppInput
+                label="Verification Code"
+                placeholder="123456"
+                value={code}
+                onChangeText={(t) => {
+                  setCode(t.replace(/\D/g, "").slice(0, 6));
+                  setVerifyError("");
+                }}
+                keyboardType="number-pad"
+                maxLength={6}
+                error={verifyError || undefined}
+                editable={!loading}
+              />
+              <Pressable onPress={handleResend} disabled={resendIn > 0 || sending} hitSlop={8}>
+                <Text
+                  style={{
+                    ...Type.bodySm,
+                    color: resendIn > 0 || sending ? TextColor.tertiary : Brand.primary,
+                    fontFamily: FontFamily.bodyBold,
+                  }}
+                >
+                  {resendIn > 0 ? `Resend code in ${resendIn}s` : "Resend code"}
+                </Text>
+              </Pressable>
+              <Button
+                label="Create Account & View History"
+                onPress={handleClaim}
+                loading={loading}
+                disabled={code.trim().length !== 6}
+                fullWidth
+                size="lg"
+              />
+              <Pressable onPress={() => setStep("form")} disabled={loading} hitSlop={8} style={{ alignSelf: "center" }}>
+                <Text style={[Type.body, { color: TextColor.secondary }]}>Use a different email</Text>
+              </Pressable>
+            </View>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
   }
 
   return (
@@ -129,7 +265,7 @@ export default function ClaimAccountScreen() {
             />
             <AppInput
               label="Password"
-              placeholder="Minimum 6 characters"
+              placeholder="Minimum 8 characters"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPwd}
@@ -137,7 +273,7 @@ export default function ClaimAccountScreen() {
               editable={!loading}
               rightIcon={
                 <Ionicons
-                  name={showPwd ? "eye-off-outline" : "eye-outline"}
+                  name={showPwd ? "eye-outline" : "eye-off-outline"}
                   size={22}
                   color={TextColor.tertiary}
                 />
@@ -145,9 +281,9 @@ export default function ClaimAccountScreen() {
               onRightIconPress={() => setShowPwd((v) => !v)}
             />
             <Button
-              label="Create Account & View History"
-              onPress={handleClaim}
-              loading={loading}
+              label="Continue"
+              onPress={handleSendCode}
+              loading={sending}
               fullWidth
               size="lg"
             />

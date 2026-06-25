@@ -6,6 +6,24 @@ interface AuthResponse {
   user: any;
 }
 
+// Step 1 of signup: email a 6-digit verification code. When SMTP is not
+// configured (local dev) the backend returns the code in `devCode` and accepts
+// the universal "000000" — mirroring the phone-OTP dev bypass.
+export interface SendSignupCodeResponse {
+  message: string;
+  devBypass?: boolean;
+  devCode?: string;
+  expiresInMinutes?: number;
+}
+
+export async function sendSignupCode(email: string): Promise<SendSignupCodeResponse> {
+  return apiRequest<SendSignupCodeResponse>("/auth/signup/send-code", {
+    method: "POST",
+    body: { email },
+    auth: false,
+  });
+}
+
 export async function signup(params: {
   email: string;
   password: string;
@@ -15,6 +33,7 @@ export async function signup(params: {
   role: string;
   roleData: any;
   consentAccepted: boolean;
+  verificationCode: string;             // step-2: the emailed code (or "000000" in dev)
 }): Promise<AuthResponse> {
   const data = await apiRequest<AuthResponse>("/auth/signup", {
     method: "POST",

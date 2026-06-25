@@ -218,7 +218,7 @@ export default function LoginScreen() {
                 editable={!loading}
                 rightIcon={
                   <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    name={showPassword ? "eye-outline" : "eye-off-outline"}
                     size={22}
                     color={TextColor.tertiary}
                   />
@@ -284,18 +284,23 @@ export default function LoginScreen() {
                     fullWidth
                     size="lg"
                   />
-                  <Pressable
-                    onPress={() => {
-                      setPhoneOtpSent(false);
-                      setPhoneOtp("");
-                      setErrors({});
-                    }}
-                    hitSlop={8}
-                  >
-                    <Text style={[Type.label, { color: Brand.primary, textAlign: "center" }]}>
-                      ← Change number
-                    </Text>
-                  </Pressable>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Pressable
+                      onPress={() => {
+                        setPhoneOtpSent(false);
+                        setPhoneOtp("");
+                        setErrors({});
+                      }}
+                      hitSlop={8}
+                    >
+                      <Text style={[Type.label, { color: Brand.primary }]}>← Change number</Text>
+                    </Pressable>
+                    <Pressable onPress={handleSendPhoneOtp} disabled={loading} hitSlop={8}>
+                      <Text style={[Type.label, { color: loading ? TextColor.tertiary : Brand.primary, fontFamily: FontFamily.bodyBold }]}>
+                        Resend code
+                      </Text>
+                    </Pressable>
+                  </View>
                 </>
               )}
             </View>

@@ -47,6 +47,26 @@ export async function sendOtpEmail(email: string, code: string): Promise<void> {
   });
 }
 
+export async function sendEmailVerificationEmail(email: string, code: string): Promise<void> {
+  await sendMailOrThrow({
+    from: env.SMTP_FROM,
+    to: email,
+    subject: "Confirm your email — Competzy",
+    text: `Welcome to Competzy!\n\nTo finish creating your account, enter this verification code:\n\n${code}\n\nThis code is valid for ${env.OTP_EXPIRY_MINUTES} minutes. If you didn't try to create a Competzy account, you can safely ignore this email.`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 440px; margin: 0 auto; padding: 24px;">
+        <h2 style="color: #4F46E5; margin: 0 0 4px;">Competzy</h2>
+        <p style="margin: 0 0 16px; color: #111;">Welcome! To finish creating your account, enter this verification code:</p>
+        <div style="background: #F0F0FF; padding: 18px; border-radius: 10px; text-align: center; margin: 16px 0;">
+          <span style="font-size: 34px; font-weight: bold; letter-spacing: 10px; color: #4F46E5;">${code}</span>
+        </div>
+        <p style="color: #666; font-size: 14px;">This code is valid for <strong>${env.OTP_EXPIRY_MINUTES} minutes</strong>.</p>
+        <p style="color: #999; font-size: 12px; margin-top: 20px;">If you didn't try to create a Competzy account, you can safely ignore this email.</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendTempPasswordEmail(email: string, tempPassword: string, fullName: string): Promise<void> {
   await sendMailOrThrow({
     from: env.SMTP_FROM,
