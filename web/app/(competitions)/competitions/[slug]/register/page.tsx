@@ -6,12 +6,18 @@
 // after signup. The page itself renders generic Competzy branding — no
 // per-competition wordmark, logo, or tagline. Competition context is
 // behavioural only, never visual.
+//
+// Signup is a two-step flow:
+//   1. form   — collect details, then POST /auth/signup/send-code (emails a code)
+//   2. verify — enter the 6-digit code, then POST /auth/signup (creates account)
+// The account is never created until the email is proven, so there are no
+// unverified ghost accounts.
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, Eye, EyeOff, Lock, Mail, Phone, User } from 'lucide-react';
-import { emcHttp } from '@/lib/api/client';
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Lock, Mail, MailCheck, Phone, RotateCw, User } from 'lucide-react';
+import { emcHttp, HttpError } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { CompetzyBrandPanel } from '@/components/auth/competzy-brand-panel';
@@ -23,6 +29,9 @@ import { Button } from '@/components/ui/button';
 import { CountrySelect } from '@/components/ui/country-select';
 
 type SignupResponse = { token: string; user: { id: string; role: string } };
+type SendCodeResponse = { message: string; devBypass?: boolean; devCode?: string; expiresInMinutes?: number };
+
+const RESEND_COOLDOWN_S = 30;
 
 export default function CompetitionRegisterPage() {
   const t = useT();
@@ -38,6 +47,8 @@ export default function CompetitionRegisterPage() {
   const { user, loading: authLoading } = useCompetitionAuth();
   const { comp, loading: compLoading } = usePortalComp(slug);
 
+  const [step, setStep] = useState<'form' | 'verify'>('form');
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -51,8 +62,17 @@ export default function CompetitionRegisterPage() {
   const [error, setError] = useState('');
   const [emailTaken, setEmailTaken] = useState(false);
   const [warning, setWarning] = useState('');
-  const [submitting, setSubmit] = useState(false);
   const [refCode, setRefCode] = useState<string | null>(null);
+
+  // Verification-step state.
+  const [code, setCode] = useState('');
+  const [sending, setSending] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [verifyError, setVerifyError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const [resendIn, setResendIn] = useState(0);
+  const codeInputRef = useRef<HTMLInputElement>(null);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const phoneValid = phone === '' || /^\+?\d{8,15}$/.test(phone.replace(/[\s-]/g, ''));
@@ -81,13 +101,81 @@ export default function CompetitionRegisterPage() {
     emcHttp.post('/referrals/click', { compId: comp.id, code: refCode }).catch(() => {});
   }, [refCode, comp?.id]);
 
-  const submit = async (e: FormEvent) => {
+  // Resend cooldown ticker.
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const id = setInterval(() => setResendIn((s) => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [resendIn]);
+
+  // Focus the code field when entering the verify step.
+  useEffect(() => {
+    if (step === 'verify') codeInputRef.current?.focus();
+  }, [step]);
+
+  const canSubmitForm =
+    !sending && consent && !!fullName.trim() && emailValid && !passwordTooShort && password.length >= 8 && password === confirmPassword && phoneValid;
+
+  // ── Step 1: send the verification code ──────────────────────────────────
+  const handleSendCode = async (e: FormEvent) => {
     e.preventDefault();
-    if (!emailValid || password.length < 8 || password !== confirmPassword || !consent || !phoneValid) return;
+    if (!canSubmitForm) return;
     setError('');
     setEmailTaken(false);
     setWarning('');
-    setSubmit(true);
+    setSending(true);
+    try {
+      const res = await emcHttp.post<SendCodeResponse>('/auth/signup/send-code', { email });
+      setDevCode(res.devBypass ? res.devCode ?? null : null);
+      setCode('');
+      setVerifyError('');
+      setNotice('');
+      setResendIn(RESEND_COOLDOWN_S);
+      setStep('verify');
+    } catch (err) {
+      if (err instanceof HttpError && err.status === 409) {
+        setEmailTaken(true);
+      } else {
+        setError(err instanceof Error ? err.message : t('creg.errSendCode'));
+      }
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // ── Resend the code ─────────────────────────────────────────────────────
+  const handleResend = async () => {
+    if (resendIn > 0 || sending) return;
+    setVerifyError('');
+    setNotice('');
+    setSending(true);
+    try {
+      const res = await emcHttp.post<SendCodeResponse>('/auth/signup/send-code', { email });
+      setDevCode(res.devBypass ? res.devCode ?? null : null);
+      setNotice(t('creg.codeResent'));
+      setResendIn(RESEND_COOLDOWN_S);
+    } catch (err) {
+      if (err instanceof HttpError && err.status === 409) {
+        setEmailTaken(true);
+        setStep('form');
+      } else {
+        setVerifyError(err instanceof Error ? err.message : t('creg.errSendCode'));
+      }
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // ── Step 2: verify the code + create the account ────────────────────────
+  const handleVerify = async (e: FormEvent) => {
+    e.preventDefault();
+    if (code.length !== 6) {
+      setVerifyError(t('creg.codeIncomplete'));
+      return;
+    }
+    setVerifyError('');
+    setWarning('');
+    setCreating(true);
     try {
       await emcHttp.post<SignupResponse>('/auth/signup', {
         email,
@@ -98,14 +186,13 @@ export default function CompetitionRegisterPage() {
         role: 'student',
         roleData: {},
         consentAccepted: consent,
+        verificationCode: code,
       });
 
       if (comp?.id) {
         // Attribute the new account to its referral, if it arrived via ?ref=.
         if (refCode) {
-          emcHttp
-            .post('/referrals/signup', { compId: comp.id, code: refCode })
-            .catch(() => {});
+          emcHttp.post('/referrals/signup', { compId: comp.id, code: refCode }).catch(() => {});
         }
         try {
           await emcHttp.post('/registrations', {
@@ -128,22 +215,21 @@ export default function CompetitionRegisterPage() {
       }
       window.location.assign(paths.dashboard);
     } catch (err) {
+      const codeErr = err instanceof HttpError && (err.body?.code === 'INVALID_VERIFICATION_CODE' || err.body?.code === 'EMAIL_NOT_VERIFIED');
       const msg = err instanceof Error ? err.message : '';
-      if (/already registered/i.test(msg)) {
+      if (codeErr || /verification code|invalid or has expired/i.test(msg)) {
+        setVerifyError(t('creg.codeInvalid'));
+      } else if (err instanceof HttpError && err.status === 409) {
         setEmailTaken(true);
-        setError('');
-      } else if (/at least 6 characters|password must be at least/i.test(msg)) {
-        setError(t('creg.errPwdShort'));
+        setStep('form');
       } else {
         setError(msg || t('creg.errDefault'));
+        setStep('form');
       }
     } finally {
-      setSubmit(false);
+      setCreating(false);
     }
   };
-
-  const canSubmit =
-    !submitting && consent && !!fullName.trim() && emailValid && !passwordTooShort && password.length >= 8 && password === confirmPassword && phoneValid;
 
   if (!config) return null;
 
@@ -151,197 +237,282 @@ export default function CompetitionRegisterPage() {
     <div className="relative grid min-h-screen lg:grid-cols-2">
       {/* Form panel — LEFT */}
       <div className="relative flex items-center justify-center bg-background px-6 py-12">
-        <div className="w-full max-w-md">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
-            {t('creg.eyebrow')}
-          </p>
-          <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">{t('creg.title')}</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">{t('creg.subtitle')}</p>
+        {step === 'form' ? (
+          <div className="w-full max-w-md">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
+              {t('creg.eyebrow')}
+            </p>
+            <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">{t('creg.title')}</h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">{t('creg.subtitle')}</p>
 
-          {error && (
-            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-          {emailTaken && (
-            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {t('creg.emailTakenPre')}
-              <Link href="/" className="font-semibold underline">
-                {t('creg.signInInstead')}
+            {error && (
+              <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+            {emailTaken && (
+              <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {t('creg.emailTakenPre')}
+                <Link href="/" className="font-semibold underline">
+                  {t('creg.signInInstead')}
+                </Link>
+                {t('creg.emailTakenPost')}
+              </div>
+            )}
+            {warning && (
+              <div className="mt-4 rounded-lg border border-amber-300/50 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+                {warning}
+              </div>
+            )}
+
+            <form onSubmit={handleSendCode} noValidate className="mt-6 space-y-4">
+              <div>
+                <Label htmlFor="reg-name" className="mb-1.5 text-xs text-muted-foreground">
+                  {t('creg.fullName')}
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="reg-name"
+                    className="pl-9"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                    autoComplete="name"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="reg-email" className="mb-1.5 text-xs text-muted-foreground">
+                  {t('creg.email')}
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="reg-email"
+                    type="email"
+                    className="pl-9"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setEmailTaken(false);
+                    }}
+                    required
+                    autoComplete="email"
+                    aria-invalid={email.length > 0 && !emailValid}
+                  />
+                </div>
+                {email.length > 0 && !emailValid && (
+                  <p className="mt-1 text-xs text-destructive">{t('creg.emailInvalid')}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="reg-phone" className="mb-1.5 text-xs text-muted-foreground">
+                  {t('creg.phone')}
+                </Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="reg-phone"
+                    type="tel"
+                    inputMode="tel"
+                    className="pl-9"
+                    placeholder={t('creg.phonePlaceholder')}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    autoComplete="tel"
+                    aria-invalid={!phoneValid}
+                  />
+                </div>
+                {!phoneValid && (
+                  <p className="mt-1 text-xs text-destructive">
+                    {t('creg.phoneInvalidPre')}
+                    <code className="font-mono">08123456789</code>.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="reg-pwd" className="mb-1.5 text-xs text-muted-foreground">
+                  {t('creg.password')}
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="reg-pwd"
+                    type={showPwd ? 'text' : 'password'}
+                    className="px-9"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    aria-invalid={passwordTooShort}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd((v) => !v)}
+                    aria-label={showPwd ? t('creg.hidePassword') : t('creg.showPassword')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPwd ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+                  </button>
+                </div>
+                {passwordTooShort && (
+                  <p className="mt-1 text-xs text-destructive">{t('creg.passwordTooShort')}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="reg-pwd2" className="mb-1.5 text-xs text-muted-foreground">
+                  {t('creg.confirmPassword')}
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="reg-pwd2"
+                    type={showPwd ? 'text' : 'password'}
+                    className="pl-9"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                    aria-invalid={passwordMismatch}
+                  />
+                </div>
+                {passwordMismatch && (
+                  <p className="mt-1 text-xs text-destructive">{t('creg.passwordMismatch')}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="reg-country" className="mb-1.5 text-xs text-muted-foreground">
+                  {t('creg.country')}
+                </Label>
+                <CountrySelect id="reg-country" value={country} onChange={setCountry} />
+                <p className="mt-1 text-xs text-muted-foreground">{t('creg.countryHint')}</p>
+              </div>
+
+              <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  required
+                  className="mt-0.5 size-4 shrink-0 accent-primary"
+                />
+                <span>
+                  {t('creg.consentPre')}
+                  <Link href="/terms" className="text-primary underline">
+                    {t('creg.terms')}
+                  </Link>
+                  {t('creg.consentMid')}
+                  <Link href="/privacy" className="text-primary underline">
+                    {t('creg.privacy')}
+                  </Link>
+                  {t('creg.consentPost')}
+                </span>
+              </label>
+
+              <Button type="submit" size="lg" className="w-full" disabled={!canSubmitForm}>
+                {sending ? t('creg.sendingCode') : compLoading ? t('creg.loading') : t('creg.continue')}
+                {!sending && !compLoading && <ArrowRight className="size-4" />}
+              </Button>
+            </form>
+
+            <p className="mt-5 text-center text-sm text-muted-foreground">
+              {t('creg.haveAccount')}
+              <Link href={paths.login} className="font-medium text-primary hover:underline">
+                {t('creg.signIn')}
               </Link>
-              {t('creg.emailTakenPost')}
-            </div>
-          )}
-          {warning && (
-            <div className="mt-4 rounded-lg border border-amber-300/50 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
-              {warning}
-            </div>
-          )}
+            </p>
+          </div>
+        ) : (
+          // ── Step 2: verify email ──────────────────────────────────────────
+          <div className="w-full max-w-md">
+            <button
+              type="button"
+              onClick={() => {
+                setStep('form');
+                setVerifyError('');
+                setNotice('');
+              }}
+              className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="size-4" />
+              {t('creg.changeEmail')}
+            </button>
 
-          <form onSubmit={submit} noValidate className="mt-6 space-y-4">
-            <div>
-              <Label htmlFor="reg-name" className="mb-1.5 text-xs text-muted-foreground">
-                {t('creg.fullName')}
-              </Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="reg-name"
-                  className="pl-9"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  autoComplete="name"
-                />
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <MailCheck className="size-6" />
+            </span>
+            <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
+              {t('creg.verifyEyebrow')}
+            </p>
+            <h1 className="mt-2 font-serif text-3xl font-medium text-foreground">{t('creg.verifyTitle')}</h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              {t('creg.verifySubtitlePre')}
+              <span className="font-medium text-foreground">{email}</span>
+              {t('creg.verifySubtitlePost')}
+            </p>
+
+            {devCode && (
+              <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm text-primary">
+                {t('creg.devBypassNote', { code: devCode })}
               </div>
-            </div>
+            )}
+            {notice && (
+              <div className="mt-4 rounded-lg border border-emerald-300/50 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
+                {notice}
+              </div>
+            )}
+            {verifyError && (
+              <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
+                {verifyError}
+              </div>
+            )}
 
-            <div>
-              <Label htmlFor="reg-email" className="mb-1.5 text-xs text-muted-foreground">
-                {t('creg.email')}
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <form onSubmit={handleVerify} noValidate className="mt-6 space-y-4">
+              <div>
+                <Label htmlFor="reg-code" className="mb-1.5 text-xs text-muted-foreground">
+                  {t('creg.verifyCodeLabel')}
+                </Label>
                 <Input
-                  id="reg-email"
-                  type="email"
-                  className="pl-9"
-                  value={email}
+                  id="reg-code"
+                  ref={codeInputRef}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  placeholder="••••••"
+                  value={code}
                   onChange={(e) => {
-                    setEmail(e.target.value);
-                    setEmailTaken(false);
+                    setCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                    setVerifyError('');
                   }}
-                  required
-                  autoComplete="email"
-                  aria-invalid={email.length > 0 && !emailValid}
+                  className="text-center font-mono text-2xl tracking-[0.5em]"
+                  aria-invalid={!!verifyError}
                 />
               </div>
-              {email.length > 0 && !emailValid && (
-                <p className="mt-1 text-xs text-destructive">{t('creg.emailInvalid')}</p>
-              )}
-            </div>
 
-            <div>
-              <Label htmlFor="reg-phone" className="mb-1.5 text-xs text-muted-foreground">
-                {t('creg.phone')}
-              </Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="reg-phone"
-                  type="tel"
-                  inputMode="tel"
-                  className="pl-9"
-                  placeholder={t('creg.phonePlaceholder')}
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  autoComplete="tel"
-                  aria-invalid={!phoneValid}
-                />
-              </div>
-              {!phoneValid && (
-                <p className="mt-1 text-xs text-destructive">
-                  {t('creg.phoneInvalidPre')}
-                  <code className="font-mono">08123456789</code>.
-                </p>
-              )}
-            </div>
+              <Button type="submit" size="lg" className="w-full" disabled={creating || code.length !== 6}>
+                {creating ? t('creg.verifying') : t('creg.verifyCta')}
+                {!creating && <ArrowRight className="size-4" />}
+              </Button>
+            </form>
 
-            <div>
-              <Label htmlFor="reg-pwd" className="mb-1.5 text-xs text-muted-foreground">
-                {t('creg.password')}
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="reg-pwd"
-                  type={showPwd ? 'text' : 'password'}
-                  className="px-9"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  aria-invalid={passwordTooShort}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPwd((v) => !v)}
-                  aria-label={showPwd ? t('creg.hidePassword') : t('creg.showPassword')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              </div>
-              {passwordTooShort && (
-                <p className="mt-1 text-xs text-destructive">{t('creg.passwordTooShort')}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="reg-pwd2" className="mb-1.5 text-xs text-muted-foreground">
-                {t('creg.confirmPassword')}
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="reg-pwd2"
-                  type={showPwd ? 'text' : 'password'}
-                  className="pl-9"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  autoComplete="new-password"
-                  aria-invalid={passwordMismatch}
-                />
-              </div>
-              {passwordMismatch && (
-                <p className="mt-1 text-xs text-destructive">{t('creg.passwordMismatch')}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="reg-country" className="mb-1.5 text-xs text-muted-foreground">
-                {t('creg.country')}
-              </Label>
-              <CountrySelect id="reg-country" value={country} onChange={setCountry} />
-              <p className="mt-1 text-xs text-muted-foreground">{t('creg.countryHint')}</p>
-            </div>
-
-            <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-                required
-                className="mt-0.5 size-4 shrink-0 accent-primary"
-              />
-              <span>
-                {t('creg.consentPre')}
-                <Link href="/terms" className="text-primary underline">
-                  {t('creg.terms')}
-                </Link>
-                {t('creg.consentMid')}
-                <Link href="/privacy" className="text-primary underline">
-                  {t('creg.privacy')}
-                </Link>
-                {t('creg.consentPost')}
-              </span>
-            </label>
-
-            <Button type="submit" size="lg" className="w-full" disabled={!canSubmit}>
-              {submitting ? t('creg.creating') : compLoading ? t('creg.loading') : t('creg.createAccount')}
-              {!submitting && !compLoading && <ArrowRight className="size-4" />}
-            </Button>
-          </form>
-
-          <p className="mt-5 text-center text-sm text-muted-foreground">
-            {t('creg.haveAccount')}
-            <Link href={paths.login} className="font-medium text-primary hover:underline">
-              {t('creg.signIn')}
-            </Link>
-          </p>
-        </div>
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resendIn > 0 || sending}
+              className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+            >
+              <RotateCw className="size-3.5" />
+              {resendIn > 0 ? t('creg.resendIn', { s: String(resendIn) }) : t('creg.resend')}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Brand panel — RIGHT */}

@@ -54,11 +54,11 @@ interface AuthContextType {
     password: string;
     fullName: string;
     phone: string;
-    province?: string;
-    city: string;
+    country?: string;                       // ISO 3166-1 alpha-2
     role: string;
     roleData: any;
     consentAccepted: boolean;
+    verificationCode: string;               // emailed code (or "000000" in dev)
   }) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
@@ -189,6 +189,7 @@ export function AuthProvider({
     role: string;
     roleData: any;
     consentAccepted: boolean;
+    verificationCode: string;               // emailed code (or "000000" in dev)
   }) {
     try {
       setError(null);

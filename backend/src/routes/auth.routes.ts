@@ -13,7 +13,7 @@ import {
 import { issueBypassCookie, clearBypassCookie } from "../services/bypass-cookie.service";
 import { gateArenaAuth, enforceArenaAuthGate } from "../services/arena-maintenance-gate.service";
 import { dbErrorResponse } from "../lib/db-errors";
-import { sendOtpEmail, sendPasswordResetEmail } from "../services/email.service";
+import { sendOtpEmail, sendPasswordResetEmail, sendEmailVerificationEmail, isSmtpConfigured } from "../services/email.service";
 import { sendPhoneOtp, verifyPhoneOtp, toE164, phoneVariants, toLocalPhone } from "../services/twilio.service";
 import { authMiddleware } from "../middleware/auth";
 import { audit } from "../middleware/audit";
@@ -161,6 +161,85 @@ async function fetchUserWithRole(userId: string) {
 }
 
 // ── POST /api/auth/signup ─────────────────────────────────────────────────
+// ── Email verification at signup ──────────────────────────────────────────
+// A new account must prove it owns the email address before it's created.
+// send-code issues a 6-digit code (otp_codes, purpose='email_verify'); signup
+// only creates the account when a matching, unconsumed, unexpired code is sent.
+// When SMTP is not configured (local dev) we don't block testing: the code is
+// returned in the response and the universal "000000" is accepted — mirroring
+// the phone-OTP dev bypass.
+const EMAIL_VERIFY_PURPOSE = "email_verify";
+const EMAIL_OTP_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const emailVerifyBypassActive = () => !isSmtpConfigured();
+
+// ── POST /api/auth/signup/send-code ───────────────────────────────────────
+router.post("/signup/send-code", otpSendLimiter, async (req: Request, res: Response) => {
+  try {
+    if (await gateArenaAuth(req, res)) return;
+
+    const rawEmail = typeof req.body?.email === "string" ? req.body.email.trim() : "";
+    if (!rawEmail || !EMAIL_OTP_RE.test(rawEmail)) {
+      res.status(400).json({ message: "A valid email is required" });
+      return;
+    }
+
+    // Don't send a verification code to an address that already has an account
+    // — surfaces "email taken" before the user fills the rest of the form.
+    const existing = await pool.query("SELECT id FROM users WHERE email = $1", [rawEmail]);
+    if (existing.rows.length > 0) {
+      res.status(409).json({ message: "Email already registered" });
+      return;
+    }
+
+    const code = generateOtp();
+    const expiresAt = new Date(Date.now() + env.OTP_EXPIRY_MINUTES * 60 * 1000);
+
+    // Invalidate any earlier unused verification codes for this email so only
+    // the latest one works.
+    await pool.query(
+      "UPDATE otp_codes SET used = true WHERE email = $1 AND purpose = $2 AND used = false",
+      [rawEmail, EMAIL_VERIFY_PURPOSE]
+    );
+    await pool.query(
+      "INSERT INTO otp_codes (email, code, expires_at, purpose) VALUES ($1, $2, $3, $4)",
+      [rawEmail, code, expiresAt, EMAIL_VERIFY_PURPOSE]
+    );
+
+    if (emailVerifyBypassActive()) {
+      res.json({
+        message: "Verification code generated (dev bypass — SMTP not configured).",
+        devBypass: true,
+        devCode: code,
+        expiresInMinutes: env.OTP_EXPIRY_MINUTES,
+      });
+      return;
+    }
+
+    try {
+      await sendEmailVerificationEmail(rawEmail, code);
+    } catch (sendErr) {
+      // Outside production, never block local testing when SMTP is broken or
+      // unreachable — surface the code as a dev fallback instead of 500.
+      // Production still fails loudly so a real delivery problem is visible.
+      if (env.NODE_ENV !== "production") {
+        console.warn("Signup send-code: email send failed, using dev fallback:", (sendErr as Error)?.message);
+        res.json({
+          message: "Verification code generated (dev fallback — email send failed).",
+          devBypass: true,
+          devCode: code,
+          expiresInMinutes: env.OTP_EXPIRY_MINUTES,
+        });
+        return;
+      }
+      throw sendErr;
+    }
+    res.json({ message: "Verification code sent to your email.", expiresInMinutes: env.OTP_EXPIRY_MINUTES });
+  } catch (err) {
+    console.error("Signup send-code error:", err);
+    res.status(500).json({ message: "Failed to send verification code" });
+  }
+});
+
 router.post("/signup", authLimiter, async (req: Request, res: Response) => {
   try {
     // Arena maintenance gate — read-only/on with no admin bypass
@@ -170,7 +249,7 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
     // closing happens per-competition via competitions.registration_*.
     if (await gateArenaAuth(req, res)) return;
 
-    const { email, password, fullName, phone, city, province, country, role, roleData, consentAccepted } = req.body;
+    const { email, password, fullName, phone, city, province, country, role, roleData, consentAccepted, verificationCode } = req.body;
 
     // Country is an optional ISO 3166-1 alpha-2 code (e.g. "ID", "MY") — match
     // the validation PUT /users/me already applies.
@@ -201,6 +280,33 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
       return;
     }
 
+    // Email verification gate — the code must have been issued to THIS email
+    // via POST /auth/signup/send-code and still be valid. Consumed inside the
+    // transaction below so it commits atomically with the account.
+    const submittedCode = typeof verificationCode === "string" ? verificationCode.trim() : "";
+    const verifyBypass = emailVerifyBypassActive() && submittedCode === "000000";
+    let verifyCodeId: string | null = null;
+    if (!verifyBypass) {
+      if (!submittedCode) {
+        res.status(400).json({ code: "EMAIL_NOT_VERIFIED", message: "Please verify your email to continue." });
+        return;
+      }
+      const codeRow = await pool.query(
+        `SELECT id FROM otp_codes
+         WHERE email = $1 AND code = $2 AND purpose = $3 AND used = false AND expires_at > now()
+         ORDER BY created_at DESC LIMIT 1`,
+        [String(email).trim(), submittedCode, EMAIL_VERIFY_PURPOSE]
+      );
+      if (codeRow.rows.length === 0) {
+        res.status(400).json({
+          code: "INVALID_VERIFICATION_CODE",
+          message: "That verification code is invalid or has expired. Request a new one.",
+        });
+        return;
+      }
+      verifyCodeId = codeRow.rows[0].id;
+    }
+
     const passwordHash = await hashPassword(password);
 
     // Use a transaction for atomicity
@@ -209,13 +315,18 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
       await client.query("BEGIN");
 
       const userResult = await client.query(
-        `INSERT INTO users (email, password_hash, full_name, phone, city, province, country, role, consent_accepted_at, consent_version)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9)
+        `INSERT INTO users (email, password_hash, full_name, phone, city, province, country, role, consent_accepted_at, consent_version, email_verified_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9, now())
          RETURNING id`,
         // Phone is normalised to the local 0-prefixed format on the way in.
         [email, passwordHash, fullName, phone ? toLocalPhone(phone) || null : null, city || null, province || null, normalizedCountry, role, "1.0"]
       );
       const userId = userResult.rows[0].id;
+
+      // Consume the verification code atomically with the account creation.
+      if (verifyCodeId) {
+        await client.query("UPDATE otp_codes SET used = true WHERE id = $1", [verifyCodeId]);
+      }
 
       // Insert into role-specific table
       if (role === "student") {
@@ -350,10 +461,11 @@ router.post("/verify-otp", otpVerifyLimiter, async (req: Request, res: Response)
       return;
     }
 
-    // Find valid OTP
+    // Find valid OTP — scoped to login codes so a signup verification code
+    // (purpose='email_verify') can't be used to authenticate.
     const otpResult = await pool.query(
       `SELECT id FROM otp_codes
-       WHERE email = $1 AND code = $2 AND used = false AND expires_at > now()
+       WHERE email = $1 AND code = $2 AND purpose = 'login' AND used = false AND expires_at > now()
        ORDER BY created_at DESC LIMIT 1`,
       [email, code]
     );
