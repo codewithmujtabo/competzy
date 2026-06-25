@@ -58,7 +58,7 @@ const NAV: NavSection[] = [
     labelKey: 'opnav.people',
     items: [
       { label: 'Schools', labelKey: 'opnav.schools', href: '/schools', icon: School },
-      { label: 'Pending Schools', labelKey: 'opnav.pendingSchools', href: '/schools-pending', icon: Clock },
+      { label: 'Approvals', labelKey: 'opnav.approvals', href: '/pending-approvals', icon: Clock },
       { label: 'Country Reps', labelKey: 'opnav.countryReps', href: '/country-reps', icon: Globe },
       { label: 'Users', labelKey: 'opnav.users', href: '/users', icon: Users },
     ],

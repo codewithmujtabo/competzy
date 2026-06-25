@@ -38,6 +38,7 @@ import commerceRoutes from "./routes/commerce.routes";
 import marketingRoutes from "./routes/marketing.routes";
 import certificatesRoutes from "./routes/certificates.routes";
 import countryRepRoutes from "./routes/country-rep.routes";
+import verificationRoutes from "./routes/verification.routes";
 import waitlistRoutes from "./routes/waitlist.routes";
 import maintenanceRoutes from "./routes/maintenance.routes";
 import { initializeCronJobs } from "./services/cron.service";
@@ -173,6 +174,8 @@ app.use("/api", venuesRoutes);
 app.use("/api", commerceRoutes);
 // Country representatives — owns /country-representatives/* + /rep/* (at /api).
 app.use("/api", countryRepRoutes);
+// Account verification queue — /verification/* (admin + organizer).
+app.use("/api", verificationRoutes);
 
 // Sentry error handler must come before our own error handler
 Sentry.setupExpressErrorHandler(app);

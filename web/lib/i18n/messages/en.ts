@@ -1230,6 +1230,7 @@ export const en = {
   'opnav.people': 'People',
   'opnav.schools': 'Schools',
   'opnav.pendingSchools': 'Pending Schools',
+  'opnav.approvals': 'Approvals',
   'opnav.countryReps': 'Country Reps',
   'opnav.users': 'Users',
   'opnav.commerce': 'Commerce',
