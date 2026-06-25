@@ -179,7 +179,11 @@ async function fetchUserWithRole(userId: string) {
 // the phone-OTP dev bypass.
 const EMAIL_VERIFY_PURPOSE = "email_verify";
 const EMAIL_OTP_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const emailVerifyBypassActive = () => !isSmtpConfigured();
+// The dev bypass (code returned in the response + universal "000000" accepted)
+// is ONLY for local/dev where SMTP is absent. In production it is NEVER active:
+// if SMTP is somehow unset there, send-code fails loudly rather than silently
+// letting anyone register an email they don't own.
+const emailVerifyBypassActive = () => env.NODE_ENV !== "production" && !isSmtpConfigured();
 
 // ── POST /api/auth/signup/send-code ───────────────────────────────────────
 router.post("/signup/send-code", otpSendLimiter, async (req: Request, res: Response) => {
@@ -277,8 +281,10 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
       return;
     }
 
-    if (password.length < 6) {
-      res.status(400).json({ message: "Password must be at least 6 characters" });
+    // 8-char minimum matches the reset-password endpoint + the web forms, so a
+    // password accepted at signup is also valid at reset.
+    if (password.length < 8) {
+      res.status(400).json({ message: "Password must be at least 8 characters" });
       return;
     }
 
