@@ -1,11 +1,13 @@
 import Link from 'next/link';
 import { ArrowLeft, TriangleAlert } from 'lucide-react';
+import { PublicToggles } from '@/components/shell/public-toggles';
 
 // Placeholder content. MUST be replaced by counsel before production launch.
 
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-background">
+      <PublicToggles />
       <div className="mx-auto max-w-3xl px-6 py-12">
         <Link
           href="/"

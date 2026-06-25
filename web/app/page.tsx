@@ -479,8 +479,9 @@ export default function UnifiedLogin() {
         </div>
       </div>
 
-      {/* Brand panel — RIGHT */}
-      <CompetzyBrandPanel />
+      {/* Brand panel — RIGHT. Same "every competition, one arena" showcase as
+          the register page so sign-in reads as a continuation of competzy.com. */}
+      <CompetzyBrandPanel showcase />
     </div>
   );
 }

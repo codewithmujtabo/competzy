@@ -9,6 +9,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Award, CheckCircle2, Download, Loader2, ShieldAlert, XCircle } from 'lucide-react';
 import { useT, useLocale } from '@/lib/i18n/context';
+import { PublicToggles } from '@/components/shell/public-toggles';
 
 interface VerifyResult {
   valid: boolean;
@@ -54,6 +55,7 @@ export default function VerifyCertificatePage() {
 
   return (
     <div className="min-h-screen bg-muted/30">
+      <PublicToggles />
       <div className="mx-auto max-w-lg px-6 py-12">
         <p className="text-center font-mono text-xs uppercase tracking-[0.22em] text-primary">
           Competzy

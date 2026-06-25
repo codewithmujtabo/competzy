@@ -119,7 +119,16 @@ async function fetchUserWithRole(userId: string) {
     const r = await pool.query("SELECT * FROM teachers WHERE id = $1", [userId]);
     if (r.rows.length > 0) {
       const t = r.rows[0];
-      roleData = { school: t.school, subject: t.subject, department: t.department };
+      roleData = {
+        school: t.school,
+        subject: t.subject,
+        department: t.department,
+        npsn: t.npsn ?? null,
+        // Mirrors schoolVerificationStatus — gates the teacher portal until an
+        // admin/organizer approves. NULL-safe (legacy rows are 'verified').
+        teacherVerificationStatus: t.verification_status ?? "verified",
+        teacherRejectionReason: t.rejection_reason ?? null,
+      };
     }
   } else if (user.role === "school_admin") {
     // Fetch school info for school_admin
@@ -273,6 +282,34 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
       return;
     }
 
+    // Self-signup is limited to public roles. Privileged roles (admin,
+    // organizer, country_representative, question_maker) are provisioned
+    // internally and can never be obtained from this endpoint.
+    const SIGNUP_ROLES = ["student", "parent", "teacher", "school_admin"];
+    if (!SIGNUP_ROLES.includes(role)) {
+      res.status(400).json({ message: "Invalid role" });
+      return;
+    }
+
+    // Minimal per-role required fields.
+    if (role === "teacher" && (!roleData?.school || !roleData?.npsn || !roleData?.subject)) {
+      res.status(400).json({ message: "School name, NPSN, and subject are required for a teacher account" });
+      return;
+    }
+    if (role === "school_admin") {
+      if (!roleData?.schoolName || !roleData?.npsn) {
+        res.status(400).json({ message: "School name and NPSN are required for a school account" });
+        return;
+      }
+      // Reject a duplicate NPSN up front unless the prior application was
+      // rejected (then it's a re-apply, handled inside the transaction).
+      const npsnDup = await pool.query("SELECT verification_status FROM schools WHERE npsn = $1", [String(roleData.npsn)]);
+      if (npsnDup.rows.length > 0 && npsnDup.rows[0].verification_status !== "rejected") {
+        res.status(409).json({ code: "NPSN_TAKEN", message: "A school with this NPSN already exists. Contact an admin to reset the previous application." });
+        return;
+      }
+    }
+
     // Check if email already exists
     const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
     if (existing.rows.length > 0) {
@@ -350,10 +387,48 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
           [userId, roleData?.childName || null, roleData?.childSchool || null, roleData?.childGrade || null]
         );
       } else if (role === "teacher") {
+        // New teachers start pending — an admin/organizer must approve before
+        // they can enter the teacher portal (so a student can't self-assign
+        // teacher tooling). Legacy teachers are grandfathered 'verified'.
         await client.query(
-          "INSERT INTO teachers (id, school, subject) VALUES ($1, $2, $3)",
-          [userId, roleData?.school || null, roleData?.subject || null]
+          `INSERT INTO teachers (id, school, subject, npsn, verification_status, applied_at)
+           VALUES ($1, $2, $3, $4, 'pending_verification', now())`,
+          [userId, roleData?.school || null, roleData?.subject || null, roleData?.npsn || null]
         );
+        // Surface the claimed school in the directory + link it (NPSN-keyed),
+        // mirroring the student path, so a verified teacher skips the picker.
+        const schoolId = await upsertSchoolFromNpsn(client, roleData?.npsn, roleData?.school, null);
+        if (schoolId) {
+          await client.query("UPDATE users SET school_id = $1 WHERE id = $2", [schoolId, userId]);
+        }
+      } else if (role === "school_admin") {
+        // Create (or re-apply on a previously-rejected) school in
+        // pending_verification, link the new school_admin to it — mirrors
+        // POST /api/schools/signup, kept atomic with the account + email gate.
+        let schoolId: string;
+        const existingSchool = await client.query(
+          "SELECT id, verification_status FROM schools WHERE npsn = $1",
+          [String(roleData.npsn)]
+        );
+        if (existingSchool.rows.length > 0) {
+          schoolId = existingSchool.rows[0].id;
+          await client.query(
+            `UPDATE schools
+                SET name = $1, verification_status = 'pending_verification',
+                    applied_at = now(), rejection_reason = NULL
+              WHERE id = $2`,
+            [roleData.schoolName, schoolId]
+          );
+        } else {
+          const ins = await client.query(
+            `INSERT INTO schools (npsn, name, verification_status, applied_at)
+             VALUES ($1, $2, 'pending_verification', now()) RETURNING id`,
+            [String(roleData.npsn), roleData.schoolName]
+          );
+          schoolId = ins.rows[0].id;
+        }
+        await client.query("UPDATE users SET school_id = $1 WHERE id = $2", [schoolId, userId]);
+        await client.query("UPDATE schools SET applied_by_user_id = $1 WHERE id = $2", [userId, schoolId]);
       }
 
       await client.query("COMMIT");

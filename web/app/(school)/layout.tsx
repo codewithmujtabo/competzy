@@ -123,14 +123,18 @@ function SchoolLayoutInner({ children }: { children: React.ReactNode }) {
   // school-signup stays reachable unauthenticated — no shell.
   if (pathname.includes('/school-signup')) return <>{children}</>;
 
-  // school_admin whose school isn't verified yet lands on /school-pending.
-  // Teachers link to already-verified schools and skip approval.
-  if (
-    user?.role === 'school_admin' &&
-    user.schoolVerificationStatus &&
-    user.schoolVerificationStatus !== 'verified' &&
-    !pathname.includes('/school-pending')
-  ) {
+  // Accounts awaiting admin/organizer approval land on /school-pending:
+  //  • school_admin — school not yet verified
+  //  • teacher      — self-registered teacher not yet verified
+  // (legacy teachers and modal-linked teachers are 'verified', so they pass.)
+  const pendingApproval =
+    (user?.role === 'school_admin' &&
+      !!user.schoolVerificationStatus &&
+      user.schoolVerificationStatus !== 'verified') ||
+    (user?.role === 'teacher' &&
+      !!user.teacherVerificationStatus &&
+      user.teacherVerificationStatus !== 'verified');
+  if (pendingApproval && !pathname.includes('/school-pending')) {
     if (typeof window !== 'undefined') router.replace('/school-pending');
     return null;
   }

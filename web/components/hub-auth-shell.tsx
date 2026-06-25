@@ -6,8 +6,7 @@
 // per-competition register page so all auth surfaces share one orientation
 // AND one set of branding — never per-competition.
 
-import { Moon, Sun } from 'lucide-react';
-import { useTheme } from '@/lib/theme/context';
+import { PublicToggles } from './shell/public-toggles';
 
 interface HubAuthShellProps {
   headlineTop: string;
@@ -23,21 +22,12 @@ const COMPETZY = {
 };
 
 export function HubAuthShell({ headlineTop, headlineBottom, caption, quote, children }: HubAuthShellProps) {
-  const { theme, toggle } = useTheme();
-  const isDark = theme === 'dark';
   const [from, to] = COMPETZY.gradient;
 
   return (
     <div className="relative grid min-h-screen lg:grid-cols-2">
-      {/* Theme toggle — pinned to the top-right of the whole screen */}
-      <button
-        onClick={toggle}
-        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        className="absolute right-5 top-5 z-20 flex size-9 items-center justify-center rounded-lg border bg-card text-muted-foreground transition-colors hover:text-foreground"
-      >
-        {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-      </button>
+      {/* Language + theme toggles — pinned to the top-right of the whole screen */}
+      <PublicToggles />
 
       {/* Form panel — LEFT */}
       <div className="relative flex items-center justify-center bg-background px-6 py-12">
