@@ -18,7 +18,6 @@ import { useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, BookOpen, Building2, Eye, EyeOff, GraduationCap, Hash, Lock, Mail, MailCheck, Phone, RotateCw, School, User } from 'lucide-react';
 import { emcHttp, HttpError } from '@/lib/api/client';
-import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/context';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { CompetzyBrandPanel } from '@/components/auth/competzy-brand-panel';
@@ -37,11 +36,12 @@ const RESEND_COOLDOWN_S = 30;
 // Account type the visitor is creating. 'school' maps to the backend
 // 'school_admin' role. Students go live immediately; teachers + schools are
 // created pending an admin/organizer approval before their portal unlocks.
+// The visitor picks one on a cards screen FIRST, then the form opens.
 type RoleKey = 'student' | 'teacher' | 'school';
-const ROLE_TABS = [
-  { value: 'student', labelKey: 'creg.roleStudent', icon: GraduationCap },
-  { value: 'teacher', labelKey: 'creg.roleTeacher', icon: BookOpen },
-  { value: 'school', labelKey: 'creg.roleSchool', icon: Building2 },
+const ROLE_CARDS = [
+  { value: 'student', labelKey: 'creg.roleStudent', descKey: 'creg.roleStudentDesc', icon: GraduationCap },
+  { value: 'teacher', labelKey: 'creg.roleTeacher', descKey: 'creg.roleTeacherDesc', icon: BookOpen },
+  { value: 'school', labelKey: 'creg.roleSchool', descKey: 'creg.roleSchoolDesc', icon: Building2 },
 ] as const;
 
 export default function CompetitionRegisterPage() {
@@ -58,7 +58,7 @@ export default function CompetitionRegisterPage() {
   const { user, loading: authLoading } = useCompetitionAuth();
   const { comp, loading: compLoading } = usePortalComp(slug);
 
-  const [step, setStep] = useState<'form' | 'verify'>('form');
+  const [step, setStep] = useState<'role' | 'form' | 'verify'>('role');
 
   const [role, setRole] = useState<RoleKey>('student');
   // Teacher + school extras (minimal set). fullName doubles as the school
@@ -285,8 +285,61 @@ export default function CompetitionRegisterPage() {
     <div className="relative grid min-h-screen lg:grid-cols-2">
       {/* Form panel — LEFT */}
       <div className="relative flex items-center justify-center bg-background px-6 py-12">
-        {step === 'form' ? (
+        {step === 'role' ? (
+          // ── Step 0: pick an account type ──────────────────────────────────
           <div className="w-full max-w-md">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
+              {t('creg.eyebrow')}
+            </p>
+            <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">{t('creg.rolePickTitle')}</h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">{t('creg.rolePickSubtitle')}</p>
+
+            <div className="mt-6 space-y-3">
+              {ROLE_CARDS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => {
+                    setRole(c.value);
+                    setError('');
+                    setEmailTaken(false);
+                    setStep('form');
+                  }}
+                  className="group flex w-full items-center gap-4 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary hover:bg-primary/5 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                >
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <c.icon className="size-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-medium text-foreground">{t(c.labelKey)}</span>
+                    <span className="block text-sm text-muted-foreground">{t(c.descKey)}</span>
+                  </span>
+                  <ArrowRight className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                </button>
+              ))}
+            </div>
+
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              {t('creg.haveAccount')}
+              <Link href={paths.login} className="font-medium text-primary hover:underline">
+                {t('creg.signIn')}
+              </Link>
+            </p>
+          </div>
+        ) : step === 'form' ? (
+          <div className="w-full max-w-md">
+            <button
+              type="button"
+              onClick={() => {
+                setStep('role');
+                setError('');
+                setEmailTaken(false);
+              }}
+              className="mb-5 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="size-4" />
+              {t('creg.changeRole')}
+            </button>
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
               {t('creg.eyebrow')}
             </p>
@@ -295,35 +348,6 @@ export default function CompetitionRegisterPage() {
               {role === 'student' ? t('creg.subtitle') : t('creg.subtitleStaff')}
             </p>
 
-            {/* Account-type selector — student goes live instantly; teacher +
-                school are reviewed by an admin/organizer before unlocking. */}
-            <div role="tablist" aria-label={t('creg.accountType')} className="mt-5 grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
-              {ROLE_TABS.map((tab) => {
-                const active = role === tab.value;
-                return (
-                  <button
-                    key={tab.value}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => {
-                      setRole(tab.value);
-                      setError('');
-                      setEmailTaken(false);
-                    }}
-                    className={cn(
-                      'flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-sm font-medium transition-colors',
-                      active
-                        ? 'bg-background text-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    <tab.icon className="size-4" />
-                    {t(tab.labelKey)}
-                  </button>
-                );
-              })}
-            </div>
             {role !== 'student' && (
               <p className="mt-3 rounded-lg border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-xs text-muted-foreground">
                 {t('creg.staffNote')}
