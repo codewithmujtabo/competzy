@@ -1221,6 +1221,7 @@ export const id: Partial<Record<MessageKey, string>> = {
   'opnav.people': 'Orang',
   'opnav.schools': 'Sekolah',
   'opnav.pendingSchools': 'Sekolah Tertunda',
+  'opnav.approvals': 'Persetujuan',
   'opnav.countryReps': 'Perwakilan Negara',
   'opnav.users': 'Pengguna',
   'opnav.commerce': 'Niaga',
