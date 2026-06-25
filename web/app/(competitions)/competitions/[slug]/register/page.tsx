@@ -21,6 +21,7 @@ import { emcHttp, HttpError } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { CompetzyBrandPanel } from '@/components/auth/competzy-brand-panel';
+import { PublicToggles } from '@/components/shell/public-toggles';
 import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/registry';
 import { usePortalComp } from '@/lib/competitions/use-portal-comp';
 import { Input } from '@/components/ui/input';
@@ -283,6 +284,9 @@ export default function CompetitionRegisterPage() {
 
   return (
     <div className="relative grid min-h-screen lg:grid-cols-2">
+      {/* Language + theme toggles — pinned to the top-right of the whole screen */}
+      <PublicToggles />
+
       {/* Form panel — LEFT */}
       <div className="relative flex items-center justify-center bg-background px-6 py-12">
         {step === 'role' ? (

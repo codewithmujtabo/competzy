@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowLeft, TriangleAlert } from 'lucide-react';
+import { PublicToggles } from '@/components/shell/public-toggles';
 
 // Placeholder content. MUST be replaced by counsel before production launch.
 // References UU PDP No. 27 of 2022 (Indonesia data protection law).
@@ -7,6 +8,7 @@ import { ArrowLeft, TriangleAlert } from 'lucide-react';
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-background">
+      <PublicToggles />
       <div className="mx-auto max-w-3xl px-6 py-12">
         <Link
           href="/"
