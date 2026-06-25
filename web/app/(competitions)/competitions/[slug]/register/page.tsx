@@ -664,8 +664,10 @@ export default function CompetitionRegisterPage() {
         )}
       </div>
 
-      {/* Brand panel — RIGHT */}
-      <CompetzyBrandPanel />
+      {/* Brand panel — RIGHT. The "every competition, one arena" showcase
+          (same for every competition) makes it clear arena.competzy.com is a
+          continuation of the marketing site the student came from. */}
+      <CompetzyBrandPanel showcase />
     </div>
   );
 }
