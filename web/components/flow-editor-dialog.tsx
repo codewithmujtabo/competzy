@@ -184,7 +184,7 @@ export function FlowEditorDialog({
         if (!o) onClose();
       }}
     >
-      <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Step-flow</DialogTitle>
           <DialogDescription>

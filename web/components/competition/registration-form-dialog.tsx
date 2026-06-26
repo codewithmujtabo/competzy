@@ -209,7 +209,7 @@ export function RegistrationFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t('regform.title', { comp: compName })}</DialogTitle>
         </DialogHeader>

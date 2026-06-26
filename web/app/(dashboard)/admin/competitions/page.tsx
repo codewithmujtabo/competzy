@@ -363,7 +363,7 @@ export default function CompetitionsPage() {
       </Card>
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editId ? t('acp.dlgEditTitle') : t('acp.dlgNewTitle')}</DialogTitle>
             <DialogDescription>

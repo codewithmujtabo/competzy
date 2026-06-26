@@ -61,12 +61,18 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
+          // The outer shell stays fixed + centred, caps to the viewport (equal
+          // top/bottom margin) and CLIPS its rounded corners (overflow-hidden +
+          // solid bg) so the overlay can never show through them on elastic
+          // overscroll. The inner wrapper does the scrolling.
+          "fixed top-[50%] left-[50%] z-50 flex max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] flex-col overflow-hidden rounded-lg border bg-background shadow-lg duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg",
           className
         )}
         {...props}
       >
-        {children}
+        <div className="grid min-h-0 gap-4 overflow-y-auto overscroll-contain p-6">
+          {children}
+        </div>
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
