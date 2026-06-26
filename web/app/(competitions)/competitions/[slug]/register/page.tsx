@@ -237,6 +237,10 @@ export default function CompetitionRegisterPage() {
         if (refCode) {
           emcHttp.post('/referrals/signup', { compId: comp.id, code: refCode }).catch(() => {});
         }
+        // Save the competition the student came in for, so it shows up under
+        // My Competitions → Saved straight away (e.g. arrived from the Komodo
+        // site → Komodo is already saved). Best-effort; idempotent server-side.
+        emcHttp.post('/favorites', { compId: comp.id }).catch(() => {});
         try {
           await emcHttp.post('/registrations', {
             id: crypto.randomUUID(),
