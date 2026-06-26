@@ -17,20 +17,30 @@ import {
   Globe,
   Heart,
   Loader2,
+  Search,
   ShieldCheck,
   Sparkles,
   Trophy,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { emcHttp } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
-import { getCompetitionConfig } from '@/lib/competitions/registry';
+import { getCompetitionConfig, competitionRegistry } from '@/lib/competitions/registry';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { AppShell } from '@/components/shell/app-shell';
 import { STUDENT_NAV, STUDENT_BRAND } from '@/lib/nav/student-nav';
 
@@ -47,7 +57,12 @@ interface CatalogCompetition {
    *  competitions.routes.ts callerCountry()); the flag is surfaced here so the
    *  card can show an "International" badge for clarity. */
   isInternational?: boolean;
+  logoUrl?: string | null;
 }
+
+type GradeBand = 'elementary' | 'junior' | 'senior';
+type LevelFilter = 'all' | 'national' | 'international';
+type GradeFilter = 'all' | GradeBand;
 
 interface DashboardSummary {
   counts: { registrations: number; certificates: number; savedComps: number };
@@ -85,6 +100,107 @@ function fmtDate(d: string | null): string {
   return d
     ? new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
     : '—';
+}
+
+// ── Per-competition colour identity ────────────────────────────────────────
+// Known competitions reuse the SAME brand colours + logos as their portal hero
+// / competzy.com (the registry gradient + the self-hosted /competitions/<slug>
+// .webp logo). Operator-created competitions with no hand-tuned branding fall
+// back to a stable, distinct hashed palette so every card is recognisable
+// instead of a wall of white cards.
+
+// Self-hosted logos in /public/competitions/<file>.webp (mirrored from
+// competzy.com). Matched by keyword against the competition's slug + name,
+// because operator-created slugs look like `international-greenwich-olympiad-f3i6d`.
+const LOGO_MATCHERS: { file: string; test: RegExp }[] = [
+  { file: 'komodo', test: /komodo/i },
+  { file: 'owlypia', test: /owlypia/i },
+  { file: 'genius', test: /genius/i },
+  { file: 'igo', test: /\bigo\b|greenwich/i },
+  { file: 'nextgen', test: /next\s*gen/i },
+  { file: 'ispo', test: /\bispo\b/i },
+  { file: 'osebi', test: /osebi/i },
+  { file: 'emc', test: /\bemc\b/i },
+];
+function resolveLogo(comp: CatalogCompetition): string | null {
+  const hay = `${comp.slug ?? ''} ${comp.name ?? ''}`;
+  for (const m of LOGO_MATCHERS) if (m.test.test(hay)) return `/competitions/${m.file}.webp`;
+  // An operator-uploaded absolute logo URL is the last resort.
+  return comp.logoUrl && /^https?:\/\//i.test(comp.logoUrl) ? comp.logoUrl : null;
+}
+
+type Palette = { from: string; to: string; accent: string; glow: string; ink: 'light' | 'dark' };
+const HASH_PALETTES: Palette[] = [
+  { from: '#7C3AED', to: '#3D087B', accent: '#6B1AB8', glow: '#C084FC', ink: 'light' },
+  { from: '#EC4899', to: '#9D174D', accent: '#BE185D', glow: '#FBCFE8', ink: 'light' },
+  { from: '#F59E0B', to: '#B45309', accent: '#B45309', glow: '#FDE68A', ink: 'dark' },
+  { from: '#10B981', to: '#065F46', accent: '#047857', glow: '#6EE7B7', ink: 'light' },
+  { from: '#3B82F6', to: '#1E40AF', accent: '#1D4ED8', glow: '#93C5FD', ink: 'light' },
+  { from: '#F43F5E', to: '#9F1239', accent: '#BE123C', glow: '#FDA4AF', ink: 'light' },
+  { from: '#06B6D4', to: '#155E75', accent: '#0E7490', glow: '#67E8F9', ink: 'light' },
+  { from: '#A855F7', to: '#6D28D9', accent: '#7E22CE', glow: '#D8B4FE', ink: 'light' },
+];
+
+type CardBrand = { from: string; to: string; accent: string; glow: string; ink: 'light' | 'dark'; logoSrc: string | null };
+function brandFor(comp: CatalogCompetition): CardBrand {
+  const reg = comp.slug ? competitionRegistry[comp.slug] : undefined;
+  let from: string, to: string, accent: string, glow: string, ink: 'light' | 'dark';
+  if (reg) {
+    // Real brand gradient + accent — matches the competition's portal hero.
+    [from, to] = reg.gradient;
+    accent = reg.accent;
+    glow = reg.activeAccent ?? reg.accent;
+    ink = 'light';
+  } else {
+    const key = comp.id || comp.slug || comp.name || '';
+    let h = 0;
+    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+    const p = HASH_PALETTES[h % HASH_PALETTES.length];
+    from = p.from;
+    to = p.to;
+    accent = p.accent;
+    glow = p.glow;
+    ink = p.ink;
+  }
+  return { from, to, accent, glow, ink, logoSrc: resolveLogo(comp) };
+}
+
+// hex → rgba, for the soft brand wash painted over the (theme-aware) card body.
+function hexA(hex: string, a: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+
+// Parse a comma/space-separated numeric grade string ("4,5,…,12") into the
+// school-level bands it spans (Elementary 1–6 / Junior 7–9 / Senior 10–12).
+function gradeBandsOf(gradeLevel: string | null): Set<GradeBand> {
+  const bands = new Set<GradeBand>();
+  if (!gradeLevel) return bands;
+  for (const tok of gradeLevel.split(/[,\s]+/)) {
+    const n = parseInt(tok, 10);
+    if (!Number.isFinite(n)) continue;
+    if (n >= 1 && n <= 6) bands.add('elementary');
+    else if (n >= 7 && n <= 9) bands.add('junior');
+    else if (n >= 10 && n <= 12) bands.add('senior');
+  }
+  return bands;
+}
+
+// A tidy "Grades 4–12" range instead of the raw comma list.
+function gradeRange(gradeLevel: string | null): string | null {
+  if (!gradeLevel) return null;
+  const nums = gradeLevel
+    .split(/[,\s]+/)
+    .map((s) => parseInt(s, 10))
+    .filter((n) => Number.isFinite(n))
+    .sort((a, b) => a - b);
+  if (nums.length === 0) return null;
+  const min = nums[0];
+  const max = nums[nums.length - 1];
+  return min === max ? `${min}` : `${min}–${max}`;
 }
 
 // The 9 profile fields the student should fill to be "complete" — matches
@@ -150,59 +266,140 @@ function CompetitionCard({
 }) {
   const t = useT();
   const hasPortal = comp.slug ? getCompetitionConfig(comp.slug) : null;
+  const brand = brandFor(comp);
+  const bandFg = brand.ink === 'dark' ? '#1a1208' : '#ffffff';
+  const range = gradeRange(comp.gradeLevel);
   const body = (
     <Card
       className={cn(
-        'gap-0 p-6 transition-all duration-200',
-        hasPortal
-          ? 'hover:-translate-y-0.5 hover:border-primary/40 hover:bg-accent/40 hover:shadow-lg'
-          : 'opacity-70',
+        'flex h-full flex-col gap-0 overflow-hidden border-0 bg-card p-0 shadow-sm ring-1 ring-black/5 transition-all duration-300 dark:ring-white/10',
+        hasPortal ? 'hover:-translate-y-1 hover:shadow-xl' : 'opacity-70',
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Trophy className="size-5" />
-        </div>
-        <button
-          type="button"
-          aria-label={isFav ? 'Remove from saved' : 'Save competition'}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onToggleFav(comp.id);
-          }}
-          className="rounded-full p-1 text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/75"
-        >
-          <Heart className={cn('size-5', isFav && 'fill-primary text-primary')} />
-        </button>
-      </div>
-      <h2 className="mt-4 font-serif text-lg font-medium leading-snug text-foreground">{comp.name}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">{comp.organizerName}</p>
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        {comp.isInternational && (
-          <Badge className="font-normal bg-sky-100 text-sky-800 hover:bg-sky-100 dark:bg-sky-950 dark:text-sky-200">
-            {t('catalog.international')}
-          </Badge>
+      {/* Brand banner — gradient + dot texture + sheen + glow + faded logo
+          watermark, so each competition reads like its own portal hero. */}
+      <div
+        className="relative h-28 shrink-0 overflow-hidden"
+        style={{ backgroundImage: `linear-gradient(135deg, ${brand.from}, ${brand.to})`, color: bandFg }}
+      >
+        {/* dotted texture (inherits band ink via currentColor) */}
+        <span
+          aria-hidden
+          className="absolute inset-0 opacity-[0.18]"
+          style={{ backgroundImage: 'radial-gradient(currentColor 1px, transparent 1.4px)', backgroundSize: '15px 15px' }}
+        />
+        {/* diagonal sheen */}
+        <span
+          aria-hidden
+          className="absolute inset-0"
+          style={{ backgroundImage: 'linear-gradient(120deg, rgba(255,255,255,0.18), transparent 45%)' }}
+        />
+        {/* coloured glow + soft white glow for depth */}
+        <span aria-hidden className="absolute -right-12 -top-14 size-44 rounded-full blur-2xl" style={{ backgroundColor: brand.glow, opacity: 0.45 }} />
+        <span aria-hidden className="absolute -bottom-16 -left-12 size-40 rounded-full bg-white/15 blur-2xl" />
+        {/* big faded logo watermark */}
+        {brand.logoSrc && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={brand.logoSrc}
+            alt=""
+            aria-hidden
+            className="pointer-events-none absolute -right-3 top-1/2 size-36 -translate-y-1/2 object-contain opacity-20"
+          />
         )}
-        {comp.category && (
-          <Badge variant="secondary" className="font-normal">{comp.category}</Badge>
-        )}
-        {comp.gradeLevel && (
-          <Badge variant="outline" className="font-normal text-muted-foreground">{comp.gradeLevel}</Badge>
-        )}
-      </div>
-      <div className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <CalendarDays className="size-3.5" />
-        <span>{t('catalog.registrationCloses', { date: fmtDate(comp.regCloseDate) })}</span>
-      </div>
-      <div className="mt-5 flex items-center justify-between">
-        {hasPortal ? (
-          <span className="flex items-center gap-1 text-sm font-medium text-primary">
-            Open portal <ArrowRight className="size-4" />
+
+        {/* Foreground: logo chip + save heart */}
+        <div className="relative flex items-start justify-between p-4">
+          <span
+            className={cn(
+              'flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-lg ring-1 ring-black/5',
+              brand.logoSrc ? 'bg-white p-2' : 'bg-white/20 ring-white/30 backdrop-blur-sm',
+            )}
+          >
+            {brand.logoSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={brand.logoSrc} alt="" className="size-full object-contain" />
+            ) : (
+              <Trophy className="size-6" />
+            )}
           </span>
-        ) : (
-          <span className="text-xs text-muted-foreground">{t('catalog.portalComingSoon')}</span>
+          <button
+            type="button"
+            aria-label={isFav ? 'Remove from saved' : 'Save competition'}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleFav(comp.id);
+            }}
+            className="flex size-9 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/30 backdrop-blur-sm transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/75"
+          >
+            <Heart className={cn('size-4', isFav ? 'fill-current' : 'opacity-90')} />
+          </button>
+        </div>
+
+        {/* Category / level chips on the band */}
+        {(comp.isInternational || comp.category) && (
+          <div className="absolute bottom-3 left-4 flex flex-wrap items-center gap-1.5">
+            {comp.isInternational && (
+              <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-medium ring-1 ring-white/30 backdrop-blur-sm">
+                {t('catalog.international')}
+              </span>
+            )}
+            {comp.category && (
+              <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[11px] font-medium ring-1 ring-white/30 backdrop-blur-sm">
+                {comp.category}
+              </span>
+            )}
+          </div>
         )}
+      </div>
+
+      {/* Body — soft brand wash + faded logo watermark so the whole card (not
+          just the band) carries the competition's identity. flex-1 makes every
+          card the same height; the footer is pinned to the bottom. */}
+      <div className="relative flex flex-1 flex-col overflow-hidden p-5">
+        {/* brand wash fading down the body */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{ background: `linear-gradient(180deg, ${hexA(brand.from, 0.1)}, ${hexA(brand.to, 0.03)} 60%, transparent)` }}
+        />
+        {/* faded logo watermark, bottom-right */}
+        {brand.logoSrc && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={brand.logoSrc}
+            alt=""
+            aria-hidden
+            className="pointer-events-none absolute -bottom-5 -right-5 size-28 object-contain opacity-[0.07]"
+          />
+        )}
+
+        <div className="relative">
+          <h2 className="font-serif text-lg font-semibold leading-snug text-foreground">{comp.name}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{comp.organizerName}</p>
+          {range && (
+            <div className="mt-3">
+              <Badge variant="outline" className="border-current/25 bg-background/60 font-normal" style={{ color: brand.accent }}>
+                {t('catalog.gradesRange', { range })}
+              </Badge>
+            </div>
+          )}
+          <div className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CalendarDays className="size-3.5" style={{ color: brand.accent }} />
+            <span>{t('catalog.registrationCloses', { date: fmtDate(comp.regCloseDate) })}</span>
+          </div>
+        </div>
+
+        <div className="relative mt-auto flex items-center justify-between pt-5">
+          {hasPortal ? (
+            <span className="flex items-center gap-1 text-sm font-semibold" style={{ color: brand.accent }}>
+              Open portal <ArrowRight className="size-4" />
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">{t('catalog.portalComingSoon')}</span>
+          )}
+        </div>
       </div>
     </Card>
   );
@@ -210,7 +407,7 @@ function CompetitionCard({
   if (hasPortal && comp.slug) {
     // Send students straight to the dashboard — that view handles every state
     // (no registration, pending payment, missed, paid, etc.) in one place.
-    return <Link href={`/competitions/${comp.slug}/dashboard`} className="block">{body}</Link>;
+    return <Link href={`/competitions/${comp.slug}/dashboard`} className="block h-full">{body}</Link>;
   }
   return body;
 }
@@ -261,6 +458,12 @@ export default function CompetitionCatalogPage() {
   const [err, setErr] = useState<string | null>(null);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [me, setMe] = useState<MeProfile | null>(null);
+
+  // Catalog filters.
+  const [search, setSearch] = useState('');
+  const [level, setLevel] = useState<LevelFilter>('all');
+  const [category, setCategory] = useState<string>('all');
+  const [grade, setGrade] = useState<GradeFilter>('all');
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/');
@@ -314,6 +517,36 @@ export default function CompetitionCatalogPage() {
   }
 
   const completion = useMemo(() => profileCompletion(me), [me]);
+
+  // Distinct categories present in the catalog (drives the Category pills).
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    comps?.forEach((c) => {
+      if (c.category?.trim()) set.add(c.category.trim());
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [comps]);
+
+  const filtered = useMemo(() => {
+    if (!comps) return null;
+    const q = search.trim().toLowerCase();
+    return comps.filter((c) => {
+      if (q && !`${c.name} ${c.organizerName}`.toLowerCase().includes(q)) return false;
+      if (level === 'international' && !c.isInternational) return false;
+      if (level === 'national' && c.isInternational) return false;
+      if (category !== 'all' && c.category?.trim() !== category) return false;
+      if (grade !== 'all' && !gradeBandsOf(c.gradeLevel).has(grade)) return false;
+      return true;
+    });
+  }, [comps, search, level, category, grade]);
+
+  const filtersActive = search.trim() !== '' || level !== 'all' || category !== 'all' || grade !== 'all';
+  const clearFilters = () => {
+    setSearch('');
+    setLevel('all');
+    setCategory('all');
+    setGrade('all');
+  };
 
   if (authLoading || !user) {
     return (
@@ -489,16 +722,96 @@ export default function CompetitionCatalogPage() {
                     {t('catalog.intlHint')}
                   </div>
                 )}
-            <div className="grid gap-4 sm:grid-cols-2">
-              {comps.map((c) => (
-                <CompetitionCard
-                  key={c.id}
-                  comp={c}
-                  isFav={favIds.has(c.id)}
-                  onToggleFav={toggleFav}
-                />
-              ))}
-            </div>
+
+              {/* Filter bar — search + Level / Category / Grade dropdowns, inline. */}
+              <Card className="mb-4 p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="relative min-w-[12rem] flex-1">
+                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder={t('catalog.searchPlaceholder')}
+                      className="pl-9"
+                      aria-label={t('catalog.searchPlaceholder')}
+                    />
+                  </div>
+
+                  <Select value={level} onValueChange={(v) => setLevel(v as LevelFilter)}>
+                    <SelectTrigger className="w-[150px]" aria-label={t('catalog.filterLevel')}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('catalog.levelAll')}</SelectItem>
+                      <SelectItem value="national">{t('catalog.levelNational')}</SelectItem>
+                      <SelectItem value="international">{t('catalog.levelInternational')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {categories.length > 0 && (
+                    <Select value={category} onValueChange={setCategory}>
+                      <SelectTrigger className="w-[160px]" aria-label={t('catalog.filterCategory')}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('catalog.categoryAll')}</SelectItem>
+                        {categories.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  <Select value={grade} onValueChange={(v) => setGrade(v as GradeFilter)}>
+                    <SelectTrigger className="w-[150px]" aria-label={t('catalog.filterGrade')}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('catalog.gradeAll')}</SelectItem>
+                      <SelectItem value="elementary">{t('catalog.gradeElementary')}</SelectItem>
+                      <SelectItem value="junior">{t('catalog.gradeJunior')}</SelectItem>
+                      <SelectItem value="senior">{t('catalog.gradeSenior')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {filtersActive && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="size-3.5" />
+                      {t('catalog.clearFilters')}
+                    </button>
+                  )}
+                  <p className="ml-auto text-xs text-muted-foreground">
+                    {t('catalog.resultsCount', { n: String(filtered?.length ?? 0), total: String(comps.length) })}
+                  </p>
+                </div>
+              </Card>
+
+              {filtered && filtered.length === 0 ? (
+                <Card className="items-center gap-3 p-10 text-center">
+                  <Trophy className="size-7 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">{t('catalog.noMatches')}</p>
+                  {filtersActive && (
+                    <Button variant="outline" size="sm" onClick={clearFilters}>
+                      {t('catalog.clearFilters')}
+                    </Button>
+                  )}
+                </Card>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {filtered!.map((c) => (
+                    <CompetitionCard
+                      key={c.id}
+                      comp={c}
+                      isFav={favIds.has(c.id)}
+                      onToggleFav={toggleFav}
+                    />
+                  ))}
+                </div>
+              )}
             </>
           )}
         </div>
