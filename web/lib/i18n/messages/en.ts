@@ -160,6 +160,7 @@ export const en = {
   'dashboard.cdToEvent': 'To event',
   // step CTAs / hints
   'dashboard.fillRegForm': 'Fill registration form',
+  'dashboard.editRegForm': 'Edit registration data',
   'dashboard.completeRegForm': 'Complete registration form',
   'dashboard.payRegistrationFee': 'Pay registration fee',
   'dashboard.uploadDocuments': 'Upload documents',

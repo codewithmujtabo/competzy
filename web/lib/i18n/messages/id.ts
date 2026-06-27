@@ -156,6 +156,7 @@ export const id: Partial<Record<MessageKey, string>> = {
   'dashboard.cdWeeks': 'Pekan',
   'dashboard.cdToEvent': 'Menuju event',
   'dashboard.fillRegForm': 'Isi Formulir Pendaftaran',
+  'dashboard.editRegForm': 'Edit Data Pendaftaran',
   'dashboard.completeRegForm': 'Lengkapi Formulir Pendaftaran',
   'dashboard.payRegistrationFee': 'Bayar Biaya Pendaftaran',
   'dashboard.uploadDocuments': 'Unggah Dokumen',

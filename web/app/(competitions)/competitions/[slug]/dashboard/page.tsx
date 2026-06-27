@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -919,6 +919,7 @@ function Stepper({
   compId,
   slug,
   theme,
+  regFormFilled,
   onCompleteProfile,
 }: {
   steps: FlowProgressStep[];
@@ -927,6 +928,7 @@ function Stepper({
   compId: string | null;
   slug: string;
   theme: CompTheme;
+  regFormFilled: boolean;
   onCompleteProfile: () => void;
 }) {
   const t = useT();
@@ -1007,15 +1009,26 @@ function Stepper({
                 {(showRegForm || showPay) && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {showRegForm && (
-                      <Button size="sm" onClick={onCompleteProfile}>
-                        {t('dashboard.fillRegForm')}
+                      // Once the form is filled it becomes a secondary "Edit"
+                      // action; payment takes over as the primary (orange) CTA.
+                      <Button
+                        size="sm"
+                        variant={regFormFilled ? 'outline' : 'default'}
+                        onClick={onCompleteProfile}
+                      >
+                        {regFormFilled ? t('dashboard.editRegForm') : t('dashboard.fillRegForm')}
                       </Button>
                     )}
-                    {showPay && (
-                      <Button asChild size="sm" variant={showRegForm ? 'outline' : 'default'}>
-                        <Link href={competitionPaths(slug).pay}>{t('dashboard.payRegistrationFee')}</Link>
-                      </Button>
-                    )}
+                    {showPay &&
+                      (regFormFilled || !showRegForm ? (
+                        <Button asChild size="sm" style={{ backgroundColor: theme.fill, color: theme.fillInk }}>
+                          <Link href={competitionPaths(slug).pay}>{t('dashboard.payRegistrationFee')}</Link>
+                        </Button>
+                      ) : (
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={competitionPaths(slug).pay}>{t('dashboard.payRegistrationFee')}</Link>
+                        </Button>
+                      ))}
                   </div>
                 )}
                 {showProfile && (
@@ -1288,12 +1301,14 @@ function CompetitionSidePanel({
   grade,
   slug,
   theme,
+  regFormFilled,
   onCompleteProfile,
 }: {
   steps: FlowProgressStep[];
   grade: string | null;
   slug: string;
   theme: CompTheme;
+  regFormFilled: boolean;
   onCompleteProfile: () => void;
 }) {
   const t = useT();
@@ -1316,9 +1331,17 @@ function CompetitionSidePanel({
   const cta = (() => {
     if (!current) return null;
     if (current.stepKey === 'registration' || current.checkType === 'profile') {
+      // Once the form is filled, the next action on a paid step is payment.
+      if (regFormFilled && current.checkType === 'payment') {
+        return (
+          <Link href={competitionPaths(slug).pay} className={ctaCls} style={ctaStyle}>
+            {t('dashboard.payRegistrationFee')}
+          </Link>
+        );
+      }
       return (
         <button type="button" className={ctaCls} style={ctaStyle} onClick={onCompleteProfile}>
-          {t('dashboard.fillRegForm')}
+          {regFormFilled ? t('dashboard.editRegForm') : t('dashboard.fillRegForm')}
         </button>
       );
     }
@@ -1482,6 +1505,8 @@ export default function CompetitionDashboardPage() {
   const [userCountry, setUserCountry] = useState<string | null>(null);
   // The caller's stored grade (1–12) — drives the hero's Category stat.
   const [userGrade, setUserGrade] = useState<string | null>(null);
+  // Full /users/me profile — used to tell whether the registration form is filled.
+  const [meProfile, setMeProfile] = useState<Record<string, unknown> | null>(null);
   // The competition's full `required_profile_fields` list (e.g. Komodo's 9
   // mandatory keys). The dialog renders every entry — pre-filled with the
   // student's current value — so they can confirm/edit before payment.
@@ -1505,15 +1530,34 @@ export default function CompetitionDashboardPage() {
   useEffect(() => {
     let cancelled = false;
     emcHttp
-      .get<{ country?: string | null; grade?: string | null }>('/users/me')
+      .get<Record<string, unknown>>('/users/me')
       .then((me) => {
         if (cancelled) return;
+        setMeProfile(me);
         setUserCountry(typeof me.country === 'string' ? me.country : null);
         setUserGrade(typeof me.grade === 'string' ? me.grade : null);
       })
       .catch(() => { /* silent — see comment above */ });
     return () => { cancelled = true; };
   }, [bump]);
+
+  // "Filled" = the registration form has been completed. For competitions that
+  // declare required_profile_fields (e.g. Komodo) we check exactly those;
+  // otherwise (EMC/ISPO/OSEBI) we fall back to the core participant fields the
+  // form collects. Drives the Edit-vs-Fill label + which button is the primary
+  // (orange) action.
+  const regFormFilled = useMemo(() => {
+    if (!meProfile) return false;
+    const has = (k: string) => {
+      const v = meProfile[k];
+      return typeof v === 'string' && v.trim() !== '';
+    };
+    const keys: string[] =
+      requiredProfileFields.length > 0
+        ? requiredProfileFields
+        : ['fullName', 'dateOfBirth', 'phone', 'grade'];
+    return keys.every(has);
+  }, [meProfile, requiredProfileFields]);
 
   const refresh = async (compId?: string | null) => {
     try {
@@ -1834,6 +1878,7 @@ export default function CompetitionDashboardPage() {
                   compId={comp?.id ?? null}
                   slug={slug}
                   theme={theme}
+                  regFormFilled={regFormFilled}
                   onCompleteProfile={() => setRegFormOpen(true)}
                 />
               </Card>
@@ -1842,6 +1887,7 @@ export default function CompetitionDashboardPage() {
                 grade={userGrade}
                 slug={slug}
                 theme={theme}
+                regFormFilled={regFormFilled}
                 onCompleteProfile={() => setRegFormOpen(true)}
               />
             </div>
