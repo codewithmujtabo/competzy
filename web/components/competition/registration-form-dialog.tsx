@@ -89,11 +89,14 @@ export function RegistrationFormDialog({
   onClose,
   compName,
   onSaved,
+  isInternational = false,
 }: {
   open: boolean;
   onClose: () => void;
   compName: string;
   onSaved: () => void;
+  /** International competitions don't use the Indonesian NPSN — hide the lookup. */
+  isInternational?: boolean;
 }) {
   const t = useT();
   const [form, setForm] = useState<Form>(EMPTY);
@@ -186,7 +189,8 @@ export function RegistrationFormDialog({
         phone: form.phone,
         parentPhone: form.parentPhone,
         parentWhatsapp: form.parentPhone,
-        npsn: form.npsn,
+        // International competitions don't use NPSN — leave it untouched.
+        npsn: isInternational ? undefined : form.npsn,
         schoolName: form.schoolName,
         schoolAddress: form.schoolAddress,
         parentName: form.parentName,
@@ -266,18 +270,20 @@ export function RegistrationFormDialog({
                 {t('regform.schoolDetails')}
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label={t('regform.npsn')}>
-                  <div className="flex gap-2">
-                    <Input
-                      value={form.npsn}
-                      onChange={(e) => set('npsn', e.target.value)}
-                      placeholder={t('regform.npsnPlaceholder')}
-                    />
-                    <Button type="button" variant="secondary" onClick={lookupNpsn} className="shrink-0">
-                      {t('regform.find')}
-                    </Button>
-                  </div>
-                </Field>
+                {!isInternational && (
+                  <Field label={t('regform.npsn')}>
+                    <div className="flex gap-2">
+                      <Input
+                        value={form.npsn}
+                        onChange={(e) => set('npsn', e.target.value)}
+                        placeholder={t('regform.npsnPlaceholder')}
+                      />
+                      <Button type="button" variant="secondary" onClick={lookupNpsn} className="shrink-0">
+                        {t('regform.find')}
+                      </Button>
+                    </div>
+                  </Field>
+                )}
                 <Field label={t('regform.schoolName')}>
                   <Input
                     value={form.schoolName}

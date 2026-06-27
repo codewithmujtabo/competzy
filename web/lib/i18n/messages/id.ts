@@ -1418,7 +1418,7 @@ export const id: Partial<Record<MessageKey, string>> = {
   'profileDlg.invalidEmail': 'Masukkan alamat email yang valid.',
   'profileDlg.invalidPhone': 'Gunakan nomor telepon yang valid, mis. 08123456789.',
   'profileDlg.npsnLabel': 'NPSN Sekolah',
-  'profileDlg.npsnHint': 'Masukkan NPSN sekolahmu lalu ketuk Cari — nama sekolah, kota, provinsi, dan negara terisi otomatis.',
+  'profileDlg.npsnHint': 'Masukkan NPSN sekolahmu lalu ketuk Cari — nama sekolah, kota, dan provinsi terisi otomatis. Kalau sekolahmu tidak ketemu, cukup ketik namanya di bawah.',
 
   // ── Profile field labels (shared: dialog + account profile) ────────
   'pf.fullName': 'Nama lengkap',

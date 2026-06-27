@@ -129,6 +129,8 @@ interface Props {
   onCompleted: () => void;
   /** Optional context — e.g. "Komodo Online Round 1". Shown in the description. */
   contextLabel?: string;
+  /** International competitions don't use the Indonesian NPSN — hide the lookup. */
+  isInternational?: boolean;
 }
 
 /**
@@ -144,6 +146,7 @@ export function ProfileCompletionDialog({
   missingFields,
   onCompleted,
   contextLabel,
+  isInternational = false,
 }: Props) {
   const t = useT();
   const [values, setValues] = useState<Record<string, string>>({});
@@ -280,7 +283,8 @@ export function ProfileCompletionDialog({
         }
       }
       // Persist NPSN (lookup field — not in the required/optional grid).
-      payload.npsn = (values.npsn || '').trim();
+      // International competitions don't use NPSN, so leave it untouched.
+      if (!isInternational) payload.npsn = (values.npsn || '').trim();
       await emcHttp.put<{ message: string }>('/users/me', payload);
       toast.success(t('profileDlg.toastSaved'));
       onCompleted();
@@ -348,7 +352,7 @@ export function ProfileCompletionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {(required.includes('schoolName') || optional.includes('schoolName')) && (
+        {!isInternational && (required.includes('schoolName') || optional.includes('schoolName')) && (
           <section className="space-y-1.5 rounded-lg border border-primary/30 bg-primary/5 p-3">
             <Label htmlFor="pcd-npsn-lookup">{t('profileDlg.npsnLabel')}</Label>
             <div className="flex gap-2">
