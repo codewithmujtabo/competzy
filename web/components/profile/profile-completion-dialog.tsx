@@ -129,8 +129,6 @@ interface Props {
   onCompleted: () => void;
   /** Optional context — e.g. "Komodo Online Round 1". Shown in the description. */
   contextLabel?: string;
-  /** International competitions don't use the Indonesian NPSN — hide the lookup. */
-  isInternational?: boolean;
 }
 
 /**
@@ -146,13 +144,18 @@ export function ProfileCompletionDialog({
   missingFields,
   onCompleted,
   contextLabel,
-  isInternational = false,
 }: Props) {
   const t = useT();
   const [values, setValues] = useState<Record<string, string>>({});
   const [country, setCountry] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [npsnBusy, setNpsnBusy] = useState(false);
+
+  // NPSN is the Indonesian national school number — only Indonesian students
+  // have one. Hide the lookup + skip persisting it for international students
+  // (country set to anything other than ID). Reacts live to the country the
+  // student picks in the dialog. Blank/unknown country defaults to local.
+  const studentIsInternational = !!country && country.trim().toUpperCase() !== 'ID';
 
   // Split the rendered field list into Required (in missingFields) +
   // Optional (everything else from FIELD_ORDER that should always show).
@@ -283,8 +286,8 @@ export function ProfileCompletionDialog({
         }
       }
       // Persist NPSN (lookup field — not in the required/optional grid).
-      // International competitions don't use NPSN, so leave it untouched.
-      if (!isInternational) payload.npsn = (values.npsn || '').trim();
+      // International students don't use NPSN, so leave it untouched.
+      if (!studentIsInternational) payload.npsn = (values.npsn || '').trim();
       await emcHttp.put<{ message: string }>('/users/me', payload);
       toast.success(t('profileDlg.toastSaved'));
       onCompleted();
@@ -352,7 +355,7 @@ export function ProfileCompletionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {!isInternational && (required.includes('schoolName') || optional.includes('schoolName')) && (
+        {!studentIsInternational && (required.includes('schoolName') || optional.includes('schoolName')) && (
           <section className="space-y-1.5 rounded-lg border border-primary/30 bg-primary/5 p-3">
             <Label htmlFor="pcd-npsn-lookup">{t('profileDlg.npsnLabel')}</Label>
             <div className="flex gap-2">

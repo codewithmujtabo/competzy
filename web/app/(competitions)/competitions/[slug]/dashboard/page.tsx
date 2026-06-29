@@ -1559,8 +1559,6 @@ export default function CompetitionDashboardPage() {
   // mandatory keys). The dialog renders every entry — pre-filled with the
   // student's current value — so they can confirm/edit before payment.
   const [requiredProfileFields, setRequiredProfileFields] = useState<ProfileFieldKey[]>([]);
-  // International competitions (e.g. Komodo) drop the Indonesian NPSN lookup.
-  const [isInternational, setIsInternational] = useState(false);
   // Bumped after the in-dashboard registration modal saves, so the
   // flow-progress effect re-fetches (the profile step's done-state is
   // computed server-side from the saved fields).
@@ -1626,7 +1624,7 @@ export default function CompetitionDashboardPage() {
   useEffect(() => {
     if (!comp?.id) return;
     emcHttp
-      .get<{ rounds?: Round[]; requiredProfileFields?: ProfileFieldKey[]; isInternational?: boolean }>(
+      .get<{ rounds?: Round[]; requiredProfileFields?: ProfileFieldKey[] }>(
         `/competitions/${comp.id}`,
       )
       .then((d) => {
@@ -1638,12 +1636,10 @@ export default function CompetitionDashboardPage() {
         setRequiredProfileFields(
           Array.isArray(d.requiredProfileFields) ? d.requiredProfileFields : [],
         );
-        setIsInternational(!!d.isInternational);
       })
       .catch(() => {
         setRounds([]);
         setRequiredProfileFields([]);
-        setIsInternational(false);
       });
   }, [comp?.id]);
 
@@ -2018,7 +2014,6 @@ export default function CompetitionDashboardPage() {
           open={regFormOpen}
           onClose={() => setRegFormOpen(false)}
           compName={`${config.shortName} 2026`}
-          isInternational={isInternational}
           onSaved={() => {
             void refresh(comp?.id ?? null);
             setBump((b) => b + 1);
@@ -2028,7 +2023,6 @@ export default function CompetitionDashboardPage() {
           open={!!profileGate}
           missingFields={profileGate?.missingFields ?? []}
           contextLabel={profileGateContext}
-          isInternational={isInternational}
           onCancel={() => setProfileGate(null)}
           onCompleted={() => void retryAfterProfileSaved()}
         />

@@ -89,19 +89,22 @@ export function RegistrationFormDialog({
   onClose,
   compName,
   onSaved,
-  isInternational = false,
 }: {
   open: boolean;
   onClose: () => void;
   compName: string;
   onSaved: () => void;
-  /** International competitions don't use the Indonesian NPSN — hide the lookup. */
-  isInternational?: boolean;
 }) {
   const t = useT();
   const [form, setForm] = useState<Form>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // NPSN is the Indonesian national school number — hide the field + skip
+  // persisting it for international students (country set to anything but ID).
+  // Reacts live to the country loaded/edited on the form; blank = local.
+  const studentIsInternational =
+    !!form.country && form.country.trim().toUpperCase() !== 'ID';
   const lastNpsn = useRef<string>('');
 
   const set = (k: keyof Form, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -190,7 +193,7 @@ export function RegistrationFormDialog({
         parentPhone: form.parentPhone,
         parentWhatsapp: form.parentPhone,
         // International competitions don't use NPSN — leave it untouched.
-        npsn: isInternational ? undefined : form.npsn,
+        npsn: studentIsInternational ? undefined : form.npsn,
         schoolName: form.schoolName,
         schoolAddress: form.schoolAddress,
         parentName: form.parentName,
@@ -270,7 +273,7 @@ export function RegistrationFormDialog({
                 {t('regform.schoolDetails')}
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
-                {!isInternational && (
+                {!studentIsInternational && (
                   <Field label={t('regform.npsn')}>
                     <div className="flex gap-2">
                       <Input
