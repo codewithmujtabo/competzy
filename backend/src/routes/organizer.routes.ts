@@ -400,7 +400,7 @@ router.post("/competitions/:id/publish", audit({ action: "organizer.competition.
 
     const result = await pool.query(
       `UPDATE competitions
-       SET registration_status = 'Open'
+       SET registration_status = 'Registration Opened'
        WHERE id = $1
        RETURNING id, name`,
       [req.params.id]
@@ -428,7 +428,7 @@ router.post("/competitions/:id/close", audit({ action: "organizer.competition.cl
 
     const result = await pool.query(
       `UPDATE competitions
-       SET registration_status = 'Closed'
+       SET registration_status = 'Registration Closed'
        WHERE id = $1
        RETURNING id, name`,
       [req.params.id]

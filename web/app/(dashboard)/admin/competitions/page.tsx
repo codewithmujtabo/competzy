@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GradeMultiSelect } from '@/components/grade-multi-select';
+import { COMPETITION_STATUSES, compStatusLabel } from '@/lib/competitions/status';
 import {
   RoundsBuilder,
   roundsToDrafts,
@@ -58,6 +59,7 @@ const FORM_DEFAULTS = {
   organizer_id: '',
   category: '',
   grade_level: '',
+  registration_status: 'Coming Soon',
   kind: 'native' as 'native' | 'affiliated',
   fee: '0',
   description: '',
@@ -168,6 +170,7 @@ export default function CompetitionsPage() {
       organizer_id: c.created_by ?? '',
       category: c.category || '',
       grade_level: c.grade_level || '',
+      registration_status: c.registration_status || 'Coming Soon',
       kind: c.kind === 'affiliated' ? 'affiliated' : 'native',
       fee: String(c.fee ?? 0),
       description: c.description || '',
@@ -193,6 +196,9 @@ export default function CompetitionsPage() {
     try {
       const payload = {
         ...form,
+        // Backend reads camelCase `registrationStatus`; `...form` only carries
+        // the snake_case key, so send it explicitly (also stops the edit-wipe).
+        registrationStatus: form.registration_status,
         fee: parseInt(form.fee, 10) || 0,
         // Owner is optional. Only send organizer_id when it's a real organizer
         // the admin actually picked; otherwise omit it so the backend preserves
@@ -415,7 +421,7 @@ export default function CompetitionsPage() {
                 onChange={(e) => setForm((f) => ({ ...f, fee: e.target.value }))}
               />
             </Field>
-            <Field label={t('acp.fldOwner')} required className="sm:col-span-6">
+            <Field label={t('acp.fldOwner')} required className="sm:col-span-4">
               <Select
                 value={form.organizer_id || undefined}
                 onValueChange={(v) => setForm((f) => ({ ...f, organizer_id: v }))}
@@ -436,6 +442,23 @@ export default function CompetitionsPage() {
                 </SelectContent>
               </Select>
               <p className="mt-1 text-[11px] text-muted-foreground">{t('acp.fldOwnerHint')}</p>
+            </Field>
+            <Field label={t('cf.regStatus')} className="sm:col-span-2">
+              <Select
+                value={form.registration_status}
+                onValueChange={(v) => setForm((f) => ({ ...f, registration_status: v }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COMPETITION_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {compStatusLabel(s, t)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <Field label={t('acp.fldGradeLevel')} className="sm:col-span-6">
               <GradeMultiSelect

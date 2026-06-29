@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { useT } from '@/lib/i18n/context';
 import { GradeMultiSelect } from '@/components/grade-multi-select';
 import { RoundsBuilder, type RoundDraft, draftsToPayload } from '@/components/rounds-builder';
+import { COMPETITION_STATUSES, compStatusLabel } from '@/lib/competitions/status';
 import {
   Select,
   SelectContent,
@@ -21,7 +22,6 @@ import {
 } from '@/components/ui/select';
 
 const CATEGORIES = ['Science', 'Math', 'Art', 'Sports', 'Technology', 'Literature', 'Music'];
-const STATUSES = ['Coming Soon', 'On Going', 'Closed'];
 
 export interface CompetitionFormValues {
   name: string;
@@ -262,9 +262,9 @@ export function CompetitionForm({ initial, submitLabel, cancelHref, onSubmit }: 
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {STATUSES.map((s) => (
+                {COMPETITION_STATUSES.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {s}
+                    {compStatusLabel(s, t)}
                   </SelectItem>
                 ))}
               </SelectContent>

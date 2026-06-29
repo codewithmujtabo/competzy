@@ -29,6 +29,7 @@ import { emcHttp } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { getCompetitionConfig, competitionRegistry } from '@/lib/competitions/registry';
+import { compStatusLabel, compStatusTone } from '@/lib/competitions/status';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +52,7 @@ interface CatalogCompetition {
   organizerName: string;
   category: string | null;
   gradeLevel: string | null;
+  registrationStatus: string | null;
   regCloseDate: string | null;
   competitionDate: string | null;
   /** Backend already filters non-international visitors out of this list (see
@@ -378,13 +380,21 @@ function CompetitionCard({
         <div className="relative">
           <h2 className="font-serif text-lg font-semibold leading-snug text-foreground">{comp.name}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{comp.organizerName}</p>
-          {range && (
-            <div className="mt-3">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {comp.registrationStatus && (
+              <Badge
+                variant="outline"
+                className={cn('border-transparent font-medium', compStatusTone(comp.registrationStatus))}
+              >
+                {compStatusLabel(comp.registrationStatus, t)}
+              </Badge>
+            )}
+            {range && (
               <Badge variant="outline" className="border-current/25 bg-background/60 font-normal" style={{ color: brand.accent }}>
                 {t('catalog.gradesRange', { range })}
               </Badge>
-            </div>
-          )}
+            )}
+          </div>
           <div className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
             <CalendarDays className="size-3.5" style={{ color: brand.accent }} />
             <span>{t('catalog.registrationCloses', { date: fmtDate(comp.regCloseDate) })}</span>

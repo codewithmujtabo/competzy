@@ -7,6 +7,7 @@ import { Eye, Pencil, Plus } from 'lucide-react';
 import { organizerHttp } from '@/lib/auth/organizer-context';
 import { PageHeader } from '@/components/shell/page-header';
 import { useT } from '@/lib/i18n/context';
+import { compStatusLabel, compStatusTone } from '@/lib/competitions/status';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,12 +32,6 @@ interface Competition {
   fee: number;
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  Open: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
-  'Coming Soon': 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
-  Closed: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
-  Draft: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
-};
 
 function fmtDate(d?: string) {
   return d
@@ -153,10 +148,10 @@ export default function OrganizerCompetitionsPage() {
                         variant="outline"
                         className={cn(
                           'border-transparent font-mono text-[10px]',
-                          STATUS_STYLE[c.registrationStatus] ?? 'bg-muted text-muted-foreground',
+                          compStatusTone(c.registrationStatus),
                         )}
                       >
-                        {c.registrationStatus}
+                        {compStatusLabel(c.registrationStatus, t)}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-mono text-[12px] text-muted-foreground">
@@ -189,11 +184,12 @@ export default function OrganizerCompetitionsPage() {
                             <Pencil className="size-3.5" />
                           </Link>
                         </Button>
-                        {c.registrationStatus === 'Coming Soon' || c.registrationStatus === 'Draft' ? (
+                        {c.registrationStatus !== 'Registration Opened' &&
+                        c.registrationStatus !== 'Registration Closed' ? (
                           <Button size="sm" onClick={() => publish(c.id)}>
                             Publish
                           </Button>
-                        ) : c.registrationStatus === 'Open' ? (
+                        ) : c.registrationStatus === 'Registration Opened' ? (
                           <Button
                             size="sm"
                             variant="outline"

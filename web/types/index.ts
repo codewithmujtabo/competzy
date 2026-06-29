@@ -16,7 +16,9 @@ export interface Competition {
   image_url?: string;
   logo_url?: string;
   website_url?: string;
-  registration_status?: 'On Going' | 'Closed' | 'Coming Soon';  // ← это вместо status
+  // Free-text column; the admin/organizer forms restrict it to the canonical
+  // COMPETITION_STATUSES (Coming Soon / Registration Opened / Registration Closed).
+  registration_status?: string;
   poster_url?: string;
   is_international?: boolean;
   detailed_description?: string;

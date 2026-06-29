@@ -493,6 +493,11 @@ export const en = {
   'cf.baseFeeHint': 'Fallback only — used when the competition has no rounds, or when a round leaves its own fee blank. Per-round fees override this. Set to 0 for a free competition.',
   'cf.quota': 'Quota',
   'cf.regStatus': 'Registration status',
+  // Competition registration-status values (shown on the student catalog +
+  // chosen in the admin/organizer edit forms).
+  'compStatus.comingSoon': 'Coming Soon',
+  'compStatus.registrationOpened': 'Registration Opened',
+  'compStatus.registrationClosed': 'Registration Closed',
   'cf.international': 'International competition',
   'cf.no': 'No',
   'cf.yes': 'Yes',

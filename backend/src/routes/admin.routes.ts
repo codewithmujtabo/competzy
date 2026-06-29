@@ -241,7 +241,7 @@ router.put("/competitions/:id", audit({ action: "admin.competition.update", reso
         category = $3,
         grade_level = $4,
         website_url = $5,
-        registration_status = $6,
+        registration_status = COALESCE($6, registration_status),
         poster_url = $7,
         is_international = $8,
         detailed_description = $9,
