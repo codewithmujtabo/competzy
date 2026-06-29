@@ -980,7 +980,7 @@ function Stepper({
                       s.status === 'upcoming' ? 'text-muted-foreground' : 'font-semibold text-foreground',
                     )}
                   >
-                    {s.stepKey === 'simulation'
+                    {s.stepKey === 'simulation' || s.stepKey === 'exam'
                       ? t('dashboard.weeklyQuiz')
                       : pickText(s.title, s.titleId, locale)}
                   </p>
@@ -996,13 +996,14 @@ function Stepper({
                     </span>
                   </p>
                 )}
-                {s.status !== 'upcoming' && (s.stepKey === 'registration' || s.description) && (
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    {s.stepKey === 'registration'
-                      ? t('dashboard.regStepDesc', { comp: compShort })
-                      : pickText(s.description, s.descriptionId, locale)}
-                  </p>
-                )}
+                {s.status !== 'upcoming' &&
+                  (s.stepKey === 'registration' || s.checkType === 'profile' || s.description) && (
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {s.stepKey === 'registration' || s.checkType === 'profile'
+                        ? t('dashboard.regStepDesc', { comp: compShort })
+                        : pickText(s.description, s.descriptionId, locale)}
+                    </p>
+                  )}
                 {hint && (
                   <p
                     className="mt-2 rounded-md px-3 py-2 text-xs leading-relaxed"
@@ -1040,8 +1041,15 @@ function Stepper({
                   </div>
                 )}
                 {showProfile && (
-                  <Button size="sm" className="mt-3" onClick={onCompleteProfile}>
-                    {t('dashboard.completeRegForm')}
+                  // Generic-flow form step — mirror the registration label so it
+                  // reads "Edit Data Pendaftaran" once the form is filled.
+                  <Button
+                    size="sm"
+                    variant={regFormFilled ? 'outline' : 'default'}
+                    className="mt-3"
+                    onClick={onCompleteProfile}
+                  >
+                    {regFormFilled ? t('dashboard.editRegForm') : t('dashboard.fillRegForm')}
                   </Button>
                 )}
                 {showDocs && (
@@ -1374,8 +1382,9 @@ function CompetitionSidePanel({
       );
     }
     // Once registration is complete the next step is the Weekly Quiz — its CTA
-    // opens the available quiz/exam.
-    if (current.stepKey === 'simulation') {
+    // opens the available quiz/exam. EMC uses a `simulation` step; the generic
+    // native flow's first post-registration step is `exam`.
+    if (current.stepKey === 'simulation' || current.stepKey === 'exam') {
       return (
         <button type="button" className={ctaCls} style={ctaStyle} onClick={onStartQuiz}>
           {t('dashboard.startWeeklyQuiz')}
@@ -1405,13 +1414,15 @@ function CompetitionSidePanel({
             {t('dashboard.nextAction')}
           </p>
           <h3 className="mt-2 font-serif text-lg font-semibold leading-snug">
-            {current.stepKey === 'simulation'
+            {current.stepKey === 'simulation' || current.stepKey === 'exam'
               ? t('dashboard.weeklyQuiz')
               : pickText(current.title, current.titleId, locale)}
           </h3>
-          {(current.stepKey === 'registration' || current.description) && (
+          {(current.stepKey === 'registration' ||
+            current.checkType === 'profile' ||
+            current.description) && (
             <p className="mt-1 text-sm text-white/80">
-              {current.stepKey === 'registration'
+              {current.stepKey === 'registration' || current.checkType === 'profile'
                 ? t('dashboard.regStepDesc', { comp: compShort })
                 : pickText(current.description, current.descriptionId, locale)}
             </p>
@@ -1456,7 +1467,7 @@ function CompetitionSidePanel({
                 {s.status === 'done' ? <Check className="size-3" /> : s.stepOrder}
               </span>
               <span className={cn('truncate', s.status === 'upcoming' ? 'text-muted-foreground' : 'text-foreground')}>
-                {s.stepKey === 'simulation'
+                {s.stepKey === 'simulation' || s.stepKey === 'exam'
                   ? t('dashboard.weeklyQuiz')
                   : pickText(s.title, s.titleId, locale)}
               </span>
