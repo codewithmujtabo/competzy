@@ -919,6 +919,7 @@ function Stepper({
   compId,
   slug,
   theme,
+  compShort,
   regFormFilled,
   onCompleteProfile,
 }: {
@@ -928,6 +929,8 @@ function Stepper({
   compId: string | null;
   slug: string;
   theme: CompTheme;
+  /** Competition short name — interpolated into the registration-step copy. */
+  compShort: string;
   regFormFilled: boolean;
   onCompleteProfile: () => void;
 }) {
@@ -940,7 +943,8 @@ function Stepper({
         const hint = s.status === 'current' ? currentHint(s.checkType, t) : '';
         const showAccess = s.stepKey === 'external_access' && s.status !== 'upcoming';
         const showExam =
-          (s.stepKey === 'exam' || s.stepKey.startsWith('round')) && s.status !== 'upcoming';
+          (s.stepKey === 'exam' || s.stepKey === 'simulation' || s.stepKey.startsWith('round')) &&
+          s.status !== 'upcoming';
         const showCert = s.stepKey === 'results' || s.stepKey === 'announcement';
         const showPay = s.checkType === 'payment' && s.status === 'current';
         const showProfile = s.checkType === 'profile' && s.status === 'current';
@@ -976,7 +980,9 @@ function Stepper({
                       s.status === 'upcoming' ? 'text-muted-foreground' : 'font-semibold text-foreground',
                     )}
                   >
-                    {pickText(s.title, s.titleId, locale)}
+                    {s.stepKey === 'simulation'
+                      ? t('dashboard.weeklyQuiz')
+                      : pickText(s.title, s.titleId, locale)}
                   </p>
                   <StepBadge status={s.status} theme={theme} />
                 </div>
@@ -990,9 +996,11 @@ function Stepper({
                     </span>
                   </p>
                 )}
-                {s.status !== 'upcoming' && s.description && (
+                {s.status !== 'upcoming' && (s.stepKey === 'registration' || s.description) && (
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    {pickText(s.description, s.descriptionId, locale)}
+                    {s.stepKey === 'registration'
+                      ? t('dashboard.regStepDesc', { comp: compShort })
+                      : pickText(s.description, s.descriptionId, locale)}
                   </p>
                 )}
                 {hint && (
@@ -1301,15 +1309,21 @@ function CompetitionSidePanel({
   grade,
   slug,
   theme,
+  compShort,
   regFormFilled,
   onCompleteProfile,
+  onStartQuiz,
 }: {
   steps: FlowProgressStep[];
   grade: string | null;
   slug: string;
   theme: CompTheme;
+  /** Competition short name — interpolated into the registration-step copy. */
+  compShort: string;
   regFormFilled: boolean;
   onCompleteProfile: () => void;
+  /** Opens the available Weekly-Quiz exam (the post-registration step). */
+  onStartQuiz: () => void;
 }) {
   const t = useT();
   const { locale } = useLocale();
@@ -1359,6 +1373,15 @@ function CompetitionSidePanel({
         </Link>
       );
     }
+    // Once registration is complete the next step is the Weekly Quiz — its CTA
+    // opens the available quiz/exam.
+    if (current.stepKey === 'simulation') {
+      return (
+        <button type="button" className={ctaCls} style={ctaStyle} onClick={onStartQuiz}>
+          {t('dashboard.startWeeklyQuiz')}
+        </button>
+      );
+    }
     return null;
   })();
 
@@ -1382,11 +1405,15 @@ function CompetitionSidePanel({
             {t('dashboard.nextAction')}
           </p>
           <h3 className="mt-2 font-serif text-lg font-semibold leading-snug">
-            {pickText(current.title, current.titleId, locale)}
+            {current.stepKey === 'simulation'
+              ? t('dashboard.weeklyQuiz')
+              : pickText(current.title, current.titleId, locale)}
           </h3>
-          {current.description && (
+          {(current.stepKey === 'registration' || current.description) && (
             <p className="mt-1 text-sm text-white/80">
-              {pickText(current.description, current.descriptionId, locale)}
+              {current.stepKey === 'registration'
+                ? t('dashboard.regStepDesc', { comp: compShort })
+                : pickText(current.description, current.descriptionId, locale)}
             </p>
           )}
           {cta && <div className="mt-4">{cta}</div>}
@@ -1429,7 +1456,9 @@ function CompetitionSidePanel({
                 {s.status === 'done' ? <Check className="size-3" /> : s.stepOrder}
               </span>
               <span className={cn('truncate', s.status === 'upcoming' ? 'text-muted-foreground' : 'text-foreground')}>
-                {pickText(s.title, s.titleId, locale)}
+                {s.stepKey === 'simulation'
+                  ? t('dashboard.weeklyQuiz')
+                  : pickText(s.title, s.titleId, locale)}
               </span>
             </li>
           ))}
@@ -1468,6 +1497,7 @@ function CompetitionSidePanel({
 export default function CompetitionDashboardPage() {
   const t = useT();
   const { locale } = useLocale();
+  const router = useRouter();
   const params = useParams<{ slug: string }>();
   const slug = params?.slug ?? '';
   const config = getCompetitionConfig(slug);
@@ -1756,6 +1786,37 @@ export default function CompetitionDashboardPage() {
     return config?.shortName;
   })();
 
+  // Open the Weekly Quiz (the post-registration "simulation" step). Resumes an
+  // in-progress attempt, starts an open exam, falls back to a finished result,
+  // else tells the student it isn't open yet. Reuses the existing exam data.
+  const startWeeklyQuiz = async () => {
+    if (!comp?.id) return;
+    try {
+      const exams = await emcHttp.get<AvailableExam[]>(
+        `/exams/available?compId=${encodeURIComponent(comp.id)}`,
+      );
+      const inProgress = exams.find((e) => e.session?.state === 'in_progress');
+      if (inProgress?.session) {
+        router.push(`/competitions/${slug}/exam/${inProgress.session.id}`);
+        return;
+      }
+      const open = exams.find((e) => e.windowStatus === 'open' && !e.session);
+      if (open) {
+        const r = await emcHttp.post<{ sessionId: string }>(`/exams/${open.examId}/sessions`, {});
+        router.push(`/competitions/${slug}/exam/${r.sessionId}`);
+        return;
+      }
+      const finished = exams.find((e) => e.session?.state === 'finished');
+      if (finished?.session) {
+        router.push(`/competitions/${slug}/exam/${finished.session.id}/result`);
+        return;
+      }
+      toast.message(t('dashboard.quizNotOpen'));
+    } catch {
+      toast.error(t('dashboard.quizOpenFailed'));
+    }
+  };
+
   if (!config) return null;
 
   const hasFlow = !!progress && progress.steps.length > 0;
@@ -1878,6 +1939,7 @@ export default function CompetitionDashboardPage() {
                   compId={comp?.id ?? null}
                   slug={slug}
                   theme={theme}
+                  compShort={config.shortName}
                   regFormFilled={regFormFilled}
                   onCompleteProfile={() => setRegFormOpen(true)}
                 />
@@ -1887,8 +1949,10 @@ export default function CompetitionDashboardPage() {
                 grade={userGrade}
                 slug={slug}
                 theme={theme}
+                compShort={config.shortName}
                 regFormFilled={regFormFilled}
                 onCompleteProfile={() => setRegFormOpen(true)}
+                onStartQuiz={startWeeklyQuiz}
               />
             </div>
           ) : (

@@ -161,9 +161,16 @@ export const en = {
   // step CTAs / hints
   'dashboard.fillRegForm': 'Fill registration form',
   'dashboard.editRegForm': 'Edit registration data',
+  'dashboard.regStepDesc':
+    'Complete your registration form and pay to finish your {comp} registration.',
   'dashboard.completeRegForm': 'Complete registration form',
   'dashboard.payRegistrationFee': 'Pay registration fee',
   'dashboard.uploadDocuments': 'Upload documents',
+  // Weekly Quiz — the post-registration "simulation" step, re-labelled.
+  'dashboard.weeklyQuiz': 'Weekly Quiz',
+  'dashboard.startWeeklyQuiz': 'Start Weekly Quiz',
+  'dashboard.quizNotOpen': 'The Weekly Quiz isn’t open yet — check back soon.',
+  'dashboard.quizOpenFailed': 'Could not open the Weekly Quiz.',
   'dashboard.hintProfile': 'Complete your profile to move forward.',
   'dashboard.hintDocuments': 'Upload the documents this competition requires.',
   'dashboard.hintPayment': 'Pay your registration fee to continue.',
