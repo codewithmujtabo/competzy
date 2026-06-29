@@ -86,6 +86,10 @@ interface CompTheme {
 }
 
 const DONE_GREEN = '#16A34A';
+// "Pay registration fee" CTA colour — a fixed orange across EVERY competition
+// (mentor brief), rather than the per-competition accent (which is lime for
+// Komodo and the default purple for operator-created comps).
+const PAY_ORANGE = '#FF6B00';
 
 function compTheme(config: CompetitionPortalConfig): CompTheme {
   const done = DONE_GREEN;
@@ -1030,7 +1034,7 @@ function Stepper({
                     )}
                     {showPay &&
                       (regFormFilled || !showRegForm ? (
-                        <Button asChild size="sm" style={{ backgroundColor: theme.fill, color: theme.fillInk }}>
+                        <Button asChild size="sm" style={{ backgroundColor: PAY_ORANGE, color: '#fff' }}>
                           <Link href={competitionPaths(slug).pay}>{t('dashboard.payRegistrationFee')}</Link>
                         </Button>
                       ) : (
@@ -1350,13 +1354,16 @@ function CompetitionSidePanel({
   const ctaCls =
     'flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm transition-[filter] hover:brightness-110';
   const ctaStyle = { background: theme.fill, color: theme.fillInk };
+  // The pay CTA is always orange (mentor brief), even on comps whose accent
+  // isn't orange — it has to read as the "pay now" action across the platform.
+  const payStyle = { background: PAY_ORANGE, color: '#fff' };
   const cta = (() => {
     if (!current) return null;
     if (current.stepKey === 'registration' || current.checkType === 'profile') {
       // Once the form is filled, the next action on a paid step is payment.
       if (regFormFilled && current.checkType === 'payment') {
         return (
-          <Link href={competitionPaths(slug).pay} className={ctaCls} style={ctaStyle}>
+          <Link href={competitionPaths(slug).pay} className={ctaCls} style={payStyle}>
             {t('dashboard.payRegistrationFee')}
           </Link>
         );
@@ -1369,7 +1376,7 @@ function CompetitionSidePanel({
     }
     if (current.checkType === 'payment') {
       return (
-        <Link href={competitionPaths(slug).pay} className={ctaCls} style={ctaStyle}>
+        <Link href={competitionPaths(slug).pay} className={ctaCls} style={payStyle}>
           {t('dashboard.payRegistrationFee')}
         </Link>
       );
