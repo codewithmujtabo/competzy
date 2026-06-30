@@ -23,6 +23,29 @@ function isInternationalCountry(country: string | null | undefined): boolean {
 const SETTLE_STATUS_SQL =
   "CASE WHEN (SELECT kind FROM competitions WHERE id = registrations.comp_id) = 'native' THEN 'paid' ELSE 'pending_review' END";
 
+// Open-redirect guard for the web success-page URL passed by the browser. Only
+// honour an http(s) URL whose origin matches our web app (env.APP_URL) or a
+// localhost dev origin; otherwise return undefined so the deep-link defaults
+// apply. Midtrans reflects this as the post-payment browser redirect, so an
+// unvalidated value would let a crafted link bounce users anywhere.
+function sanitizeReturnUrl(raw: string | undefined): string | undefined {
+  if (!raw || typeof raw !== "string") return undefined;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return undefined;
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") return undefined;
+  const allowedHosts = new Set<string>(["localhost", "127.0.0.1"]);
+  try {
+    allowedHosts.add(new URL(env.APP_URL).hostname);
+  } catch {
+    /* APP_URL malformed — fall through to localhost-only */
+  }
+  return allowedHosts.has(url.hostname) ? url.toString() : undefined;
+}
+
 const router: Router = Router();
 
 // ── T20: Parent ownership check ───────────────────────────────────────────────
@@ -369,17 +392,25 @@ router.use(authMiddleware);
 // ── POST /api/payments/snap ───────────────────────────────────────────────────
 router.post("/snap", async (req: Request, res: Response) => {
   try {
-    const { registrationId, payerKind, payerUserId, voucherCode } = req.body as {
+    const { registrationId, payerKind, payerUserId, voucherCode, returnUrl } = req.body as {
       registrationId?: string;
       payerKind?: "self" | "parent" | "school" | "sponsor";
       payerUserId?: string;
       voucherCode?: string;
+      returnUrl?: string;
     };
 
     if (!registrationId) {
       res.status(400).json({ message: "registrationId is required" });
       return;
     }
+
+    // The browser passes its own success-page URL (web flow). Only honour it
+    // when its origin matches our web app (or localhost in dev) — never reflect
+    // an arbitrary URL into Midtrans's redirect (open-redirect guard). When it
+    // doesn't pass the check we omit it and createSnapToken uses the deep-link
+    // defaults.
+    const safeReturnUrl = sanitizeReturnUrl(returnUrl);
 
     // Whitelist payer kinds. Default to "self".
     const resolvedPayerKind: "self" | "parent" | "school" | "sponsor" =
@@ -537,6 +568,7 @@ router.post("/snap", async (req: Request, res: Response) => {
       customerName:    row.full_name,
       customerEmail:   row.email,
       competitionName: row.competition_name,
+      returnUrl:       safeReturnUrl,
     });
 
     const paymentResult = await pool.query(

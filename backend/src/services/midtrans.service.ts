@@ -49,7 +49,12 @@ export interface SnapTokenResult {
 
 /**
  * Create a Midtrans Snap transaction token for a registration.
- * Callbacks redirect back to the app via the competzy:// scheme.
+ *
+ * `returnUrl` (web only) is where Midtrans redirects the browser after the
+ * payment finishes — our animated /payment/success page. When omitted (mobile),
+ * the callbacks fall back to the `competzy://` deep-link scheme so the app
+ * reopens. The success page never trusts the redirect; it re-verifies the
+ * status server-side.
  */
 export async function createSnapToken(params: {
   orderId: string;
@@ -57,10 +62,19 @@ export async function createSnapToken(params: {
   customerName: string;
   customerEmail: string;
   competitionName: string;
+  returnUrl?: string;
 }): Promise<SnapTokenResult> {
   if (!env.MIDTRANS_SERVER_KEY) {
     throw new Error("MIDTRANS_SERVER_KEY is not configured");
   }
+
+  const callbacks = params.returnUrl
+    ? { finish: params.returnUrl, error: params.returnUrl, pending: params.returnUrl }
+    : {
+        finish:  `${DEEP_LINK_BASE}/finish`,
+        error:   `${DEEP_LINK_BASE}/error`,
+        pending: `${DEEP_LINK_BASE}/pending`,
+      };
 
   const transaction = {
     transaction_details: {
@@ -79,11 +93,7 @@ export async function createSnapToken(params: {
       first_name: params.customerName,
       email: params.customerEmail,
     },
-    callbacks: {
-      finish:  `${DEEP_LINK_BASE}/finish`,
-      error:   `${DEEP_LINK_BASE}/error`,
-      pending: `${DEEP_LINK_BASE}/pending`,
-    },
+    callbacks,
   };
 
   const response = await snap.createTransaction(transaction);

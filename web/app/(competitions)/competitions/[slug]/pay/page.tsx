@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { ArrowLeft, Check, CheckCircle2, Loader2, Ticket, X } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, Ticket, X } from 'lucide-react';
 import { emcHttp } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
 import type { MessageKey } from '@/lib/i18n/messages/en';
@@ -13,6 +13,7 @@ import { getCompetitionConfig, competitionPaths } from '@/lib/competitions/regis
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PaymentResult } from '@/components/payment/payment-result';
 
 interface RegistrationRow {
   id: string;
@@ -62,15 +63,11 @@ export default function CompetitionPayPage() {
   const [voucher, setVoucher] = useState<VoucherResult | null>(null);
   const [checking, setChecking] = useState(false);
 
-  // Payment.
+  // Payment. After Snap we full-page redirect to /payment/success, which
+  // verifies + animates the outcome — so the only inline state we keep is
+  // `settled`, shown when a voucher fully covers the fee (no Midtrans hop).
   const [paying, setPaying] = useState(false);
-  const [polling, setPolling] = useState(false);
-  // Set when the verify poll gives up (~2.7 min) without a settled status, so
-  // we can replace the silent stop with an explainer instead of leaving the
-  // student on a spinner that vanished.
-  const [timedOut, setTimedOut] = useState(false);
   const [settled, setSettled] = useState(false);
-  const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!config) notFound();
@@ -121,12 +118,6 @@ export default function CompetitionPayPage() {
       .catch(() => {});
   }, [comp?.id]);
 
-  useEffect(() => {
-    return () => {
-      if (pollTimer.current) clearInterval(pollTimer.current);
-    };
-  }, []);
-
   // Pay the registration named in ?registrationId=, else the first payable one.
   const reg = regs
     ? (targetRegId
@@ -158,57 +149,38 @@ export default function CompetitionPayPage() {
     setCode('');
   };
 
-  const checkStatus = useCallback(async () => {
-    if (!reg) return;
-    try {
-      const r = await emcHttp.get<{ status: string }>(`/payments/verify/${reg.id}`);
-      if (['pending_review', 'approved', 'paid', 'completed'].includes(r.status)) {
-        if (pollTimer.current) clearInterval(pollTimer.current);
-        setPolling(false);
-        setSettled(true);
-      }
-    } catch {
-      /* transient — keep polling */
-    }
-  }, [reg]);
-
   const pay = async () => {
     if (!reg) return;
     setPaying(true);
     setErr(null);
-    setTimedOut(false);
     try {
       const appliedCode = voucher?.valid ? code.trim() : undefined;
+      // Where Midtrans sends the browser back after payment — our animated
+      // success page, which re-verifies the real status. Built from the current
+      // origin so it works in dev (localhost) + prod (arena.competzy.com); the
+      // backend allowlists the origin before handing it to Midtrans.
+      const returnUrl = `${window.location.origin}/payment/success?registrationId=${encodeURIComponent(
+        reg.id,
+      )}&slug=${encodeURIComponent(slug)}`;
       const res = await emcHttp.post<{
         covered?: boolean;
         redirectUrl?: string;
-      }>('/payments/snap', { registrationId: reg.id, voucherCode: appliedCode });
+      }>('/payments/snap', { registrationId: reg.id, voucherCode: appliedCode, returnUrl });
 
       if (res.covered) {
+        // A voucher covered the whole fee — settled server-side, no Midtrans hop.
         setSettled(true);
         return;
       }
       if (res.redirectUrl) {
-        window.open(res.redirectUrl, '_blank', 'noopener');
-        setPolling(true);
-        // Poll the verify endpoint while the student pays in the other tab.
-        let tries = 0;
-        pollTimer.current = setInterval(() => {
-          tries += 1;
-          if (tries > 40) {
-            if (pollTimer.current) clearInterval(pollTimer.current);
-            setPolling(false);
-            setTimedOut(true);
-            return;
-          }
-          void checkStatus();
-        }, 4000);
-      } else {
-        setErr('Could not start payment — please try again.');
+        // Full-page redirect into Snap; Midtrans returns to /payment/success.
+        window.location.assign(res.redirectUrl);
+        return;
       }
+      setErr('Could not start payment — please try again.');
+      setPaying(false);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to start payment');
-    } finally {
       setPaying(false);
     }
   };
@@ -263,13 +235,16 @@ export default function CompetitionPayPage() {
             <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
           </Card>
         ) : settled ? (
-          <Card className="items-center gap-3 p-10 text-center">
-            <CheckCircle2 className="size-10 text-emerald-600" />
-            <h2 className="font-serif text-xl font-medium text-foreground">{t('pay.successTitle')}</h2>
-            <p className="text-sm text-muted-foreground">{t('pay.successBody')}</p>
-            <Button className="mt-2" onClick={() => router.replace(paths.dashboard)}>
-              {t('pay.back')}
-            </Button>
+          <Card className="gap-0 p-8 sm:p-10">
+            <PaymentResult
+              state="success"
+              title={t('paySuccess.successTitle')}
+              body={t('paySuccess.successBody')}
+            >
+              <Button className="w-full" size="lg" onClick={() => router.replace(paths.dashboard)}>
+                {t('paySuccess.goToDashboard')}
+              </Button>
+            </PaymentResult>
           </Card>
         ) : !reg ? (
           <Card className="gap-2 p-8 text-center">
@@ -349,59 +324,13 @@ export default function CompetitionPayPage() {
               </div>
             </div>
 
-            {polling ? (
-              <div
-                role="status"
-                aria-live="polite"
-                aria-atomic="true"
-                className="mt-6 rounded-md bg-primary/5 px-4 py-3 text-sm text-primary"
-              >
-                <p className="flex items-center gap-2">
-                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  {t('pay.waiting')}
-                </p>
-                <p className="mt-1 text-xs text-primary/80">{t('pay.waitingHint')}</p>
-                <Button size="sm" variant="outline" className="mt-3" onClick={() => void checkStatus()}>
-                  {t('pay.checkNow')}
-                </Button>
-              </div>
-            ) : (
-              <>
-                {timedOut && (
-                  <div
-                    role="status"
-                    aria-live="polite"
-                    className="mt-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
-                  >
-                    <p className="font-medium">{t('pay.timedOutTitle')}</p>
-                    <p className="mt-1 text-xs">
-                      {t('pay.waitingHint')}{' '}
-                      <Link href="/account/competitions" className="font-medium underline">
-                        {t('pay.myCompetitions')}
-                      </Link>
-                      .
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="mt-3"
-                      onClick={() => void checkStatus()}
-                    >
-                      {t('pay.checkNow')}
-                    </Button>
-                  </div>
-                )}
-                <Button className="mt-6 w-full" size="lg" onClick={pay} disabled={paying}>
-                  {paying
-                    ? t('pay.starting')
-                    : timedOut
-                      ? t('pay.tryAgain')
-                      : usdEquivalent != null
-                        ? `${t('dashboard.pay', { amount: formatAmount(amountDue) })} (~$${usdEquivalent} USD)`
-                        : t('dashboard.pay', { amount: formatAmount(amountDue) })}
-                </Button>
-              </>
-            )}
+            <Button className="mt-6 w-full" size="lg" onClick={pay} disabled={paying}>
+              {paying
+                ? t('pay.starting')
+                : usdEquivalent != null
+                  ? `${t('dashboard.pay', { amount: formatAmount(amountDue) })} (~$${usdEquivalent} USD)`
+                  : t('dashboard.pay', { amount: formatAmount(amountDue) })}
+            </Button>
           </Card>
         )}
       </div>
