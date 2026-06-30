@@ -31,6 +31,13 @@ export default function AnnouncementsScreen() {
     enabled: !!compId,
   });
 
+  // Record opens once the feed loads (best-effort; server dedupes per student).
+  React.useEffect(() => {
+    if (data && data.length > 0) {
+      void marketingService.markAnnouncementsOpen(data.map((a) => a.id));
+    }
+  }, [data]);
+
   const featured = (data ?? []).filter((a) => a.isFeatured);
   const rest = (data ?? []).filter((a) => !a.isFeatured);
 

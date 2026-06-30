@@ -57,6 +57,9 @@ interface Announcement {
   isFeatured: boolean;
   publishedAt: string | null;
   createdAt: string;
+  // Open-tracking analytics (operator list only).
+  opens?: number;
+  reach?: number;
 }
 
 const DEFAULTS = {
@@ -263,6 +266,7 @@ function AnnouncementsPage() {
                 <TableHead className="w-28">Type</TableHead>
                 <TableHead className="w-32">Status</TableHead>
                 <TableHead className="w-32">Published</TableHead>
+                <TableHead className="w-32">{t('adm.colOpens')}</TableHead>
                 <TableHead className="w-24 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -270,14 +274,14 @@ function AnnouncementsPage() {
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={6}>
                       <Skeleton className="h-9 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
                     {t('adm.ann.noAnnouncements')}
                   </TableCell>
                 </TableRow>
@@ -306,6 +310,14 @@ function AnnouncementsPage() {
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
                       {fmtDate(a.publishedAt)}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      <span className="font-medium text-foreground">{a.opens ?? 0}</span>
+                      <span className="ml-1.5 font-mono text-[11px] text-muted-foreground">
+                        {(a.reach ?? 0) > 0
+                          ? `${Math.round(((a.opens ?? 0) / (a.reach ?? 1)) * 100)}% ${t('adm.ofReach', { reach: a.reach ?? 0 })}`
+                          : t('adm.noReach')}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">

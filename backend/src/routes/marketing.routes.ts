@@ -325,6 +325,10 @@ async function mapAnnouncement(r: any) {
     isFeatured: r.is_featured,
     publishedAt: r.published_at ?? null,
     createdAt: r.created_at,
+    // Present only on the operator list (which SELECTs the computed columns);
+    // the student feed leaves them undefined → 0.
+    opens: Number(r.opens ?? 0),
+    reach: Number(r.reach ?? 0),
   };
 }
 
@@ -365,10 +369,18 @@ router.get("/marketing/announcements", async (req: Request, res: Response) => {
       return;
     }
     const r = await pool.query(
-      `SELECT * FROM announcements
-        WHERE ${scope.platform ? "comp_id IS NULL" : "comp_id = $1"}
-          AND deleted_at IS NULL
-        ORDER BY is_featured DESC, COALESCE(published_at, created_at) DESC`,
+      `SELECT a.*,
+              (SELECT COUNT(*) FROM announcement_opens ao WHERE ao.announcement_id = a.id) AS opens,
+              CASE
+                WHEN a.comp_id IS NULL
+                  THEN (SELECT COUNT(*) FROM users WHERE role = 'student' AND deleted_at IS NULL)
+                ELSE (SELECT COUNT(DISTINCT user_id) FROM registrations
+                       WHERE comp_id = a.comp_id AND deleted_at IS NULL)
+              END AS reach
+         FROM announcements a
+        WHERE ${scope.platform ? "a.comp_id IS NULL" : "a.comp_id = $1"}
+          AND a.deleted_at IS NULL
+        ORDER BY a.is_featured DESC, COALESCE(a.published_at, a.created_at) DESC`,
       scope.platform ? [] : [scope.compId]
     );
     res.json(await Promise.all(r.rows.map(mapAnnouncement)));
@@ -814,6 +826,33 @@ router.get("/announcements", authMiddleware, async (req: Request, res: Response)
     console.error("Student announcements feed error:", err);
     res.status(500).json({ message: "Failed to load announcements" });
   }
+});
+
+// Record that the caller opened (viewed) one or more announcements. The student
+// feed fires this once per load with the rendered ids; the composite PK makes
+// it idempotent (re-opening doesn't inflate the count). Best-effort — analytics
+// must never block the feed, so it always returns 204.
+router.post("/announcements/open", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const raw = (req.body?.ids ?? []) as unknown;
+    const ids = Array.isArray(raw)
+      ? raw.filter((x): x is string => typeof x === "string" && UUID_RE.test(x)).slice(0, 100)
+      : [];
+    if (ids.length > 0) {
+      await pool.query(
+        `INSERT INTO announcement_opens (announcement_id, user_id)
+           SELECT a.id, $2
+             FROM announcements a
+            WHERE a.id = ANY($1::uuid[]) AND a.deleted_at IS NULL
+         ON CONFLICT DO NOTHING`,
+        [ids, req.userId]
+      );
+    }
+  } catch (err) {
+    console.error("Announcement open-tracking error:", err);
+  }
+  res.status(204).end();
 });
 
 // GET /api/announcements/mine — the caller's aggregated feed: announcements

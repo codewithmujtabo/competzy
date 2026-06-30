@@ -29,6 +29,16 @@ export async function getAnnouncements(compId: string): Promise<Announcement[]> 
   }));
 }
 
+/** Record that the student opened these announcements (best-effort, deduped server-side). */
+export async function markAnnouncementsOpen(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  try {
+    await apiRequest("/announcements/open", { method: "POST", body: { ids } });
+  } catch {
+    // Analytics is best-effort — never surface to the student.
+  }
+}
+
 export interface Material {
   id: string;
   compId: string | null; // null = a platform-wide material

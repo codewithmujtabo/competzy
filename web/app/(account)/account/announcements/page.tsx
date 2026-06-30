@@ -82,7 +82,12 @@ export default function AnnouncementsPage() {
   useEffect(() => {
     marketingHttp
       .get<Announcement[]>('/announcements/mine')
-      .then(setItems)
+      .then((data) => {
+        setItems(data);
+        // Record opens (best-effort; server dedupes per student).
+        const ids = data.map((a) => a.id);
+        if (ids.length) marketingHttp.post('/announcements/open', { ids }).catch(() => {});
+      })
       .catch((e) => setErr(e instanceof Error ? e.message : t('acc.failedAnnouncements')));
   }, [t]);
 

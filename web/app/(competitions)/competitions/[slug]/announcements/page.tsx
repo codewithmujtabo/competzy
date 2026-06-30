@@ -101,7 +101,12 @@ export default function CompetitionAnnouncementsPage() {
     if (!comp?.id) return;
     emcHttp
       .get<Announcement[]>(`/announcements?compId=${encodeURIComponent(comp.id)}`)
-      .then(setItems)
+      .then((data) => {
+        setItems(data);
+        // Record opens (best-effort; server dedupes per student).
+        const ids = data.map((a) => a.id);
+        if (ids.length) emcHttp.post('/announcements/open', { ids }).catch(() => {});
+      })
       .catch((e) => {
         toast.error(e instanceof Error ? e.message : 'Failed to load announcements');
         setItems([]);
