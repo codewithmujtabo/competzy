@@ -346,38 +346,85 @@ router.post(
 
 /**
  * DELETE /api/admin/competitions/:id
- * Delete a competition
+ * Hard-delete a competition AND its registrant data. User accounts are never
+ * touched — `users` is a separate table and `registrations.comp_id` has no FK
+ * to competitions, so a student simply loses access to this competition while
+ * their account (and registrations to other competitions) stay intact.
+ *
+ * Most competition-scoped tables carry `comp_id ... REFERENCES competitions(id)
+ * ON DELETE CASCADE`, so they auto-purge when the competition row goes. A few
+ * relationships need manual handling, in this order (one transaction):
+ *   1. school_payment_batch_items → registrations is RESTRICT — clear first.
+ *   2. registrations (no FK to competitions, never cascades) — cascades
+ *      payments(kind='registration'), affiliated_credentials, certificates;
+ *      SET-NULLs orders.registration_id.
+ *   3. order-kind payments — registration_id is NULL so step 2 misses them;
+ *      they're only reachable via orders.payment_id, so delete before orders.
+ *   4. order_items → products is RESTRICT (products cascade off the comp) —
+ *      delete order_items + orders explicitly before the competition cascade.
+ *   5. the competition row — CASCADE removes everything else.
  */
 router.delete("/competitions/:id", audit({ action: "admin.competition.delete", resourceType: "competition", resourceIdParam: "id" }), async (req, res) => {
+  const { id } = req.params;
+  const client = await pool.connect();
+
   try {
-    const { id } = req.params;
+    await client.query("BEGIN");
 
-    // Check if competition has registrations
-    const regCheck = await pool.query(
-      "SELECT COUNT(*) FROM registrations WHERE comp_id = $1",
+    // Lock the competition row; bail out cleanly if it doesn't exist.
+    const compCheck = await client.query(
+      "SELECT id FROM competitions WHERE id = $1 FOR UPDATE",
       [id]
     );
-
-    if (parseInt(regCheck.rows[0].count) > 0) {
-      return res.status(400).json({
-        message: "Cannot delete competition with existing registrations",
-      });
-    }
-
-    // Delete competition (rounds will be deleted via CASCADE)
-    const result = await pool.query(
-      "DELETE FROM competitions WHERE id = $1 RETURNING *",
-      [id]
-    );
-
-    if (result.rows.length === 0) {
+    if (compCheck.rows.length === 0) {
+      await client.query("ROLLBACK");
       return res.status(404).json({ message: "Competition not found" });
     }
 
-    res.json({ message: "Competition deleted successfully" });
+    // 1. RESTRICT blocker on registrations: clear the batch items for this
+    //    competition's registrations (leave the school-scoped parent batches —
+    //    they may cover other competitions).
+    await client.query(
+      `DELETE FROM school_payment_batch_items
+        WHERE registration_id IN (SELECT id FROM registrations WHERE comp_id = $1)`,
+      [id]
+    );
+
+    // 2. registrations — manual delete (no cascade from competitions).
+    const regResult = await client.query(
+      "DELETE FROM registrations WHERE comp_id = $1",
+      [id]
+    );
+
+    // 3. order-kind payments (reachable only via orders.payment_id).
+    await client.query(
+      `DELETE FROM payments
+        WHERE kind = 'order'
+          AND id IN (SELECT payment_id FROM orders WHERE comp_id = $1 AND payment_id IS NOT NULL)`,
+      [id]
+    );
+
+    // 4. order_items + orders before the competition cascade hits products.
+    await client.query("DELETE FROM order_items WHERE comp_id = $1", [id]);
+    await client.query("DELETE FROM orders WHERE comp_id = $1", [id]);
+
+    // 5. the competition itself — CASCADE removes rounds, favorites, views,
+    //    the EMC content/exam/commerce/marketing tables, certificates, flows,
+    //    country_representatives, rep_payment_batches, etc.
+    await client.query("DELETE FROM competitions WHERE id = $1", [id]);
+
+    await client.query("COMMIT");
+
+    res.json({
+      message: "Competition deleted successfully",
+      removedRegistrations: regResult.rowCount ?? 0,
+    });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Error deleting competition:", error);
     res.status(500).json({ message: "Failed to delete competition" });
+  } finally {
+    client.release();
   }
 });
 

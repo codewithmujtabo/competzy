@@ -44,7 +44,7 @@ export const competitionsApi = {
   update: (id: string, data: Partial<Competition>) =>
     adminHttp.put<Competition>(`/admin/competitions/${id}`, data),
   delete: (id: string) =>
-    adminHttp.delete<{ message: string }>(`/admin/competitions/${id}`),
+    adminHttp.delete<{ message: string; removedRegistrations?: number }>(`/admin/competitions/${id}`),
 };
 
 export const usersApi = {

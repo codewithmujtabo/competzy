@@ -231,8 +231,13 @@ export default function CompetitionsPage() {
   const remove = async (id: string, name: string) => {
     if (!confirm(t('acp.confirmDelete', { name }))) return;
     try {
-      await competitionsApi.delete(id);
-      toast.success(t('acp.toastDeleted'));
+      const res = await competitionsApi.delete(id);
+      const removed = res?.removedRegistrations ?? 0;
+      toast.success(
+        removed > 0
+          ? t('acp.toastDeletedWithCount', { count: removed })
+          : t('acp.toastDeleted')
+      );
       load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('acp.toastDeleteFail'));
