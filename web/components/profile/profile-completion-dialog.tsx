@@ -99,6 +99,7 @@ const FIELD_ORDER: ProfileFieldKey[] = [
   'email',
   'phone',
   'dateOfBirth',
+  'grade',
   'schoolName',
   'country',
   'province',
@@ -161,10 +162,23 @@ export function ProfileCompletionDialog({
   // Optional (everything else from FIELD_ORDER that should always show).
   const { required, optional } = useMemo(() => {
     const reqSet = new Set(missingFields);
-    const requiredKeys = FIELD_ORDER.filter((k) => reqSet.has(k));
+    const requiredKeys = FIELD_ORDER.filter((k) => k !== 'grade' && reqSet.has(k));
     const optionalKeys = FIELD_ORDER.filter(
-      (k) => !reqSet.has(k) && ALWAYS_OPTIONAL.includes(k),
+      (k) => k !== 'grade' && !reqSet.has(k) && ALWAYS_OPTIONAL.includes(k),
     );
+    // Grade rides alongside Date of birth: render the grade picker immediately
+    // to the right of DOB, in whichever section DOB lands in. Its required-ness
+    // mirrors DOB's (gates Save only when DOB is required). If DOB isn't shown,
+    // offer grade in the Optional section so the student can still set it.
+    const placeGradeAfterDob = (list: ProfileFieldKey[]) => {
+      const i = list.indexOf('dateOfBirth');
+      if (i === -1) return false;
+      list.splice(i + 1, 0, 'grade');
+      return true;
+    };
+    if (!placeGradeAfterDob(requiredKeys) && !placeGradeAfterDob(optionalKeys)) {
+      optionalKeys.push('grade');
+    }
     return { required: requiredKeys, optional: optionalKeys };
   }, [missingFields]);
 
@@ -278,8 +292,9 @@ export function ProfileCompletionDialog({
           continue;
         }
         const f = FIELDS[k];
-        if (f.type === 'date') {
-          // A DATE column rejects '' — omit empty rather than clear.
+        if (f.type === 'date' || f.type === 'grade') {
+          // A DATE column rejects '' — omit empty rather than clear. Same for
+          // grade: never clobber a stored grade with an empty pick.
           payload[k] = (values[k] || '').trim() || undefined;
         } else {
           payload[k] = (values[k] || '').trim();
