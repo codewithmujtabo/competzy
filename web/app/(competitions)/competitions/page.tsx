@@ -111,6 +111,10 @@ function fmtDate(d: string | null): string {
 // back to a stable, distinct hashed palette so every card is recognisable
 // instead of a wall of white cards.
 
+// Flagship competitions pinned to the front of the catalog, in this order.
+// Matched against the exact competition slug.
+const PINNED_SLUGS = ['emc', 'komodo'];
+
 // Self-hosted logos in /public/competitions/<file>.webp (mirrored from
 // competzy.com). Matched by keyword against the competition's slug + name,
 // because operator-created slugs look like `international-greenwich-olympiad-f3i6d`.
@@ -540,7 +544,7 @@ export default function CompetitionCatalogPage() {
   const filtered = useMemo(() => {
     if (!comps) return null;
     const q = search.trim().toLowerCase();
-    return comps.filter((c) => {
+    const matched = comps.filter((c) => {
       if (q && !`${c.name} ${c.organizerName}`.toLowerCase().includes(q)) return false;
       if (level === 'international' && !c.isInternational) return false;
       if (level === 'national' && c.isInternational) return false;
@@ -548,6 +552,17 @@ export default function CompetitionCatalogPage() {
       if (grade !== 'all' && !gradeBandsOf(c.gradeLevel).has(grade)) return false;
       return true;
     });
+    // Pin the flagship competitions (EMC, then Komodo) to the front of the
+    // catalog; everything else keeps its backend order. Stable: equal-rank
+    // items fall back to their original index.
+    const rank = (slug: string | null) => {
+      const i = slug ? PINNED_SLUGS.indexOf(slug) : -1;
+      return i === -1 ? PINNED_SLUGS.length : i;
+    };
+    return matched
+      .map((c, i) => ({ c, i }))
+      .sort((a, b) => rank(a.c.slug) - rank(b.c.slug) || a.i - b.i)
+      .map((x) => x.c);
   }, [comps, search, level, category, grade]);
 
   const filtersActive = search.trim() !== '' || level !== 'all' || category !== 'all' || grade !== 'all';
