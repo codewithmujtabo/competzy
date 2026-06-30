@@ -63,12 +63,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <HubAuthShell
-      headlineTop={t('fpw.headlineTop')}
-      headlineBottom={t('fpw.headlineBottom')}
-      caption={t('fpw.caption')}
-      quote={t('fpw.quote')}
-    >
+    <HubAuthShell>
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
         {t('fpw.eyebrow')}
       </p>

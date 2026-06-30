@@ -59,12 +59,7 @@ function ResetPasswordInner() {
   };
 
   return (
-    <HubAuthShell
-      headlineTop={t('rpw.headlineTop')}
-      headlineBottom={t('rpw.headlineBottom')}
-      caption={t('rpw.caption')}
-      quote={t('rpw.quote')}
-    >
+    <HubAuthShell>
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
         {t('fpw.eyebrow')}
       </p>

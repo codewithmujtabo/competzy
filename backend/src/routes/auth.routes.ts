@@ -791,12 +791,14 @@ router.post("/forgot-password", passwordResetLimiter, async (req: Request, res: 
       );
 
       const resetUrl = `${appBaseUrl(req)}/reset-password?token=${token}`;
-      try {
-        await sendPasswordResetEmail(email, resetUrl, fullName);
-      } catch (mailErr) {
-        // Log but keep returning 200 so we don't reveal whether the email exists.
+      // Fire-and-forget: a slow or misconfigured SMTP must NEVER block the
+      // request — an awaited send would hang until the gateway times out and
+      // surface to the user as a 500. The token is already persisted, so the
+      // email can land asynchronously. Always returns 200 regardless (also
+      // prevents account enumeration via timing).
+      void sendPasswordResetEmail(email, resetUrl, fullName).catch((mailErr) => {
         console.error("Password reset email send failed:", mailErr);
-      }
+      });
     }
 
     res.json({
