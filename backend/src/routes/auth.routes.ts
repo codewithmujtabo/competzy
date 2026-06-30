@@ -253,6 +253,40 @@ router.post("/signup/send-code", otpSendLimiter, async (req: Request, res: Respo
   }
 });
 
+// ── GET /api/auth/check-availability ──────────────────────────────────────
+// Live signup-field check used by the register form. Email must be unique;
+// phone MAY be shared (so phoneInUse is advisory, never blocking — see
+// migration 1753100000000). Existence of an email is already observable via
+// /signup/send-code's 409, so this adds no new enumeration surface.
+router.get("/check-availability", async (req: Request, res: Response) => {
+  try {
+    const rawEmail = typeof req.query.email === "string" ? req.query.email.trim() : "";
+    const rawPhone = typeof req.query.phone === "string" ? req.query.phone.trim() : "";
+
+    let emailTaken = false;
+    if (rawEmail) {
+      // Mirror signup's exact-match check on the unique email column.
+      const r = await pool.query("SELECT 1 FROM users WHERE email = $1 AND deleted_at IS NULL LIMIT 1", [rawEmail]);
+      emailTaken = r.rows.length > 0;
+    }
+
+    let phoneInUse = false;
+    if (rawPhone) {
+      // Match any stored format (08xxx / +62xxx / …) just like phone-OTP login.
+      const r = await pool.query(
+        "SELECT 1 FROM users WHERE phone = ANY($1::text[]) AND deleted_at IS NULL LIMIT 1",
+        [phoneVariants(rawPhone)]
+      );
+      phoneInUse = r.rows.length > 0;
+    }
+
+    res.json({ emailTaken, phoneInUse });
+  } catch (err) {
+    console.error("check-availability error:", err);
+    res.status(500).json({ message: "Failed to check availability" });
+  }
+});
+
 router.post("/signup", authLimiter, async (req: Request, res: Response) => {
   try {
     // Arena maintenance gate — read-only/on with no admin bypass
@@ -624,8 +658,12 @@ router.post("/phone/verify-otp", otpVerifyLimiter, async (req: Request, res: Res
     // Find an existing user by phone — match any stored format (08xxx saved
     // by the app, +62xxx by the web, …) so a phone-format mismatch can't make
     // an existing account look unregistered.
+    // A phone is no longer unique (it can be shared, e.g. a parent's WhatsApp
+    // across several children — see migration 1753100000000), so resolve the
+    // ambiguity deterministically: the earliest-created account wins. The other
+    // account(s) sharing the number sign in via email / email-OTP instead.
     const result = await pool.query(
-      "SELECT id, email, role FROM users WHERE phone = ANY($1::text[])",
+      "SELECT id, email, role FROM users WHERE phone = ANY($1::text[]) AND deleted_at IS NULL ORDER BY created_at ASC LIMIT 1",
       [variants]
     );
 
