@@ -6,6 +6,7 @@ import { env } from "../config/env";
 import { authMiddleware } from "../middleware/auth";
 import { schoolAdminOnly } from "../middleware/school-admin.middleware";
 import { createSnapToken, getTransactionStatus } from "../services/midtrans.service";
+import { compTag, buildPaymentOrderId } from "../services/order-id";
 import * as pushService from "../services/push.service";
 
 // True iff the caller's stored country is anything other than Indonesia.
@@ -439,8 +440,10 @@ router.post("/snap", async (req: Request, res: Response) => {
          r.id          AS reg_id,
          r.status      AS reg_status,
          r.comp_id     AS comp_id,
+         r.registration_number AS registration_number,
          r.voucher_code AS persisted_voucher_code,
          c.name        AS competition_name,
+         c.slug        AS competition_slug,
          COALESCE(cr.fee, c.fee) AS fee,
          cr.fee_international AS fee_intl_usd,
          u.full_name,
@@ -559,8 +562,14 @@ router.post("/snap", async (req: Request, res: Response) => {
       return;
     }
 
-    // Generate a unique order_id — Midtrans rejects reused order_ids after expiry
-    const orderId = `PAY-${registrationId}-${Date.now()}`.slice(0, 50);
+    // Generate a unique order_id — Midtrans rejects reused order_ids after expiry.
+    // Hybrid format CTZ-<TAG>-<regnum>-<ts> makes the competition recognisable in
+    // the shared Midtrans dashboard; analytics still come from the DB, not the id.
+    const orderId = buildPaymentOrderId({
+      tag: compTag(row.competition_slug, row.competition_name),
+      ref: row.registration_number ?? registrationId,
+      ts: Date.now(),
+    });
 
     const { snapToken, redirectUrl } = await createSnapToken({
       orderId,
