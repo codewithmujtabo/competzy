@@ -773,6 +773,8 @@ export const en = {
   'creg.passwordTooShort': 'Password must be at least 8 characters.',
   'creg.confirmPassword': 'Confirm password',
   'creg.passwordMismatch': 'Passwords don’t match.',
+  'creg.grade': 'Grade (class)',
+  'creg.gradePlaceholder': 'Select your grade',
   'creg.country': 'Country',
   'creg.countryHint': 'You can add your province and city later from your profile.',
   'creg.consentPre': 'I agree to the Competzy ',

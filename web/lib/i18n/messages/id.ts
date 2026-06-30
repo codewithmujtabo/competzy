@@ -768,6 +768,8 @@ export const id: Partial<Record<MessageKey, string>> = {
   'creg.passwordTooShort': 'Kata sandi harus minimal 8 karakter.',
   'creg.confirmPassword': 'Konfirmasi kata sandi',
   'creg.passwordMismatch': 'Kata sandi tidak cocok.',
+  'creg.grade': 'Kelas',
+  'creg.gradePlaceholder': 'Pilih kelasmu',
   'creg.country': 'Negara',
   'creg.countryHint': 'Anda dapat menambahkan provinsi dan kota nanti dari profil Anda.',
   'creg.consentPre': 'Saya menyetujui ',

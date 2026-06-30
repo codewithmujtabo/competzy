@@ -28,6 +28,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { CountrySelect } from '@/components/ui/country-select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type SignupResponse = { token: string; user: { id: string; role: string } };
 type SendCodeResponse = { message: string; devBypass?: boolean; devCode?: string; expiresInMinutes?: number };
@@ -75,6 +82,9 @@ export default function CompetitionRegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [country, setCountry] = useState<string | null>(null);
+  // Student grade (1–12). Collected at signup so EMC has the class up front;
+  // persisted to students.grade via roleData. Not applicable to teacher/school.
+  const [grade, setGrade] = useState('');
   // Province + city moved into the profile editor — registration only asks for
   // country (it gates international catalog visibility + voucher scoping).
   const [consent, setConsent] = useState(false);
@@ -103,7 +113,7 @@ export default function CompetitionRegisterPage() {
   const npsnValid = npsn === '' || /^\d{6,12}$/.test(npsn.trim());
   const roleFieldsValid =
     role === 'student'
-      ? true
+      ? !!grade
       : role === 'teacher'
         ? !!schoolName.trim() && !!npsn.trim() && npsnValid && !!subject.trim()
         : /* school */ !!schoolName.trim() && !!npsn.trim() && npsnValid;
@@ -238,7 +248,7 @@ export default function CompetitionRegisterPage() {
           ? { school: schoolName.trim(), npsn: npsn.trim(), subject: subject.trim() }
           : role === 'school'
             ? { schoolName: schoolName.trim(), npsn: npsn.trim() }
-            : {};
+            : /* student */ { grade };
 
       await emcHttp.post<SignupResponse>('/auth/signup', {
         email,
@@ -601,6 +611,27 @@ export default function CompetitionRegisterPage() {
                     </div>
                   )}
                 </>
+              )}
+
+              {/* Grade + country apply only to students. */}
+              {role === 'student' && (
+                <div>
+                  <Label htmlFor="reg-grade" className="mb-1.5 text-xs text-muted-foreground">
+                    {t('creg.grade')}
+                  </Label>
+                  <Select value={grade} onValueChange={setGrade}>
+                    <SelectTrigger id="reg-grade" className="w-full">
+                      <SelectValue placeholder={t('creg.gradePlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((g) => (
+                        <SelectItem key={g} value={g}>
+                          {t('dashboard.heroGrade', { n: g })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
 
               {/* Country only applies to students (intl catalog + voucher scoping). */}
