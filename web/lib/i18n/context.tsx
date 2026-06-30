@@ -42,11 +42,15 @@ function translate(locale: Locale, key: MessageKey, vars?: Vars): string {
  * back on mount and persists future toggles to `localStorage('locale')`.
  */
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('en');
+  // Bahasa Indonesia is the default (EMC is an Indonesian competition). The
+  // anti-flash script in the root layout sets <html lang> before paint from
+  // localStorage, falling back to 'id'; this just reads it back on mount, so a
+  // user who toggled to English still gets English.
+  const [locale, setLocaleState] = useState<Locale>('id');
 
   useEffect(() => {
     const current = document.documentElement.lang;
-    setLocaleState(current === 'id' ? 'id' : 'en');
+    setLocaleState(current === 'en' ? 'en' : 'id');
   }, []);
 
   const setLocale = useCallback((next: Locale) => {
