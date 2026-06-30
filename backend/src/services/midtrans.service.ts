@@ -15,6 +15,31 @@ const coreApi = new midtransClient.CoreApi({
   clientKey: env.MIDTRANS_CLIENT_KEY,
 });
 
+// On a SHARED Midtrans merchant account (Competzy reuses the legacy
+// EMC/kompetisi.net account), the dashboard's global Payment Notification URL
+// points at the legacy backend. Override it per-transaction to Competzy's own
+// webhook so Midtrans notifies US — not the legacy site — for our transactions,
+// without touching the shared dashboard config. `X-Override-Notification`
+// replaces the URL for these requests only; the legacy site's own transactions
+// keep using the dashboard URL. Set MIDTRANS_NOTIFICATION_URL to
+// https://api.competzy.com/api/payments/webhook on the backend service.
+// (If unset, we fall back to the dashboard URL + the verify-poll backstop.)
+if (env.MIDTRANS_NOTIFICATION_URL) {
+  try {
+    // midtrans-client 1.4.3 wraps an axios instance at snap.httpClient.http_client;
+    // a default `common` header rides along with every Snap charge request.
+    (snap as unknown as {
+      httpClient: { http_client: { defaults: { headers: { common: Record<string, string> } } } };
+    }).httpClient.http_client.defaults.headers.common["X-Override-Notification"] =
+      env.MIDTRANS_NOTIFICATION_URL;
+  } catch (err) {
+    console.warn(
+      "[midtrans] Failed to set X-Override-Notification header — Midtrans will use the dashboard notification URL; payment confirmation falls back to the verify-poll.",
+      err,
+    );
+  }
+}
+
 const DEEP_LINK_BASE = "competzy://payment";
 
 export interface SnapTokenResult {

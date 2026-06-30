@@ -33,6 +33,13 @@ export const env = {
   MIDTRANS_SERVER_KEY: process.env.MIDTRANS_SERVER_KEY || "",
   MIDTRANS_CLIENT_KEY: process.env.MIDTRANS_CLIENT_KEY || "",
   MIDTRANS_IS_PRODUCTION: process.env.MIDTRANS_IS_PRODUCTION === "true",
+  // Per-transaction notification-URL override. Needed when Competzy shares a
+  // Midtrans merchant account with another site (the legacy EMC/kompetisi.net
+  // account) whose dashboard notification URL points elsewhere. Set this to
+  // Competzy's OWN webhook — https://api.competzy.com/api/payments/webhook — so
+  // Midtrans notifies us for our transactions. Leave blank to use the dashboard
+  // URL (dedicated-account setups).
+  MIDTRANS_NOTIFICATION_URL: process.env.MIDTRANS_NOTIFICATION_URL || "",
   // USD → IDR display + charge rate for international students. Stripe isn't
   // available to Indonesian merchants, so non-ID callers pay the USD price
   // converted to IDR via Midtrans (their card issuer handles the local-currency
