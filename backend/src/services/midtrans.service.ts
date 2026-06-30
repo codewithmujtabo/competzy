@@ -40,6 +40,40 @@ if (env.MIDTRANS_NOTIFICATION_URL) {
   }
 }
 
+// Fail-loud config validation. Midtrans silently returns 401 on a wrong key,
+// and a sandbox/production mismatch is easy to miss — these warnings surface
+// the common misconfigurations at boot (e.g. the Merchant ID "M0123456789"
+// pasted into CLIENT_KEY, or a production key left in sandbox mode). Logs
+// only, never blocks — mirrors the SMTP config warning.
+function validateMidtransConfig(): void {
+  const sk = env.MIDTRANS_SERVER_KEY;
+  const ck = env.MIDTRANS_CLIENT_KEY;
+  const prod = env.MIDTRANS_IS_PRODUCTION;
+  const notif = env.MIDTRANS_NOTIFICATION_URL;
+  const warn = (m: string) => console.warn(`[midtrans] CONFIG: ${m}`);
+
+  if (!sk || !ck) {
+    warn("MIDTRANS_SERVER_KEY / MIDTRANS_CLIENT_KEY not set — payments are disabled.");
+    return;
+  }
+  const skSandbox = sk.startsWith("SB-Mid-server-");
+  const skProd = sk.startsWith("Mid-server-");
+  const ckSandbox = ck.startsWith("SB-Mid-client-");
+  const ckProd = ck.startsWith("Mid-client-");
+
+  if (!skSandbox && !skProd)
+    warn(`MIDTRANS_SERVER_KEY is not a server key (expected "Mid-server-..." or "SB-Mid-server-...").`);
+  if (!ckSandbox && !ckProd)
+    warn(`MIDTRANS_CLIENT_KEY is not a client key (expected "Mid-client-..." or "SB-Mid-client-..."). A value like "M0123456789" is the Merchant ID, NOT the Client Key.`);
+  if (prod && (skSandbox || ckSandbox))
+    warn("MIDTRANS_IS_PRODUCTION=true but a SANDBOX key (SB-...) is configured — production charges will fail.");
+  if (!prod && (skProd || ckProd))
+    warn("MIDTRANS_IS_PRODUCTION=false but a PRODUCTION key is configured — set MIDTRANS_IS_PRODUCTION=true to go live (sandbox charges will fail against a production key).");
+  if (notif && !/\/(webhook|notification)/i.test(notif))
+    warn(`MIDTRANS_NOTIFICATION_URL ("${notif}") does not look like a server-to-server webhook — payment notifications may go to the wrong place. Expected e.g. https://api.competzy.com/api/payments/webhook`);
+}
+validateMidtransConfig();
+
 const DEEP_LINK_BASE = "competzy://payment";
 
 export interface SnapTokenResult {
