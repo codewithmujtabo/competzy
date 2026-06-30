@@ -1417,6 +1417,7 @@ export const en = {
   'paySuccess.myCompetitions': 'View my competitions',
   'paySuccess.tryAgain': 'Try again',
   'paySuccess.checkAgain': 'Check again',
+  'paySuccess.redirectingIn': 'Taking you to your dashboard in {s}s…',
   'pay.noReg': 'No registration yet',
   'pay.noRegBody': 'Enroll from the dashboard before paying.',
   'pay.goToDashboard': 'Go to dashboard',

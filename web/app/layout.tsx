@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="id" suppressHydrationWarning>
       <head>
         {/* Anti-flash: apply theme before first paint (both legacy data-theme + shadcn .dark) */}
         <script
@@ -24,12 +24,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `try{var t=localStorage.getItem('theme')||'light';var e=document.documentElement;e.setAttribute('data-theme',t);if(t==='dark')e.classList.add('dark');}catch(e){}`,
           }}
         />
-        {/* Anti-flash: apply locale before first paint. Auto-detect from the
-            browser language on the first visit (Indonesian → 'id', else 'en');
-            a manual toggle is remembered in localStorage thereafter. */}
+        {/* Anti-flash: apply locale before first paint. This is an Indonesian
+            competition platform (EMC), so Bahasa Indonesia is the default on a
+            first visit; a manual toggle is remembered in localStorage thereafter
+            (so a user who switched to English keeps English). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var l=localStorage.getItem('locale');if(l!=='id'&&l!=='en'){l=(navigator.language||navigator.userLanguage||'').toLowerCase().indexOf('id')===0?'id':'en';}document.documentElement.lang=l;}catch(e){}`,
+            __html: `try{var l=localStorage.getItem('locale');if(l!=='id'&&l!=='en'){l='id';}document.documentElement.lang=l;}catch(e){}`,
           }}
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

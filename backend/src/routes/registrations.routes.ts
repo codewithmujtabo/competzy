@@ -421,51 +421,65 @@ router.post("/", async (req: Request, res: Response) => {
       );
     }
 
-    // Get competition + student details for notifications
-    const detailsResult = await pool.query(
-      `SELECT c.name as competition_name, u.full_name as student_name
-       FROM competitions c
-       JOIN users u ON u.id = $2
-       WHERE c.id = $1`,
-      [compId, req.userId]
-    );
-    const competitionName = detailsResult.rows[0]?.competition_name || "Competition";
-    const studentName = detailsResult.rows[0]?.student_name || "Your child";
-
-    // Create notification for registration
-    const notifBody = isFree
-      ? `Your registration for ${competitionName} is under admin review. You'll be notified once it's approved.`
-      : `You're registered for ${competitionName}! Complete your payment to submit your application.`;
-
-    await pushService.sendPushNotification(
-      req.userId!,
-      "Registration Submitted!",
-      notifBody,
-      {
-        type: "registration_created",
-        compId,
-        registrationId: id,
-      }
-    );
-
-    const parentIds = await pushService.getActiveParentIdsForStudent(req.userId!);
-    if (parentIds.length > 0) {
-      await pushService.sendBatchNotifications(
-        parentIds,
-        "Child Registration Submitted",
-        isFree
-          ? `${studentName} registered for ${competitionName}. Waiting for admin approval.`
-          : `${studentName} registered for ${competitionName}. Payment required to complete registration.`,
-        {
-          type: "child_registration_created",
-          compId,
-          registrationId: id,
-          studentId: req.userId,
-        }
-      );
-    }
-
+    // The registration is fully persisted now — respond immediately. The
+    // notifications below call Expo's push API (an external HTTP service);
+    // awaiting them tied the HTTP response to a slow third party, so a transient
+    // Expo stall pushed the response past the reverse-proxy read timeout and the
+    // client got a 502 even though the registration had already succeeded.
+    // Run them fire-and-forget instead (best-effort, like the audit log).
     res.status(201).json({ message: "Registration created", id, status: initialStatus, registrationNumber });
+
+    // ── Background: notify the student + their parents (non-blocking) ────────
+    const userId = req.userId!;
+    void (async () => {
+      try {
+        // Get competition + student details for notifications
+        const detailsResult = await pool.query(
+          `SELECT c.name as competition_name, u.full_name as student_name
+           FROM competitions c
+           JOIN users u ON u.id = $2
+           WHERE c.id = $1`,
+          [compId, userId]
+        );
+        const competitionName = detailsResult.rows[0]?.competition_name || "Competition";
+        const studentName = detailsResult.rows[0]?.student_name || "Your child";
+
+        // Create notification for registration
+        const notifBody = isFree
+          ? `Your registration for ${competitionName} is under admin review. You'll be notified once it's approved.`
+          : `You're registered for ${competitionName}! Complete your payment to submit your application.`;
+
+        await pushService.sendPushNotification(
+          userId,
+          "Registration Submitted!",
+          notifBody,
+          {
+            type: "registration_created",
+            compId,
+            registrationId: id,
+          }
+        );
+
+        const parentIds = await pushService.getActiveParentIdsForStudent(userId);
+        if (parentIds.length > 0) {
+          await pushService.sendBatchNotifications(
+            parentIds,
+            "Child Registration Submitted",
+            isFree
+              ? `${studentName} registered for ${competitionName}. Waiting for admin approval.`
+              : `${studentName} registered for ${competitionName}. Payment required to complete registration.`,
+            {
+              type: "child_registration_created",
+              compId,
+              registrationId: id,
+              studentId: userId,
+            }
+          );
+        }
+      } catch (notifyErr) {
+        console.error("Registration notification error (non-blocking):", notifyErr);
+      }
+    })();
   } catch (err: any) {
     if (err.code === "23505") {
       const msg = err.constraint === "uq_registrations_user_comp_round"

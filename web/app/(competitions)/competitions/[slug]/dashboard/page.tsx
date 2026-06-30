@@ -30,6 +30,7 @@ import {
 } from '@/lib/competitions/registry';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Confetti } from '@/components/ui/confetti';
 import {
   Dialog,
   DialogContent,
@@ -1564,10 +1565,23 @@ export default function CompetitionDashboardPage() {
   // computed server-side from the saved fields).
   const [bump, setBump] = useState(0);
   const [regFormOpen, setRegFormOpen] = useState(false);
+  // Celebrate a just-completed payment: /payment/success redirects back here
+  // with ?paid=1 once Midtrans settles. Fire confetti once, then strip the
+  // param so a refresh doesn't replay it.
+  const [celebrate, setCelebrate] = useState(false);
 
   useEffect(() => {
     if (!config) notFound();
   }, [config]);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get('paid') !== '1') return;
+    setCelebrate(true);
+    sp.delete('paid');
+    const qs = sp.toString();
+    window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+  }, []);
 
   // One-shot fetch of the caller's profile to read `country`. The competition
   // auth context doesn't carry this field, so we read it directly. Best-effort
@@ -1784,7 +1798,12 @@ export default function CompetitionDashboardPage() {
       if (gate) {
         setProfileGate({ roundId, meta, missingFields: gate });
       } else {
-        setErr(e instanceof Error ? e.message : 'Could not register');
+        // The registration may already have been created (e.g. a transient
+        // gateway error after the row committed, or a double-fire) — treat
+        // "already exists/registered" as success and just resync.
+        const msg = e instanceof Error ? e.message : '';
+        if (/already (exists|registered)/i.test(msg)) await refresh(comp.id);
+        else setErr(msg || 'Could not register');
       }
     }
   };
@@ -2026,6 +2045,7 @@ export default function CompetitionDashboardPage() {
           onCancel={() => setProfileGate(null)}
           onCompleted={() => void retryAfterProfileSaved()}
         />
+        {celebrate && <Confetti onDone={() => setCelebrate(false)} />}
     </div>
   );
 }
