@@ -1410,6 +1410,7 @@ export const id: Partial<Record<MessageKey, string>> = {
   'paySuccess.myCompetitions': 'Lihat kompetisi saya',
   'paySuccess.tryAgain': 'Coba lagi',
   'paySuccess.checkAgain': 'Cek lagi',
+  'paySuccess.redirectingIn': 'Mengalihkan ke dasbor dalam {s} detik…',
   'pay.noReg': 'Belum terdaftar',
   'pay.noRegBody': 'Daftar dulu dari dasbor sebelum membayar.',
   'pay.goToDashboard': 'Ke dasbor',

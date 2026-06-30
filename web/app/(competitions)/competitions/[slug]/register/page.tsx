@@ -16,7 +16,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, BookOpen, Building2, Eye, EyeOff, GraduationCap, Hash, Lock, Mail, MailCheck, Phone, RotateCw, School, User } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Building2, Eye, EyeOff, GraduationCap, Hash, Info, Lock, Mail, MailCheck, Phone, RotateCw, School, User } from 'lucide-react';
 import { emcHttp, HttpError } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
@@ -80,6 +80,9 @@ export default function CompetitionRegisterPage() {
   const [consent, setConsent] = useState(false);
   const [error, setError] = useState('');
   const [emailTaken, setEmailTaken] = useState(false);
+  // Advisory only — a phone may be shared (e.g. a parent's WhatsApp across
+  // several children), so this never blocks submit.
+  const [phoneInUse, setPhoneInUse] = useState(false);
   const [warning, setWarning] = useState('');
   const [refCode, setRefCode] = useState<string | null>(null);
 
@@ -138,6 +141,32 @@ export default function CompetitionRegisterPage() {
   useEffect(() => {
     if (step === 'verify') codeInputRef.current?.focus();
   }, [step]);
+
+  // Live phone-availability check (debounced). A phone may be shared, so this
+  // surfaces a soft warning — never blocks signup. Only runs once the typed
+  // number is a plausible format, to avoid noise mid-typing.
+  useEffect(() => {
+    const trimmed = phone.trim();
+    if (!trimmed || !phoneValid) {
+      setPhoneInUse(false);
+      return;
+    }
+    let cancelled = false;
+    const id = setTimeout(async () => {
+      try {
+        const res = await emcHttp.get<{ phoneInUse: boolean }>(
+          `/auth/check-availability?phone=${encodeURIComponent(trimmed)}`,
+        );
+        if (!cancelled) setPhoneInUse(!!res.phoneInUse);
+      } catch {
+        if (!cancelled) setPhoneInUse(false);
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [phone, phoneValid]);
 
   const canSubmitForm =
     !sending && consent && !!fullName.trim() && emailValid && !passwordTooShort && password.length >= 8 && password === confirmPassword && phoneValid && roleFieldsValid;
@@ -447,6 +476,15 @@ export default function CompetitionRegisterPage() {
                   <p className="mt-1 text-xs text-destructive">
                     {t('creg.phoneInvalidPre')}
                     <code className="font-mono">08123456789</code>.
+                  </p>
+                )}
+                {phoneValid && phone.trim() !== '' && phoneInUse && (
+                  <p
+                    role="status"
+                    className="mt-1.5 flex items-start gap-1.5 text-xs text-amber-600 duration-200 animate-in fade-in slide-in-from-top-1 dark:text-amber-400"
+                  >
+                    <Info className="mt-px size-3.5 shrink-0" aria-hidden />
+                    <span>{t('creg.phoneInUse')}</span>
                   </p>
                 )}
               </div>

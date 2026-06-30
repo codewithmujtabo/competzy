@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { emcHttp } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
 import { competitionPaths } from '@/lib/competitions/registry';
@@ -15,14 +16,19 @@ import { PaymentResult, type PayState } from '@/components/payment/payment-resul
 
 const SETTLED = ['paid', 'registered', 'approved', 'completed', 'pending_review'];
 const MAX_TRIES = 6;
+// Auto-redirect to the dashboard this many seconds after the payment confirms,
+// so the student lands back where they started without a manual click.
+const REDIRECT_SECONDS = 5;
 
 export default function PaymentSuccessPage() {
   const t = useT();
+  const router = useRouter();
   const ridRef = useRef<string | null>(null);
   const triesRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [slug, setSlug] = useState('');
   const [state, setState] = useState<PayState>('verifying');
+  const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
 
   const runVerify = useCallback(async () => {
     const rid = ridRef.current;
@@ -68,6 +74,21 @@ export default function PaymentSuccessPage() {
 
   const dashboardHref = slug ? competitionPaths(slug).dashboard : '/competitions';
   const payHref = slug ? competitionPaths(slug).pay : '/competitions';
+  // The dashboard fires confetti when it sees ?paid=1 — both the auto-redirect
+  // and the manual button carry it.
+  const celebrateHref = `${dashboardHref}?paid=1`;
+
+  // Once the payment is confirmed, count down and auto-redirect to the
+  // dashboard (where the student started). The manual button still works.
+  useEffect(() => {
+    if (state !== 'success') return;
+    if (countdown <= 0) {
+      router.replace(celebrateHref);
+      return;
+    }
+    const id = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [state, countdown, celebrateHref, router]);
 
   const copy: Record<PayState, { title: string; body: string }> = {
     verifying: { title: t('paySuccess.verifyingTitle'), body: t('paySuccess.verifyingBody') },
@@ -83,11 +104,14 @@ export default function PaymentSuccessPage() {
           {state === 'success' && (
             <>
               <Button asChild size="lg" className="w-full">
-                <Link href={dashboardHref}>{t('paySuccess.goToDashboard')}</Link>
+                <Link href={celebrateHref}>{t('paySuccess.goToDashboard')}</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="w-full">
                 <Link href="/account/competitions">{t('paySuccess.myCompetitions')}</Link>
               </Button>
+              <p className="text-center text-xs text-muted-foreground" aria-live="polite">
+                {t('paySuccess.redirectingIn', { s: String(countdown) })}
+              </p>
             </>
           )}
           {state === 'pending' && (
