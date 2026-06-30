@@ -57,6 +57,8 @@ export const en = {
     "That email and password don't match. Try again, or use Forgot password.",
   'login.codeSent': 'Code sent. Check your phone — it can take a moment.',
   'login.codeInvalid': 'That code is incorrect or has expired. Request a new one.',
+  'login.phoneShared':
+    'This phone is linked to several accounts. Please sign in with your email and password.',
   'login.footerPrivacy': 'Privacy',
   'login.footerTerms': 'Terms',
   'login.footerContact': 'Contact',

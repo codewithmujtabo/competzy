@@ -57,6 +57,8 @@ export const id: Partial<Record<MessageKey, string>> = {
     'Email dan kata sandi tidak cocok. Coba lagi, atau gunakan Lupa kata sandi.',
   'login.codeSent': 'Kode terkirim. Cek teleponmu — mungkin perlu beberapa saat.',
   'login.codeInvalid': 'Kode salah atau sudah kedaluwarsa. Minta kode baru.',
+  'login.phoneShared':
+    'Nomor HP ini terhubung ke beberapa akun. Silakan masuk dengan email dan kata sandimu.',
   'login.footerPrivacy': 'Privasi',
   'login.footerTerms': 'Ketentuan',
   'login.footerContact': 'Kontak',

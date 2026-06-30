@@ -683,6 +683,17 @@ router.post("/phone/verify-otp", otpVerifyLimiter, async (req: Request, res: Res
       return;
     }
 
+    // Phone numbers are no longer unique (a family may share one). When several
+    // accounts share this number we can't decide which to sign in — ask the
+    // user to use email instead. Single-account phone login is unaffected.
+    if (result.rows.length > 1) {
+      res.status(409).json({
+        code: "PHONE_NOT_UNIQUE",
+        message: "This phone is linked to several accounts — please sign in with your email.",
+      });
+      return;
+    }
+
     const userRow = result.rows[0];
 
     // Arena maintenance gate — runs AFTER OTP is verified and the user

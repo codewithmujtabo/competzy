@@ -21,7 +21,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Moon, Phone, Sun } from 'lucide-react';
-import { adminHttp } from '@/lib/api/client';
+import { adminHttp, HttpError } from '@/lib/api/client';
 import { useTheme } from '@/lib/theme/context';
 import { useT } from '@/lib/i18n/context';
 import { LocaleToggle } from '@/components/shell/locale-toggle';
@@ -202,7 +202,9 @@ export default function UnifiedLogin() {
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
-      if (/no_account/i.test(msg)) {
+      if (err instanceof HttpError && err.body?.code === 'PHONE_NOT_UNIQUE') {
+        setError(t('login.phoneShared'));
+      } else if (/no_account/i.test(msg)) {
         setError("That phone isn't linked to an account. Sign up first, then phone sign-in will work.");
       } else if (/invalid|expired/i.test(msg)) {
         setError(t('login.codeInvalid'));
