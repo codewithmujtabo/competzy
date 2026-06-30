@@ -8,6 +8,7 @@ import { adminHttp } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
 import type { Competition } from '@/types';
 import { FlowEditorDialog } from '@/components/flow-editor-dialog';
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
 import { CompetitionLogoUploader } from '@/components/competition-logo-uploader';
 import { PageHeader } from '@/components/shell/page-header';
 import { Pager } from '@/components/shell/pager';
@@ -121,6 +122,8 @@ export default function CompetitionsPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(FORM_DEFAULTS);
   const [flowComp, setFlowComp] = useState<{ id: string; name: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [organizers, setOrganizers] = useState<OrganizerOption[]>([]);
 
@@ -228,19 +231,23 @@ export default function CompetitionsPage() {
     }
   };
 
-  const remove = async (id: string, name: string) => {
-    if (!confirm(t('acp.confirmDelete', { name }))) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      const res = await competitionsApi.delete(id);
+      const res = await competitionsApi.delete(deleteTarget.id);
       const removed = res?.removedRegistrations ?? 0;
       toast.success(
         removed > 0
           ? t('acp.toastDeletedWithCount', { count: removed })
           : t('acp.toastDeleted')
       );
+      setDeleteTarget(null);
       load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('acp.toastDeleteFail'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -358,7 +365,7 @@ export default function CompetitionsPage() {
                           size="sm"
                           variant="outline"
                           className="text-destructive hover:text-destructive"
-                          onClick={() => remove(c.id, c.name)}
+                          onClick={() => setDeleteTarget({ id: c.id, name: c.name })}
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
@@ -574,6 +581,22 @@ export default function CompetitionsPage() {
         competitionId={flowComp?.id ?? null}
         competitionName={flowComp?.name ?? ''}
         onClose={() => setFlowComp(null)}
+      />
+
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+        title={t('acp.del.title')}
+        resourceName={deleteTarget?.name ?? ''}
+        consequences={[t('acp.del.c1'), t('acp.del.c2'), t('acp.del.c3')]}
+        typeToConfirmLabel={t('acp.del.typeHint')}
+        confirmLabel={t('acp.del.confirm')}
+        confirmingLabel={t('acp.del.deleting')}
+        cancelLabel={t('common.cancel')}
+        confirming={deleting}
+        onConfirm={confirmDelete}
       />
     </div>
   );
