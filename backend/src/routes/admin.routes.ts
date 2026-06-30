@@ -701,6 +701,89 @@ router.get("/kpi", async (_req, res) => {
 });
 
 /**
+ * GET /api/admin/revenue/by-competition
+ * Reproduces the per-competition Midtrans pivot the finance team builds by hand:
+ * settled registration payments sliced by competition → round → payer type
+ * (Personal vs Kolektif), with transaction count, gross revenue, distinct
+ * participants, and companions (registrants whose student has a supervisor).
+ *
+ * Only settled (`payment_status='settlement'`) registration-kind payments count
+ * toward revenue — merchandise orders (`kind='order'`) are excluded so the
+ * numbers match registration income. `?year=` filters by payment year.
+ */
+router.get("/revenue/by-competition", async (req, res) => {
+  try {
+    const yearRaw = parseInt(String(req.query.year ?? ""), 10);
+    const year = Number.isFinite(yearRaw) ? yearRaw : null;
+
+    const result = await pool.query(
+      `SELECT
+         c.id                                   AS comp_id,
+         c.name                                 AS competition,
+         cr.round_name                          AS round,
+         CASE WHEN p.payer_kind IN ('school','sponsor')
+              THEN 'Kolektif' ELSE 'Personal' END AS payer_type,
+         COUNT(*)::int                          AS txn_count,
+         COALESCE(SUM(p.amount), 0)::bigint     AS revenue_rp,
+         COUNT(DISTINCT r.id)::int              AS participants,
+         COUNT(DISTINCT r.id) FILTER (
+           WHERE st.supervisor_name IS NOT NULL AND st.supervisor_name <> ''
+         )::int                                 AS companions
+       FROM payments p
+       JOIN registrations r      ON r.id = p.registration_id AND r.deleted_at IS NULL
+       JOIN competitions  c      ON c.id = r.comp_id
+  LEFT JOIN competition_rounds cr ON cr.id = r.round_id
+  LEFT JOIN students st          ON st.id = r.user_id
+      WHERE p.payment_status = 'settlement'
+        AND COALESCE(p.kind, 'registration') = 'registration'
+        AND ($1::int IS NULL OR EXTRACT(YEAR FROM p.created_at) = $1)
+      GROUP BY c.id, c.name, cr.round_name, payer_type
+      ORDER BY c.name ASC, cr.round_name NULLS FIRST, payer_type`,
+      [year],
+    );
+
+    const rows = result.rows.map((r) => ({
+      compId: r.comp_id,
+      competition: r.competition,
+      round: r.round ?? null,
+      payerType: r.payer_type as "Personal" | "Kolektif",
+      txnCount: Number(r.txn_count),
+      revenueRp: Number(r.revenue_rp),
+      participants: Number(r.participants),
+      companions: Number(r.companions),
+    }));
+
+    const grand = rows.reduce(
+      (a, r) => ({
+        txnCount: a.txnCount + r.txnCount,
+        revenueRp: a.revenueRp + r.revenueRp,
+        participants: a.participants + r.participants,
+        companions: a.companions + r.companions,
+      }),
+      { txnCount: 0, revenueRp: 0, participants: 0, companions: 0 },
+    );
+
+    // Distinct payment years present, for the year filter dropdown.
+    const years = await pool.query(
+      `SELECT DISTINCT EXTRACT(YEAR FROM created_at)::int AS y
+         FROM payments
+        WHERE payment_status = 'settlement'
+        ORDER BY y DESC`,
+    );
+
+    res.json({
+      year,
+      rows,
+      grandTotal: grand,
+      years: years.rows.map((r) => r.y),
+    });
+  } catch (err) {
+    console.error("Revenue-by-competition error:", err);
+    res.status(500).json({ message: "Failed to compute revenue report" });
+  }
+});
+
+/**
  * GET /api/admin/segments
  * Pre-built audience segments for cross-sell campaigns.
  * Spec F-AD-02 (viewer only — full builder is Phase 2).

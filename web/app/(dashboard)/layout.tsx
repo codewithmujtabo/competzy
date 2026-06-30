@@ -67,7 +67,7 @@ const NAV: NavSection[] = [
     label: 'Commerce',
     labelKey: 'opnav.commerce',
     items: [
-      { label: 'Revenue', labelKey: 'opnav.revenue', href: '/revenue', icon: Wallet },
+      { label: 'Revenue', labelKey: 'opnav.revenue', href: '/admin/revenue', icon: Wallet },
       { label: 'Products', labelKey: 'opnav.products', href: '/products', icon: Package },
       { label: 'Vouchers', labelKey: 'opnav.vouchers', href: '/vouchers', icon: Ticket },
       { label: 'Orders', labelKey: 'opnav.orders', href: '/orders', icon: ShoppingBag },
