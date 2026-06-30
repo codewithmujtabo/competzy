@@ -729,12 +729,40 @@ router.post("/phone/verify-otp", otpVerifyLimiter, async (req: Request, res: Res
 // email; the DB stores its SHA-256 hash with a 15-minute TTL.
 const RESET_TOKEN_TTL_MIN = 15;
 
+// Allow a candidate base URL only when it's an http(s) URL on a Competzy host
+// (or localhost in dev). Returns the normalized "scheme://host" or null. Guards
+// the password-reset link against pointing anywhere arbitrary.
+function allowedBase(raw: string | undefined): string | null {
+  if (!raw || typeof raw !== "string") return null;
+  let u: URL;
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+  const h = u.hostname;
+  if (h === "localhost" || h === "127.0.0.1" || h === "competzy.com" || h.endsWith(".competzy.com")) {
+    return `${u.protocol}//${u.host}`;
+  }
+  return null;
+}
+
 function appBaseUrl(req: Request): string {
-  // Prefer the request's Origin header (matches whichever subdomain the
-  // user is on); fall back to the configured APP_URL for server-to-server
-  // calls or missing headers.
-  const origin = (req.headers.origin as string | undefined)?.trim();
-  if (origin && /^https?:\/\//.test(origin)) return origin.replace(/\/$/, "");
+  // The web's /api proxy can drop the browser Origin header, and APP_URL on the
+  // backend may be unset (defaults to localhost) — either makes the reset link
+  // point at the wrong place. So prefer the origin the WEB explicitly sends in
+  // the body (resetBase), then the Origin header, then APP_URL. Each candidate
+  // is host-allowlisted before use.
+  const candidates = [
+    typeof req.body?.resetBase === "string" ? req.body.resetBase : undefined,
+    req.headers.origin as string | undefined,
+    env.APP_URL,
+  ];
+  for (const c of candidates) {
+    const ok = allowedBase(c);
+    if (ok) return ok;
+  }
   return env.APP_URL.replace(/\/$/, "");
 }
 

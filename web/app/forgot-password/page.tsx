@@ -47,7 +47,13 @@ export default function ForgotPasswordPage() {
     setError('');
     setSubmit(true);
     try {
-      await adminHttp.post('/auth/forgot-password', { email });
+      // Send our own origin so the backend builds the reset link on THIS domain
+      // (the /api proxy can hide the browser Origin from the backend, and the
+      // backend's APP_URL may be misconfigured). Backend host-allowlists it.
+      await adminHttp.post('/auth/forgot-password', {
+        email,
+        resetBase: window.location.origin,
+      });
       setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('fpw.errorDefault'));
