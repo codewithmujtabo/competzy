@@ -537,8 +537,8 @@ export default function MaintenanceAdminPage() {
             </div>
             <DialogDescription>
               Only flip a site to <strong>On</strong> for an incident or scheduled downtime.
-              Every public visitor will see the maintenance page until you flip it back —
-              admins with the bypass cookie keep through-access.
+              Every public visitor will see the maintenance page until you flip it back.
+              Admins with the bypass cookie keep through-access.
             </DialogDescription>
           </DialogHeader>
 
@@ -551,7 +551,7 @@ export default function MaintenanceAdminPage() {
                 </div>
                 <div className="flex gap-2">
                   <dt className="w-24 shrink-0 text-xs uppercase text-muted-foreground">Host</dt>
-                  <dd className="font-mono text-xs">{pendingOn.host === '*' ? '(global kill switch — every site)' : pendingOn.host}</dd>
+                  <dd className="font-mono text-xs">{pendingOn.host === '*' ? '(global kill switch, every site)' : pendingOn.host}</dd>
                 </div>
               </dl>
             </div>

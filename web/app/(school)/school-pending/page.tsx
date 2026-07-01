@@ -58,7 +58,7 @@ export default function SchoolPendingPage() {
         ) : (
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             Your {subjectNoun} is being reviewed by our team. You’ll get an email once it’s
-            approved — usually within one business day. The portal (roster, Bulk Registration,
+            approved, usually within one business day. The portal (roster, Bulk Registration,
             Bulk Payment, Reports) unlocks immediately after.
           </p>
         )}

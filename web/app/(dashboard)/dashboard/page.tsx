@@ -230,7 +230,7 @@ export default function DashboardPage() {
             />
             <StatCard
               label={t('adm.kpiAvgTimeToPay')}
-              value={kpi.avgTimeToPaymentHours != null ? `${kpi.avgTimeToPaymentHours.toFixed(1)} h` : '—'}
+              value={kpi.avgTimeToPaymentHours != null ? `${kpi.avgTimeToPaymentHours.toFixed(1)} h` : '-'}
               icon={Clock}
               hint={t('adm.regToSettlement')}
               accent="sunshine"

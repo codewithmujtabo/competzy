@@ -237,7 +237,7 @@ export default function NotificationsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">— No competition —</SelectItem>
+                  <SelectItem value="none">No competition</SelectItem>
                   {allComps.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}

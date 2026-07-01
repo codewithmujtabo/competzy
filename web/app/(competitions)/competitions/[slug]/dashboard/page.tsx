@@ -281,7 +281,7 @@ function AccessBlock({
         </>
       ) : (
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Your access details are being prepared — check back soon.
+          Your access details are being prepared, check back soon.
         </p>
       )}
     </div>
@@ -334,7 +334,7 @@ function ExamBlock({ compId, slug }: { compId: string | null; slug: string }) {
   if (exams.length === 0) {
     return (
       <div className="mt-2 rounded-md border bg-card p-3 text-xs text-muted-foreground">
-        No exam is available for you yet — check back closer to the exam date.
+        No exam is available for you yet. Check back closer to the exam date.
       </div>
     );
   }
@@ -1140,8 +1140,8 @@ function CompetitionHero({
 }) {
   const t = useT();
   const status = statusLabel(reg?.status ?? null, t);
-  const participantId = reg?.registrationNumber ?? '—';
-  const category = grade ? t('dashboard.heroGrade', { n: grade }) : '—';
+  const participantId = reg?.registrationNumber ?? '-';
+  const category = grade ? t('dashboard.heroGrade', { n: grade }) : '-';
   const title = config.heroTitle ?? config.wordmark;
 
   // ── EMC — white card, tricolor wordmark, math watermark ──────────────
@@ -1172,7 +1172,7 @@ function CompetitionHero({
           stats={[
             { k: t('dashboard.heroParticipantId'), v: participantId, color: EMC_TRI.blue },
             { k: t('dashboard.heroCategory'), v: category, color: EMC_TRI.pink },
-            { k: t('dashboard.heroTestCenter'), v: '—', color: EMC_TRI.orange },
+            { k: t('dashboard.heroTestCenter'), v: '-', color: EMC_TRI.orange },
             { k: t('dashboard.heroStatus'), v: status, color: EMC_TRI.blue },
           ]}
         />
@@ -1214,7 +1214,7 @@ function CompetitionHero({
           stats={[
             { k: t('dashboard.heroParticipantId'), v: participantId },
             { k: t('dashboard.heroCategory'), v: category },
-            { k: t('dashboard.heroTrack'), v: '—' },
+            { k: t('dashboard.heroTrack'), v: '-' },
             { k: t('dashboard.heroStatus'), v: status },
           ]}
         />
@@ -1814,7 +1814,7 @@ export default function CompetitionDashboardPage() {
     if (!profileGate) return undefined;
     if (profileGate.roundId && rounds) {
       const r = rounds.find((rr) => rr.id === profileGate.roundId);
-      if (r) return `${config?.shortName ?? ''} — ${pickText(r.roundName, r.roundNameId, locale)}`.trim();
+      if (r) return `${config?.shortName ?? ''}, ${pickText(r.roundName, r.roundNameId, locale)}`.trim();
     }
     return config?.shortName;
   })();

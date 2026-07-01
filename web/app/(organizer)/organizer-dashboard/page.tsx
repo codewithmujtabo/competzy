@@ -62,7 +62,7 @@ export default function OrganizerDashboardPage() {
         setActivity(
           comps.slice(0, 5).map((c) => ({
             id: c.id,
-            description: `${c.name} — ${c.registrationCount} registration${c.registrationCount === 1 ? '' : 's'}`,
+            description: `${c.name}, ${c.registrationCount} registration${c.registrationCount === 1 ? '' : 's'}`,
             created_at: c.regCloseDate || new Date().toISOString(),
           })),
         );

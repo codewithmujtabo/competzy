@@ -117,7 +117,7 @@ export default function SchoolDashboardPage() {
         title={user?.full_name || 'School'}
         subtitle={
           isAdmin && school
-            ? `${school.name} — ${[school.city, school.province].filter(Boolean).join(', ')}`
+            ? `${school.name}, ${[school.city, school.province].filter(Boolean).join(', ')}`
             : t('sch.dashMonitor')
         }
       />

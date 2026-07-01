@@ -71,7 +71,7 @@ const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
 const scoreText = (c: Pick<Certificate, 'score' | 'scoreMax'>) =>
-  c.score == null ? '—' : `${c.score}${c.scoreMax != null ? ` / ${c.scoreMax}` : ''}`;
+  c.score == null ? '-' : `${c.score}${c.scoreMax != null ? ` / ${c.scoreMax}` : ''}`;
 
 export default function CertificatesPage() {
   const t = useT();
@@ -128,7 +128,7 @@ export default function CertificatesPage() {
         `/certificates/manage/backfill?compId=${encodeURIComponent(selectedId)}`,
         {},
       );
-      toast.success(`Backfill done — ${r.issued} issued, ${r.refreshed} score(s) refreshed.`);
+      toast.success(`Backfill done. ${r.issued} issued, ${r.refreshed} score(s) refreshed.`);
       load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Backfill failed');
@@ -267,7 +267,7 @@ export default function CertificatesPage() {
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="h-32 text-center text-sm text-muted-foreground">
-                    No certificates yet — they appear once students finish an exam. Try “Run
+                    No certificates yet. They appear once students finish an exam. Try “Run
                     backfill”.
                   </TableCell>
                 </TableRow>
@@ -296,7 +296,7 @@ export default function CertificatesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {c.awardLabel || '—'}
+                      {c.awardLabel || '-'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{scoreText(c)}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
@@ -408,7 +408,7 @@ export default function CertificatesPage() {
                   type="number"
                   value={form.score}
                   onChange={(e) => setForm((f) => ({ ...f, score: e.target.value }))}
-                  placeholder="—"
+                  placeholder="-"
                 />
               </div>
               <div>
@@ -417,12 +417,12 @@ export default function CertificatesPage() {
                   type="number"
                   value={form.scoreMax}
                   onChange={(e) => setForm((f) => ({ ...f, scoreMax: e.target.value }))}
-                  placeholder="—"
+                  placeholder="-"
                 />
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Editing the score locks it — the nightly backfill will stop syncing it from exam
+              Editing the score locks it, the nightly backfill will stop syncing it from exam
               results.
             </p>
           </div>

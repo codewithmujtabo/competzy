@@ -619,7 +619,7 @@ function RoundCard({
                     <SelectItem key={o.tempId} value={o.tempId}>
                       {`${t('rb.roundLabel', {
                         n: all.findIndex((x) => x.tempId === o.tempId) + 1,
-                      })}${o.roundName ? ` — ${o.roundName}` : ''}`}
+                      })}${o.roundName ? `, ${o.roundName}` : ''}`}
                     </SelectItem>
                   ))}
                 </SelectContent>

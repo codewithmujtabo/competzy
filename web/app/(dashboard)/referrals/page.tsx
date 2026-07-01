@@ -321,7 +321,7 @@ function ReferralsPage() {
             <DialogTitle>{editing ? 'Edit referral' : 'New referral'}</DialogTitle>
             <DialogDescription>
               {editing
-                ? `Code ${editing.code} — the funnel counters update automatically.`
+                ? `Code ${editing.code}, the funnel counters update automatically.`
                 : 'An affiliate who shares a ?ref= link for this competition.'}
             </DialogDescription>
           </DialogHeader>
@@ -357,7 +357,7 @@ function ReferralsPage() {
               <Label className="mb-1.5 text-xs text-muted-foreground">
                 Referral code{' '}
                 <span className="font-normal text-muted-foreground/70">
-                  {editing ? '— immutable' : '— optional, auto-generated if blank'}
+                  {editing ? ', immutable' : ', optional, auto-generated if blank'}
                 </span>
               </Label>
               <Input

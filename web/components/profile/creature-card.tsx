@@ -95,7 +95,7 @@ export function CreatureCard({ rounds }: Props) {
             <p className="mt-1 text-sm text-[#FFE459]/90">
               {hero.creature ? (
                 <>
-                  {hero.creature.ageRange} — you&apos;ll be{' '}
+                  {hero.creature.ageRange}, you&apos;ll be{' '}
                   <span className="font-semibold">{hero.creature.ageAtCutoff}</span>{' '}
                   on {fmtDate(hero.ageCutoffDate)}.
                 </>
@@ -110,7 +110,7 @@ export function CreatureCard({ rounds }: Props) {
             )}
             {hero.creature?.placeholder && (
               <p className="mt-2 text-[10px] uppercase tracking-wider text-[#FFE459]/70">
-                * artwork TBD — placeholder image
+                * artwork TBD, placeholder image
               </p>
             )}
           </div>

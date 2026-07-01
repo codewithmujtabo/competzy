@@ -220,7 +220,7 @@ router.post("/signup/send-code", otpSendLimiter, async (req: Request, res: Respo
 
     if (emailVerifyBypassActive()) {
       res.json({
-        message: "Verification code generated (dev bypass — SMTP not configured).",
+        message: "Verification code generated (dev bypass, SMTP not configured).",
         devBypass: true,
         devCode: code,
         expiresInMinutes: env.OTP_EXPIRY_MINUTES,
@@ -237,7 +237,7 @@ router.post("/signup/send-code", otpSendLimiter, async (req: Request, res: Respo
       if (env.NODE_ENV !== "production") {
         console.warn("Signup send-code: email send failed, using dev fallback:", (sendErr as Error)?.message);
         res.json({
-          message: "Verification code generated (dev fallback — email send failed).",
+          message: "Verification code generated (dev fallback, email send failed).",
           devBypass: true,
           devCode: code,
           expiresInMinutes: env.OTP_EXPIRY_MINUTES,
@@ -689,7 +689,7 @@ router.post("/phone/verify-otp", otpVerifyLimiter, async (req: Request, res: Res
     if (result.rows.length > 1) {
       res.status(409).json({
         code: "PHONE_NOT_UNIQUE",
-        message: "This phone is linked to several accounts — please sign in with your email.",
+        message: "This phone is linked to several accounts. Please sign in with your email.",
       });
       return;
     }

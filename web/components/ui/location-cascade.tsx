@@ -462,7 +462,7 @@ function CascadePopover({
             )}
             <span>
               Add custom {customLabel}
-              <span className="text-muted-foreground"> — type it manually</span>
+              <span className="text-muted-foreground">, type it manually</span>
             </span>
           </button>
         </div>

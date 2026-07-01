@@ -61,7 +61,7 @@ export function CredentialIssueDialog({
         username: username.trim(),
         password: password.trim(),
       });
-      toast.success('Credentials issued — the student can now see them.');
+      toast.success('Credentials issued. The student can now see them.');
       onSaved();
       onClose();
     } catch (e) {

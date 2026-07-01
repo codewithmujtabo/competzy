@@ -132,7 +132,7 @@ export default function SchoolsPendingPage() {
                     <TableCell>
                       <div className="font-medium text-foreground">{s.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {[s.city, s.province].filter(Boolean).join(', ') || '—'}
+                        {[s.city, s.province].filter(Boolean).join(', ') || '-'}
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-[12px] text-muted-foreground">{s.npsn}</TableCell>
@@ -145,7 +145,7 @@ export default function SchoolsPendingPage() {
                           </div>
                         </>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -160,7 +160,7 @@ export default function SchoolsPendingPage() {
                           <ExternalLink className="size-3.5" />
                         </a>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell>

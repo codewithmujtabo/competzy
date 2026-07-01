@@ -153,7 +153,7 @@ export default function RepRegistrationsPage() {
                       <TableRow key={s.registrationId}>
                         <TableCell className="font-medium text-foreground">{s.fullName}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{s.email}</TableCell>
-                        <TableCell className="text-sm">{s.grade ?? '—'}</TableCell>
+                        <TableCell className="text-sm">{s.grade ?? '-'}</TableCell>
                         <TableCell>
                           <Badge
                             variant={STATUS_VARIANT[s.status] ?? 'secondary'}
@@ -163,7 +163,7 @@ export default function RepRegistrationsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="tabular-nums">
-                          {s.score != null ? s.score : '—'}
+                          {s.score != null ? s.score : '-'}
                         </TableCell>
                         <TableCell>
                           {s.isMedalist ? (
@@ -172,7 +172,7 @@ export default function RepRegistrationsPage() {
                               Medal
                             </span>
                           ) : (
-                            <span className="text-muted-foreground">—</span>
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
                       </TableRow>

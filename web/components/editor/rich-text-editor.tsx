@@ -104,7 +104,7 @@ function MathButton({ editor }: { editor: Editor }) {
         <button
           type="button"
           aria-label="Insert math (LaTeX)"
-          title="Insert math — LaTeX (Cmd/Ctrl+Shift+M)"
+          title="Insert math, LaTeX (Cmd/Ctrl+Shift+M)"
           className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <Sigma className="size-4" />

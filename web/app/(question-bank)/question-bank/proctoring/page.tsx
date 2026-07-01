@@ -33,7 +33,7 @@ interface ProctoringSession {
 }
 
 function fmtDateTime(s: string | null) {
-  if (!s) return '—';
+  if (!s) return '-';
   return new Date(s).toLocaleString('en-US', {
     day: 'numeric',
     month: 'short',
@@ -57,7 +57,7 @@ function CameraCell({ available }: { available: boolean | null }) {
       </span>
     );
   }
-  return <span className="text-xs text-muted-foreground">—</span>;
+  return <span className="text-xs text-muted-foreground">-</span>;
 }
 
 export default function ProctoringPage() {

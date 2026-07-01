@@ -82,8 +82,8 @@ export default function SchoolStudentsPage() {
                   <TableRow key={s.id}>
                     <TableCell className="font-medium text-foreground">{s.fullName}</TableCell>
                     <TableCell className="font-mono text-[12px] text-muted-foreground">{s.email}</TableCell>
-                    <TableCell>{s.grade || '—'}</TableCell>
-                    <TableCell className="font-mono text-[12px] text-muted-foreground">{s.nisn || '—'}</TableCell>
+                    <TableCell>{s.grade || '-'}</TableCell>
+                    <TableCell className="font-mono text-[12px] text-muted-foreground">{s.nisn || '-'}</TableCell>
                     <TableCell className="text-right font-mono text-[13px] text-muted-foreground">
                       {s.registrationCount || 0}
                     </TableCell>

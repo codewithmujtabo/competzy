@@ -196,7 +196,7 @@ export function UserEditDialog({ userId, onClose, onSaved }: Props) {
                     <SelectValue placeholder="Pick a school" />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
-                    <SelectItem value="__none__">— No school —</SelectItem>
+                    <SelectItem value="__none__">No school</SelectItem>
                     {(schools ?? []).map((s) => (
                       <SelectItem key={s.id} value={s.id}>
                         {s.name}

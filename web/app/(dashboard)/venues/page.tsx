@@ -221,12 +221,12 @@ function AreasPanel() {
                 rows.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium text-foreground">{a.province}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{a.part || '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{a.part || '-'}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {a.groupName || '—'}
+                      {a.groupName || '-'}
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
-                      {a.code || '—'}
+                      {a.code || '-'}
                     </TableCell>
                     <TableCell>
                       <ActiveBadge active={a.isActive} />
@@ -477,11 +477,11 @@ function TestCentersPanel() {
                   <TableRow key={tc.id}>
                     <TableCell className="font-medium text-foreground">{tc.name}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {tc.areaProvince || '—'}
+                      {tc.areaProvince || '-'}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{tc.city || '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{tc.city || '-'}</TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
-                      {tc.code || '—'}
+                      {tc.code || '-'}
                     </TableCell>
                     <TableCell>
                       <ActiveBadge active={tc.isActive} />

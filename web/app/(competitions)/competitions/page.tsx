@@ -101,7 +101,7 @@ interface MeProfile {
 function fmtDate(d: string | null): string {
   return d
     ? new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
-    : '—';
+    : '-';
 }
 
 // ── Per-competition colour identity ────────────────────────────────────────
@@ -623,7 +623,7 @@ export default function CompetitionCatalogPage() {
               </h1>
               <p className="mt-2 max-w-prose text-sm text-[#FFE459]/90">
                 {summary?.continueTask
-                  ? `${summary.continueTask.label} — pick up where you left off below.`
+                  ? `${summary.continueTask.label}, pick up where you left off below.`
                   : t('catalog.subtitle')}
               </p>
               {isStudent && me && completion < 100 && (
@@ -673,7 +673,7 @@ export default function CompetitionCatalogPage() {
             />
             <KpiTile
               label={t('catalog.kpiBestScore')}
-              value={summary?.bestScore ? summary.bestScore.value : '—'}
+              value={summary?.bestScore ? summary.bestScore.value : '-'}
               hint={summary?.bestScore ? summary.bestScore.compName : t('catalog.kpiBestScoreHint')}
               icon={Trophy}
               gradient="bg-gradient-to-br from-[#FFE459] via-[#FFD93D] to-[#FFC93C]"

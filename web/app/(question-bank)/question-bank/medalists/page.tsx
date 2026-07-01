@@ -132,12 +132,12 @@ export default function MedalistsPage() {
                       <div className="truncate font-medium text-foreground">{r.studentName}</div>
                       <div className="truncate text-xs text-muted-foreground">{r.email}</div>
                     </TableCell>
-                    <TableCell className="truncate text-sm">{r.roundName ?? '—'}</TableCell>
+                    <TableCell className="truncate text-sm">{r.roundName ?? '-'}</TableCell>
                     <TableCell className="font-serif text-base font-medium text-foreground tabular-nums">
-                      {r.score ?? '—'}
+                      {r.score ?? '-'}
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
-                      {r.qualifyingScore != null ? `≥ ${r.qualifyingScore}` : '—'}
+                      {r.qualifyingScore != null ? `≥ ${r.qualifyingScore}` : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">

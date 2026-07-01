@@ -59,7 +59,7 @@ export async function checkRoundGating(
       ? {
           allowed: false,
           reason:
-            "You have already qualified — the Fast Track is for students still without a spot.",
+            "You have already qualified. The Fast Track is for students still without a spot.",
         }
       : { allowed: true };
   }

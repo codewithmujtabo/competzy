@@ -478,7 +478,7 @@ router.post("/snap", async (req: Request, res: Response) => {
     }
 
     if (row.fee === 0) {
-      res.status(400).json({ message: "This competition is free — no payment required" });
+      res.status(400).json({ message: "This competition is free. No payment required" });
       return;
     }
 

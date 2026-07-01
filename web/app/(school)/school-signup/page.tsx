@@ -154,7 +154,7 @@ export default function SchoolSignupPage() {
             </div>
             <Field
               label="Verification letter URL"
-              hint="Optional — upload a principal-signed letter somewhere accessible (Drive, etc.) and paste the link."
+              hint="Optional. Upload a principal-signed letter somewhere accessible (Drive, etc.) and paste the link."
             >
               <Input
                 type="url"

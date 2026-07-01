@@ -245,7 +245,7 @@ function GroupRows({ grp }: { grp: { name: string; rows: Row[]; subtotal: Totals
           <TableCell className="font-medium text-foreground">
             {i === 0 ? grp.name : <span className="select-none text-transparent">{grp.name}</span>}
           </TableCell>
-          <TableCell className="text-sm text-muted-foreground">{r.round ?? '—'}</TableCell>
+          <TableCell className="text-sm text-muted-foreground">{r.round ?? '-'}</TableCell>
           <TableCell>
             <Badge
               variant="outline"

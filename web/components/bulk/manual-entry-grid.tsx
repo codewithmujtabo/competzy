@@ -234,7 +234,7 @@ export function ManualEntryGrid({ rows, onChange, softMax = 100 }: Props) {
                             cellBad && 'border-destructive ring-1 ring-destructive/30',
                             focused?.row === rIdx && focused?.col === cIdx && !cellBad && 'border-primary',
                           )}
-                          aria-label={`${c.label} — row ${rIdx + 1}`}
+                          aria-label={`${c.label}, row ${rIdx + 1}`}
                         />
                       </td>
                     );
@@ -274,14 +274,14 @@ export function ManualEntryGrid({ rows, onChange, softMax = 100 }: Props) {
           )}
           {overSoftMax && (
             <span className="text-amber-700 dark:text-amber-400">
-              {' · '}consider splitting — {rows.length} rows is a lot for one submission
+              {' · '}consider splitting, {rows.length} rows is a lot for one submission
             </span>
           )}
         </div>
       </div>
 
       <p className="text-[11px] text-muted-foreground">
-        Tip — copy a block of rows from Excel or Google Sheets, click any cell, and paste. The
+        Tip. Copy a block of rows from Excel or Google Sheets, click any cell, and paste. The
         grid fills automatically.
       </p>
     </div>

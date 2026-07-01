@@ -121,7 +121,7 @@ export default function ExamResultsPage() {
                       {r.studentName}
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
-                      {r.grade ?? '—'}
+                      {r.grade ?? '-'}
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
                       {fmtDate(r.finishedAt)}

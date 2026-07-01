@@ -21,7 +21,7 @@ function daysUntil(dateStr: string | null): number | null {
 }
 
 function fmtDate(dateStr: string | null): string {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   const d = new Date(dateStr);
   if (!Number.isFinite(d.getTime())) return dateStr;
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -118,7 +118,7 @@ export default function RepDeadlinesPage() {
                 <p className="text-sm font-semibold text-foreground">Awaiting payment</p>
                 <p className="text-xs text-muted-foreground">
                   {pendingPayment > 0 && round.fee > 0
-                    ? `Owed: ${rupiah(round.fee * pendingPayment)} — settle one batch invoice.`
+                    ? `Owed: ${rupiah(round.fee * pendingPayment)}, settle one batch invoice.`
                     : 'Every student is settled.'}
                 </p>
                 {pendingPayment > 0 && round.fee > 0 && (

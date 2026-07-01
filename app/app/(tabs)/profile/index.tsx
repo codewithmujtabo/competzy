@@ -54,7 +54,7 @@ export default function ProfileScreen() {
     }, [refreshRegistrations])
   );
 
-  const fullName = (user as any)?.fullName ?? (user as any)?.name ?? "—";
+  const fullName = (user as any)?.fullName ?? (user as any)?.name ?? "-";
   const initial = fullName.charAt(0).toUpperCase();
   const photoUrl = (user as any)?.photoUrl || (user as any)?.avatarUrl;
   const kid = (user as any)?.kid;

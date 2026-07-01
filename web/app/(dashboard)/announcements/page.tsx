@@ -75,7 +75,7 @@ const DEFAULTS = {
 };
 
 function fmtDate(s: string | null) {
-  if (!s) return '—';
+  if (!s) return '-';
   return new Date(s).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
@@ -294,7 +294,7 @@ function AnnouncementsPage() {
                         <Badge className="ml-2 bg-amber-500 text-[10px] text-white">Featured</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{a.type || '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{a.type || '-'}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -349,7 +349,7 @@ function AnnouncementsPage() {
             <DialogTitle>{editing ? 'Edit announcement' : 'New announcement'}</DialogTitle>
             <DialogDescription>
               {scope === PLATFORM
-                ? 'Platform-wide — shown in every competition portal.'
+                ? 'Platform-wide, shown in every competition portal.'
                 : 'Shown in this competition’s portal.'}
             </DialogDescription>
           </DialogHeader>

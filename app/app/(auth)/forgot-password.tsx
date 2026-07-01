@@ -112,7 +112,7 @@ export default function ForgotPasswordScreen() {
                 ]}
               >
                 If that email matches an account, we sent a reset link. The link expires in 15
-                minutes — tap it on this device to open the app.
+                minutes. Tap it on this device to open the app.
               </Text>
               <Button
                 label="Back to sign in"

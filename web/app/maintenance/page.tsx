@@ -30,12 +30,12 @@ export default function MaintenancePage() {
 
         <p className="mx-auto mt-3 max-w-md text-balance text-sm leading-relaxed text-muted-foreground sm:text-base">
           Competzy is briefly offline for scheduled maintenance. We&apos;re back as soon as the
-          work wraps up — try again in a few minutes.
+          work wraps up. Try again in a few minutes.
         </p>
 
         <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           <span className="size-1.5 rounded-full bg-amber-500" aria-hidden />
-          Status — maintenance window
+          Status, maintenance window
         </div>
 
         <p className="mt-10 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70">

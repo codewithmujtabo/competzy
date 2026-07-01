@@ -283,7 +283,7 @@ function MaterialsPage() {
                       {m.file && <FileText className="ml-2 inline size-3.5 text-muted-foreground" />}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {m.category || '—'}
+                      {m.category || '-'}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {m.grades.length ? m.grades.join(', ') : 'All grades'}
@@ -330,7 +330,7 @@ function MaterialsPage() {
             <DialogTitle>{editing ? 'Edit material' : 'New material'}</DialogTitle>
             <DialogDescription>
               {scope === PLATFORM
-                ? 'Platform-wide — shown in every competition’s library.'
+                ? 'Platform-wide, shown in every competition’s library.'
                 : 'Shown in this competition’s study-material library.'}
             </DialogDescription>
           </DialogHeader>
@@ -363,7 +363,7 @@ function MaterialsPage() {
             <div>
               <Label className="mb-1.5 block text-xs text-muted-foreground">
                 Target grades{' '}
-                <span className="font-normal text-muted-foreground/70">— none = all grades</span>
+                <span className="font-normal text-muted-foreground/70">, none = all grades</span>
               </Label>
               <div className="flex gap-2">
                 {GRADES.map((g) => (

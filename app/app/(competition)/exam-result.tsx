@@ -92,7 +92,7 @@ export default function ExamResultScreen() {
                 <View style={{ flexDirection: "row", gap: Spacing.sm }}>
                   <Ionicons name="hourglass-outline" size={18} color={Brand.navy} />
                   <Text style={[Type.bodySm, { flex: 1, color: Brand.navy }]}>
-                    Some short-answer questions are still being graded — your final score may rise.
+                    Some short-answer questions are still being graded. Your final score may rise.
                   </Text>
                 </View>
               </Card>

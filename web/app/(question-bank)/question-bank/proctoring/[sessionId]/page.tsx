@@ -26,7 +26,7 @@ interface ProctoringSession {
 }
 
 function fmtDateTime(s: string | null) {
-  if (!s) return '—';
+  if (!s) return '-';
   return new Date(s).toLocaleString('en-US', {
     day: 'numeric',
     month: 'short',
@@ -138,7 +138,7 @@ export default function ProctoringSessionPage() {
           <CameraOff className="mx-auto size-7 text-muted-foreground" />
           <p className="mt-2 text-sm font-medium text-foreground">No camera during this attempt</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            The student did not grant camera access — the exam ran unproctored.
+            The student did not grant camera access. The exam ran unproctored.
           </p>
         </Card>
       ) : data.snapshots.length === 0 ? (
