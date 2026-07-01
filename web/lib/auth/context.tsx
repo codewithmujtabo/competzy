@@ -5,9 +5,9 @@ import { createRoleAuth } from './factory';
 
 const { Provider, useHook } = createRoleAuth({
   http: adminHttp,
-  acceptRole: role => role === 'admin',
+  acceptRole: role => role === 'admin' || role === 'manager',
   hookName: 'useAuth',
-  deniedMessage: 'Access denied. Admin account required.',
+  deniedMessage: 'Access denied. Admin or Manager account required.',
 });
 
 export const AuthProvider = Provider;

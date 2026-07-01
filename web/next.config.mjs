@@ -3,12 +3,31 @@ const nextConfig = {
   // Required for the Coolify Docker image — produces a self-contained
   // .next/standalone/ output so the runtime stage stays small.
   output: 'standalone',
+  poweredByHeader: false,
   // Pin the workspace root to this directory — there are lockfiles both here
   // and at the monorepo root, and Next would otherwise infer the wrong one.
   turbopack: {
     root: import.meta.dirname,
   },
   outputFileTracingRoot: import.meta.dirname,
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          // nginx terminates TLS; HSTS passes through to the browser.
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          // SAMEORIGIN (not DENY): nothing on the platform frames arena today,
+          // but same-origin embedding stays available for future dialogs.
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // camera=self: the exam runner's webcam proctoring needs it.
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=()' },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     const backend = process.env.BACKEND_URL ?? 'http://localhost:3000';
     return [

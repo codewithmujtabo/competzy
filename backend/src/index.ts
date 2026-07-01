@@ -58,6 +58,20 @@ const app: Express = express();
 // In dev there's no proxy, so this is a no-op.
 app.set("trust proxy", 1);
 
+// ── Security headers ────────────────────────────────────────────────────────
+// Hand-rolled minimal set (no extra dependency). nginx terminates TLS and
+// passes these through. HSTS only makes sense over HTTPS, i.e. production.
+app.disable("x-powered-by");
+app.use((_req, res, next) => {
+  if (env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY"); // the API is never framed
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
 // CORS: allow credentials so the web frontend can send the auth cookie.
 // Origin list reads CORS_ORIGINS (comma-separated) from env, falls back to
 // localhost dev hosts. In non-prod we also accept any http://localhost:<port>
