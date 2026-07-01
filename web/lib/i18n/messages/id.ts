@@ -61,6 +61,7 @@ export const id: Partial<Record<MessageKey, string>> = {
     'Nomor HP ini terhubung ke beberapa akun. Silakan masuk dengan email dan kata sandimu.',
   'login.footerPrivacy': 'Privasi',
   'login.footerTerms': 'Ketentuan',
+  'login.footerHelp': 'Bantuan',
   'login.footerContact': 'Kontak',
 
   // ── Catalog (/competitions) ────────────────────────────────────────

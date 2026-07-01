@@ -41,6 +41,7 @@ import countryRepRoutes from "./routes/country-rep.routes";
 import verificationRoutes from "./routes/verification.routes";
 import waitlistRoutes from "./routes/waitlist.routes";
 import maintenanceRoutes from "./routes/maintenance.routes";
+import contactRoutes from "./routes/contact.routes";
 import { initializeCronJobs } from "./services/cron.service";
 import { verifySignedUrlToken } from "./services/storage.service";
 import fs from "fs";
@@ -136,6 +137,8 @@ app.use("/api/organizers", organizerRoutes);
 app.use("/api/regions", regionsRoutes);
 app.use("/api/favorites", favoritesRoutes);
 app.use("/api/historical", historicalRoutes);
+// Public contact form for the /help page. Own prefix, no auth, rate-limited.
+app.use("/api/contact", contactRoutes);
 // Marketing — owns /marketing/* + /referrals/{click,signup} (mounted at /api).
 // Mounted before the bare-/api routers that carry an unscoped authMiddleware
 // (competition-flows / affiliated-credentials / exam-session) so its PUBLIC

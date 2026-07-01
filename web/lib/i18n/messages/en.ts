@@ -61,6 +61,7 @@ export const en = {
     'This phone is linked to several accounts. Please sign in with your email and password.',
   'login.footerPrivacy': 'Privacy',
   'login.footerTerms': 'Terms',
+  'login.footerHelp': 'Help',
   'login.footerContact': 'Contact',
 
   // ── Catalog (/competitions) ────────────────────────────────────────
