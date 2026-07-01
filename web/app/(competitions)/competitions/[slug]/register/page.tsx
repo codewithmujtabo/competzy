@@ -178,6 +178,33 @@ export default function CompetitionRegisterPage() {
     };
   }, [phone, phoneValid]);
 
+  // Live email-availability check (debounced), mirroring the phone check above.
+  // Email must be UNIQUE, so a taken address surfaces the "already registered"
+  // banner as soon as a valid email is typed — the same UX as the WhatsApp
+  // field. Submit still catches a 409 as a backstop.
+  useEffect(() => {
+    const trimmed = email.trim();
+    if (!trimmed || !emailValid) {
+      setEmailTaken(false);
+      return;
+    }
+    let cancelled = false;
+    const id = setTimeout(async () => {
+      try {
+        const res = await emcHttp.get<{ emailTaken: boolean }>(
+          `/auth/check-availability?email=${encodeURIComponent(trimmed)}`,
+        );
+        if (!cancelled) setEmailTaken(!!res.emailTaken);
+      } catch {
+        /* silent — submit still catches a 409 as a backstop */
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [email, emailValid]);
+
   const canSubmitForm =
     !sending && consent && !!fullName.trim() && emailValid && !passwordTooShort && password.length >= 8 && password === confirmPassword && phoneValid && roleFieldsValid;
 
