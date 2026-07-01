@@ -1,0 +1,22 @@
+name: Migrations check
+
+# Fails a PR (or push to main) if two migrations share a timestamp, which would
+# crash the backend on boot via node-pg-migrate's checkOrder. Runs for EVERY
+# contributor's PR regardless of their local setup, so a remote teammate is
+# covered without installing anything. Dependency-free — just needs Node.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check migration timestamps
+        run: node backend/scripts/check-migration-timestamps.mjs

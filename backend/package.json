@@ -22,7 +22,8 @@
     "db:seed:komodo": "ts-node src/db/seed-komodo.ts",
     "db:regrade": "ts-node src/db/regrade-sessions.ts",
     "db:init": "psql $DATABASE_URL < src/db/schema.sql",
-    "db:import-historical": "ts-node src/db/import-historical.ts"
+    "db:import-historical": "ts-node src/db/import-historical.ts",
+    "check:migrations": "node scripts/check-migration-timestamps.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.821.0",
