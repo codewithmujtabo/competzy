@@ -5,7 +5,7 @@ import { z } from "zod";
 import { pool } from "../config/database";
 import { env } from "../config/env";
 import { authMiddleware } from "../middleware/auth";
-import { adminOnly } from "../middleware/admin.middleware";
+import { adminOrManager } from "../middleware/admin.middleware";
 import { audit } from "../middleware/audit";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ router.post("/waitlist", async (req: Request, res: Response) => {
 const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
   authMiddleware(req, res, (err?: unknown) => {
     if (err) return next(err);
-    adminOnly(req, res, next);
+    adminOrManager(req, res, next);
   });
 };
 

@@ -4,6 +4,7 @@
 export function destinationFor(role: string): string {
   switch (role) {
     case 'admin':
+    case 'manager':
       return '/dashboard';
     case 'organizer':
       return '/organizer-dashboard';

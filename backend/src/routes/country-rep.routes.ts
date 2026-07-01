@@ -4,7 +4,7 @@ import { randomUUID, randomBytes } from "crypto";
 import PDFDocument from "pdfkit";
 import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
-import { adminOnly } from "../middleware/admin.middleware";
+import { adminOrManager } from "../middleware/admin.middleware";
 import { requireRole } from "../middleware/require-role";
 import { audit } from "../middleware/audit";
 import { softDelete } from "../db/query-helpers";
@@ -20,7 +20,7 @@ import { createSnapToken, getTransactionStatus } from "../services/midtrans.serv
 
 const router: Router = Router();
 
-router.use("/country-representatives", authMiddleware, adminOnly);
+router.use("/country-representatives", authMiddleware, adminOrManager);
 router.use("/rep", authMiddleware, requireRole("country_representative"));
 
 // The caller's representative assignment (competition + country).

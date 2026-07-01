@@ -12,7 +12,7 @@ import * as pushService from "../services/push.service";
 // under /api/admin/schools/* ; this unified namespace adds teachers and opens
 // both to organizers so the queue lives in both portals ("update everywhere").
 const router: Router = Router();
-router.use(authMiddleware, requireRole("admin", "organizer"));
+router.use(authMiddleware, requireRole("admin", "manager", "organizer"));
 
 // ── Schools ───────────────────────────────────────────────────────────────
 

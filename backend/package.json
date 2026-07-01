@@ -13,6 +13,7 @@
     "db:seed": "ts-node src/db/seed.ts",
     "db:seed:competitions": "ts-node src/db/seed-competitions-from-csv.ts",
     "db:create-admin": "ts-node src/db/create-admin.ts",
+    "db:create-manager": "ts-node src/db/create-manager.ts",
     "db:create-organizer": "ts-node src/db/create-organizer.ts",
     "db:create-question-maker": "ts-node src/db/create-question-maker.ts",
     "db:create-teacher": "ts-node src/db/create-teacher.ts",

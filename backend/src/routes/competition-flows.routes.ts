@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
-import { adminOnly } from "../middleware/admin.middleware";
+import { adminOrManager } from "../middleware/admin.middleware";
 import { audit } from "../middleware/audit";
 import { liveFilter, compFilter, softDelete } from "../db/query-helpers";
 import { computeCompleteness, type CompletenessResult } from "../services/readiness.service";
@@ -148,7 +148,7 @@ router.get("/registrations/:id/flow-progress", async (req: Request, res: Respons
 // Append a step to the end of a competition's flow.
 router.post(
   "/admin/competitions/:compId/flow",
-  adminOnly,
+  adminOrManager,
   audit({ action: "admin.competition.flow.create", resourceType: "competition_flow", resourceIdParam: "compId" }),
   async (req: Request, res: Response) => {
     try {
@@ -207,7 +207,7 @@ router.post(
 // Declared before /flow/:stepId so "reorder" is not captured as a step id.
 router.put(
   "/admin/competitions/:compId/flow/reorder",
-  adminOnly,
+  adminOrManager,
   audit({ action: "admin.competition.flow.reorder", resourceType: "competition_flow", resourceIdParam: "compId" }),
   async (req: Request, res: Response) => {
     const compId = String(req.params.compId);
@@ -252,7 +252,7 @@ router.put(
 // Edit a step's fields (title / description / step_key / check_type).
 router.put(
   "/admin/competitions/:compId/flow/:stepId",
-  adminOnly,
+  adminOrManager,
   audit({ action: "admin.competition.flow.update", resourceType: "competition_flow", resourceIdParam: "stepId" }),
   async (req: Request, res: Response) => {
     try {
@@ -329,7 +329,7 @@ router.put(
 // ── DELETE /api/admin/competitions/:compId/flow/:stepId ───────────────────
 router.delete(
   "/admin/competitions/:compId/flow/:stepId",
-  adminOnly,
+  adminOrManager,
   audit({ action: "admin.competition.flow.delete", resourceType: "competition_flow", resourceIdParam: "stepId" }),
   async (req: Request, res: Response) => {
     try {

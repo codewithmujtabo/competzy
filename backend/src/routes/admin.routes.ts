@@ -2,7 +2,7 @@ import { Router } from "express";
 import { pool } from "../config/database";
 import { dbErrorResponse } from "../lib/db-errors";
 import { dateOnlyToNoonUtc } from "../lib/date-utils";
-import { adminOnly } from "../middleware/admin.middleware";
+import { adminOnly, adminOrManager } from "../middleware/admin.middleware";
 import { authMiddleware } from "../middleware/auth";
 import { audit } from "../middleware/audit";
 import * as pushService from "../services/push.service";
@@ -16,7 +16,10 @@ const router: Router = Router();
 
 // All routes require authentication and admin role
 router.use(authMiddleware);
-router.use(adminOnly);
+// Managers (administrative staff) share the admin operational surface.
+// Financial endpoints below re-tighten with the strict per-route `adminOnly`,
+// and /stats + /kpi redact money figures for managers in the handler.
+router.use(adminOrManager);
 
 // Competition logo uploads — in-memory, image-only, 5 MB cap.
 const logoUpload = multer({
@@ -605,11 +608,13 @@ router.get("/stats", async (req, res) => {
       pool.query("SELECT SUM(c.fee) FROM registrations r JOIN competitions c ON r.comp_id = c.id WHERE r.status = 'paid'"),
     ]);
 
+    // Managers see operations, not money — revenue is admin-only.
+    const showMoney = (req as any).userRole === "admin";
     res.json({
       totalCompetitions: parseInt(competitions.rows[0].count),
       totalStudents: parseInt(users.rows[0].count),
       totalRegistrations: parseInt(registrations.rows[0].count),
-      totalRevenue: parseInt(revenue.rows[0].sum) || 0,
+      totalRevenue: showMoney ? parseInt(revenue.rows[0].sum) || 0 : null,
     });
   } catch (error) {
     console.error("Error fetching stats:", error);
@@ -628,7 +633,7 @@ router.get("/stats", async (req, res) => {
  *
  * Spec F-AD-05.
  */
-router.get("/kpi", async (_req, res) => {
+router.get("/kpi", async (req, res) => {
   try {
     const [totals, topComps, daily] = await Promise.all([
       pool.query(`
@@ -673,12 +678,15 @@ router.get("/kpi", async (_req, res) => {
     const billable = Number(t.total_registrations) - Number(t.free_registrations);
     const paidRate = billable > 0 ? Number(t.paid_registrations) / billable : 0;
 
+    // Managers see operations, not money — revenue figures are admin-only.
+    // (Competition fees stay: they're public catalog data.)
+    const showMoney = (req as any).userRole === "admin";
     res.json({
       totals: {
         totalRegistrations: Number(t.total_registrations),
         paidRegistrations:  Number(t.paid_registrations),
         freeRegistrations:  Number(t.free_registrations),
-        revenueRp:          Number(t.revenue_rp ?? 0),
+        revenueRp:          showMoney ? Number(t.revenue_rp ?? 0) : null,
       },
       paidRate,
       avgTimeToPaymentHours: t.avg_hours_to_pay ? Number(t.avg_hours_to_pay) : null,
@@ -691,7 +699,7 @@ router.get("/kpi", async (_req, res) => {
       dailySeries: daily.rows.map((d) => ({
         date: d.day,
         registrations: d.registrations,
-        revenueRp: Number(d.revenue_rp ?? 0),
+        revenueRp: showMoney ? Number(d.revenue_rp ?? 0) : null,
       })),
     });
   } catch (err) {
@@ -711,7 +719,7 @@ router.get("/kpi", async (_req, res) => {
  * toward revenue — merchandise orders (`kind='order'`) are excluded so the
  * numbers match registration income. `?year=` filters by payment year.
  */
-router.get("/revenue/by-competition", async (req, res) => {
+router.get("/revenue/by-competition", adminOnly, async (req, res) => {
   try {
     const yearRaw = parseInt(String(req.query.year ?? ""), 10);
     const year = Number.isFinite(yearRaw) ? yearRaw : null;
@@ -1721,7 +1729,7 @@ router.post("/notifications/broadcast", audit({ action: "admin.notification.broa
 // ── POST /api/admin/payments/:id/refund ──────────────────────────────────────
 // Issues a Midtrans refund for a settled payment and marks the registration refunded.
 // Body: { reason?: string }
-router.post("/payments/:id/refund", audit({ action: "admin.payment.refund", resourceType: "payment", resourceIdParam: "id" }), async (req, res) => {
+router.post("/payments/:id/refund", adminOnly, audit({ action: "admin.payment.refund", resourceType: "payment", resourceIdParam: "id" }), async (req, res) => {
   try {
     const { id } = req.params;
     const reason: string = req.body?.reason || "Admin-initiated refund";

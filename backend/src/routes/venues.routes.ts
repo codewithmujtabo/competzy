@@ -13,7 +13,7 @@ import { liveFilter, softDelete } from "../db/query-helpers";
 
 const router: Router = Router();
 router.use("/venues", authMiddleware, requireRole("admin", "organizer"));
-router.use("/admin/venues", authMiddleware, requireRole("admin"));
+router.use("/admin/venues", authMiddleware, requireRole("admin", "manager"));
 
 function mapArea(r: any) {
   return {

@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '@/lib/auth/context';
+import { destinationFor } from '@/lib/auth/role-destination';
 import { AppShell, type NavSection } from '@/components/shell/app-shell';
 
 // Information architecture:
@@ -95,13 +96,47 @@ const NAV: NavSection[] = [
   },
 ];
 
+// Routes a manager cannot reach on the backend — hidden from their sidebar.
+// Revenue + refunds are financial (strict adminOnly); question-bank, commerce,
+// and the marketing operator workspace are admin/organizer; maintenance is
+// infrastructure (admin-only).
+const MANAGER_HIDDEN = new Set([
+  '/admin/revenue',
+  '/question-bank',
+  '/products',
+  '/vouchers',
+  '/orders',
+  '/announcements',
+  '/materials',
+  '/referrals',
+  '/suggestions',
+  '/admin/maintenance',
+]);
+
+function navForRole(role: string): NavSection[] {
+  if (role !== 'manager') return NAV;
+  return NAV.map((section) => ({
+    ...section,
+    items: section.items.filter((i) => !MANAGER_HIDDEN.has(i.href)),
+  })).filter((section) => section.items.length > 0);
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
 
+  const allowed = user?.role === 'admin' || user?.role === 'manager';
+
   useEffect(() => {
-    if (!loading && !user) router.replace('/');
-  }, [user, loading, router]);
+    if (loading) return;
+    if (!user) {
+      router.replace('/');
+    } else if (!allowed) {
+      // Signed in but not admin/manager — bounce to their own portal instead
+      // of rendering the admin chrome (the backend blocks the data anyway).
+      router.replace(destinationFor(user.role));
+    }
+  }, [user, loading, allowed, router]);
 
   if (loading) {
     return (
@@ -111,13 +146,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!user) return null;
+  if (!user || !allowed) return null;
+
+  const isManager = user.role === 'manager';
 
   return (
     <AppShell
       brand={{ name: 'Competzy', tagline: 'Admin Panel', taglineKey: 'shell.tagAdmin', icon: GraduationCap }}
-      nav={NAV}
-      user={{ name: user.full_name || 'Admin', email: user.email, role: 'Administrator' }}
+      nav={navForRole(user.role)}
+      user={{
+        name: user.full_name || (isManager ? 'Manager' : 'Admin'),
+        email: user.email,
+        role: isManager ? 'Manager' : 'Administrator',
+      }}
       profileHref="/account/profile"
       onSignOut={async () => {
         await logout();
