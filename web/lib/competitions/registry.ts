@@ -48,7 +48,7 @@ export const competitionRegistry: Record<string, CompetitionPortalConfig> = {
     slug: 'emc',
     shortName: 'EMC',
     wordmark: 'Mathematics Competition',
-    tagline: 'Rejuvenate your brain with math',
+    tagline: 'Where problem-solvers become champions',
     accent: '#1B6EF3',
     accentDark: '#1456c4',
     gradient: ['#1B6EF3', '#0D47C4'] as const,
