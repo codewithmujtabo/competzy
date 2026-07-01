@@ -38,6 +38,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CompetzyBrandPanel } from '@/components/auth/competzy-brand-panel';
+import { cn } from '@/lib/utils';
 
 type Mode = 'email' | 'phone';
 
@@ -233,7 +234,7 @@ export default function UnifiedLogin() {
           </button>
         </div>
 
-        <div className="w-full max-w-md">
+        <div className={cn('w-full max-w-md', !hydrating && 'stagger-children')}>
           {hydrating ? (
             <div className="space-y-3" aria-busy="true" aria-live="polite">
               <Skeleton className="h-3 w-40" />
@@ -251,7 +252,7 @@ export default function UnifiedLogin() {
                 aria-label="Back to competzy.com"
                 className="group mb-7 inline-flex items-center gap-3 rounded-lg transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/75 focus-visible:ring-offset-2"
               >
-                <span className="flex size-11 items-center justify-center rounded-xl bg-[#4a148c] font-mono text-sm font-semibold tracking-wide text-white shadow-sm">
+                <span className="flex size-11 items-center justify-center rounded-xl bg-primary font-mono text-sm font-semibold tracking-wide text-primary-foreground shadow-sm transition-shadow duration-base ease-smooth group-hover:shadow-brand">
                   CZ
                 </span>
                 <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground transition-colors group-hover:text-foreground">
@@ -351,7 +352,7 @@ export default function UnifiedLogin() {
                   <Button
                     type="submit"
                     size="lg"
-                    className="w-full"
+                    className="w-full transition-shadow duration-base ease-smooth hover:shadow-brand"
                     disabled={!emailValid || password.length < 8 || submitting}
                   >
                     {submitting ? t('login.signingIn') : t('login.signInButton')}
@@ -391,7 +392,7 @@ export default function UnifiedLogin() {
                       </p>
                     ) : null}
                   </div>
-                  <Button type="submit" size="lg" className="w-full" disabled={!phoneValid || submitting}>
+                  <Button type="submit" size="lg" className="w-full transition-shadow duration-base ease-smooth hover:shadow-brand" disabled={!phoneValid || submitting}>
                     {submitting ? t('login.sendingCode') : t('login.sendCode')}
                     {!submitting && <ArrowRight className="size-4" />}
                   </Button>
@@ -421,7 +422,7 @@ export default function UnifiedLogin() {
                       />
                     </div>
                   </div>
-                  <Button type="submit" size="lg" className="w-full" disabled={otpCode.length < 4 || submitting}>
+                  <Button type="submit" size="lg" className="w-full transition-shadow duration-base ease-smooth hover:shadow-brand" disabled={otpCode.length < 4 || submitting}>
                     {submitting ? t('login.verifying') : t('login.verifyButton')}
                     {!submitting && <ArrowRight className="size-4" />}
                   </Button>

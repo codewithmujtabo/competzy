@@ -24,22 +24,26 @@ interface ColorRow {
 
 const brandColors: ColorRow[] = [
   { name: 'Primary', cls: 'bg-primary', hex: '#5627FF', note: 'Electric Indigo' },
-  { name: 'Brand Pink', cls: 'bg-brand-pink', hex: '#D9277B', note: 'Hot Pink accent' },
+  { name: 'Brand Pink', cls: 'bg-brand-pink', hex: '#D9277B', note: 'Hot Pink' },
+  { name: 'Brand Orange', cls: 'bg-brand-orange', hex: '#F08C00' },
   { name: 'Brand Gold', cls: 'bg-brand-gold', hex: '#F8DB46', note: 'Sunshine' },
-  { name: 'Accent', cls: 'bg-accent', hex: '#E9E3FF', note: 'Soft violet tint' },
+  { name: 'Brand Green', cls: 'bg-brand-green', hex: '#31AB00' },
+  { name: 'Brand Blue', cls: 'bg-brand-blue', hex: '#0066FF' },
+  { name: 'Brand Lime', cls: 'bg-brand-lime', hex: '#7CD516' },
+  { name: 'Sirih', cls: 'bg-brand-sirih', hex: '#937AFF', note: 'Soft violet' },
 ];
 
 const surfaceColors: ColorRow[] = [
-  { name: 'Background', cls: 'bg-background', hex: '#F4ECDC', note: 'Ivory paper' },
-  { name: 'Card', cls: 'bg-card', hex: '#FAF3E3' },
-  { name: 'Secondary', cls: 'bg-secondary', hex: '#EBE0C8' },
-  { name: 'Muted', cls: 'bg-muted', hex: '#ECE1CA' },
-  { name: 'Border', cls: 'bg-border', hex: '#DDD1B9' },
-  { name: 'Foreground', cls: 'bg-foreground', hex: '#161214', note: 'Ink text' },
+  { name: 'Background', cls: 'bg-background', hex: '#FAF6EC', note: 'Warm ivory' },
+  { name: 'Card', cls: 'bg-card', hex: '#FFFFFF' },
+  { name: 'Secondary', cls: 'bg-secondary', hex: '#F0EDE4' },
+  { name: 'Muted', cls: 'bg-muted', hex: '#F0EDE4' },
+  { name: 'Accent', cls: 'bg-accent', hex: '#ECE5FF', note: 'Violet tint' },
+  { name: 'Foreground', cls: 'bg-foreground', hex: '#181219', note: 'Ink text' },
 ];
 
 const statusColors: ColorRow[] = [
-  { name: 'Success', cls: 'bg-success', hex: '#1F9D57' },
+  { name: 'Success', cls: 'bg-success', hex: '#31AB00' },
   { name: 'Warning', cls: 'bg-warning', hex: '#F8DB46' },
   { name: 'Destructive', cls: 'bg-destructive', hex: '#D92D2D' },
 ];
@@ -47,9 +51,19 @@ const statusColors: ColorRow[] = [
 const chartColors: ColorRow[] = [
   { name: 'Chart 1', cls: 'bg-chart-1', hex: '#5627FF' },
   { name: 'Chart 2', cls: 'bg-chart-2', hex: '#D9277B' },
-  { name: 'Chart 3', cls: 'bg-chart-3', hex: '#F8DB46' },
-  { name: 'Chart 4', cls: 'bg-chart-4', hex: '#937AFF' },
-  { name: 'Chart 5', cls: 'bg-chart-5', hex: '#1F9D57' },
+  { name: 'Chart 3', cls: 'bg-chart-3', hex: '#F08C00' },
+  { name: 'Chart 4', cls: 'bg-chart-4', hex: '#31AB00' },
+  { name: 'Chart 5', cls: 'bg-chart-5', hex: '#0066FF' },
+];
+
+// Motion language — the landing's animation tokens, demonstrated live.
+const motionRows = [
+  { name: 'fade-up', cls: 'animate-fade-up', meta: '600ms · ease-out-expo' },
+  { name: 'slide-in', cls: 'animate-slide-in', meta: '500ms · ease-out-expo' },
+  { name: 'float', cls: 'animate-float', meta: '6s · ease-in-out · loop' },
+  { name: 'pulse-glow', cls: 'animate-pulse-glow', meta: '2.4s · ease-smooth · loop' },
+  { name: 'pop', cls: 'animate-pop', meta: '500ms · ease-spring' },
+  { name: 'shimmer', cls: 'shimmer-surface', meta: '2.2s · linear · loop' },
 ];
 
 interface TypeRow {
@@ -166,7 +180,7 @@ export default function DesignSystemPage() {
             organizer, school, and student portals and the mobile app.
           </p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-2">
-            {['Tailwind v4', 'shadcn/ui', 'Bricolage Grotesque', 'Plus Jakarta Sans'].map((t) => (
+            {['Tailwind v4', 'shadcn/ui', 'Plus Jakarta Sans', 'JetBrains Mono'].map((t) => (
               <span
                 key={t}
                 className="rounded-full border border-white/25 bg-white/10 px-3 py-1 font-mono text-[11px]"
@@ -182,7 +196,7 @@ export default function DesignSystemPage() {
           <Section
             eyebrow="Foundations"
             title="Color"
-            description="An ivory-cream paper ground, Electric Indigo as the primary, and Hot Pink for accents. Every value is a CSS token with a matched dark-mode variant. Toggle the header switch to preview."
+            description="A warm ivory ground, Electric Indigo as the primary, and the landing's categorical accents (pink, orange, gold, green, blue, lime). Every value is a CSS token with a matched dark-mode variant. Toggle the header switch to preview."
           >
             <div className="space-y-7">
               <SwatchGrid label="Brand" rows={brandColors} />
@@ -192,17 +206,48 @@ export default function DesignSystemPage() {
             </div>
           </Section>
 
+          {/* Motion */}
+          <Section
+            eyebrow="Foundations"
+            title="Motion"
+            description="The landing's animation language: expo-out enters, spring overshoot for pops, 150/250/400/600ms durations. Everything respects prefers-reduced-motion."
+          >
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {motionRows.map((m) => (
+                <Card key={m.name} className="flex flex-col items-center gap-4 p-6">
+                  <div
+                    className={`size-14 rounded-2xl bg-gradient-to-br from-primary to-[#3a1bb8] shadow-brand ${m.cls}`}
+                  />
+                  <div className="text-center">
+                    <p className="font-mono text-sm font-semibold text-foreground">{m.name}</p>
+                    <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">{m.meta}</p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+            <Card className="p-6">
+              <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                Staggered reveal (stagger-children)
+              </p>
+              <div className="stagger-children grid grid-cols-3 gap-3 sm:grid-cols-6">
+                {['#5627ff', '#d9277b', '#f08c00', '#f8db46', '#31ab00', '#0066ff'].map((c) => (
+                  <div key={c} className="h-16 rounded-xl" style={{ background: c }} />
+                ))}
+              </div>
+            </Card>
+          </Section>
+
           {/* Typography */}
           <Section
             eyebrow="Foundations"
             title="Typography"
-            description="Bricolage Grotesque carries display and headings; Plus Jakarta Sans is the body face; JetBrains Mono is reserved for codes, IDs, and labels."
+            description="Plus Jakarta Sans carries everything from display headlines (bold, tight tracking) to body copy; JetBrains Mono is reserved for codes, IDs, and labels."
           >
             <div className="grid gap-4 sm:grid-cols-3">
               <Card className="p-5">
                 <p className="font-serif text-5xl font-semibold text-foreground">Aa</p>
-                <p className="mt-3 text-sm font-medium text-foreground">Bricolage Grotesque</p>
-                <p className="text-xs text-muted-foreground">Display & headings</p>
+                <p className="mt-3 text-sm font-medium text-foreground">Plus Jakarta Sans</p>
+                <p className="text-xs text-muted-foreground">Display & headings (bold)</p>
               </Card>
               <Card className="p-5">
                 <p className="text-5xl font-semibold text-foreground">Aa</p>

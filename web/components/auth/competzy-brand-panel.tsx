@@ -138,12 +138,19 @@ function ShowcasePanel() {
         }}
       />
 
-      {/* headline + continuity copy — vertically centred, left-aligned */}
-      <div className="relative z-10 max-w-md">
-        <h2 className="font-serif text-5xl font-medium leading-[1.05] tracking-[-0.01em] xl:text-6xl">
+      {/* ambient brand glow drifting behind the copy (landing's ds-ambient-drift) */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 top-1/3 size-[28rem] rounded-full bg-white/10 blur-3xl animate-ambient"
+      />
+
+      {/* headline + continuity copy — vertically centred, left-aligned,
+          entering with the design system's staggered fade-up */}
+      <div className="relative z-10 max-w-md stagger-children">
+        <h2 className="font-serif text-5xl font-bold leading-[1.05] tracking-[-0.01em] xl:text-6xl">
           Every competition,
           <br />
-          <span className="text-amber-300">one arena.</span>
+          <span className="text-[#f8db46]">one arena.</span>
         </h2>
         <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/80">
           Arena is where the competing happens. One account signs you in to EMC, ISPO, Komodo,
