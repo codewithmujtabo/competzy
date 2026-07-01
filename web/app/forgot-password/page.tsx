@@ -64,13 +64,9 @@ export default function ForgotPasswordPage() {
 
   return (
     <HubAuthShell>
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
-        {t('fpw.eyebrow')}
-      </p>
-
       {sent ? (
         <>
-          <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">{t('fpw.sentTitle')}</h1>
+          <h1 className="font-serif text-3xl font-medium text-foreground">{t('fpw.sentTitle')}</h1>
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
             {t('fpw.sentBodyPre')}
             <strong className="text-foreground">{email}</strong>
@@ -99,7 +95,7 @@ export default function ForgotPasswordPage() {
         </>
       ) : (
         <>
-          <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">{t('fpw.resetTitle')}</h1>
+          <h1 className="font-serif text-3xl font-medium text-foreground">{t('fpw.resetTitle')}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{t('fpw.resetSubtitle')}</p>
 
           {error && (

@@ -327,18 +327,14 @@ export default function CompetitionRegisterPage() {
 
   return (
     <div className="relative grid min-h-screen lg:grid-cols-2">
-      {/* Language + theme toggles — pinned to the top-right of the whole screen */}
-      <PublicToggles />
-
       {/* Form panel — LEFT */}
       <div className="relative flex items-center justify-center bg-background px-6 py-12">
+        {/* Language + theme toggles — top-right of the form column */}
+        <PublicToggles className="absolute" />
         {step === 'role' ? (
           // ── Step 0: pick an account type ──────────────────────────────────
           <div className="w-full max-w-md">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
-              {t('creg.eyebrow')}
-            </p>
-            <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">{t('creg.rolePickTitle')}</h1>
+            <h1 className="font-serif text-3xl font-medium text-foreground">{t('creg.rolePickTitle')}</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">{t('creg.rolePickSubtitle')}</p>
 
             <div className="mt-6 space-y-3">
@@ -387,10 +383,7 @@ export default function CompetitionRegisterPage() {
               <ArrowLeft className="size-4" />
               {t('creg.changeRole')}
             </button>
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
-              {t('creg.eyebrow')}
-            </p>
-            <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">{t('creg.title')}</h1>
+            <h1 className="font-serif text-3xl font-medium text-foreground">{t('creg.title')}</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
               {role === 'student' ? t('creg.subtitle') : t('creg.subtitleStaff')}
             </p>

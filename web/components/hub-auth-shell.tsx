@@ -12,11 +12,10 @@ import { CompetzyBrandPanel } from '@/components/auth/competzy-brand-panel';
 export function HubAuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative grid min-h-screen lg:grid-cols-2">
-      {/* Language + theme toggles — pinned to the top-right of the whole screen */}
-      <PublicToggles />
-
       {/* Form panel — LEFT */}
       <div className="relative flex items-center justify-center bg-background px-6 py-12">
+        {/* Language + theme toggles — top-right of the form column */}
+        <PublicToggles className="absolute" />
         <div className="w-full max-w-md">{children}</div>
       </div>
 

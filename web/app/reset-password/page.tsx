@@ -60,13 +60,9 @@ function ResetPasswordInner() {
 
   return (
     <HubAuthShell>
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
-        {t('fpw.eyebrow')}
-      </p>
-
       {!token ? (
         <>
-          <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">{t('rpw.missingTitle')}</h1>
+          <h1 className="font-serif text-3xl font-medium text-foreground">{t('rpw.missingTitle')}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{t('rpw.missingBody')}</p>
           <Button asChild size="lg" className="mt-6 w-full">
             <Link href={slug ? competitionPaths(slug).forgotPassword : '/forgot-password'}>
@@ -77,7 +73,7 @@ function ResetPasswordInner() {
         </>
       ) : done ? (
         <>
-          <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">{t('rpw.doneTitle')}</h1>
+          <h1 className="font-serif text-3xl font-medium text-foreground">{t('rpw.doneTitle')}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{t('rpw.doneBody')}</p>
           <Button asChild size="lg" className="mt-6 w-full">
             <Link href={signInHref}>
@@ -88,7 +84,7 @@ function ResetPasswordInner() {
         </>
       ) : (
         <>
-          <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">{t('rpw.chooseTitle')}</h1>
+          <h1 className="font-serif text-3xl font-medium text-foreground">{t('rpw.chooseTitle')}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{t('rpw.chooseSubtitle')}</p>
 
           {error && (
