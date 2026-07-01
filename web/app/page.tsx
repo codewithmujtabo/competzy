@@ -218,21 +218,21 @@ export default function UnifiedLogin() {
 
   return (
     <div className="relative grid min-h-screen lg:grid-cols-2">
-      {/* Language + theme toggles — pinned to the top-right of the whole screen */}
-      <div className="absolute right-5 top-5 z-20 flex items-center gap-2">
-        <LocaleToggle className="rounded-lg border bg-card px-2 py-1.5" />
-        <button
-          onClick={toggle}
-          aria-label={isDark ? t('common.lightMode') : t('common.darkMode')}
-          title={isDark ? t('common.lightMode') : t('common.darkMode')}
-          className="flex size-9 items-center justify-center rounded-lg border bg-card text-muted-foreground transition-colors hover:text-foreground"
-        >
-          {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        </button>
-      </div>
-
       {/* Form panel — LEFT */}
       <div className="relative flex items-center justify-center bg-background px-6 py-12">
+        {/* Language + theme toggles — top-right of the form column */}
+        <div className="absolute right-5 top-5 z-20 flex items-center gap-2">
+          <LocaleToggle className="rounded-lg border bg-card px-2 py-1.5" />
+          <button
+            onClick={toggle}
+            aria-label={isDark ? t('common.lightMode') : t('common.darkMode')}
+            title={isDark ? t('common.lightMode') : t('common.darkMode')}
+            className="flex size-9 items-center justify-center rounded-lg border bg-card text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
+        </div>
+
         <div className="w-full max-w-md">
           {hydrating ? (
             <div className="space-y-3" aria-busy="true" aria-live="polite">
@@ -259,10 +259,7 @@ export default function UnifiedLogin() {
                 </span>
               </a>
 
-              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">
-                {t('login.eyebrow')}
-              </p>
-              <h1 className="mt-3 font-serif text-3xl font-medium text-foreground">
+              <h1 className="font-serif text-3xl font-medium text-foreground">
                 {t('login.welcomeBack')}
               </h1>
               <p className="mt-1.5 text-sm text-muted-foreground">{t('login.subtitle')}</p>

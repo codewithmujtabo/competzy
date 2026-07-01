@@ -138,16 +138,6 @@ function ShowcasePanel() {
         }}
       />
 
-      {/* platform mark — top-left */}
-      <div className="absolute left-12 top-12 z-10 flex items-center gap-2.5 [text-shadow:0_1px_10px_rgba(0,0,0,0.3)]">
-        <span className="grid size-8 place-items-center rounded-lg bg-white/15 font-serif text-base font-bold backdrop-blur-sm">
-          C
-        </span>
-        <span className="font-mono text-[11px] uppercase tracking-[0.26em] text-white/85">
-          Competzy Arena
-        </span>
-      </div>
-
       {/* headline + continuity copy — vertically centred, left-aligned */}
       <div className="relative z-10 max-w-md">
         <h2 className="font-serif text-5xl font-medium leading-[1.05] tracking-[-0.01em] xl:text-6xl">
@@ -156,20 +146,9 @@ function ShowcasePanel() {
           <span className="text-amber-300">one arena.</span>
         </h2>
         <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/80">
-          You came from <span className="font-semibold text-white">competzy.com</span> — and
-          you&apos;re still on it. Arena is where the competing happens. One account signs you in to
-          EMC, ISPO, Komodo, Owlypia and every competition we host.
+          Arena is where the competing happens. One account signs you in to EMC, ISPO, Komodo,
+          Owlypia and every competition.
         </p>
-        <div className="mt-6 flex flex-wrap gap-2">
-          {['Register once', 'One login', 'Every competition'].map((perk) => (
-            <span
-              key={perk}
-              className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/75 backdrop-blur-sm"
-            >
-              {perk}
-            </span>
-          ))}
-        </div>
       </div>
     </div>
   );
