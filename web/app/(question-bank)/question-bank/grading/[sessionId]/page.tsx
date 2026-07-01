@@ -227,7 +227,7 @@ export default function GradingSessionPage() {
                       Student's answer
                     </p>
                     <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
-                      {p.studentAnswer && p.studentAnswer.trim() ? p.studentAnswer : '— blank —'}
+                      {p.studentAnswer && p.studentAnswer.trim() ? p.studentAnswer : 'blank'}
                     </p>
                   </div>
                   <div className="rounded-md border bg-muted/30 p-3">
@@ -235,7 +235,7 @@ export default function GradingSessionPage() {
                       Answer key
                     </p>
                     <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
-                      {p.answerKey ?? '—'}
+                      {p.answerKey ?? '-'}
                     </p>
                   </div>
                 </div>
@@ -276,7 +276,7 @@ export default function GradingSessionPage() {
                   </div>
                 ) : (
                   <p className="border-t pt-3 text-xs text-muted-foreground">
-                    Left blank — scores 0, nothing to grade.
+                    Left blank, scores 0, nothing to grade.
                   </p>
                 )}
               </div>

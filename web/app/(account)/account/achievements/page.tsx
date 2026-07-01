@@ -29,7 +29,7 @@ interface Certificate {
 function fmtDate(d: string | null): string {
   return d
     ? new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
-    : '—';
+    : '-';
 }
 
 export default function AchievementsPage() {

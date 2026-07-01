@@ -104,7 +104,7 @@ export default function BulkPaymentPage() {
       <div className="mx-auto max-w-[900px] p-6 lg:p-8">
         <Card className="p-12 text-center">
           <p className="text-sm text-destructive">
-            Access denied — a school-admin or teacher account is required.
+            Access denied, a school-admin or teacher account is required.
           </p>
           <Button asChild className="mt-4">
             <Link href="/school-dashboard">Back to dashboard</Link>
@@ -164,7 +164,7 @@ export default function BulkPaymentPage() {
           </div>
           <h2 className="mt-4 text-lg font-semibold text-foreground">Payment page opened</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            A Midtrans payment page opened in a new tab — {fmtRp(batchResult.totalAmount)} for{' '}
+            A Midtrans payment page opened in a new tab, {fmtRp(batchResult.totalAmount)} for{' '}
             {selectedRows.length} student{selectedRows.length === 1 ? '' : 's'}.
           </p>
           <div className="mt-6 flex flex-col gap-2">

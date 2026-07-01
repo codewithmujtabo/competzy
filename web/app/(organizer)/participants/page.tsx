@@ -128,7 +128,7 @@ export default function ParticipantsPage() {
     setBusy(id);
     try {
       await organizerHttp.post(`/organizers/registrations/${id}/approve`, {});
-      toast.success('Registration approved — student notified.');
+      toast.success('Registration approved, student notified.');
       await refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to approve');
@@ -142,7 +142,7 @@ export default function ParticipantsPage() {
     setBusy(rejectId);
     try {
       await organizerHttp.post(`/organizers/registrations/${rejectId}/reject`, { reason: reason.trim() });
-      toast.success('Registration rejected — student notified.');
+      toast.success('Registration rejected, student notified.');
       setRejectId(null);
       setReason('');
       await refresh();
@@ -244,8 +244,8 @@ export default function ParticipantsPage() {
                             {r.student.email}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm">{r.student.school || '—'}</TableCell>
-                        <TableCell className="text-sm">{r.student.grade || '—'}</TableCell>
+                        <TableCell className="text-sm">{r.student.school || '-'}</TableCell>
+                        <TableCell className="text-sm">{r.student.grade || '-'}</TableCell>
                         <TableCell>
                           <Badge
                             variant="outline"
@@ -271,7 +271,7 @@ export default function ParticipantsPage() {
                               {r.payment.status}
                             </Badge>
                           ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
+                            <span className="text-sm text-muted-foreground">-</span>
                           )}
                         </TableCell>
                         <TableCell className="font-mono text-[11px] text-muted-foreground">
@@ -323,7 +323,7 @@ export default function ParticipantsPage() {
                               </Button>
                             </div>
                           ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
+                            <span className="text-sm text-muted-foreground">-</span>
                           )}
                         </TableCell>
                       </TableRow>

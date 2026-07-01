@@ -185,8 +185,8 @@ export default function CompetitionAdminPage() {
                             {r.student.email}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm">{r.student.school || '—'}</TableCell>
-                        <TableCell className="text-sm">{r.student.grade || '—'}</TableCell>
+                        <TableCell className="text-sm">{r.student.school || '-'}</TableCell>
+                        <TableCell className="text-sm">{r.student.grade || '-'}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="font-mono text-[10px]">
                             {statusLabel(r.status)}

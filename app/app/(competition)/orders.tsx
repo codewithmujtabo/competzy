@@ -25,7 +25,7 @@ function cap(s: string): string {
 }
 
 function fmtDate(d: string | null | undefined): string {
-  if (!d) return "—";
+  if (!d) return "-";
   return new Date(d).toLocaleDateString("en-US", {
     day: "numeric",
     month: "short",

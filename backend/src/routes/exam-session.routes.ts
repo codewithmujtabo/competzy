@@ -459,7 +459,7 @@ router.put("/sessions/:id/periods/:periodId", async (req: Request, res: Response
       s.rows[0].end_time
     );
     if (Date.now() > deadline.getTime()) {
-      res.status(409).json({ message: "Time is up — submit the exam to finish" });
+      res.status(409).json({ message: "Time is up. Submit the exam to finish" });
       return;
     }
     const p = await pool.query(

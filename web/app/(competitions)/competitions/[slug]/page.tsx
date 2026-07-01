@@ -60,7 +60,7 @@ interface RegistrationRow {
 function fmtDate(d: string | null): string {
   return d
     ? new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
-    : '—';
+    : '-';
 }
 
 function rupiah(n: number): string {
@@ -264,12 +264,12 @@ export default function CompetitionLandingPage() {
             <DetailRow
               icon={Trophy}
               label="Category"
-              value={comp.category ?? '—'}
+              value={comp.category ?? '-'}
             />
             <DetailRow
               icon={GraduationCap}
               label="Grade level"
-              value={comp.gradeLevel ?? '—'}
+              value={comp.gradeLevel ?? '-'}
             />
             <DetailRow
               icon={CalendarDays}
@@ -299,7 +299,7 @@ export default function CompetitionLandingPage() {
             </p>
             <p className="mt-1 text-sm text-foreground">
               {user
-                ? 'You’ll be guided through the rest — fill in any missing details, then pay.'
+                ? 'You’ll be guided through the rest, fill in any missing details, then pay.'
                 : 'Create your free Competzy account to register, or sign in if you already have one.'}
             </p>
           </div>

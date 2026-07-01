@@ -81,7 +81,7 @@ function fmtForInput(d?: string) {
 function fmtDate(d?: string) {
   return d
     ? new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
-    : '—';
+    : '-';
 }
 
 function Field({
@@ -325,7 +325,7 @@ export default function CompetitionsPage() {
                           {c.category}
                         </Badge>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell className="truncate text-sm">{c.organizer_name}</TableCell>
@@ -448,7 +448,7 @@ export default function CompetitionsPage() {
                 <SelectContent>
                   {organizers.map((o) => (
                     <SelectItem key={o.id} value={o.id}>
-                      {o.full_name} — {o.email}
+                      {o.full_name}, {o.email}
                     </SelectItem>
                   ))}
                 </SelectContent>

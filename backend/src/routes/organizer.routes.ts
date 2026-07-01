@@ -411,7 +411,7 @@ router.post("/competitions/:id/publish", audit({ action: "organizer.competition.
       return;
     }
 
-    res.json({ message: "Competition published — registration is now open", id: result.rows[0].id });
+    res.json({ message: "Competition published. Registration is now open", id: result.rows[0].id });
   } catch (err) {
     console.error("POST /organizers/competitions/:id/publish error:", err);
     res.status(500).json({ message: "Failed to publish competition" });

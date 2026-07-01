@@ -312,7 +312,7 @@ export default function WaitlistAdminPage() {
       });
       setDrawResult(r);
       if (r.drawn === 0) {
-        toast.error('No eligible entries — everyone in this filter already won.');
+        toast.error('No eligible entries. Everyone in this filter already won.');
       } else {
         toast.success(`Drew ${r.drawn} voucher winner${r.drawn === 1 ? '' : 's'}`);
       }
@@ -556,7 +556,7 @@ export default function WaitlistAdminPage() {
                           {HEARD_FROM_LABEL[e.heard_from] ?? e.heard_from}
                         </Badge>
                       ) : (
-                        <span className="text-[11px] italic text-muted-foreground/60">—</span>
+                        <span className="text-[11px] italic text-muted-foreground/60">-</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -568,7 +568,7 @@ export default function WaitlistAdminPage() {
                           </span>
                         </div>
                       ) : (
-                        <span className="text-[11px] italic text-muted-foreground/60">—</span>
+                        <span className="text-[11px] italic text-muted-foreground/60">-</span>
                       )}
                     </TableCell>
                     <TableCell className="truncate font-mono text-[10px] text-muted-foreground" title={e.source}>
@@ -631,7 +631,7 @@ export default function WaitlistAdminPage() {
               </div>
               <div className="rounded-md border border-amber-300/40 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
                 <CalendarDays className="mr-1 inline size-3.5" />
-                This action is idempotent — already-drawn entries are skipped, so re-running won&apos;t double-count.
+                This action is idempotent, already-drawn entries are skipped, so re-running won&apos;t double-count.
               </div>
             </div>
           ) : (
@@ -685,7 +685,7 @@ export default function WaitlistAdminPage() {
             </div>
             <DialogDescription>
               This permanently removes the row from the waitlist. The signup can&apos;t be
-              recovered — the sender would have to resubmit.
+              recovered. The sender would have to resubmit.
             </DialogDescription>
           </DialogHeader>
 

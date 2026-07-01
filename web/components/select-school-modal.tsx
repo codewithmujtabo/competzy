@@ -93,7 +93,7 @@ export function SelectSchoolModal({ open, onConfirmed }: Props) {
           </div>
           <DialogDescription>
             Your account isn&apos;t linked to a school yet. Pick the verified school you belong
-            to — this can&apos;t be changed by you afterwards (an admin must reassign).
+            to. This can&apos;t be changed by you afterwards (an admin must reassign).
           </DialogDescription>
         </DialogHeader>
 

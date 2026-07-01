@@ -34,7 +34,7 @@ interface ExamRow {
 }
 
 function fmtDate(s: string | null) {
-  if (!s) return '—';
+  if (!s) return '-';
   return new Date(s).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
@@ -72,7 +72,7 @@ export default function ExamsListPage() {
   const remove = async (ex: ExamRow) => {
     if (
       !confirm(
-        `Delete exam "${ex.code}" — ${ex.name}?\n\n` +
+        `Delete exam "${ex.code}", ${ex.name}?\n\n` +
           `This removes the exam and its question set. Students with attempts ` +
           `in progress keep their session, but no new attempts can be started.\n\n` +
           `This cannot be undone.`,
@@ -148,7 +148,7 @@ export default function ExamsListPage() {
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
-                    No exams yet — create one from your approved questions.
+                    No exams yet. Create one from your approved questions.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -169,7 +169,7 @@ export default function ExamsListPage() {
                       {fmtDate(ex.date)}
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
-                      {ex.grades.length ? ex.grades.join(', ') : '—'}
+                      {ex.grades.length ? ex.grades.join(', ') : '-'}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-mono text-[10px]">
@@ -177,7 +177,7 @@ export default function ExamsListPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
-                      {ex.minutes ?? '—'}
+                      {ex.minutes ?? '-'}
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">

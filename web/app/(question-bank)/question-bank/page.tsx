@@ -53,7 +53,7 @@ export default function QuestionBankDashboard() {
         <Card className="p-12 text-center">
           <p className="text-sm font-medium text-foreground">No native competitions yet</p>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            The question bank is available for native competitions. Create one — affiliated
+            The question bank is available for native competitions. Create one, affiliated
             competitions are run on an external platform and have no bank here.
           </p>
         </Card>

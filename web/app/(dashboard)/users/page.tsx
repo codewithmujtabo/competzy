@@ -192,7 +192,7 @@ export default function UsersPage() {
               ) : (
                 users.map((u) => (
                   <TableRow key={u.id}>
-                    <TableCell className="font-medium text-foreground">{u.full_name || '—'}</TableCell>
+                    <TableCell className="font-medium text-foreground">{u.full_name || '-'}</TableCell>
                     <TableCell className="font-mono text-[12px] text-muted-foreground">{u.email}</TableCell>
                     <TableCell>
                       <Badge
@@ -210,7 +210,7 @@ export default function UsersPage() {
                       title={u.school_name ?? ''}
                     >
                       {u.school_name || (
-                        <span className="italic text-muted-foreground/60">—</span>
+                        <span className="italic text-muted-foreground/60">-</span>
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
@@ -220,7 +220,7 @@ export default function UsersPage() {
                             month: 'short',
                             year: 'numeric',
                           })
-                        : '—'}
+                        : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       {u.id === me?.id ? (

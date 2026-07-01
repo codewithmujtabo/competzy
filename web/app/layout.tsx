@@ -11,7 +11,7 @@ import 'katex/dist/katex.min.css';
 
 export const metadata: Metadata = {
   title: 'Competzy',
-  description: 'Competzy — Indonesia’s unified K-12 academic competition platform',
+  description: 'Competzy, Indonesia’s unified K-12 academic competition platform',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

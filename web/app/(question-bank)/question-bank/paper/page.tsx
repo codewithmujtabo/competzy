@@ -210,7 +210,7 @@ export default function PaperExamsPage() {
           <SelectContent>
             {exams.map((e) => (
               <SelectItem key={e.id} value={e.id}>
-                {e.code} — {e.name}
+                {e.code}, {e.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -270,10 +270,10 @@ export default function PaperExamsPage() {
                         {pe.studentName}
                       </TableCell>
                       <TableCell className="font-mono text-[11px] text-muted-foreground">
-                        {pe.grade ?? '—'}
+                        {pe.grade ?? '-'}
                       </TableCell>
                       <TableCell className="truncate text-sm text-muted-foreground" title={pe.testCenterName ?? ''}>
-                        {pe.testCenterName ?? '—'}
+                        {pe.testCenterName ?? '-'}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-mono text-[10px]">
@@ -364,7 +364,7 @@ export default function PaperExamsPage() {
                   >
                     <span className="truncate text-foreground">{s.name}</span>
                     <span className="font-mono text-[11px] text-muted-foreground">
-                      {s.grade ?? '—'}
+                      {s.grade ?? '-'}
                     </span>
                   </button>
                 </li>

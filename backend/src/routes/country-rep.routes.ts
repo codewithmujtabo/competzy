@@ -447,7 +447,7 @@ router.post("/rep/pay-batch", async (req: Request, res: Response) => {
     }
     const fee = Number(round.fee) || 0;
     if (fee <= 0) {
-      res.status(400).json({ message: "This round is free — no payment is needed." });
+      res.status(400).json({ message: "This round is free. No payment is needed." });
       return;
     }
     const regs = await pool.query(

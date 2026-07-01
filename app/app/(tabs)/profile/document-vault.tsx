@@ -48,7 +48,7 @@ const DOC_TYPES: { id: string; label: string; emoji: string; icon: IoniconName }
 ];
 
 function formatFileSize(bytes: number) {
-  if (!bytes) return "—";
+  if (!bytes) return "-";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -96,7 +96,7 @@ async function uploadFileXHR(
       }
     };
 
-    xhr.onerror = () => reject(new Error("Network error — check your connection"));
+    xhr.onerror = () => reject(new Error("Network error. Check your connection"));
 
     xhr.open("POST", `${baseUrl}/api/documents/upload`);
     if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);

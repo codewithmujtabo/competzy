@@ -182,7 +182,7 @@ export function BulkCredentialDialog({
                 <ul className="mt-1.5 space-y-0.5 text-xs text-muted-foreground">
                   {result.errors.slice(0, 6).map((er, i) => (
                     <li key={i}>
-                      <span className="font-mono">{er.registrationNumber}</span> — {er.error}
+                      <span className="font-mono">{er.registrationNumber}</span>, {er.error}
                     </li>
                   ))}
                   {result.errors.length > 6 && <li>+{result.errors.length - 6} more…</li>}

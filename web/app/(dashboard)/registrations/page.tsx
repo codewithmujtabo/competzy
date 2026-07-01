@@ -155,7 +155,7 @@ export default function RegistrationsPage() {
     setBusy(id);
     try {
       await registrationsApi.approve(id);
-      toast.success('Registration approved — student notified.');
+      toast.success('Registration approved. Student notified.');
       load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to approve');
@@ -169,7 +169,7 @@ export default function RegistrationsPage() {
     setBusy(rejectId);
     try {
       await registrationsApi.reject(rejectId, reason.trim());
-      toast.success('Registration rejected — student notified.');
+      toast.success('Registration rejected. Student notified.');
       load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to reject');
@@ -281,9 +281,9 @@ export default function RegistrationsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="truncate text-sm">{r.student.school || '—'}</div>
+                      <div className="truncate text-sm">{r.student.school || '-'}</div>
                       <div className="truncate text-xs text-muted-foreground">
-                        Grade {r.student.grade || '—'}
+                        Grade {r.student.grade || '-'}
                       </div>
                       {r.student.nisn && (
                         <div className="truncate font-mono text-[10px] text-muted-foreground">
@@ -380,7 +380,7 @@ export default function RegistrationsPage() {
                 <DialogTitle>{viewing.student.name}</DialogTitle>
                 <DialogDescription>
                   {viewing.competition.name}
-                  {viewing.round?.name ? ` — ${viewing.round.name}` : ''}
+                  {viewing.round?.name ? `, ${viewing.round.name}` : ''}
                 </DialogDescription>
               </DialogHeader>
 
@@ -390,7 +390,7 @@ export default function RegistrationsPage() {
                 </Cell>
                 <Cell label="Reg. number">
                   <span className="font-mono text-xs">
-                    {viewing.registrationNumber || '—'}
+                    {viewing.registrationNumber || '-'}
                   </span>
                 </Cell>
                 <Cell label="Submitted">
@@ -404,24 +404,24 @@ export default function RegistrationsPage() {
                   <span className="font-mono text-xs">{viewing.student.email}</span>
                 </Cell>
                 <Cell label="Phone">
-                  <span className="font-mono text-xs">{viewing.student.phone || '—'}</span>
+                  <span className="font-mono text-xs">{viewing.student.phone || '-'}</span>
                 </Cell>
 
-                <Cell label="School" wide>{viewing.student.school || '—'}</Cell>
-                <Cell label="Grade">{viewing.student.grade || '—'}</Cell>
+                <Cell label="School" wide>{viewing.student.school || '-'}</Cell>
+                <Cell label="Grade">{viewing.student.grade || '-'}</Cell>
                 <Cell label="NISN">
-                  <span className="font-mono text-xs">{viewing.student.nisn || '—'}</span>
+                  <span className="font-mono text-xs">{viewing.student.nisn || '-'}</span>
                 </Cell>
-                <Cell label="Country">{viewing.student.country || '—'}</Cell>
+                <Cell label="Country">{viewing.student.country || '-'}</Cell>
 
-                <Cell label="City">{viewing.student.city || '—'}</Cell>
-                <Cell label="Province" wide>{viewing.student.province || '—'}</Cell>
+                <Cell label="City">{viewing.student.city || '-'}</Cell>
+                <Cell label="Province" wide>{viewing.student.province || '-'}</Cell>
 
                 <Cell label="Fee (local)">{formatFee(viewing.competition.fee)}</Cell>
                 <Cell label="Fee (intl)" wide>
                   {viewing.competition.feeInternational != null
                     ? `$${viewing.competition.feeInternational} USD`
-                    : '—'}
+                    : '-'}
                 </Cell>
               </dl>
 

@@ -78,7 +78,7 @@ export const competitionRegistry: Record<string, CompetitionPortalConfig> = {
     slug: 'komodo',
     shortName: 'Komodo',
     wordmark: 'International Math Competition',
-    heroTitle: 'Komodo 2026/2027 — Your Journey to Bali',
+    heroTitle: 'Komodo 2026/2027, Your Journey to Bali',
     tagline: 'A playing ground for agile young minds.',
     accent: '#5627FF',
     accentDark: '#3A1290',

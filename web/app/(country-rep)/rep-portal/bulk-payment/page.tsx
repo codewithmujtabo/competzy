@@ -53,7 +53,7 @@ export default function RepBulkPaymentPage() {
         if (tries > 40) {
           if (pollTimer.current) clearInterval(pollTimer.current);
           setPaying(false);
-          toast.message('Still waiting for the payment to settle — refresh once you finish.');
+          toast.message('Still waiting for the payment to settle. Refresh once you finish.');
           return;
         }
         try {
@@ -63,7 +63,7 @@ export default function RepBulkPaymentPage() {
           if (v.status === 'paid') {
             if (pollTimer.current) clearInterval(pollTimer.current);
             setPaying(false);
-            toast.success('Payment received — your students are now registered.');
+            toast.success('Payment received. Your students are now registered.');
             await refresh();
           }
         } catch {
@@ -107,7 +107,7 @@ export default function RepBulkPaymentPage() {
           <CheckCircle2 className="mx-auto size-7 text-emerald-600" />
           <p className="mt-3 text-sm font-medium text-foreground">This round is free</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            No payment is required — students move straight to pending review on registration.
+            No payment is required. Students move straight to pending review on registration.
           </p>
         </Card>
       ) : unpaid.length === 0 ? (
@@ -144,7 +144,7 @@ export default function RepBulkPaymentPage() {
 
           {paying && (
             <Card className="border-primary/30 bg-primary/5 p-4 text-xs text-muted-foreground">
-              Finish in the new tab — this page updates automatically once the payment settles.
+              Finish in the new tab. This page updates automatically once the payment settles.
             </Card>
           )}
 
@@ -165,7 +165,7 @@ export default function RepBulkPaymentPage() {
                     <TableRow key={s.registrationId}>
                       <TableCell className="font-medium text-foreground">{s.fullName}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{s.email}</TableCell>
-                      <TableCell className="text-sm">{s.grade ?? '—'}</TableCell>
+                      <TableCell className="text-sm">{s.grade ?? '-'}</TableCell>
                       <TableCell className="text-right tabular-nums">{rupiah(fee)}</TableCell>
                     </TableRow>
                   ))}

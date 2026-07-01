@@ -36,7 +36,7 @@ interface Competition {
 function fmtDate(d?: string) {
   return d
     ? new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
-    : '—';
+    : '-';
 }
 
 export default function OrganizerCompetitionsPage() {
@@ -140,7 +140,7 @@ export default function OrganizerCompetitionsPage() {
                           {c.category}
                         </Badge>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell>

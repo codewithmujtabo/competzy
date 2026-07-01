@@ -165,8 +165,8 @@ export default function SchoolsPage() {
                   <TableRow key={s.id}>
                     <TableCell className="font-mono text-[12px] text-muted-foreground">{s.npsn}</TableCell>
                     <TableCell className="font-medium text-foreground">{s.name}</TableCell>
-                    <TableCell>{s.city || '—'}</TableCell>
-                    <TableCell>{s.province || '—'}</TableCell>
+                    <TableCell>{s.city || '-'}</TableCell>
+                    <TableCell>{s.province || '-'}</TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
                       {s.created_at
                         ? new Date(s.created_at).toLocaleDateString('en-US', {
@@ -174,7 +174,7 @@ export default function SchoolsPage() {
                             month: 'short',
                             year: 'numeric',
                           })
-                        : '—'}
+                        : '-'}
                     </TableCell>
                   </TableRow>
                 ))

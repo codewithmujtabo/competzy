@@ -196,7 +196,7 @@ export default function RepDashboardPage() {
                   {pendingPayment} student{pendingPayment === 1 ? '' : 's'} need to be paid for
                 </p>
                 <p className="mt-0.5 text-xs text-amber-900/80 dark:text-amber-100/70">
-                  Total {rupiah(round.fee * pendingPayment)} — settle in one Midtrans transaction.
+                  Total {rupiah(round.fee * pendingPayment)}, settle in one Midtrans transaction.
                 </p>
               </div>
               <Button asChild>

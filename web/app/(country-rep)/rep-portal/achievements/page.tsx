@@ -224,7 +224,7 @@ export default function RepAchievementsPage() {
                               {r.fullName}
                             </TableCell>
                             <TableCell className="tabular-nums">
-                              {r.score != null ? r.score : '—'}
+                              {r.score != null ? r.score : '-'}
                             </TableCell>
                             <TableCell>
                               {r.isMedalist ? (
@@ -233,7 +233,7 @@ export default function RepAchievementsPage() {
                                   Medal
                                 </span>
                               ) : (
-                                <span className="text-muted-foreground">—</span>
+                                <span className="text-muted-foreground">-</span>
                               )}
                             </TableCell>
                             <TableCell>
@@ -284,16 +284,16 @@ export default function RepAchievementsPage() {
                               {r.fullName}
                             </TableCell>
                             <TableCell className="text-sm">
-                              {r.compName ?? '—'}
+                              {r.compName ?? '-'}
                               {r.eventPart && (
                                 <span className="text-muted-foreground"> ({r.eventPart})</span>
                               )}
                             </TableCell>
                             <TableCell className="tabular-nums text-sm">
-                              {r.compYear ?? '—'}
+                              {r.compYear ?? '-'}
                             </TableCell>
                             <TableCell className="text-sm uppercase tracking-wide">
-                              {r.result ?? '—'}
+                              {r.result ?? '-'}
                             </TableCell>
                           </TableRow>
                         ))}

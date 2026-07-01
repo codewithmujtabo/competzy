@@ -31,7 +31,7 @@ const slides = [
     accentSoft: Brand.primarySoft,
     title: "One Place for\nAll Competitions",
     description:
-      "EMC, ISPO, OSEBI, Komodo Math, IGO, and hundreds more national & international competitions — all in one place.",
+      "EMC, ISPO, OSEBI, Komodo Math, IGO, and hundreds more national & international competitions, all in one place.",
   },
   {
     id: "2",

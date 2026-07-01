@@ -129,7 +129,7 @@ export default function AccountFamilyPage() {
         </div>
         {lastInvite?.debugPin && (
           <div className="rounded-md border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-            Dev mode — share PIN{' '}
+            Dev mode, share PIN{' '}
             <span className="font-mono font-semibold text-foreground">
               {lastInvite.debugPin}
             </span>{' '}

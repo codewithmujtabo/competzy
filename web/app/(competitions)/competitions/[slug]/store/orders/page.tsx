@@ -45,7 +45,7 @@ function rupiah(n: number) {
   return `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
 }
 function fmtDate(s: string | null) {
-  if (!s) return '—';
+  if (!s) return '-';
   return new Date(s).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 

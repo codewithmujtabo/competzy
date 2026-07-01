@@ -104,7 +104,7 @@ export default function GradingQueuePage() {
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
-                    Nothing awaiting grading — the queue is clear.
+                    Nothing awaiting grading, the queue is clear.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -121,7 +121,7 @@ export default function GradingQueuePage() {
                       {r.studentName}
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
-                      {r.grade ?? '—'}
+                      {r.grade ?? '-'}
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
                       {fmtDate(r.finishedAt)}

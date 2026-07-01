@@ -162,7 +162,7 @@ export default function DesignSystemPage() {
             One system across every Competzy surface
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-sm opacity-90">
-            Colors, typography, and components — the shared vocabulary behind the admin,
+            Colors, typography, and components, the shared vocabulary behind the admin,
             organizer, school, and student portals and the mobile app.
           </p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-2">
@@ -182,7 +182,7 @@ export default function DesignSystemPage() {
           <Section
             eyebrow="Foundations"
             title="Color"
-            description="An ivory-cream paper ground, Electric Indigo as the primary, and Hot Pink for accents. Every value is a CSS token with a matched dark-mode variant — toggle the header switch to preview."
+            description="An ivory-cream paper ground, Electric Indigo as the primary, and Hot Pink for accents. Every value is a CSS token with a matched dark-mode variant. Toggle the header switch to preview."
           >
             <div className="space-y-7">
               <SwatchGrid label="Brand" rows={brandColors} />
@@ -253,7 +253,7 @@ export default function DesignSystemPage() {
             <div className="space-y-4">
               <Card className="space-y-4 p-5">
                 <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                  Buttons — variants
+                  Buttons, variants
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <Button>Primary</Button>
@@ -264,7 +264,7 @@ export default function DesignSystemPage() {
                   <Button variant="link">Link</Button>
                 </div>
                 <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                  Buttons — sizes
+                  Buttons, sizes
                 </p>
                 <div className="flex flex-wrap items-center gap-3">
                   <Button size="sm">Small</Button>
@@ -317,7 +317,7 @@ export default function DesignSystemPage() {
                   Mathematics Competition
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  The card is the workhorse container — sectioned content, list rows, and stat
+                  The card is the workhorse container. Sectioned content, list rows, and stat
                   panels across every portal sit on it.
                 </p>
                 <div className="flex gap-2 pt-1">

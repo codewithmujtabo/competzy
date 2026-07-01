@@ -149,7 +149,7 @@ export default function BulkRegistrationPage() {
       <div className="mx-auto max-w-[900px] p-6 lg:p-8">
         <Card className="p-12 text-center">
           <p className="text-sm text-destructive">
-            Access denied — a school-admin or teacher account is required.
+            Access denied, a school-admin or teacher account is required.
           </p>
           <Button asChild className="mt-4">
             <Link href="/school-dashboard">Back to dashboard</Link>
@@ -352,7 +352,7 @@ export default function BulkRegistrationPage() {
                 <>
                   <p className="text-sm font-medium text-foreground">No template for this competition</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Use the standard format — required: <code className="font-mono">full_name</code>,{' '}
+                    Use the standard format, required: <code className="font-mono">full_name</code>,{' '}
                     <code className="font-mono">email</code>; optional:{' '}
                     <code className="font-mono">nisn, grade, school_name, phone</code>.
                   </p>
@@ -434,7 +434,7 @@ export default function BulkRegistrationPage() {
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-                  Preview — {csvRows.length} students
+                  Preview, {csvRows.length} students
                 </p>
                 {issueCount > 0 && (
                   <Badge
@@ -498,7 +498,7 @@ export default function BulkRegistrationPage() {
             <TabsContent value="manual" className="mt-4 space-y-4">
               <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
                 Just a handful of students? Type them in here, or paste a block from Excel /
-                Google Sheets — the grid splits the cells automatically.
+                Google Sheets. The grid splits the cells automatically.
                 {manualIssueCount > 0 && (
                   <span className="ml-1 font-medium text-amber-700 dark:text-amber-300">
                     {' '}{manualIssueCount} row{manualIssueCount === 1 ? '' : 's'} need
@@ -538,7 +538,7 @@ export default function BulkRegistrationPage() {
                     ? 'Failed'
                     : jobStatus.status === 'processing'
                       ? 'Processing…'
-                      : 'Queued — waiting for the processor…'}
+                      : 'Queued, waiting for the processor…'}
               </span>
               <span className="font-mono text-xs text-muted-foreground">
                 {jobStatus.processedRows}/{jobStatus.totalRows}
@@ -590,7 +590,7 @@ export default function BulkRegistrationPage() {
         <Card className="gap-4 p-5">
           <div className="flex items-center justify-between">
             <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-              Results — {selectedComp?.name}
+              Results, {selectedComp?.name}
             </p>
             <div className="flex gap-3 text-sm">
               <span className="text-emerald-600 dark:text-emerald-400">{jobStatus.successfulRows} ok</span>
@@ -618,9 +618,9 @@ export default function BulkRegistrationPage() {
                   return (
                     <TableRow key={i} className={cn(failed && 'bg-red-50 dark:bg-red-950/30')}>
                       <TableCell className="font-mono text-xs text-muted-foreground">{i + 1}</TableCell>
-                      <TableCell className="font-medium text-foreground">{row['full_name'] || '—'}</TableCell>
+                      <TableCell className="font-medium text-foreground">{row['full_name'] || '-'}</TableCell>
                       <TableCell className="font-mono text-[11px] text-muted-foreground">
-                        {row['email'] || '—'}
+                        {row['email'] || '-'}
                       </TableCell>
                       <TableCell>
                         <Badge

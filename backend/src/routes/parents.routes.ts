@@ -94,7 +94,7 @@ router.post("/invite-parent", authMiddleware, async (req: Request, res: Response
           await client.query("ROLLBACK");
           res.status(502).json({
             message:
-              "Could not send invitation email. The email service is not responding — please try again later or contact support.",
+              "Could not send invitation email. The email service is not responding. Please try again later or contact support.",
           });
           return;
         }
@@ -123,7 +123,7 @@ router.post("/invite-parent", authMiddleware, async (req: Request, res: Response
       message: emailSent
         ? "Invitation sent successfully"
         : smtpError
-          ? "Email service unavailable — share the PIN below with your parent manually."
+          ? "Email service unavailable. Share the PIN below with your parent manually."
           : "Invitation created in debug mode. Use the PIN shown for testing.",
       deliveryMethod,
       emailSent,

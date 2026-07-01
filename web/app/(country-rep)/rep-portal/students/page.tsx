@@ -134,7 +134,7 @@ export default function RepStudentsPage() {
                     <TableRow>
                       <TableCell colSpan={6} className="h-28 text-center text-sm text-muted-foreground">
                         {ctx?.students.length === 0
-                          ? 'No students yet — use “Add students” to register them.'
+                          ? 'No students yet. Use “Add students” to register them.'
                           : 'No students match your search.'}
                       </TableCell>
                     </TableRow>
@@ -143,14 +143,14 @@ export default function RepStudentsPage() {
                       <TableRow key={s.registrationId}>
                         <TableCell className="font-medium text-foreground">{s.fullName}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{s.email}</TableCell>
-                        <TableCell className="text-sm">{s.grade ?? '—'}</TableCell>
+                        <TableCell className="text-sm">{s.grade ?? '-'}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="font-normal">
                             {s.status.replace(/_/g, ' ')}
                           </Badge>
                         </TableCell>
                         <TableCell className="tabular-nums">
-                          {s.score != null ? s.score : '—'}
+                          {s.score != null ? s.score : '-'}
                         </TableCell>
                         <TableCell>
                           {s.isMedalist ? (
@@ -159,7 +159,7 @@ export default function RepStudentsPage() {
                               Medal
                             </span>
                           ) : (
-                            <span className="text-muted-foreground">—</span>
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
                       </TableRow>

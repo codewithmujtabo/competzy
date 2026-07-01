@@ -235,7 +235,7 @@ export default function QuestionsListPage() {
                       {q.type === 'short_answer' ? 'Short answer' : 'Multiple choice'}
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
-                      {q.grades.length ? q.grades.join(', ') : '—'}
+                      {q.grades.length ? q.grades.join(', ') : '-'}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -249,7 +249,7 @@ export default function QuestionsListPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="truncate text-xs text-muted-foreground">
-                      {q.writerName ?? '—'}
+                      {q.writerName ?? '-'}
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">

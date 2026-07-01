@@ -48,7 +48,7 @@ const STATUS_STYLE: Record<string, string> = {
 function fmtDate(d?: string) {
   return d
     ? new Date(d).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })
-    : '—';
+    : '-';
 }
 
 function fmtRp(n: number) {
@@ -188,9 +188,9 @@ export default function CompetitionDetailPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         <Section title={t('ocd.details')}>
           <dl className="grid grid-cols-2 gap-4">
-            <Row label={t('cf.category')} value={competition.category || '—'} />
-            <Row label={t('cf.gradeLevel')} value={competition.gradeLevel || '—'} />
-            <Row label={t('ocd.organizer')} value={competition.organizerName || '—'} />
+            <Row label={t('cf.category')} value={competition.category || '-'} />
+            <Row label={t('cf.gradeLevel')} value={competition.gradeLevel || '-'} />
+            <Row label={t('ocd.organizer')} value={competition.organizerName || '-'} />
             <Row label={t('ocd.international')} value={competition.isInternational ? t('cf.yes') : t('cf.no')} />
           </dl>
         </Section>

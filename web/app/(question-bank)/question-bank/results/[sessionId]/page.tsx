@@ -188,7 +188,7 @@ export default function ExamResultDetailPage() {
                   </li>
                 ))}
                 {!p.options.some((o) => o.chosen) && (
-                  <li className="text-xs text-muted-foreground">— left blank —</li>
+                  <li className="text-xs text-muted-foreground">left blank</li>
                 )}
               </ul>
             ) : (
@@ -199,7 +199,7 @@ export default function ExamResultDetailPage() {
                       Student&apos;s answer
                     </p>
                     <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
-                      {p.studentAnswer && p.studentAnswer.trim() ? p.studentAnswer : '— blank —'}
+                      {p.studentAnswer && p.studentAnswer.trim() ? p.studentAnswer : 'blank'}
                     </p>
                   </div>
                   <div className="rounded-md border bg-muted/30 p-3">
@@ -207,7 +207,7 @@ export default function ExamResultDetailPage() {
                       Answer key
                     </p>
                     <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
-                      {p.answerKey ?? '—'}
+                      {p.answerKey ?? '-'}
                     </p>
                   </div>
                 </div>

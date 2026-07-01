@@ -177,7 +177,7 @@ export default function CompetitionPayPage() {
         window.location.assign(res.redirectUrl);
         return;
       }
-      setErr('Could not start payment — please try again.');
+      setErr('Could not start payment. Please try again.');
       setPaying(false);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to start payment');

@@ -183,8 +183,8 @@ function VouchersPage() {
         });
         toast.success(
           form.mode === 'shared'
-            ? `Voucher group created — 1 shared code with ${g.usableCount} uses.`
-            : `Voucher group created — ${g.voucherCount} codes minted.`,
+            ? `Voucher group created, 1 shared code with ${g.usableCount} uses.`
+            : `Voucher group created, ${g.voucherCount} codes minted.`,
         );
       }
       setOpen(false);
@@ -360,7 +360,7 @@ function VouchersPage() {
               <Input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="SMAN 1 Jakarta — 2026 batch"
+                placeholder="SMAN 1 Jakarta, 2026 batch"
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -382,7 +382,7 @@ function VouchersPage() {
               <div>
                 <Label className="mb-1.5 text-xs text-muted-foreground">
                   Normal fee (Rp){' '}
-                  <span className="font-normal text-muted-foreground/70">— optional</span>
+                  <span className="font-normal text-muted-foreground/70">, optional</span>
                 </Label>
                 <Input
                   type="number"
@@ -408,7 +408,7 @@ function VouchersPage() {
                       onChange={(e) => setForm((f) => ({ ...f, usableCount: e.target.value }))}
                     />
                     <p className="mt-1 text-xs text-muted-foreground">
-                      1–1000 — total redemptions allowed across all codes minted.
+                      1–1000, total redemptions allowed across all codes minted.
                     </p>
                   </div>
                   <div>
@@ -424,10 +424,10 @@ function VouchersPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="distinct">
-                          Distinct codes — one per seat
+                          Distinct codes, one per seat
                         </SelectItem>
                         <SelectItem value="shared">
-                          Shared code — one code, N uses
+                          Shared code, one code, N uses
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -452,7 +452,7 @@ function VouchersPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">No scope — any registrant</SelectItem>
+                        <SelectItem value="none">No scope, any registrant</SelectItem>
                         <SelectItem value="school">School (NPSN)</SelectItem>
                         <SelectItem value="country">Country</SelectItem>
                       </SelectContent>
@@ -552,7 +552,7 @@ function VouchersPage() {
                     <TableRow key={v.id}>
                       <TableCell className="font-mono text-xs text-foreground">{v.code}</TableCell>
                       <TableCell className="font-mono text-[11px] text-muted-foreground">
-                        {v.npsn || '—'}
+                        {v.npsn || '-'}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -567,7 +567,7 @@ function VouchersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {v.claimerEmail || '—'}
+                        {v.claimerEmail || '-'}
                       </TableCell>
                     </TableRow>
                   ))

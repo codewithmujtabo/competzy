@@ -259,7 +259,7 @@ export default function SchoolRegistrationsPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>{r.student.grade ? `Grade ${r.student.grade}` : '—'}</TableCell>
+                    <TableCell>{r.student.grade ? `Grade ${r.student.grade}` : '-'}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"

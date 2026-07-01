@@ -101,7 +101,7 @@ export default function ReviewQueuePage() {
               ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground">
-                    Nothing awaiting review — the queue is clear.
+                    Nothing awaiting review, the queue is clear.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -119,10 +119,10 @@ export default function ReviewQueuePage() {
                       {q.type === 'short_answer' ? 'Short answer' : 'Multiple choice'}
                     </TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
-                      {q.grades.length ? q.grades.join(', ') : '—'}
+                      {q.grades.length ? q.grades.join(', ') : '-'}
                     </TableCell>
                     <TableCell className="truncate text-xs text-muted-foreground">
-                      {q.writerName ?? '—'}
+                      {q.writerName ?? '-'}
                     </TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <Button size="sm" onClick={() => router.push(`/question-bank/review/${q.id}`)}>

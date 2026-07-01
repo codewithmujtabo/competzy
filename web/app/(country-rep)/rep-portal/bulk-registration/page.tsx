@@ -143,7 +143,7 @@ export default function RepBulkRegistrationPage() {
       });
       setResult(res);
       toast.success(
-        `${res.registered} registered — ${res.created} new account(s), ${res.skipped} skipped.`,
+        `${res.registered} registered, ${res.created} new account(s), ${res.skipped} skipped.`,
       );
       await refresh();
     } catch (e) {
@@ -156,7 +156,7 @@ export default function RepBulkRegistrationPage() {
   const submitCsv = async () => {
     const students = csvRows.map(csvRowToPayload).filter((s) => s.fullName && s.email);
     if (students.length === 0) {
-      toast.error('CSV is missing required columns — need fullName + email.');
+      toast.error('CSV is missing required columns. Need fullName + email.');
       return;
     }
     await submitPayload(students);
@@ -314,7 +314,7 @@ export default function RepBulkRegistrationPage() {
                   <div>
                     <div className="mb-2 flex items-center justify-between">
                       <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
-                        Preview — {csvRows.length} row(s)
+                        Preview, {csvRows.length} row(s)
                       </p>
                       {csvIssueCount > 0 && (
                         <Badge
@@ -385,7 +385,7 @@ export default function RepBulkRegistrationPage() {
               <TabsContent value="manual" className="mt-4 space-y-4">
                 <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
                   Just a handful of students? Type them in here, or paste a block from Excel /
-                  Google Sheets — the grid splits cells automatically. Only{' '}
+                  Google Sheets, the grid splits cells automatically. Only{' '}
                   <strong>full name</strong>, <strong>email</strong>, and <strong>grade</strong>{' '}
                   are used for the local round.
                   {manualIssueCount > 0 && (

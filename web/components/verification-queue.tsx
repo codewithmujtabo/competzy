@@ -73,7 +73,7 @@ function StatusCell({ status, reason }: { status: Status; reason: string | null 
 }
 
 function ApplicantCell({ applicant }: { applicant: Applicant }) {
-  if (!applicant) return <span className="text-muted-foreground">—</span>;
+  if (!applicant) return <span className="text-muted-foreground">-</span>;
   return (
     <>
       <div className="text-sm">{applicant.name}</div>
@@ -249,7 +249,7 @@ export function VerificationQueue({
                       <TableCell>
                         <div className="font-medium text-foreground">{s.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {[s.city, s.province].filter(Boolean).join(', ') || '—'}
+                          {[s.city, s.province].filter(Boolean).join(', ') || '-'}
                         </div>
                       </TableCell>
                       <TableCell className="font-mono text-[12px] text-muted-foreground">{s.npsn}</TableCell>
@@ -298,9 +298,9 @@ export function VerificationQueue({
                       <TableCell>
                         <ApplicantCell applicant={tch.applicant} />
                       </TableCell>
-                      <TableCell className="text-sm">{tch.school || '—'}</TableCell>
-                      <TableCell className="font-mono text-[12px] text-muted-foreground">{tch.npsn || '—'}</TableCell>
-                      <TableCell className="text-sm">{tch.subject || '—'}</TableCell>
+                      <TableCell className="text-sm">{tch.school || '-'}</TableCell>
+                      <TableCell className="font-mono text-[12px] text-muted-foreground">{tch.npsn || '-'}</TableCell>
+                      <TableCell className="text-sm">{tch.subject || '-'}</TableCell>
                       <TableCell>
                         <StatusCell status={tch.verificationStatus} reason={tch.rejectionReason} />
                       </TableCell>

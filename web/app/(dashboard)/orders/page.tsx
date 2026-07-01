@@ -74,7 +74,7 @@ function rupiah(n: number) {
   return `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
 }
 function fmtDate(s: string | null) {
-  if (!s) return '—';
+  if (!s) return '-';
   return new Date(s).toLocaleString('en-US', {
     day: 'numeric',
     month: 'short',
@@ -246,14 +246,14 @@ function OrdersPage() {
                     </TableCell>
                     <TableCell>
                       <p className="font-medium text-foreground">
-                        {o.customerName || o.buyerName || '—'}
+                        {o.customerName || o.buyerName || '-'}
                       </p>
                       {o.buyerEmail && (
                         <p className="text-xs text-muted-foreground">{o.buyerEmail}</p>
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {o.itemCount ?? '—'}
+                      {o.itemCount ?? '-'}
                     </TableCell>
                     <TableCell className="font-medium text-foreground">{rupiah(o.total)}</TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">
@@ -328,9 +328,9 @@ function OrdersPage() {
                 <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                   Ship to
                 </p>
-                <p className="mt-1 text-foreground">{detail.customerName || '—'}</p>
-                <p className="text-muted-foreground">{detail.customerPhone || '—'}</p>
-                <p className="text-muted-foreground">{detail.customerAddress || '—'}</p>
+                <p className="mt-1 text-foreground">{detail.customerName || '-'}</p>
+                <p className="text-muted-foreground">{detail.customerPhone || '-'}</p>
+                <p className="text-muted-foreground">{detail.customerAddress || '-'}</p>
                 {detail.trackingNumber && (
                   <p className="mt-2 text-foreground">
                     Tracking: <span className="font-mono">{detail.trackingNumber}</span>

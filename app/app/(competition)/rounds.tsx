@@ -123,7 +123,7 @@ export default function CompetitionRoundsScreen() {
   };
 
   const profileGateLabel = profileGate
-    ? `${comp?.name ?? "This competition"} — ${profileGate.round.roundName}`
+    ? `${comp?.name ?? "This competition"}, ${profileGate.round.roundName}`
     : undefined;
 
   return (

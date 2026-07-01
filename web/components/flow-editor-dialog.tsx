@@ -42,11 +42,11 @@ interface FlowStep {
 }
 
 const CHECK_TYPE_OPTIONS: { value: CheckType; label: string }[] = [
-  { value: 'profile', label: 'Gate — profile complete' },
-  { value: 'documents', label: 'Gate — documents uploaded' },
-  { value: 'payment', label: 'Gate — payment made' },
-  { value: 'approval', label: 'Gate — organizer approved' },
-  { value: 'none', label: 'Info only — no gate' },
+  { value: 'profile', label: 'Gate, profile complete' },
+  { value: 'documents', label: 'Gate, documents uploaded' },
+  { value: 'payment', label: 'Gate, payment made' },
+  { value: 'approval', label: 'Gate, organizer approved' },
+  { value: 'none', label: 'Info only, no gate' },
 ];
 
 const CHECK_TYPE_LABEL: Record<CheckType, string> = {
