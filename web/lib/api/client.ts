@@ -28,37 +28,64 @@ export class HttpError extends Error {
   }
 }
 
+// A user should NEVER see a raw "HTTP 502" / "HTTP 500" / "Failed to fetch".
+// Those happen on transient server or gateway problems (a deploy restart, an
+// upstream blip) and network drops — none of which the user can act on, and
+// none of which should leak a status code into the UI. We return a calm,
+// localized fallback instead. 4xx are kept as-is because their messages are
+// meaningful and actionable ("Email already registered", validation, etc.).
+// Localized off <html lang> so it matches the active locale without needing
+// React context here. status 0 = network/fetch failure.
+function friendlyMessage(status: number): string {
+  const isId = typeof document !== 'undefined' && document.documentElement.lang === 'id';
+  if (status === 0) {
+    return isId
+      ? 'Koneksi bermasalah. Periksa internetmu lalu coba lagi.'
+      : 'Connection problem. Please check your internet and try again.';
+  }
+  return isId
+    ? 'Ada gangguan sementara di sisi kami. Mohon coba lagi sebentar lagi.'
+    : 'Something went wrong on our end. Please try again in a moment.';
+}
+
+// Turn a non-ok Response into an HttpError. Preserves the parsed body (so
+// callers can still branch on `.body.code`, e.g. PROFILE_INCOMPLETE) but keeps
+// any raw status code out of the user-facing `.message` for 5xx / non-JSON.
+async function errorFromResponse(res: Response): Promise<HttpError> {
+  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  const backendMsg = typeof body.message === 'string' ? body.message : undefined;
+  // 5xx (server + gateway) or a body with no usable message → friendly.
+  // 4xx with a message → keep it (it's meant for the user).
+  const message = res.status >= 500 || !backendMsg ? friendlyMessage(res.status) : backendMsg;
+  return new HttpError(message, res.status, body);
+}
+
 async function httpReq<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(init.headers as Record<string, string> ?? {}),
   };
 
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers,
-    credentials: 'include',
-  });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
-    const message = (body as { message?: string }).message ?? `HTTP ${res.status}`;
-    throw new HttpError(message, res.status, body as Record<string, unknown>);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, { ...init, headers, credentials: 'include' });
+  } catch {
+    // Network failure (offline, DNS, connection reset) — fetch rejects.
+    throw new HttpError(friendlyMessage(0), 0, {});
   }
+
+  if (!res.ok) throw await errorFromResponse(res);
   return res.json() as Promise<T>;
 }
 
 async function httpFormData<T>(path: string, formData: FormData): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    method: 'POST',
-    body: formData,
-    credentials: 'include',
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
-    const message = (body as { message?: string }).message ?? `HTTP ${res.status}`;
-    throw new HttpError(message, res.status, body as Record<string, unknown>);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, { method: 'POST', body: formData, credentials: 'include' });
+  } catch {
+    throw new HttpError(friendlyMessage(0), 0, {});
   }
+  if (!res.ok) throw await errorFromResponse(res);
   return res.json() as Promise<T>;
 }
 
