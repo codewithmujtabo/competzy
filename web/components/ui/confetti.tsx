@@ -6,9 +6,9 @@ import { useEffect, useRef } from 'react';
 // full-screen canvas. No dependencies. Honours prefers-reduced-motion (renders
 // nothing and calls onDone immediately). Auto-cleans once the burst settles.
 //
-// Colours follow the Competzy brand palette (warm gold/pink + cyan family)
+// Colours follow the competzy.com categorical accents
 // rather than a generic rainbow.
-const COLORS = ['#F7B643', '#BE65A9', '#FEE404', '#4BC2EC', '#4CBCBE', '#65C8DB', '#ffffff'];
+const COLORS = ['#5627ff', '#d9277b', '#f08c00', '#f8db46', '#31ab00', '#0066ff', '#ffffff'];
 
 type Particle = {
   x: number;

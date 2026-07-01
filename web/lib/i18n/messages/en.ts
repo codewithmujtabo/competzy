@@ -328,6 +328,7 @@ export const en = {
   'adm.kpiRegistrations': 'Registrations',
   'adm.kpiPaidRate': 'Paid Rate',
   'adm.kpiRevenue90d': 'Revenue · 90d',
+  'adm.kpiPaidCount': 'Paid Registrations',
   'adm.kpiAvgTimeToPay': 'Avg Time to Pay',
   'adm.free': '{n} free',
   'adm.paid': '{n} paid',

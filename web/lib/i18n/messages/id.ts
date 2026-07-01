@@ -323,6 +323,7 @@ export const id: Partial<Record<MessageKey, string>> = {
   'adm.kpiRegistrations': 'Pendaftaran',
   'adm.kpiPaidRate': 'Tingkat Pembayaran',
   'adm.kpiRevenue90d': 'Pendapatan · 90h',
+  'adm.kpiPaidCount': 'Pendaftaran Lunas',
   'adm.kpiAvgTimeToPay': 'Rata-rata Waktu Bayar',
   'adm.free': '{n} gratis',
   'adm.paid': '{n} lunas',
