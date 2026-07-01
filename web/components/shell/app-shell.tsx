@@ -298,8 +298,14 @@ export function AppShell({
             level so the sticky header above can't slide horizontally and
             overlay the sidebar. Inner overflow-x-auto containers (tables,
             wide diagrams) still scroll horizontally inside themselves. */}
+        {/* Keying the wrapper on pathname replays the fade-up on every client
+            navigation — the design system's page-transition without a router
+            animation lib. Reduced-motion users get an instant swap (global
+            prefers-reduced-motion reset in globals.css). */}
         <main className={cn('flex-1 overflow-y-auto overflow-x-hidden')}>
-          {children}
+          <div key={pathname} className="animate-fade-up [animation-duration:450ms]">
+            {children}
+          </div>
         </main>
       </SidebarInset>
     </SidebarProvider>
