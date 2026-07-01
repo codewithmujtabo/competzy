@@ -26,6 +26,10 @@ export const env = {
   SMTP_USER: process.env.SMTP_USER || "",
   SMTP_PASS: process.env.SMTP_PASS || "",
   SMTP_FROM: process.env.SMTP_FROM || "Competzy <noreply@competzy.id>",
+  // Destination inbox for public contact-form submissions (POST /api/contact,
+  // the /help page). Configurable so it can change without a code edit;
+  // defaults to the brand support address.
+  SUPPORT_EMAIL: process.env.SUPPORT_EMAIL || "competzy@eduversal.org",
   OTP_EXPIRY_MINUTES: parseInt(process.env.OTP_EXPIRY_MINUTES || "10", 10),
   TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || "",
   TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN || "",

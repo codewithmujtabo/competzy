@@ -466,6 +466,10 @@ export default function UnifiedLogin() {
                   {t('login.footerTerms')}
                 </Link>
                 <span>·</span>
+                <Link href="/help" className="hover:text-foreground">
+                  {t('login.footerHelp')}
+                </Link>
+                <span>·</span>
                 <a href="mailto:hello@competzy.com" className="hover:text-foreground">
                   {t('login.footerContact')}
                 </a>

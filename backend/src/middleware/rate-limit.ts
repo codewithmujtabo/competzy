@@ -84,6 +84,23 @@ export const passwordResetLimiter = rateLimit({
 });
 
 /**
+ * Contact-form limiter: 5 messages per 15 minutes per IP + email.
+ * Public /help contact form; throttles spam and abuse of the support inbox.
+ */
+export const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { keyGeneratorIpFallback: false },
+  message: { message: "Too many messages. Please wait 15 minutes and try again." },
+  keyGenerator: (req) => {
+    const identifier = req.body?.email || "unknown";
+    return `${ipKeyGenerator(req.ip ?? "")}:${identifier}`;
+  },
+});
+
+/**
  * PIN verify limiter: 5 attempts per 15 minutes per IP + email.
  * Protects against brute-force PIN guessing for parent invitations.
  */
