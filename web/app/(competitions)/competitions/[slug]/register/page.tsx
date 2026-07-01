@@ -205,8 +205,11 @@ export default function CompetitionRegisterPage() {
     };
   }, [email, emailValid]);
 
+  // Note: phoneInUse is intentionally NOT a gate. A phone may be shared (a
+  // parent's WhatsApp across several children), so it is advisory only. Email
+  // must be unique, so emailTaken blocks submit.
   const canSubmitForm =
-    !sending && consent && !!fullName.trim() && emailValid && !passwordTooShort && password.length >= 8 && password === confirmPassword && phoneValid && roleFieldsValid;
+    !sending && consent && !!fullName.trim() && emailValid && !emailTaken && !passwordTooShort && password.length >= 8 && password === confirmPassword && phoneValid && roleFieldsValid;
 
   // ── Step 1: send the verification code ──────────────────────────────────
   const handleSendCode = async (e: FormEvent) => {
