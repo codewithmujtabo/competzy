@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   BookOpen,
+  Send,
   ClipboardList,
   Clock,
   Globe,
@@ -80,6 +81,7 @@ const NAV: NavSection[] = [
     items: [
       { label: 'Waitlist', labelKey: 'opnav.waitlist', href: '/admin/waitlist', icon: Mailbox },
       { label: 'Send Notification', labelKey: 'opnav.sendNotification', href: '/notifications', icon: Megaphone },
+      { label: 'Email Broadcast', labelKey: 'opnav.emailBroadcast', href: '/broadcasts', icon: Send },
       { label: 'Announcements', labelKey: 'opnav.announcements', href: '/announcements', icon: Megaphone },
       { label: 'Materials', labelKey: 'opnav.materials', href: '/materials', icon: BookOpen },
       { label: 'Referrals', labelKey: 'opnav.referrals', href: '/referrals', icon: Share2 },

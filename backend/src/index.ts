@@ -24,6 +24,7 @@ import bulkRegistrationRoutes from "./routes/bulk-registration.routes";
 import schoolsRoutes from "./routes/schools.routes";
 import teachersRoutes from "./routes/teachers.routes";
 import adminRoutes from "./routes/admin.routes";
+import broadcastRoutes from "./routes/broadcast.routes";
 import organizerRoutes from "./routes/organizer.routes";
 import regionsRoutes from "./routes/regions.routes";
 import favoritesRoutes from "./routes/favorites.routes";
@@ -43,6 +44,7 @@ import waitlistRoutes from "./routes/waitlist.routes";
 import maintenanceRoutes from "./routes/maintenance.routes";
 import contactRoutes from "./routes/contact.routes";
 import { initializeCronJobs } from "./services/cron.service";
+import { scheduleBroadcastProcessor } from "./services/broadcast.service";
 import { verifySignedUrlToken } from "./services/storage.service";
 import fs from "fs";
 
@@ -132,6 +134,7 @@ app.use("/api/parents", parentsRoutes);
 app.use("/api/bulk-registration", bulkRegistrationRoutes);
 app.use("/api/schools", schoolsRoutes);
 app.use("/api/teachers", teachersRoutes);
+app.use("/api/admin/broadcasts", broadcastRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/organizers", organizerRoutes);
 app.use("/api/regions", regionsRoutes);
@@ -191,6 +194,9 @@ app.listen(env.PORT, () => {
 
   // Initialize Sprint 4 cron jobs
   initializeCronJobs();
+
+  // Email-broadcast background sender (kirim.email-style campaigns).
+  scheduleBroadcastProcessor();
 });
 
 export default app;
