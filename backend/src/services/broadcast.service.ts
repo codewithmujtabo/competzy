@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "crypto";
 import { pool } from "../config/database";
 import { env } from "../config/env";
 import { sendMailOrThrow, isSmtpConfigured } from "./email.service";
@@ -38,13 +39,60 @@ interface Recipient {
 const BATCH_SIZE = 90; // Resend batch cap is 100 — headroom for safety.
 const TICK_MS = 15_000;
 
+// ── Unsubscribe tokens (RFC 8058 one-click) ─────────────────────────────────
+// Stateless HMAC over the email so footer links + List-Unsubscribe headers
+// need no per-recipient DB writes at send time. Keyed on JWT_SECRET.
+
+function unsubSig(email: string): string {
+  return createHmac("sha256", env.JWT_SECRET).update(email.toLowerCase()).digest("base64url");
+}
+
+export function unsubscribeToken(email: string): string {
+  return `${Buffer.from(email.toLowerCase()).toString("base64url")}.${unsubSig(email)}`;
+}
+
+/** Returns the verified email, or null on a bad/tampered token. */
+export function verifyUnsubscribeToken(token: string): string | null {
+  const dot = token.lastIndexOf(".");
+  if (dot <= 0) return null;
+  try {
+    const email = Buffer.from(token.slice(0, dot), "base64url").toString("utf8");
+    const given = Buffer.from(token.slice(dot + 1), "base64url");
+    const want = Buffer.from(unsubSig(email), "base64url");
+    if (given.length !== want.length || !timingSafeEqual(given, want)) return null;
+    return email;
+  } catch {
+    return null;
+  }
+}
+
+export async function suppressEmail(email: string, source: "link" | "one-click"): Promise<void> {
+  await pool.query(
+    `INSERT INTO email_unsubscribes (email, source) VALUES (lower($1), $2)
+     ON CONFLICT (email) DO NOTHING`,
+    [email, source]
+  );
+}
+
+function unsubscribeUrl(email: string): string {
+  // The API endpoint accepts both the one-click POST (RFC 8058) and a human
+  // GET (302 → the arena confirmation page).
+  const api = env.APP_URL.includes("localhost")
+    ? "http://localhost:3010"
+    : "https://api.competzy.com";
+  return `${api}/api/email/unsubscribe?token=${unsubscribeToken(email)}`;
+}
+
 // ── Audience resolution — always live from the DB ───────────────────────────
 
 export async function resolveAudience(a: Audience): Promise<Recipient[]> {
   const base = `SELECT u.id AS user_id, u.email, u.full_name
                   FROM users u
                  WHERE u.deleted_at IS NULL
-                   AND u.email IS NOT NULL AND u.email <> ''`;
+                   AND u.email IS NOT NULL AND u.email <> ''
+                   AND NOT EXISTS (
+                     SELECT 1 FROM email_unsubscribes eu WHERE eu.email = lower(u.email)
+                   )`;
 
   switch (a.kind) {
     case "all_students":
@@ -69,6 +117,9 @@ export async function resolveAudience(a: Audience): Promise<Recipient[]> {
            JOIN users u ON u.id = r.user_id
           WHERE r.comp_id = $1 AND r.deleted_at IS NULL
             AND u.deleted_at IS NULL AND u.email IS NOT NULL AND u.email <> ''
+            AND NOT EXISTS (
+              SELECT 1 FROM email_unsubscribes eu WHERE eu.email = lower(u.email)
+            )
             ${statusFilter}`,
         [a.compId]
       );
@@ -99,7 +150,7 @@ function mapRow(r: { user_id: string; email: string; full_name: string | null })
 // ── Branded email wrapper ───────────────────────────────────────────────────
 
 /** Wraps campaign HTML in the Competzy shell. `{{name}}` personalizes. */
-export function renderBroadcastHtml(bodyHtml: string, fullName: string | null): string {
+export function renderBroadcastHtml(bodyHtml: string, fullName: string | null, unsubUrl?: string): string {
   const personalized = bodyHtml.split("{{name}}").join(escapeHtml(fullName || "Kompetitor"));
   return `<!doctype html>
 <html><body style="margin:0;padding:0;background:#f4f1fb;font-family:'Plus Jakarta Sans',Helvetica,Arial,sans-serif;">
@@ -113,7 +164,7 @@ export function renderBroadcastHtml(bodyHtml: string, fullName: string | null): 
     <p style="text-align:center;color:#54505a;font-size:12px;margin-top:16px;line-height:1.6;">
       Kamu menerima email ini karena memiliki akun Competzy.<br/>
       <a href="${env.APP_URL}" style="color:#5627ff;">arena.competzy.com</a> ·
-      <a href="mailto:competzy@eduversal.org?subject=Unsubscribe" style="color:#54505a;">Berhenti berlangganan</a>
+      <a href="${unsubUrl ?? "mailto:competzy@eduversal.org?subject=Unsubscribe"}" style="color:#54505a;">Berhenti berlangganan</a>
     </p>
   </div>
 </body></html>`;
@@ -136,6 +187,8 @@ interface BatchItem {
   recipientRowId: number;
   email: string;
   html: string;
+  /** RFC 8058 one-click unsubscribe headers. */
+  headers: Record<string, string>;
 }
 
 /** Sends one batch. Returns per-row outcomes aligned to `items`. */
@@ -150,7 +203,7 @@ async function sendBatch(
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify(
-          items.map((i) => ({ from: env.SMTP_FROM, to: [i.email], subject, html: i.html }))
+          items.map((i) => ({ from: env.SMTP_FROM, to: [i.email], subject, html: i.html, headers: i.headers }))
         ),
       });
       if (res.ok) return items.map(() => ({ ok: true }));
@@ -167,7 +220,7 @@ async function sendBatch(
   const out: Array<{ ok: boolean; error?: string }> = [];
   for (const i of items) {
     try {
-      await sendMailOrThrow({ from: env.SMTP_FROM, to: i.email, subject, html: i.html });
+      await sendMailOrThrow({ from: env.SMTP_FROM, to: i.email, subject, html: i.html, headers: i.headers });
       out.push({ ok: true });
     } catch (err) {
       out.push({ ok: false, error: err instanceof Error ? err.message.slice(0, 300) : "send failed" });
@@ -254,11 +307,18 @@ export async function processBroadcasts(): Promise<void> {
     return;
   }
 
-  const items: BatchItem[] = pending.rows.map((r) => ({
-    recipientRowId: r.id,
-    email: r.email,
-    html: renderBroadcastHtml(html, r.full_name),
-  }));
+  const items: BatchItem[] = pending.rows.map((r) => {
+    const unsub = unsubscribeUrl(r.email);
+    return {
+      recipientRowId: r.id,
+      email: r.email,
+      html: renderBroadcastHtml(html, r.full_name, unsub),
+      headers: {
+        "List-Unsubscribe": `<${unsub}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+    };
+  });
 
   const results = await sendBatch(subject, items);
 

@@ -25,6 +25,7 @@ import schoolsRoutes from "./routes/schools.routes";
 import teachersRoutes from "./routes/teachers.routes";
 import adminRoutes from "./routes/admin.routes";
 import broadcastRoutes from "./routes/broadcast.routes";
+import emailPublicRoutes from "./routes/email-public.routes";
 import organizerRoutes from "./routes/organizer.routes";
 import regionsRoutes from "./routes/regions.routes";
 import favoritesRoutes from "./routes/favorites.routes";
@@ -149,6 +150,8 @@ app.use("/api/bulk-registration", bulkRegistrationRoutes);
 app.use("/api/schools", schoolsRoutes);
 app.use("/api/teachers", teachersRoutes);
 app.use("/api/admin/broadcasts", broadcastRoutes);
+// Public unsubscribe (RFC 8058 one-click + footer link) — no auth by design.
+app.use("/api/email", emailPublicRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/organizers", organizerRoutes);
 app.use("/api/regions", regionsRoutes);
