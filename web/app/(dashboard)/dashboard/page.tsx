@@ -130,7 +130,7 @@ function ChartTooltip({
 
 function StatSkeleton() {
   return (
-    <Card className="gap-0 overflow-hidden border-0 bg-gradient-to-br from-[#efeaff] to-[#f7f3ff] p-6">
+    <Card className="gap-0 overflow-hidden border-0 bg-gradient-to-br from-[#ece5ff] to-[#f4f1fb] p-6">
       <div className="flex items-start justify-between">
         <Skeleton className="h-3 w-24 bg-[#5627ff]/20" />
         <Skeleton className="size-11 rounded-2xl bg-[#5627ff]/20" />

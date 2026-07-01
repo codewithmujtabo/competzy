@@ -86,7 +86,7 @@ interface CompTheme {
   heroStyle: 'tricolor' | 'komodo' | 'gradient';
 }
 
-const DONE_GREEN = '#16A34A';
+const DONE_GREEN = '#31ab00';
 // "Pay registration fee" CTA colour — a fixed orange across EVERY competition
 // (mentor brief), rather than the per-competition accent (which is lime for
 // Komodo and the default purple for operator-created comps).
@@ -110,11 +110,11 @@ function compTheme(config: CompetitionPortalConfig): CompTheme {
     // Komodo — lime fill (dark ink), violet structural, deep-purple panel.
     return {
       fill: '#B8FF00',
-      fillInk: '#1A0880',
+      fillInk: '#2a1170',
       structural: '#5627FF',
       structuralSoft: hexA('#5627FF', 0.1),
       done,
-      panelGradient: 'linear-gradient(160deg, #1A0880 0%, #5627FF 100%)',
+      panelGradient: 'linear-gradient(160deg, #2a1170 0%, #5627FF 100%)',
       heroStyle: 'komodo',
     };
   }
@@ -1187,7 +1187,7 @@ function CompetitionHero({
         className="relative gap-0 overflow-hidden border-0 p-7 text-white sm:p-9"
         style={{
           background:
-            'radial-gradient(900px 320px at 88% -50%, #4B1FA0 0%, transparent 60%), linear-gradient(120deg, #1E0550 0%, #3A1290 100%)',
+            'radial-gradient(900px 320px at 88% -50%, #3a1bb8 0%, transparent 60%), linear-gradient(120deg, #1E0550 0%, #3A1290 100%)',
         }}
       >
         {config.mascot && (
@@ -1201,7 +1201,7 @@ function CompetitionHero({
         )}
         <span
           className="inline-block rounded-md px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em]"
-          style={{ background: '#B8FF00', color: '#1A0880' }}
+          style={{ background: '#B8FF00', color: '#2a1170' }}
         >
           {config.shortName} · International Math Competition
         </span>

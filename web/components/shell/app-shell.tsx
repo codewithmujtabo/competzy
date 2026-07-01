@@ -142,11 +142,11 @@ export function AppShell({
     <SidebarProvider>
       <Sidebar
         collapsible="icon"
-        className="border-r-0 bg-gradient-to-b from-white via-white to-[#f5f0ff]"
+        className="border-r-0 bg-gradient-to-b from-white via-white to-[#f4f1fb]"
       >
         <SidebarHeader className="border-b border-sidebar-border/60 pb-3">
           <div className="flex items-center gap-3 px-2 py-2">
-            <div className="relative flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-[#7849ff] to-[#937aff] text-primary-foreground shadow-[0_10px_28px_-12px_rgba(86,39,255,0.65)]">
+            <div className="relative flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-[#6a3dff] to-[#937aff] text-primary-foreground shadow-[0_10px_28px_-12px_rgba(86,39,255,0.65)]">
               <BrandIcon className="size-[1.4rem]" />
               <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-[#f8db46] ring-2 ring-white" />
             </div>
@@ -254,7 +254,7 @@ export function AppShell({
                   aria-label={t('shell.accountMenu')}
                 >
                   <Avatar className="size-8">
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-[#7849ff] text-[12px] font-semibold text-primary-foreground">
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-[#6a3dff] text-[12px] font-semibold text-primary-foreground">
                       {initials(user.name)}
                     </AvatarFallback>
                   </Avatar>

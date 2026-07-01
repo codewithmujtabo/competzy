@@ -205,7 +205,7 @@ export default function CompetitionPayPage() {
   const formatAmount = (n: number) => rupiah(n);
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div>
       <div className="mx-auto max-w-xl space-y-6 p-6 lg:p-10">
         <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" asChild>
           <Link href={paths.dashboard}>

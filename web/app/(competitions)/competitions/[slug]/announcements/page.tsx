@@ -119,7 +119,7 @@ export default function CompetitionAnnouncementsPage() {
   const rest = items?.filter((a) => !a.isFeatured) ?? [];
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div>
       <div className="mx-auto max-w-2xl space-y-6 p-6 lg:p-10">
         <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" asChild>
           <Link href={paths.dashboard}>

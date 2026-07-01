@@ -18,9 +18,9 @@ export const metadata: Metadata = {
  */
 export default function MaintenancePage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white via-white to-[#f5f0ff] px-6 py-12">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-white via-white to-[#f4f1fb] px-6 py-12">
       <div className="mx-auto w-full max-w-xl text-center">
-        <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5627ff] via-[#7849ff] to-[#937aff] text-white shadow-[0_18px_42px_-18px_rgba(86,39,255,0.65)]">
+        <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5627ff] via-[#6a3dff] to-[#937aff] text-white shadow-[0_18px_42px_-18px_rgba(86,39,255,0.65)]">
           <Wrench className="size-7" aria-hidden />
         </div>
 

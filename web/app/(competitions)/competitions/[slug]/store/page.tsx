@@ -54,7 +54,7 @@ export default function CompetitionStorePage() {
   if (!config) return null;
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div>
       <div className="mx-auto max-w-5xl space-y-6 p-6 lg:p-10">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" asChild>
