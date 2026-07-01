@@ -188,7 +188,7 @@ export default function CompetitionLandingPage() {
         : 'Register now';
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Top bar — subtle, keeps the brand wordmark + a back-to-catalog escape
           hatch for students who clicked through and want to keep browsing. */}
       <header className="border-b border-border/40 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">

@@ -102,7 +102,7 @@ function mapRow(r: { user_id: string; email: string; full_name: string | null })
 export function renderBroadcastHtml(bodyHtml: string, fullName: string | null): string {
   const personalized = bodyHtml.split("{{name}}").join(escapeHtml(fullName || "Kompetitor"));
   return `<!doctype html>
-<html><body style="margin:0;padding:0;background:#faf6ec;font-family:'Plus Jakarta Sans',Helvetica,Arial,sans-serif;">
+<html><body style="margin:0;padding:0;background:#f4f1fb;font-family:'Plus Jakarta Sans',Helvetica,Arial,sans-serif;">
   <div style="max-width:600px;margin:0 auto;padding:24px 16px;">
     <div style="background:linear-gradient(135deg,#5627ff,#3a1bb8);border-radius:16px 16px 0 0;padding:20px 28px;">
       <span style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.01em;">Competzy</span>

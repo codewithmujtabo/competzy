@@ -31,6 +31,7 @@ import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { getCompetitionConfig, competitionRegistry } from '@/lib/competitions/registry';
 import { compStatusLabel, compStatusTone } from '@/lib/competitions/status';
 import { cn } from '@/lib/utils';
+import { AnimatedNumber } from '@/components/motion/animated-number';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -136,15 +137,17 @@ function resolveLogo(comp: CatalogCompetition): string | null {
 }
 
 type Palette = { from: string; to: string; accent: string; glow: string; ink: 'light' | 'dark' };
+// Landing categorical accents only — indigo, pink, orange, green, blue,
+// gold, lime, sirih. Operator-created competitions hash into these.
 const HASH_PALETTES: Palette[] = [
-  { from: '#7C3AED', to: '#3D087B', accent: '#6B1AB8', glow: '#C084FC', ink: 'light' },
-  { from: '#EC4899', to: '#9D174D', accent: '#BE185D', glow: '#FBCFE8', ink: 'light' },
-  { from: '#F59E0B', to: '#B45309', accent: '#B45309', glow: '#FDE68A', ink: 'dark' },
-  { from: '#10B981', to: '#065F46', accent: '#047857', glow: '#6EE7B7', ink: 'light' },
-  { from: '#3B82F6', to: '#1E40AF', accent: '#1D4ED8', glow: '#93C5FD', ink: 'light' },
-  { from: '#F43F5E', to: '#9F1239', accent: '#BE123C', glow: '#FDA4AF', ink: 'light' },
-  { from: '#06B6D4', to: '#155E75', accent: '#0E7490', glow: '#67E8F9', ink: 'light' },
-  { from: '#A855F7', to: '#6D28D9', accent: '#7E22CE', glow: '#D8B4FE', ink: 'light' },
+  { from: '#6a3dff', to: '#2a1170', accent: '#5627ff', glow: '#937aff', ink: 'light' },
+  { from: '#e85aa0', to: '#b01561', accent: '#d9277b', glow: '#f5b1d0', ink: 'light' },
+  { from: '#ffb84d', to: '#c47200', accent: '#f08c00', glow: '#ffd9a1', ink: 'dark' },
+  { from: '#54c91f', to: '#20720a', accent: '#31ab00', glow: '#a8e88a', ink: 'light' },
+  { from: '#3d8bff', to: '#0047c2', accent: '#0066ff', glow: '#9cc4ff', ink: 'light' },
+  { from: '#fbe57a', to: '#d9b21a', accent: '#b8860b', glow: '#fdf2b3', ink: 'dark' },
+  { from: '#a5ec4a', to: '#57a30a', accent: '#4f8f0e', glow: '#d3f5a1', ink: 'dark' },
+  { from: '#937aff', to: '#4a22cc', accent: '#5627ff', glow: '#c9bcff', ink: 'light' },
 ];
 
 type CardBrand = { from: string; to: string; accent: string; glow: string; ink: 'light' | 'dark'; logoSrc: string | null };
@@ -239,7 +242,7 @@ function CompletionRing({ percent }: { percent: number }) {
         cy="36"
         r={r}
         fill="none"
-        stroke="#FFE459"
+        stroke="#f8db46"
         strokeWidth="6"
         strokeLinecap="round"
         strokeDasharray={`${dash} ${c - dash}`}
@@ -253,7 +256,7 @@ function CompletionRing({ percent }: { percent: number }) {
         dominantBaseline="central"
         fontSize="14"
         fontWeight="700"
-        fill="#FFE459"
+        fill="#f8db46"
       >
         {percent}%
       </text>
@@ -456,7 +459,9 @@ function KpiTile({
           <Icon className="size-4" strokeWidth={2.25} />
         </span>
       </div>
-      <p className="relative mt-4 font-serif text-3xl font-semibold tracking-tight">{value}</p>
+      <p className="relative mt-4 font-serif text-3xl font-bold tracking-tight">
+        {typeof value === 'number' ? <AnimatedNumber value={value} /> : value}
+      </p>
       {hint && <p className="relative mt-1 text-xs opacity-80">{hint}</p>}
     </Card>
   );
@@ -603,33 +608,33 @@ export default function CompetitionCatalogPage() {
         <Card
           className={cn(
             'relative gap-0 overflow-hidden border-0 p-7 sm:p-9',
-            'bg-gradient-to-br from-[#3D087B] via-[#6B1AB8] to-[#F43B86]',
-            'shadow-[0_28px_70px_-30px_rgba(61,8,123,0.55)]',
+            'bg-gradient-to-br from-[#2a1170] via-[#5627ff] to-[#d9277b]',
+            'shadow-[0_28px_70px_-30px_rgba(86,39,255,0.5)]',
           )}
         >
-          <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 size-72 rounded-full bg-[#FFE459] opacity-30 blur-3xl" />
-          <span aria-hidden className="pointer-events-none absolute -left-16 -bottom-24 size-64 rounded-full bg-[#F43B86] opacity-25 blur-3xl" />
+          <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 size-72 rounded-full bg-[#f8db46] opacity-30 blur-3xl animate-ambient" />
+          <span aria-hidden className="pointer-events-none absolute -left-16 -bottom-24 size-64 rounded-full bg-[#937aff] opacity-25 blur-3xl animate-ambient [animation-delay:6s]" />
 
           <div className="relative flex flex-wrap items-start justify-between gap-5">
             <div className="min-w-0 max-w-xl">
               <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 backdrop-blur-sm ring-1 ring-white/25">
-                <Sparkles className="size-3.5 text-[#FFE459]" />
-                <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#FFE459]">
+                <Sparkles className="size-3.5 text-[#f8db46]" />
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#f8db46]">
                   {t('catalog.welcomeBack')}
                 </span>
               </div>
-              <h1 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-[#FFE459] sm:text-4xl">
+              <h1 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-[#f8db46] sm:text-4xl">
                 {t('catalog.greeting', { name: firstName })}
               </h1>
-              <p className="mt-2 max-w-prose text-sm text-[#FFE459]/90">
+              <p className="mt-2 max-w-prose text-sm text-[#f8db46]/90">
                 {summary?.continueTask
-                  ? `${summary.continueTask.label}, pick up where you left off below.`
+                  ? `${summary.continueTask.label}${t('catalog.continueHint')}`
                   : t('catalog.subtitle')}
               </p>
               {isStudent && me && completion < 100 && (
                 <Link
                   href="/account/profile"
-                  className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[#FFE459]/90 underline-offset-4 hover:underline"
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[#f8db46]/90 underline-offset-4 hover:underline"
                 >
                   {t('catalog.completeProfile')} <ArrowRight className="size-3" />
                 </Link>
@@ -639,13 +644,13 @@ export default function CompetitionCatalogPage() {
               <div className="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur-sm ring-1 ring-white/20">
                 <CompletionRing percent={completion} />
                 <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#FFE459]/80">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#f8db46]/80">
                     Profile
                   </p>
-                  <p className="mt-1 font-serif text-lg font-semibold text-[#FFE459]">
+                  <p className="mt-1 font-serif text-lg font-semibold text-[#f8db46]">
                     {completion === 100 ? t('catalog.profileAllSet') : t('catalog.profileAlmost')}
                   </p>
-                  <p className="text-xs text-[#FFE459]/80">{completion}% complete</p>
+                  <p className="text-xs text-[#f8db46]/80">{completion}% complete</p>
                 </div>
               </div>
             )}
@@ -654,38 +659,38 @@ export default function CompetitionCatalogPage() {
 
         {/* KPI strip — student only. */}
         {isStudent && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="stagger-children grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiTile
               label={t('catalog.kpiRegistrations')}
               value={summary?.counts.registrations ?? 0}
               hint={t('catalog.kpiRegistrationsHint')}
               icon={ClipboardCheck}
-              gradient="bg-gradient-to-br from-[#3D087B] via-[#6B1AB8] to-[#1F0454]"
-              ink="text-[#FFE459]"
+              gradient="bg-gradient-to-br from-[#6a3dff] via-[#5627ff] to-[#2a1170]"
+              ink="text-white"
             />
             <KpiTile
               label={t('catalog.kpiCertificates')}
               value={summary?.counts.certificates ?? 0}
               hint={t('catalog.kpiCertificatesHint')}
               icon={Award}
-              gradient="bg-gradient-to-br from-[#F43B86] via-[#FF6BA8] to-[#8A1A6B]"
-              ink="text-[#FFF4E8]"
+              gradient="bg-gradient-to-br from-[#e85aa0] via-[#d9277b] to-[#b01561]"
+              ink="text-white"
             />
             <KpiTile
               label={t('catalog.kpiBestScore')}
               value={summary?.bestScore ? summary.bestScore.value : '-'}
               hint={summary?.bestScore ? summary.bestScore.compName : t('catalog.kpiBestScoreHint')}
               icon={Trophy}
-              gradient="bg-gradient-to-br from-[#FFE459] via-[#FFD93D] to-[#FFC93C]"
-              ink="text-[#11052C]"
+              gradient="bg-gradient-to-br from-[#fbe57a] via-[#f8db46] to-[#eec522]"
+              ink="text-[#2d240a]"
             />
             <KpiTile
               label={t('catalog.kpiSaved')}
               value={summary?.counts.savedComps ?? favIds.size}
               hint={t('catalog.kpiSavedHint')}
               icon={Heart}
-              gradient="bg-gradient-to-br from-[#11052C] via-[#1F0454] to-[#3D087B]"
-              ink="text-[#FFE459]"
+              gradient="bg-gradient-to-br from-[#3d8bff] via-[#0066ff] to-[#0047c2]"
+              ink="text-white"
             />
           </div>
         )}
@@ -826,7 +831,7 @@ export default function CompetitionCatalogPage() {
                   )}
                 </Card>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="stagger-children grid gap-4 sm:grid-cols-2">
                   {filtered!.map((c) => (
                     <CompetitionCard
                       key={c.id}
@@ -850,7 +855,7 @@ export default function CompetitionCatalogPage() {
                 <p className="mt-0.5 text-sm text-muted-foreground">
                   {summary.recentCertificates.length > 0
                     ? t('catalog.achievementsHint')
-                    : 'Finish a competition exam to earn your first certificate.'}
+                    : t('catalog.achievementsFirstHint')}
                 </p>
               </div>
             </div>
@@ -860,15 +865,15 @@ export default function CompetitionCatalogPage() {
                 <p className="text-sm text-muted-foreground">{t('catalog.achievementsEmpty')}</p>
               </Card>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="stagger-children grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {summary.recentCertificates.map((c) => (
                   <Card key={c.certificateNumber} className="gap-0 overflow-hidden p-0">
                     <div
                       className={cn(
                         'p-5',
                         c.type === 'achievement'
-                          ? 'bg-gradient-to-br from-[#FFE459] via-[#FFD93D] to-[#FFC93C] text-[#11052C]'
-                          : 'bg-gradient-to-br from-[#3D087B] via-[#6B1AB8] to-[#7A3FC4] text-[#FFE459]',
+                          ? 'bg-gradient-to-br from-[#fbe57a] via-[#f8db46] to-[#eec522] text-[#2d240a]'
+                          : 'bg-gradient-to-br from-[#6a3dff] via-[#5627ff] to-[#2a1170] text-white',
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">

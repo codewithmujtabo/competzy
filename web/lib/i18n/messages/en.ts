@@ -66,6 +66,8 @@ export const en = {
 
   // ── Catalog (/competitions) ────────────────────────────────────────
   'catalog.welcomeBack': 'Welcome back',
+  'catalog.continueHint': ', pick up where you left off below.',
+  'catalog.achievementsFirstHint': 'Finish a competition exam to earn your first certificate.',
   'catalog.greeting': 'Hey {name}!',
   'catalog.subtitle': 'Pick a competition to register or check on your progress.',
   'catalog.completeProfile': 'Complete your profile',

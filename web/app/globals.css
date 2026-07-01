@@ -9,7 +9,8 @@
    Mirrors the competzy.com landing identity exactly:
    - Electric Indigo #5627ff primary, Hot Pink #d9277b, categorical accents
      (orange #f08c00, green #31ab00, blue #06f, lime #7cd516, gold #f8db46)
-   - Warm ivory surfaces in light, deep ink #0e0b14 in dark
+   - The landing's --gradient-hero (white→lavender radial) as the page ground
+     in light; its deep-ink counterpart in dark
    - Plus Jakarta Sans (display + body) / JetBrains Mono (labels)
    - The landing's motion language: ease-out-expo enters, spring overshoot,
      150/250/400/600ms durations, fade-up / slide-in / float / shimmer /
@@ -149,8 +150,9 @@
 
   --radius: 0.7rem;
 
-  /* Light — the landing's warm ivory surfaces, ink text, Electric Indigo */
-  --background: #faf6ec;
+  /* Light — the landing's hero lavender-white family, ink text, Electric Indigo */
+  --gradient-hero: radial-gradient(130% 100% at 50% 0%, #fdfcff 0%, #f4f1fb 55%, #ece7f6 100%);
+  --background: #f4f1fb;
   --foreground: #181219;
   --card: #ffffff;
   --card-foreground: #181219;
@@ -158,10 +160,10 @@
   --popover-foreground: #181219;
   --primary: #5627ff;
   --primary-foreground: #ffffff;
-  --secondary: #f0ede4;
+  --secondary: #ece7f6;
   --secondary-foreground: #2a2226;
-  --muted: #f0ede4;
-  /* ≥ 5.8:1 on the ivory background — passes WCAG AA. */
+  --muted: #ece7f6;
+  /* ≥ 5.8:1 on the lavender-white background — passes WCAG AA. */
   --muted-foreground: #54505a;
   --accent: #ece5ff;
   --accent-foreground: #3f18cc;
@@ -201,6 +203,7 @@
 
 .dark {
   /* Dark — the landing's deep-ink night palette. */
+  --gradient-hero: radial-gradient(130% 100% at 50% 0%, #1a1430 0%, #120e1e 55%, #0e0b14 100%);
   --background: #0e0b14;
   --foreground: #f3f0f7;
   --card: #17131f;
@@ -256,7 +259,7 @@
     background-color: var(--background);
   }
   body {
-    background: linear-gradient(180deg, #f6f0e0 0%, #fdfbf6 62%);
+    background: var(--gradient-hero);
     background-attachment: fixed;
     min-height: 100vh;
     color: var(--foreground);
@@ -265,7 +268,7 @@
     text-rendering: optimizelegibility;
   }
   .dark body {
-    background: radial-gradient(ellipse at top, #171226 0%, #0e0b14 68%);
+    background: var(--gradient-hero);
     background-attachment: fixed;
   }
 

@@ -66,6 +66,8 @@ export const id: Partial<Record<MessageKey, string>> = {
 
   // ── Catalog (/competitions) ────────────────────────────────────────
   'catalog.welcomeBack': 'Selamat datang kembali',
+  'catalog.continueHint': ', lanjutkan dari tempatmu berhenti di bawah.',
+  'catalog.achievementsFirstHint': 'Selesaikan ujian kompetisi untuk meraih sertifikat pertamamu.',
   'catalog.greeting': 'Hai {name}!',
   'catalog.subtitle': 'Pilih kompetisi untuk mendaftar atau melihat progresmu.',
   'catalog.completeProfile': 'Lengkapi profilmu',

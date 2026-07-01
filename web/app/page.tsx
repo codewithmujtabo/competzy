@@ -220,7 +220,7 @@ export default function UnifiedLogin() {
   return (
     <div className="relative grid min-h-screen lg:grid-cols-2">
       {/* Form panel — LEFT */}
-      <div className="relative flex items-center justify-center bg-background px-6 py-12">
+      <div className="relative flex items-center justify-center px-6 py-12">
         {/* Language + theme toggles — top-right of the form column */}
         <div className="absolute right-5 top-5 z-20 flex items-center gap-2">
           <LocaleToggle className="rounded-lg border bg-card px-2 py-1.5" />

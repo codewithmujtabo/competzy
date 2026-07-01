@@ -202,7 +202,9 @@ export function AppShell({
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset>
+      {/* bg-transparent: the body carries the landing's --gradient-hero, and
+          the workspace must let it show through on every portal page. */}
+      <SidebarInset className="bg-transparent">
         {/* Impersonation banner — renders inside the workspace so it pushes
             the header + content down instead of overlaying them. Returns
             null when not impersonating, so layout is unaffected normally. */}

@@ -205,7 +205,7 @@ export default function HelpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <PublicToggles />
       <div className="mx-auto max-w-3xl px-6 py-12">
         <Link

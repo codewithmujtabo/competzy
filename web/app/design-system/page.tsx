@@ -34,10 +34,10 @@ const brandColors: ColorRow[] = [
 ];
 
 const surfaceColors: ColorRow[] = [
-  { name: 'Background', cls: 'bg-background', hex: '#FAF6EC', note: 'Warm ivory' },
+  { name: 'Background', cls: 'bg-background', hex: '#F4F1FB', note: 'Hero lavender' },
   { name: 'Card', cls: 'bg-card', hex: '#FFFFFF' },
-  { name: 'Secondary', cls: 'bg-secondary', hex: '#F0EDE4' },
-  { name: 'Muted', cls: 'bg-muted', hex: '#F0EDE4' },
+  { name: 'Secondary', cls: 'bg-secondary', hex: '#ECE7F6' },
+  { name: 'Muted', cls: 'bg-muted', hex: '#ECE7F6' },
   { name: 'Accent', cls: 'bg-accent', hex: '#ECE5FF', note: 'Violet tint' },
   { name: 'Foreground', cls: 'bg-foreground', hex: '#181219', note: 'Ink text' },
 ];
@@ -147,7 +147,7 @@ export default function DesignSystemPage() {
   // no global side effect leaks to the rest of the app.
   return (
     <div className={dark ? 'dark' : undefined}>
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="min-h-screen text-foreground">
         {/* Top bar */}
         <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/85 px-6 py-3.5 backdrop-blur">
           <div className="flex items-center gap-2.5">
@@ -196,7 +196,7 @@ export default function DesignSystemPage() {
           <Section
             eyebrow="Foundations"
             title="Color"
-            description="A warm ivory ground, Electric Indigo as the primary, and the landing's categorical accents (pink, orange, gold, green, blue, lime). Every value is a CSS token with a matched dark-mode variant. Toggle the header switch to preview."
+            description="The landing's hero lavender-white ground, Electric Indigo as the primary, and the landing's categorical accents (pink, orange, gold, green, blue, lime). Every value is a CSS token with a matched dark-mode variant. Toggle the header switch to preview."
           >
             <div className="space-y-7">
               <SwatchGrid label="Brand" rows={brandColors} />

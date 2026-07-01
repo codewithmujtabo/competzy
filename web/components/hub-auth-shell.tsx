@@ -13,7 +13,7 @@ export function HubAuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative grid min-h-screen lg:grid-cols-2">
       {/* Form panel — LEFT */}
-      <div className="relative flex items-center justify-center bg-background px-6 py-12">
+      <div className="relative flex items-center justify-center px-6 py-12">
         {/* Language + theme toggles — top-right of the form column */}
         <PublicToggles className="absolute" />
         <div className="w-full max-w-md">{children}</div>
