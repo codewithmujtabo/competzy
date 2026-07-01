@@ -205,7 +205,7 @@ export default function CompetitionLandingPage() {
         {/* Hero — image at top with a soft gradient wash, then the wordmark
             and organizer. Falls back to a brand gradient if no image set. */}
         <Card className="gap-0 overflow-hidden border-0 p-0">
-          <div className="relative h-56 w-full bg-gradient-to-br from-[#3D087B] via-[#6B1AB8] to-[#F43B86] sm:h-72">
+          <div className="relative h-56 w-full bg-gradient-to-br from-[#2a1170] via-[#5627ff] to-[#d9277b] sm:h-72">
             {comp.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img

@@ -78,8 +78,8 @@ export default function AchievementsPage() {
                 className={cn(
                   'p-5',
                   c.type === 'achievement'
-                    ? 'bg-gradient-to-br from-[#FFE459] via-[#FFD93D] to-[#FFC93C] text-[#11052C]'
-                    : 'bg-gradient-to-br from-[#3D087B] via-[#6B1AB8] to-[#7A3FC4] text-[#FFE459]',
+                    ? 'bg-gradient-to-br from-[#fbe57a] via-[#f8db46] to-[#eec522] text-[#2d240a]'
+                    : 'bg-gradient-to-br from-[#6a3dff] via-[#5627ff] to-[#2a1170] text-white',
                 )}
               >
                 <div className="flex items-start justify-between gap-2">

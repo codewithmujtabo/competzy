@@ -8,7 +8,7 @@ export type PayState = 'verifying' | 'success' | 'pending' | 'failed';
 // Per-state accent colour for the animated icon.
 const TONE: Record<Exclude<PayState, 'verifying'>, string> = {
   success: '#16A34A',
-  pending: '#F59E0B',
+  pending: '#f08c00',
   failed: '#DC2626',
 };
 

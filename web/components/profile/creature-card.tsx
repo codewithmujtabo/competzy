@@ -50,15 +50,15 @@ export function CreatureCard({ rounds }: Props) {
 
   if (hero.missingDob) {
     return (
-      <Card className="gap-3 overflow-hidden border-0 bg-gradient-to-br from-primary via-[#6B1AB8] to-[#7A3FC4] p-6 text-[#FFE459]">
+      <Card className="gap-3 overflow-hidden border-0 bg-gradient-to-br from-[#6a3dff] via-[#5627ff] to-[#2a1170] p-6 text-[#f8db46]">
         <div className="flex items-center gap-2">
           <Sparkles className="size-4" />
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#FFE459]/80">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f8db46]/80">
             {t('creature.title')}
           </p>
         </div>
         <h3 className="font-serif text-xl font-semibold tracking-tight">{t('creature.addDob')}</h3>
-        <p className="text-sm text-[#FFE459]/85">{t('creature.addDobBody')}</p>
+        <p className="text-sm text-[#f8db46]/85">{t('creature.addDobBody')}</p>
         <Button asChild variant="secondary" size="sm" className="mt-2 w-fit">
           <Link href="/account/profile">{t('creature.completeProfile')}</Link>
         </Button>
@@ -69,10 +69,10 @@ export function CreatureCard({ rounds }: Props) {
   return (
     <Card className="gap-4 overflow-hidden p-0">
       {/* Hero — gradient banner + creature photo + name. */}
-      <div className="relative bg-gradient-to-br from-primary via-[#6B1AB8] to-[#7A3FC4] p-6 text-[#FFE459]">
+      <div className="relative bg-gradient-to-br from-[#6a3dff] via-[#5627ff] to-[#2a1170] p-6 text-[#f8db46]">
         <div className="flex flex-wrap items-center gap-5">
           {hero.creature ? (
-            <div className="relative size-24 shrink-0 overflow-hidden rounded-2xl bg-white/10 ring-2 ring-[#FFE459]/30">
+            <div className="relative size-24 shrink-0 overflow-hidden rounded-2xl bg-white/10 ring-2 ring-[#f8db46]/30">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={hero.creature.photoUrl}
@@ -81,18 +81,18 @@ export function CreatureCard({ rounds }: Props) {
               />
             </div>
           ) : (
-            <div className="flex size-24 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-2 ring-[#FFE459]/30">
-              <Sparkles className="size-9 text-[#FFE459]/70" />
+            <div className="flex size-24 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-2 ring-[#f8db46]/30">
+              <Sparkles className="size-9 text-[#f8db46]/70" />
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#FFE459]/80">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#f8db46]/80">
               {t('creature.title')} · {hero.roundName}
             </p>
-            <h3 className="mt-1 font-serif text-3xl font-semibold tracking-tight text-[#FFE459]">
+            <h3 className="mt-1 font-serif text-3xl font-semibold tracking-tight text-[#f8db46]">
               {hero.creature ? hero.creature.name : t('creature.outOfBracket')}
             </h3>
-            <p className="mt-1 text-sm text-[#FFE459]/90">
+            <p className="mt-1 text-sm text-[#f8db46]/90">
               {hero.creature ? (
                 <>
                   {hero.creature.ageRange}, you&apos;ll be{' '}
@@ -104,12 +104,12 @@ export function CreatureCard({ rounds }: Props) {
               )}
             </p>
             {hero.creature && (
-              <p className="mt-2 text-xs text-[#FFE459]/70">
+              <p className="mt-2 text-xs text-[#f8db46]/70">
                 {creatureInfo(hero.creature.key)?.tagline}
               </p>
             )}
             {hero.creature?.placeholder && (
-              <p className="mt-2 text-[10px] uppercase tracking-wider text-[#FFE459]/70">
+              <p className="mt-2 text-[10px] uppercase tracking-wider text-[#f8db46]/70">
                 * artwork TBD, placeholder image
               </p>
             )}
