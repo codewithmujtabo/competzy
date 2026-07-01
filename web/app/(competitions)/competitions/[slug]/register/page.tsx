@@ -426,15 +426,6 @@ export default function CompetitionRegisterPage() {
                 {error}
               </div>
             )}
-            {emailTaken && (
-              <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {t('creg.emailTakenPre')}
-                <Link href="/" className="font-semibold underline">
-                  {t('creg.signInInstead')}
-                </Link>
-                {t('creg.emailTakenPost')}
-              </div>
-            )}
             {warning && (
               <div className="mt-4 rounded-lg border border-amber-300/50 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
                 {warning}
@@ -481,6 +472,25 @@ export default function CompetitionRegisterPage() {
                 </div>
                 {email.length > 0 && !emailValid && (
                   <p className="mt-1 text-xs text-destructive">{t('creg.emailInvalid')}</p>
+                )}
+                {emailValid && emailTaken && (
+                  <p
+                    role="status"
+                    className="mt-1.5 flex items-start gap-1.5 text-xs text-destructive duration-200 animate-in fade-in slide-in-from-top-1"
+                  >
+                    <Info className="mt-px size-3.5 shrink-0" aria-hidden />
+                    <span>
+                      {t('creg.emailTakenPre')}
+                      <Link href={paths.login} className="font-semibold underline">
+                        {t('creg.signInInstead')}
+                      </Link>
+                      {t('creg.emailTakenPost')}
+                      <Link href={paths.forgotPassword} className="font-semibold underline">
+                        {t('creg.forgotPassword')}
+                      </Link>
+                      .
+                    </span>
+                  </p>
                 )}
               </div>
 
