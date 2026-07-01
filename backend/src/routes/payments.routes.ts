@@ -538,13 +538,20 @@ router.post("/snap", async (req: Request, res: Response) => {
       return;
     }
 
-    // Re-use an existing pending Snap token to avoid duplicate charges — but
-    // only if its amount still matches (a voucher applied later changes it).
+    // Re-use an existing pending Snap token to avoid duplicate charges, but only
+    // if its amount still matches (a voucher applied later changes it) AND the
+    // token is fresh. A Snap token is a short-lived payment session; a stale one
+    // (expired, or minted under a previous Midtrans environment such as sandbox)
+    // renders "Transaksi tidak ditemukan" on the redirect page even though the
+    // payments row still says 'pending'. The 30-minute window keeps the
+    // rapid-double-click dedup while forcing a fresh token for abandoned or
+    // environment-switched payments.
     const existing = await pool.query(
       `SELECT id, snap_token, order_id, amount FROM payments
        WHERE registration_id = $1
          AND payment_status = 'pending'
          AND snap_token IS NOT NULL
+         AND created_at > now() - interval '30 minutes'
        ORDER BY created_at DESC
        LIMIT 1`,
       [registrationId]
