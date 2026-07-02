@@ -24,12 +24,13 @@ import { audit } from "../middleware/audit";
 const router: Router = Router();
 
 // ── Valid competition slugs accepted from the landing page ──────────────
-// Locked to the 12 active subdomains per the spec. Any other slug returns
+// Locked to the active subdomains per the spec. Any other slug returns
 // 400 — easier to catch typos than silently store garbage.
+// NOTE: keep in sync with competzy-web's app/api/waitlist/route.ts enum.
 const COMP_SLUGS = [
   "emc", "ispo", "osebi", "komodo", "genius", "owlypia",
-  "mathchallenge", "stemolympiad", "nextgen", "youngmaster",
-  "angkor", "igo",
+  "codingolympiad", "stemolympiad", "nextgen", "youngmaster",
+  "angkor", "igo", "teeneagle",
 ] as const;
 
 // Closed-enum marketing-attribution channels. Spec section 2.
