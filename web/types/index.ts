@@ -2,6 +2,7 @@
 
 export interface Competition {
   id: string;
+  slug?: string | null;
   name: string;
   organizer_name: string;
   category?: string;

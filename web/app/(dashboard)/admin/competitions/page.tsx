@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { ListChecks, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CalendarDays, ListChecks, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import { competitionsApi } from '@/lib/api';
 import { adminHttp } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
+import { cn } from '@/lib/utils';
 import type { Competition } from '@/types';
 import { FlowEditorDialog } from '@/components/flow-editor-dialog';
 import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
@@ -19,7 +20,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GradeMultiSelect } from '@/components/grade-multi-select';
-import { COMPETITION_STATUSES, compStatusLabel } from '@/lib/competitions/status';
+import { COMPETITION_STATUSES, compStatusLabel, compStatusTone } from '@/lib/competitions/status';
+import { brandFor } from '@/lib/competitions/branding';
+import { CompetitionBrandCard, BandChip } from '@/components/competition/brand-card';
 import {
   RoundsBuilder,
   roundsToDrafts,
@@ -27,14 +30,6 @@ import {
   type RoundDraft,
 } from '@/components/rounds-builder';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -76,6 +71,14 @@ type OrganizerOption = { id: string; full_name: string; email: string };
 function fmtForInput(d?: string) {
   if (!d) return '';
   return new Date(d).toISOString().split('T')[0];
+}
+
+// "4,5,6,…,12" → "4-12" so the badge stays compact.
+function gradeRange(gradeLevel?: string): string | null {
+  if (!gradeLevel) return null;
+  const ns = gradeLevel.split(/[\s,]+/).map((x) => parseInt(x, 10)).filter(Number.isFinite).sort((a, b) => a - b);
+  if (ns.length === 0) return gradeLevel;
+  return ns.length === 1 ? String(ns[0]) : `${ns[0]}-${ns[ns.length - 1]}`;
 }
 
 function fmtDate(d?: string) {
@@ -281,104 +284,115 @@ export default function CompetitionsPage() {
         </TabsList>
       </Tabs>
 
-      <Card className="overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <Table className="w-full table-fixed min-w-[1024px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('adm.colName')}</TableHead>
-                <TableHead className="w-[200px]">{t('acp.colCategory')}</TableHead>
-                <TableHead className="w-36">{t('acp.colOrganizer')}</TableHead>
-                <TableHead className="w-24">{t('acp.colFee')}</TableHead>
-                <TableHead className="w-28">{t('acp.colRegCloses')}</TableHead>
-                <TableHead className="w-28">{t('acp.colEventDate')}</TableHead>
-                <TableHead className="w-[200px] text-right">{t('acp.colActions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={7}>
-                      <Skeleton className="h-9 w-full" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : comps.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-sm text-muted-foreground">
-                    {t('acp.empty')}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                comps.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell>
-                      <div className="truncate font-medium text-foreground">{c.name}</div>
-                      {c.grade_level && (
-                        <div className="truncate text-xs text-muted-foreground">{c.grade_level}</div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {c.category ? (
-                        <Badge variant="secondary" className="max-w-full truncate font-normal">
-                          {c.category}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="truncate text-sm">{c.organizer_name}</TableCell>
-                    <TableCell>
-                      {c.fee === 0 ? (
-                        <Badge
-                          variant="outline"
-                          className="border-transparent bg-emerald-100 font-mono text-[10px] text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
-                        >
-                          {t('acp.free')}
-                        </Badge>
-                      ) : (
-                        <span className="text-sm tabular-nums">Rp {c.fee.toLocaleString('id-ID')}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-mono text-[11px] text-muted-foreground">
-                      {fmtDate(c.reg_close_date)}
-                    </TableCell>
-                    <TableCell className="font-mono text-[11px] text-muted-foreground">
-                      {fmtDate(c.competition_date)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setFlowComp({ id: c.id, name: c.name })}
-                        >
-                          <ListChecks className="size-3.5" />
-                          {t('acp.flow')}
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => openEdit(c)}>
-                          <Pencil className="size-3.5" />
-                          {t('acp.edit')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTarget({ id: c.id, name: c.name })}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+      {loading ? (
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="gap-0 overflow-hidden border-0 p-0">
+              <Skeleton className="h-28 w-full rounded-none" />
+              <div className="space-y-3 p-5">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-9 w-full" />
+              </div>
+            </Card>
+          ))}
         </div>
-        <Pager page={page} total={total} limit={LIMIT} onChange={setPage} />
-      </Card>
+      ) : comps.length === 0 ? (
+        <Card className="items-center p-12 text-center text-sm text-muted-foreground">
+          {t('acp.empty')}
+        </Card>
+      ) : (
+        <div className="stagger-children grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {comps.map((c) => {
+            const brand = brandFor({ id: c.id, slug: c.slug ?? null, name: c.name, logoUrl: c.logo_url ?? null });
+            return (
+              <CompetitionBrandCard
+                key={c.id}
+                brand={brand}
+                bandChips={
+                  <>
+                    {c.is_international && <BandChip>International</BandChip>}
+                    {c.category && <BandChip>{c.category}</BandChip>}
+                  </>
+                }
+                bandAction={
+                  c.kind === 'affiliated' ? <BandChip>{t('acp.typeAffiliated')}</BandChip> : undefined
+                }
+                footer={
+                  <div className="flex items-center gap-1.5 border-t pt-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setFlowComp({ id: c.id, name: c.name })}
+                    >
+                      <ListChecks className="size-3.5" />
+                      {t('acp.flow')}
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => openEdit(c)}>
+                      <Pencil className="size-3.5" />
+                      {t('acp.edit')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setDeleteTarget({ id: c.id, name: c.name })}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                }
+              >
+                <h2 className="font-serif text-lg font-semibold leading-snug text-foreground">{c.name}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{c.organizer_name}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {c.registration_status && (
+                    <Badge
+                      variant="outline"
+                      className={cn('border-transparent font-medium', compStatusTone(c.registration_status))}
+                    >
+                      {compStatusLabel(c.registration_status, t)}
+                    </Badge>
+                  )}
+                  {gradeRange(c.grade_level) && (
+                    <Badge
+                      variant="outline"
+                      className="border-current/25 bg-background/60 font-normal"
+                      style={{ color: brand.accent }}
+                    >
+                      {t('acp.gradesBadge', { range: gradeRange(c.grade_level)! })}
+                    </Badge>
+                  )}
+                </div>
+                <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <Wallet className="size-3.5" style={{ color: brand.accent }} />
+                    {c.fee === 0 ? (
+                      <span className="font-medium text-[#237a02]">{t('acp.free')}</span>
+                    ) : (
+                      <span className="tabular-nums">Rp {c.fee.toLocaleString('id-ID')}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CalendarDays className="size-3.5" style={{ color: brand.accent }} />
+                    <span>
+                      {t('acp.colRegCloses')}: {fmtDate(c.reg_close_date)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CalendarDays className="size-3.5" style={{ color: brand.accent }} />
+                    <span>
+                      {t('acp.colEventDate')}: {fmtDate(c.competition_date)}
+                    </span>
+                  </div>
+                </div>
+              </CompetitionBrandCard>
+            );
+          })}
+        </div>
+      )}
+      <Pager page={page} total={total} limit={LIMIT} onChange={setPage} />
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="sm:max-w-2xl">

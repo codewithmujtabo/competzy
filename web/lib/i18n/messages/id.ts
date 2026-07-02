@@ -650,6 +650,7 @@ export const id: Partial<Record<MessageKey, string>> = {
   'acp.colActions': 'Tindakan',
   'acp.empty': 'Tidak ada kompetisi ditemukan.',
   'acp.free': 'Gratis',
+  'acp.gradesBadge': 'Kelas {range}',
   'acp.flow': 'Alur',
   'acp.edit': 'Ubah',
   'acp.toastLoadFail': 'Gagal memuat kompetisi',

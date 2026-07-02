@@ -657,6 +657,7 @@ export const en = {
   'acp.colActions': 'Actions',
   'acp.empty': 'No competitions found.',
   'acp.free': 'Free',
+  'acp.gradesBadge': 'Grades {range}',
   'acp.flow': 'Flow',
   'acp.edit': 'Edit',
   'acp.toastLoadFail': 'Failed to load competitions',

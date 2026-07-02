@@ -8,6 +8,8 @@ import { emcHttp } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
 import type { MessageKey } from '@/lib/i18n/messages/en';
 import { getCompetitionConfig } from '@/lib/competitions/registry';
+import { brandFor } from '@/lib/competitions/branding';
+import { CompetitionBrandCard, BandChip } from '@/components/competition/brand-card';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +28,7 @@ interface Catalog {
   name: string;
   organizerName: string;
   category: string | null;
+  logoUrl?: string | null;
 }
 
 // GET /favorites returns favorite_id + the raw `competitions` row (snake_case).
@@ -35,6 +38,7 @@ interface FavRow {
   name: string;
   organizer_name: string | null;
   category: string | null;
+  logo_url?: string | null;
 }
 
 function portalHref(slug: string | null): string | null {
@@ -94,7 +98,7 @@ export default function AccountCompetitionsPage() {
   const registeredReady = regs !== null && compList !== null;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6 lg:p-8">
+    <div className="mx-auto max-w-5xl space-y-6 p-6 lg:p-8">
       <PageHeader
         eyebrow={t('apf.eyebrow')}
         title={t('acc.myCompTitle')}
@@ -129,33 +133,33 @@ export default function AccountCompetitionsPage() {
               </Button>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="stagger-children grid gap-5 sm:grid-cols-2">
               {[...byComp.entries()].map(([compId, list]) => {
                 const comp = compMap.get(compId);
                 const href = portalHref(comp?.slug ?? null);
                 const statuses = [...new Set(list.map((r) => r.status))];
+                const brand = brandFor({
+                  id: compId,
+                  slug: comp?.slug ?? null,
+                  name: comp?.name ?? null,
+                  logoUrl: comp?.logoUrl ?? null,
+                });
                 return (
-                  <Card key={compId} className="gap-0 p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="font-serif text-base font-medium text-foreground">
-                          {comp?.name ?? 'Competition'}
-                        </h3>
-                        {comp?.organizerName && (
-                          <p className="text-sm text-muted-foreground">
-                            {comp.organizerName}
-                          </p>
-                        )}
-                      </div>
-                      {comp?.category && (
-                        <Badge variant="secondary" className="shrink-0 font-normal">
-                          {comp.category}
-                        </Badge>
-                      )}
-                    </div>
+                  <CompetitionBrandCard
+                    key={compId}
+                    brand={brand}
+                    interactive={!!href}
+                    bandChips={comp?.category ? <BandChip>{comp.category}</BandChip> : undefined}
+                  >
+                    <h3 className="font-serif text-lg font-semibold leading-snug text-foreground">
+                      {comp?.name ?? 'Competition'}
+                    </h3>
+                    {comp?.organizerName && (
+                      <p className="mt-1 text-sm text-muted-foreground">{comp.organizerName}</p>
+                    )}
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {statuses.map((s) => (
-                        <Badge key={s} variant="outline" className="font-normal">
+                        <Badge key={s} variant="outline" className="bg-background/60 font-normal">
                           {t(`status.${s}` as MessageKey)}
                         </Badge>
                       ))}
@@ -168,7 +172,7 @@ export default function AccountCompetitionsPage() {
                         </Link>
                       </Button>
                     )}
-                  </Card>
+                  </CompetitionBrandCard>
                 );
               })}
             </div>
@@ -193,36 +197,31 @@ export default function AccountCompetitionsPage() {
               </Button>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="stagger-children grid gap-5 sm:grid-cols-2">
               {favs.map((f) => {
                 const href = portalHref(f.slug);
+                const brand = brandFor({ id: f.id, slug: f.slug, name: f.name, logoUrl: f.logo_url ?? null });
                 return (
-                  <Card key={f.id} className="gap-0 p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="font-serif text-base font-medium text-foreground">
-                          {f.name}
-                        </h3>
-                        {f.organizer_name && (
-                          <p className="text-sm text-muted-foreground">{f.organizer_name}</p>
-                        )}
-                      </div>
+                  <CompetitionBrandCard
+                    key={f.id}
+                    brand={brand}
+                    interactive={!!href}
+                    bandChips={f.category ? <BandChip>{f.category}</BandChip> : undefined}
+                    bandAction={
                       <button
                         type="button"
                         aria-label={t('acc.removeFromSaved')}
                         title={t('acc.removeFromSaved')}
                         onClick={() => unsave(f.id)}
-                        className="shrink-0 rounded-full p-1 text-primary transition-colors hover:text-muted-foreground"
+                        className="flex size-9 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/30 backdrop-blur-sm transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/75"
                       >
-                        <Heart className="size-5 fill-primary" />
+                        <Heart className="size-4 fill-current" />
                       </button>
-                    </div>
-                    {f.category && (
-                      <div className="mt-3">
-                        <Badge variant="secondary" className="font-normal">
-                          {f.category}
-                        </Badge>
-                      </div>
+                    }
+                  >
+                    <h3 className="font-serif text-lg font-semibold leading-snug text-foreground">{f.name}</h3>
+                    {f.organizer_name && (
+                      <p className="mt-1 text-sm text-muted-foreground">{f.organizer_name}</p>
                     )}
                     {href && (
                       <Button asChild size="sm" variant="outline" className="mt-4 self-start">
@@ -232,7 +231,7 @@ export default function AccountCompetitionsPage() {
                         </Link>
                       </Button>
                     )}
-                  </Card>
+                  </CompetitionBrandCard>
                 );
               })}
             </div>

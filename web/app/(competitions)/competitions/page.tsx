@@ -28,7 +28,8 @@ import { toast } from 'sonner';
 import { emcHttp } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
-import { getCompetitionConfig, competitionRegistry } from '@/lib/competitions/registry';
+import { getCompetitionConfig } from '@/lib/competitions/registry';
+import { brandFor, hexA, type CardBrand } from '@/lib/competitions/branding';
 import { compStatusLabel, compStatusTone } from '@/lib/competitions/status';
 import { cn } from '@/lib/utils';
 import { AnimatedNumber } from '@/components/motion/animated-number';
@@ -115,73 +116,6 @@ function fmtDate(d: string | null): string {
 // Flagship competitions pinned to the front of the catalog, in this order.
 // Matched against the exact competition slug.
 const PINNED_SLUGS = ['emc', 'komodo'];
-
-// Self-hosted logos in /public/competitions/<file>.webp (mirrored from
-// competzy.com). Matched by keyword against the competition's slug + name,
-// because operator-created slugs look like `international-greenwich-olympiad-f3i6d`.
-const LOGO_MATCHERS: { file: string; test: RegExp }[] = [
-  { file: 'komodo', test: /komodo/i },
-  { file: 'owlypia', test: /owlypia/i },
-  { file: 'genius', test: /genius/i },
-  { file: 'igo', test: /\bigo\b|greenwich/i },
-  { file: 'nextgen', test: /next\s*gen/i },
-  { file: 'ispo', test: /\bispo\b/i },
-  { file: 'osebi', test: /osebi/i },
-  { file: 'emc', test: /\bemc\b/i },
-];
-function resolveLogo(comp: CatalogCompetition): string | null {
-  const hay = `${comp.slug ?? ''} ${comp.name ?? ''}`;
-  for (const m of LOGO_MATCHERS) if (m.test.test(hay)) return `/competitions/${m.file}.webp`;
-  // An operator-uploaded absolute logo URL is the last resort.
-  return comp.logoUrl && /^https?:\/\//i.test(comp.logoUrl) ? comp.logoUrl : null;
-}
-
-type Palette = { from: string; to: string; accent: string; glow: string; ink: 'light' | 'dark' };
-// Landing categorical accents only — indigo, pink, orange, green, blue,
-// gold, lime, sirih. Operator-created competitions hash into these.
-const HASH_PALETTES: Palette[] = [
-  { from: '#6a3dff', to: '#2a1170', accent: '#5627ff', glow: '#937aff', ink: 'light' },
-  { from: '#e85aa0', to: '#b01561', accent: '#d9277b', glow: '#f5b1d0', ink: 'light' },
-  { from: '#ffb84d', to: '#c47200', accent: '#f08c00', glow: '#ffd9a1', ink: 'dark' },
-  { from: '#54c91f', to: '#20720a', accent: '#31ab00', glow: '#a8e88a', ink: 'light' },
-  { from: '#3d8bff', to: '#0047c2', accent: '#0066ff', glow: '#9cc4ff', ink: 'light' },
-  { from: '#fbe57a', to: '#d9b21a', accent: '#b8860b', glow: '#fdf2b3', ink: 'dark' },
-  { from: '#a5ec4a', to: '#57a30a', accent: '#4f8f0e', glow: '#d3f5a1', ink: 'dark' },
-  { from: '#937aff', to: '#4a22cc', accent: '#5627ff', glow: '#c9bcff', ink: 'light' },
-];
-
-type CardBrand = { from: string; to: string; accent: string; glow: string; ink: 'light' | 'dark'; logoSrc: string | null };
-function brandFor(comp: CatalogCompetition): CardBrand {
-  const reg = comp.slug ? competitionRegistry[comp.slug] : undefined;
-  let from: string, to: string, accent: string, glow: string, ink: 'light' | 'dark';
-  if (reg) {
-    // Real brand gradient + accent — matches the competition's portal hero.
-    [from, to] = reg.gradient;
-    accent = reg.accent;
-    glow = reg.activeAccent ?? reg.accent;
-    ink = 'light';
-  } else {
-    const key = comp.id || comp.slug || comp.name || '';
-    let h = 0;
-    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-    const p = HASH_PALETTES[h % HASH_PALETTES.length];
-    from = p.from;
-    to = p.to;
-    accent = p.accent;
-    glow = p.glow;
-    ink = p.ink;
-  }
-  return { from, to, accent, glow, ink, logoSrc: resolveLogo(comp) };
-}
-
-// hex → rgba, for the soft brand wash painted over the (theme-aware) card body.
-function hexA(hex: string, a: number): string {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${a})`;
-}
 
 // Parse a comma/space-separated numeric grade string ("4,5,…,12") into the
 // school-level bands it spans (Elementary 1–6 / Junior 7–9 / Senior 10–12).
