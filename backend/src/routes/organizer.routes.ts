@@ -1,3 +1,4 @@
+import { freshPublicUrl } from "../services/storage.service";
 import { Router, Request, Response } from "express";
 import multer from "multer";
 import { pool } from "../config/database";
@@ -348,7 +349,7 @@ router.get("/competitions/:id", async (req: Request, res: Response) => {
       isInternational: c.is_international,
       websiteUrl: c.website_url,
       imageUrl: c.image_url,
-      logoUrl: c.logo_url ?? null,
+      logoUrl: await freshPublicUrl(c.logo_url),
       posterUrl: c.poster_url,
       participantInstructions: c.participant_instructions,
       requiredDocs: c.required_docs,
@@ -804,7 +805,7 @@ router.post(
       await pool.query("UPDATE competitions SET logo_url = $1 WHERE id = $2", [
         url, req.params.id,
       ]);
-      res.json({ logoUrl: url });
+      res.json({ logoUrl: await freshPublicUrl(url) });
     } catch (err) {
       console.error("POST /organizers/competitions/:id/logo error:", err);
       res.status(500).json({ message: "Failed to upload competition logo" });

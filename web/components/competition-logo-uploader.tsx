@@ -25,6 +25,10 @@ interface Props {
 const MAX_BYTES = 5 * 1024 * 1024;
 
 export function CompetitionLogoUploader({ endpoint, http, logoUrl, onUploaded }: Props) {
+  // A stale/broken stored URL renders as the browser's broken-image glyph —
+  // treat it as "no logo yet" instead.
+  const [broken, setBroken] = useState<string | null>(null);
+  const showUrl = logoUrl && logoUrl !== broken ? logoUrl : null;
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -57,9 +61,14 @@ export function CompetitionLogoUploader({ endpoint, http, logoUrl, onUploaded }:
   return (
     <div className="flex items-center gap-4">
       <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted">
-        {logoUrl ? (
+        {showUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoUrl} alt="Competition logo" className="size-full object-contain" />
+          <img
+            src={showUrl}
+            alt="Competition logo"
+            onError={() => setBroken(logoUrl)}
+            className="size-full object-contain"
+          />
         ) : (
           <ImagePlus className="size-6 text-muted-foreground" />
         )}

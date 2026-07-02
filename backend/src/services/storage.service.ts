@@ -80,6 +80,25 @@ export async function getSignedUrl(fileUrl: string, expiresInSec: number = 900):
 }
 
 /**
+ * Re-sign a STORED public-asset URL for the client (logos, posters).
+ * - Our MinIO URL → fresh presigned GET (the bucket is private; the raw URL
+ *   stored at upload time 403s, which is exactly the "broken logo" bug).
+ * - Anything else (external URL, local-dev /uploads path served statically)
+ *   passes through untouched — getSignedUrl would mangle it.
+ */
+export async function freshPublicUrl(url: string | null | undefined): Promise<string | null> {
+  if (!url) return null;
+  if (isS3Configured() && url.includes(`/${env.MINIO_BUCKET}/`)) {
+    try {
+      return await getSignedUrl(url);
+    } catch {
+      return url;
+    }
+  }
+  return url;
+}
+
+/**
  * Verify a signed-URL JWT token (local-disk dev mode) and return the file path,
  * or null if the token is invalid/expired.
  */

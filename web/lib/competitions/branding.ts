@@ -76,6 +76,41 @@ export function brandFor(comp: BrandableCompetition): CardBrand {
   return { ...palette, logoSrc: resolveLogo(comp) };
 }
 
+// Canonical catalog display order (business-decided). Matched by keyword
+// against slug + name, so operator-created slugs still rank. Anything not
+// matched keeps its relative order after the ranked ones.
+const DISPLAY_ORDER: RegExp[] = [
+  /\bemc\b/i,
+  /genius/i,
+  /komodo/i,
+  /\bispo\b/i,
+  /osebi/i,
+  /owlypia/i,
+  /\bstem\b/i,
+  /next\s*gen/i,
+  /coding/i,
+  /young\s*master/i,
+  /teeneagle/i,
+  /angkor/i,
+  /greenwich|\bigo\b/i,
+];
+
+export function displayRank(comp: { slug?: string | null; name?: string | null }): number {
+  const hay = `${comp.slug ?? ''} ${comp.name ?? ''}`;
+  for (let i = 0; i < DISPLAY_ORDER.length; i++) {
+    if (DISPLAY_ORDER[i].test(hay)) return i;
+  }
+  return DISPLAY_ORDER.length;
+}
+
+/** Stable sort into the canonical order; unranked items keep relative order. */
+export function orderCompetitions<T extends { slug?: string | null; name?: string | null }>(list: T[]): T[] {
+  return list
+    .map((c, i) => ({ c, i }))
+    .sort((a, b) => displayRank(a.c) - displayRank(b.c) || a.i - b.i)
+    .map((x) => x.c);
+}
+
 /** hex → rgba, for the soft brand wash painted over theme-aware card bodies. */
 export function hexA(hex: string, a: number): string {
   const h = hex.replace('#', '');

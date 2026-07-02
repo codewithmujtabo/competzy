@@ -8,6 +8,7 @@
 
 /* eslint-disable @next/next/no-img-element -- decorative, self-hosted logos */
 
+import { useState } from 'react';
 import { Trophy } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -39,6 +40,10 @@ export function CompetitionBrandCard({
   children,
   footer,
 }: CompetitionBrandCardProps) {
+  // A stored logo URL can 404/expire — swap to the Trophy fallback instead of
+  // the browser's broken-image glyph (watermarks simply hide themselves).
+  const [logoBroken, setLogoBroken] = useState(false);
+  const logoSrc = logoBroken ? null : brand.logoSrc;
   const bandFg = brand.ink === 'dark' ? '#181219' : '#ffffff';
   return (
     <Card
@@ -67,11 +72,12 @@ export function CompetitionBrandCard({
         />
         <span aria-hidden className="absolute -right-12 -top-14 size-44 rounded-full blur-2xl" style={{ backgroundColor: brand.glow, opacity: 0.45 }} />
         <span aria-hidden className="absolute -bottom-16 -left-12 size-40 rounded-full bg-white/15 blur-2xl" />
-        {brand.logoSrc && (
+        {logoSrc && (
           <img
-            src={brand.logoSrc}
+            src={logoSrc}
             alt=""
             aria-hidden
+            onError={() => setLogoBroken(true)}
             className="pointer-events-none absolute -right-3 top-1/2 size-36 -translate-y-1/2 object-contain opacity-20"
           />
         )}
@@ -81,11 +87,11 @@ export function CompetitionBrandCard({
           <span
             className={cn(
               'flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl shadow-lg ring-1 ring-black/5',
-              brand.logoSrc ? 'bg-white p-2' : 'bg-white/20 ring-white/30 backdrop-blur-sm',
+              logoSrc ? 'bg-white p-2' : 'bg-white/20 ring-white/30 backdrop-blur-sm',
             )}
           >
-            {brand.logoSrc ? (
-              <img src={brand.logoSrc} alt="" className="size-full object-contain" />
+            {logoSrc ? (
+              <img src={logoSrc} alt="" onError={() => setLogoBroken(true)} className="size-full object-contain" />
             ) : (
               <Trophy className="size-6" />
             )}
@@ -106,11 +112,12 @@ export function CompetitionBrandCard({
           className="pointer-events-none absolute inset-0"
           style={{ background: `linear-gradient(180deg, ${hexA(brand.from, 0.1)}, ${hexA(brand.to, 0.03)} 60%, transparent)` }}
         />
-        {brand.logoSrc && (
+        {logoSrc && (
           <img
-            src={brand.logoSrc}
+            src={logoSrc}
             alt=""
             aria-hidden
+            onError={() => setLogoBroken(true)}
             className="pointer-events-none absolute -bottom-5 -right-5 size-28 object-contain opacity-[0.07]"
           />
         )}

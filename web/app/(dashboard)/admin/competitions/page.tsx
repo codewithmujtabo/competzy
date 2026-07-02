@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GradeMultiSelect } from '@/components/grade-multi-select';
 import { COMPETITION_STATUSES, compStatusLabel, compStatusTone } from '@/lib/competitions/status';
-import { brandFor } from '@/lib/competitions/branding';
+import { brandFor, orderCompetitions } from '@/lib/competitions/branding';
 import { CompetitionBrandCard, BandChip } from '@/components/competition/brand-card';
 import {
   RoundsBuilder,
@@ -145,7 +145,7 @@ export default function CompetitionsPage() {
         limit: LIMIT,
         category: cat === 'all' ? undefined : cat,
       });
-      setComps(Array.isArray(r?.competitions) ? r.competitions : []);
+      setComps(orderCompetitions(Array.isArray(r?.competitions) ? r.competitions : []));
       setTotal(r?.pagination?.total ?? 0);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('acp.toastLoadFail'));

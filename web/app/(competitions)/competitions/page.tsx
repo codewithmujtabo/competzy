@@ -29,7 +29,7 @@ import { emcHttp } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
 import { useCompetitionAuth } from '@/lib/auth/competition-context';
 import { getCompetitionConfig } from '@/lib/competitions/registry';
-import { brandFor, hexA, type CardBrand } from '@/lib/competitions/branding';
+import { brandFor, hexA, orderCompetitions, type CardBrand } from '@/lib/competitions/branding';
 import { compStatusLabel, compStatusTone } from '@/lib/competitions/status';
 import { cn } from '@/lib/utils';
 import { AnimatedNumber } from '@/components/motion/animated-number';
@@ -112,10 +112,6 @@ function fmtDate(d: string | null): string {
 // .webp logo). Operator-created competitions with no hand-tuned branding fall
 // back to a stable, distinct hashed palette so every card is recognisable
 // instead of a wall of white cards.
-
-// Flagship competitions pinned to the front of the catalog, in this order.
-// Matched against the exact competition slug.
-const PINNED_SLUGS = ['emc', 'komodo'];
 
 // Parse a comma/space-separated numeric grade string ("4,5,…,12") into the
 // school-level bands it spans (Elementary 1–6 / Junior 7–9 / Senior 10–12).
@@ -247,6 +243,7 @@ function CompetitionCard({
             src={brand.logoSrc}
             alt=""
             aria-hidden
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
             className="pointer-events-none absolute -right-3 top-1/2 size-36 -translate-y-1/2 object-contain opacity-20"
           />
         )}
@@ -261,7 +258,7 @@ function CompetitionCard({
           >
             {brand.logoSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={brand.logoSrc} alt="" className="size-full object-contain" />
+              <img src={brand.logoSrc} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="size-full object-contain" />
             ) : (
               <Trophy className="size-6" />
             )}
@@ -314,6 +311,7 @@ function CompetitionCard({
             src={brand.logoSrc}
             alt=""
             aria-hidden
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
             className="pointer-events-none absolute -bottom-5 -right-5 size-28 object-contain opacity-[0.07]"
           />
         )}
@@ -491,17 +489,9 @@ export default function CompetitionCatalogPage() {
       if (grade !== 'all' && !gradeBandsOf(c.gradeLevel).has(grade)) return false;
       return true;
     });
-    // Pin the flagship competitions (EMC, then Komodo) to the front of the
-    // catalog; everything else keeps its backend order. Stable: equal-rank
-    // items fall back to their original index.
-    const rank = (slug: string | null) => {
-      const i = slug ? PINNED_SLUGS.indexOf(slug) : -1;
-      return i === -1 ? PINNED_SLUGS.length : i;
-    };
-    return matched
-      .map((c, i) => ({ c, i }))
-      .sort((a, b) => rank(a.c.slug) - rank(b.c.slug) || a.i - b.i)
-      .map((x) => x.c);
+    // Canonical business ordering (EMC, Genius, Komodo, ISPO, …) — shared
+    // with the admin grid + account page via orderCompetitions().
+    return orderCompetitions(matched);
   }, [comps, search, level, category, grade]);
 
   const filtersActive = search.trim() !== '' || level !== 'all' || category !== 'all' || grade !== 'all';
@@ -551,13 +541,7 @@ export default function CompetitionCatalogPage() {
 
           <div className="relative flex flex-wrap items-start justify-between gap-5">
             <div className="min-w-0 max-w-xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 backdrop-blur-sm ring-1 ring-white/25">
-                <Sparkles className="size-3.5 text-[#f8db46]" />
-                <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#f8db46]">
-                  {t('catalog.welcomeBack')}
-                </span>
-              </div>
-              <h1 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-[#f8db46] sm:text-4xl">
+              <h1 className="font-serif text-3xl font-semibold tracking-tight text-[#f8db46] sm:text-4xl">
                 {t('catalog.greeting', { name: firstName })}
               </h1>
               <p className="mt-2 max-w-prose text-sm text-[#f8db46]/90">

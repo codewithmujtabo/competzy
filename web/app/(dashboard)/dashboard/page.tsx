@@ -179,13 +179,7 @@ export default function DashboardPage() {
 
         <div className="relative flex flex-wrap items-end justify-between gap-6">
           <div className="min-w-0 max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#fff4e8]/18 px-3 py-1 backdrop-blur-sm ring-1 ring-[#fff4e8]/25">
-              <Sparkles className="size-3.5 text-[#f8db46]" />
-              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[#fff4e8]">
-                Welcome back
-              </span>
-            </div>
-            <h1 className="mt-3 font-serif text-4xl font-semibold tracking-tight text-[#fff4e8] sm:text-5xl">
+            <h1 className="font-serif text-4xl font-semibold tracking-tight text-[#fff4e8] sm:text-5xl">
               {t('adm.greeting', { name: user?.full_name?.split(' ')[0] || 'Admin' })}
             </h1>
             <p className="mt-2 max-w-prose text-[15px] text-[#fff4e8]/85">{t('adm.dashSubtitle')}</p>

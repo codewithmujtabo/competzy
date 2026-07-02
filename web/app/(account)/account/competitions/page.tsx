@@ -8,7 +8,7 @@ import { emcHttp } from '@/lib/api/client';
 import { useT } from '@/lib/i18n/context';
 import type { MessageKey } from '@/lib/i18n/messages/en';
 import { getCompetitionConfig } from '@/lib/competitions/registry';
-import { brandFor } from '@/lib/competitions/branding';
+import { brandFor, orderCompetitions } from '@/lib/competitions/branding';
 import { CompetitionBrandCard, BandChip } from '@/components/competition/brand-card';
 import { PageHeader } from '@/components/shell/page-header';
 import { Card } from '@/components/ui/card';
@@ -134,7 +134,14 @@ export default function AccountCompetitionsPage() {
             </Card>
           ) : (
             <div className="stagger-children grid gap-5 sm:grid-cols-2">
-              {[...byComp.entries()].map(([compId, list]) => {
+              {orderCompetitions(
+                [...byComp.entries()].map(([compId, list]) => ({
+                  compId,
+                  list,
+                  slug: compMap.get(compId)?.slug ?? null,
+                  name: compMap.get(compId)?.name ?? null,
+                })),
+              ).map(({ compId, list }) => {
                 const comp = compMap.get(compId);
                 const href = portalHref(comp?.slug ?? null);
                 const statuses = [...new Set(list.map((r) => r.status))];
@@ -198,7 +205,7 @@ export default function AccountCompetitionsPage() {
             </Card>
           ) : (
             <div className="stagger-children grid gap-5 sm:grid-cols-2">
-              {favs.map((f) => {
+              {orderCompetitions(favs).map((f) => {
                 const href = portalHref(f.slug);
                 const brand = brandFor({ id: f.id, slug: f.slug, name: f.name, logoUrl: f.logo_url ?? null });
                 return (

@@ -4,6 +4,7 @@ import { dbErrorResponse } from "../lib/db-errors";
 import { dateOnlyToNoonUtc } from "../lib/date-utils";
 import { adminOnly, adminOrManager } from "../middleware/admin.middleware";
 import { softDelete } from "../db/query-helpers";
+import { freshPublicUrl } from "../services/storage.service";
 import { isSuperAdminEmail } from "../services/auth.service";
 import { normalizeFullName } from "../lib/names";
 import { authMiddleware } from "../middleware/auth";
@@ -61,7 +62,11 @@ router.get("/competitions", async (req, res) => {
           ORDER BY c.created_at DESC
         `);
 
-    res.json(result.rows);
+    // Stored logo_url is the raw private-bucket URL — re-sign for the client.
+    const rows = await Promise.all(
+      result.rows.map(async (r) => ({ ...r, logo_url: await freshPublicUrl(r.logo_url) }))
+    );
+    res.json(rows);
   } catch (error) {
     console.error("Error fetching competitions:", error);
     res.status(500).json({ message: "Failed to fetch competitions" });
@@ -342,7 +347,7 @@ router.post(
       if (result.rows.length === 0) {
         return res.status(404).json({ message: "Competition not found" });
       }
-      res.json({ logoUrl: url });
+      res.json({ logoUrl: await freshPublicUrl(url) });
     } catch (error) {
       console.error("Error uploading competition logo:", error);
       res.status(500).json({ message: "Failed to upload competition logo" });

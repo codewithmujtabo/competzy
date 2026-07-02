@@ -1,3 +1,4 @@
+import { freshPublicUrl } from "../services/storage.service";
 import { Router, Request, Response } from "express";
 import { pool } from "../config/database";
 import { env } from "../config/env";
@@ -138,7 +139,7 @@ router.get("/", async (req: Request, res: Response) => {
 
     const result = await pool.query(query, values);
 
-    const competitions = result.rows.map((c) => ({
+    const competitions = await Promise.all( result.rows.map(async (c) => ({
       id: c.id,
       slug: c.slug ?? null,
       name: c.name,
@@ -155,11 +156,11 @@ router.get("/", async (req: Request, res: Response) => {
       registrationStatus: c.registration_status,
       isInternational: c.is_international,
       imageUrl: c.image_url,
-      logoUrl: c.logo_url ?? null,
+      logoUrl: await freshPublicUrl(c.logo_url),
       participantInstructions: c.participant_instructions,
       kind: c.kind ?? "native",
       createdAt: c.created_at,
-    }));
+    })));
 
     res.json(competitions);
   } catch (err) {
@@ -251,7 +252,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       // number Midtrans will show in the Snap popup.
       usdToIdrRate: env.USD_TO_IDR_RATE,
       imageUrl: c.image_url,
-      logoUrl: c.logo_url ?? null,
+      logoUrl: await freshPublicUrl(c.logo_url),
       websiteUrl: c.website_url,
       participantInstructions: c.participant_instructions,
       rounds: rounds.map((round) => ({

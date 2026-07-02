@@ -1,3 +1,4 @@
+import { freshPublicUrl } from "../services/storage.service";
 import { Router, Request, Response } from "express";
 import { pool } from "../config/database";
 import { authMiddleware } from "../middleware/auth";
@@ -21,7 +22,10 @@ router.get("/", authMiddleware, async (req: Request, res: Response) => {
       [userId]
     );
 
-    res.json({ favorites: result.rows });
+    const favorites = await Promise.all(
+      result.rows.map(async (r) => ({ ...r, logo_url: await freshPublicUrl(r.logo_url) }))
+    );
+    res.json({ favorites });
   } catch (err) {
     console.error("Get favorites error:", err);
     res.status(500).json({ message: "Failed to fetch favorites" });
