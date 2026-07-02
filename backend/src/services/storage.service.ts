@@ -16,13 +16,13 @@ import { env } from "../config/env";
 // ── S3 client (lazy-initialised) ─────────────────────────────────────────────
 
 let s3Client: any = null;
+let s3PublicClient: any = null;
 
-function getS3Client() {
-  if (s3Client) return s3Client;
+function makeS3Client(endpoint: string) {
   // Dynamic require so the module loads on Node 18+ without issues
   const { S3Client } = require("@aws-sdk/client-s3");
-  s3Client = new S3Client({
-    endpoint: env.MINIO_ENDPOINT,
+  return new S3Client({
+    endpoint,
     region: "us-east-1",
     credentials: {
       accessKeyId: env.MINIO_ACCESS_KEY,
@@ -30,7 +30,24 @@ function getS3Client() {
     },
     forcePathStyle: true, // required for MinIO
   });
+}
+
+/** Internal client — uploads/deletes over the docker network endpoint. */
+function getS3Client() {
+  if (!s3Client) s3Client = makeS3Client(env.MINIO_ENDPOINT);
   return s3Client;
+}
+
+/**
+ * Presigning client — bound to the BROWSER-facing endpoint. SigV4 signs the
+ * Host header, so a URL presigned against the internal endpoint
+ * (http://<ip>:9000) is both mixed-content-blocked on https pages AND cannot
+ * be host-rewritten after signing. nginx proxies MINIO_PUBLIC_URL straight
+ * into MinIO with the Host preserved, so signatures validate.
+ */
+function getPublicS3Client() {
+  if (!s3PublicClient) s3PublicClient = makeS3Client(env.MINIO_PUBLIC_URL || env.MINIO_ENDPOINT);
+  return s3PublicClient;
 }
 
 export function isS3Configured(): boolean {
@@ -71,7 +88,7 @@ export async function getSignedUrl(fileUrl: string, expiresInSec: number = 900):
     const idx = fileUrl.indexOf(marker);
     const key = fileUrl.slice(idx + marker.length);
     const cmd = new GetObjectCommand({ Bucket: env.MINIO_BUCKET, Key: key });
-    return await s3GetSignedUrl(getS3Client(), cmd, { expiresIn: expiresInSec });
+    return await s3GetSignedUrl(getPublicS3Client(), cmd, { expiresIn: expiresInSec });
   }
   // Local-disk dev: emit a JWT-token URL. The /uploads-signed/:token endpoint
   // in index.ts validates the token and streams the file.
