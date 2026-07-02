@@ -7,6 +7,7 @@ import { authMiddleware } from "../middleware/auth";
 import { adminOrManager } from "../middleware/admin.middleware";
 import { requireRole } from "../middleware/require-role";
 import { audit } from "../middleware/audit";
+import { normalizeFullName } from "../lib/names";
 import { softDelete } from "../db/query-helpers";
 import { createSnapToken, getTransactionStatus } from "../services/midtrans.service";
 
@@ -142,7 +143,7 @@ router.post(
         `INSERT INTO users (email, password_hash, full_name, role, consent_accepted_at)
          VALUES ($1, $2, $3, 'country_representative', NOW())
          RETURNING id`,
-        [String(email).trim().toLowerCase(), hash, fullName],
+        [String(email).trim().toLowerCase(), hash, normalizeFullName(fullName)],
       );
       const userId = ins.rows[0].id as string;
       await client.query(

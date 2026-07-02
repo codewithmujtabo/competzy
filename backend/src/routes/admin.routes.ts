@@ -5,6 +5,7 @@ import { dateOnlyToNoonUtc } from "../lib/date-utils";
 import { adminOnly, adminOrManager } from "../middleware/admin.middleware";
 import { softDelete } from "../db/query-helpers";
 import { isSuperAdminEmail } from "../services/auth.service";
+import { normalizeFullName } from "../lib/names";
 import { authMiddleware } from "../middleware/auth";
 import { audit } from "../middleware/audit";
 import * as pushService from "../services/push.service";
@@ -1639,7 +1640,7 @@ router.put(
       const fields: string[] = [];
       const values: unknown[] = [];
       let i = 1;
-      if (fullName !== undefined) { fields.push(`full_name = $${i++}`); values.push(fullName); }
+      if (fullName !== undefined) { fields.push(`full_name = $${i++}`); values.push(normalizeFullName(fullName)); }
       if (phone !== undefined) {
         // Reuse phone normalisation — same shape the user route writes.
         const { toLocalPhone } = await import("../services/twilio.service");

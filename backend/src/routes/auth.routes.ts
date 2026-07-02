@@ -13,6 +13,7 @@ import {
 import { issueBypassCookie, clearBypassCookie } from "../services/bypass-cookie.service";
 import { gateArenaAuth, enforceArenaAuthGate } from "../services/arena-maintenance-gate.service";
 import { dbErrorResponse } from "../lib/db-errors";
+import { normalizeFullName } from "../lib/names";
 import { sendOtpEmail, sendPasswordResetEmail, sendEmailVerificationEmail, isSmtpConfigured } from "../services/email.service";
 import { sendPhoneOtp, verifyPhoneOtp, toE164, phoneVariants, toLocalPhone } from "../services/twilio.service";
 import { authMiddleware } from "../middleware/auth";
@@ -396,7 +397,7 @@ router.post("/signup", authLimiter, async (req: Request, res: Response) => {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9, now())
          RETURNING id`,
         // Phone is normalised to the local 0-prefixed format on the way in.
-        [email, passwordHash, fullName, phone ? toLocalPhone(phone) || null : null, city || null, province || null, normalizedCountry, role, "1.0"]
+        [email, passwordHash, normalizeFullName(fullName), phone ? toLocalPhone(phone) || null : null, city || null, province || null, normalizedCountry, role, "1.0"]
       );
       const userId = userResult.rows[0].id;
 

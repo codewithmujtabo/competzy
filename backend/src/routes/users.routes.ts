@@ -5,6 +5,7 @@ import { pool } from "../config/database";
 import { dbErrorResponse } from "../lib/db-errors";
 import { upsertSchoolFromNpsn } from "../db/upsert-school";
 import { authMiddleware } from "../middleware/auth";
+import { normalizeFullName } from "../lib/names";
 import { storeFile } from "../services/storage.service";
 import { toLocalPhone } from "../services/twilio.service";
 
@@ -123,7 +124,7 @@ router.put("/me", async (req: Request, res: Response) => {
     const values: any[] = [];
     let idx = 1;
 
-    if (fullName !== undefined) { fields.push(`full_name = $${idx++}`); values.push(fullName); }
+    if (fullName !== undefined) { fields.push(`full_name = $${idx++}`); values.push(normalizeFullName(fullName)); }
     // Phone is normalised to the local 0-prefixed format on the way in.
     if (phone !== undefined) { fields.push(`phone = $${idx++}`); values.push(phone ? toLocalPhone(phone) || null : null); }
     if (city !== undefined) { fields.push(`city = $${idx++}`); values.push(city); }

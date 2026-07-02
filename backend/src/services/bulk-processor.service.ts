@@ -1,4 +1,5 @@
 import { pool } from "../config/database";
+import { normalizeFullName } from "../lib/names";
 import { parse } from "csv-parse/sync";
 import { hashPassword } from "./auth.service";
 import { isSmtpConfigured, sendTempPasswordEmail } from "./email.service";
@@ -217,7 +218,7 @@ async function processRow(
         `INSERT INTO users (email, password_hash, full_name, phone, role, consent_accepted_at, consent_version)
          VALUES ($1, $2, $3, $4, 'student', now(), '1.0')
          RETURNING id`,
-        [row.email.toLowerCase(), hashedPassword, row.full_name, row.phone || null]
+        [row.email.toLowerCase(), hashedPassword, normalizeFullName(row.full_name), row.phone || null]
       );
       userId = userResult.rows[0].id;
 
