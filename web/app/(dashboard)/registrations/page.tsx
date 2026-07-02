@@ -8,8 +8,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Eye } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import { competitionsApi, registrationsApi } from '@/lib/api';
+import { adminHttp } from '@/lib/api/client';
+import { useAuth } from '@/lib/auth/context';
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
 import type { Competition, PendingRegistration } from '@/types';
 import { PageHeader } from '@/components/shell/page-header';
 import { Pager } from '@/components/shell/pager';
@@ -103,6 +106,27 @@ export default function RegistrationsPage() {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [viewing, setViewing] = useState<PendingRegistration | null>(null);
+
+  // Registration deletion is SUPER-ADMIN only (backend-enforced too).
+  const { user: me } = useAuth();
+  const canDelete = !!me?.isSuperAdmin;
+  const [deleteTarget, setDeleteTarget] = useState<PendingRegistration | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await adminHttp.delete(`/admin/registrations/${deleteTarget.registrationId}`);
+      toast.success(t('adm.reg.del.done', { name: deleteTarget.student.name }));
+      setDeleteTarget(null);
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('adm.reg.del.fail'));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Competition list for the filter dropdown — loaded once on mount.
   const [comps, setComps] = useState<Competition[]>([]);
@@ -359,6 +383,17 @@ export default function RegistrationsPage() {
                             </Button>
                           </>
                         )}
+                        {canDelete && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDeleteTarget(r)}
+                            title={t('adm.reg.del.confirm')}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -478,6 +513,22 @@ export default function RegistrationsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+        title={t('adm.reg.del.title')}
+        resourceName={deleteTarget?.student.name ?? ''}
+        consequences={[t('adm.reg.del.c1'), t('adm.reg.del.c2'), t('adm.reg.del.c3')]}
+        typeToConfirmLabel={t('adm.reg.del.typeHint')}
+        confirmLabel={t('adm.reg.del.confirm')}
+        confirmingLabel={t('adm.reg.del.deleting')}
+        cancelLabel={t('common.cancel')}
+        confirming={deleting}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

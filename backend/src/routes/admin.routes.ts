@@ -905,7 +905,8 @@ router.get("/registrations/pending", async (req, res) => {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
     const offset = (page - 1) * limit;
 
-    const where: string[] = [];
+    // Soft-deleted registrations never appear (same live-filter rule as users).
+    const where: string[] = ["r.deleted_at IS NULL"];
     const values: unknown[] = [];
     if (statusFilter !== "all") {
       values.push(statusFilter);
@@ -1028,6 +1029,50 @@ router.get("/registrations/pending", async (req, res) => {
  * GET /api/admin/registrations/:id
  * Get full registration details
  */
+/**
+ * DELETE /api/admin/registrations/:id
+ * SUPER-ADMIN ONLY — soft-deletes a registration. It disappears from every
+ * list (student portal included) while payments/audit history is retained.
+ * The web UI additionally requires typing the student's name to confirm.
+ */
+router.delete(
+  "/registrations/:id",
+  audit({ action: "admin.registration.delete", resourceType: "registration", resourceIdParam: "id" }),
+  async (req, res) => {
+    try {
+      const caller = await pool.query("SELECT email FROM users WHERE id = $1", [req.userId]);
+      if (!isSuperAdminEmail(caller.rows[0]?.email ?? "")) {
+        res.status(403).json({ message: "Only the super-admin can delete a registration" });
+        return;
+      }
+
+      const id = String(req.params.id);
+      const target = await pool.query(
+        `SELECT r.id, r.registration_number, u.full_name AS student_name
+           FROM registrations r
+           JOIN users u ON u.id = r.user_id
+          WHERE r.id = $1 AND r.deleted_at IS NULL`,
+        [id]
+      );
+      if (target.rows.length === 0) {
+        res.status(404).json({ message: "Registration not found" });
+        return;
+      }
+
+      await softDelete("registrations", id);
+      res.json({
+        message: "Registration deleted",
+        id,
+        registrationNumber: target.rows[0].registration_number,
+        studentName: target.rows[0].student_name,
+      });
+    } catch (err) {
+      console.error("Delete registration error:", err);
+      res.status(500).json({ message: "Failed to delete registration" });
+    }
+  }
+);
+
 router.get("/registrations/:id", async (req, res) => {
   try {
     const { id } = req.params;
