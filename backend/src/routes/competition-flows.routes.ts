@@ -153,7 +153,8 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const { compId } = req.params;
-      const { stepKey, title, titleId, description, descriptionId, checkType } = req.body ?? {};
+      const { stepKey, title, titleId, description, descriptionId, checkType, startsOn, endsOn, location } =
+        req.body ?? {};
 
       if (!title || typeof title !== "string" || !title.trim()) {
         res.status(400).json({ message: "title is required" });
@@ -163,6 +164,9 @@ router.post(
       // Optional Bahasa Indonesia translations — empty string normalises to NULL
       // so the renderer falls back to the canonical (English) column.
       const norm = (v: unknown): string | null =>
+        typeof v === "string" && v.trim() ? v.trim() : null;
+      // DATE columns reject '' — normalise blanks to NULL.
+      const normDate = (v: unknown): string | null =>
         typeof v === "string" && v.trim() ? v.trim() : null;
 
       const comp = await pool.query("SELECT 1 FROM competitions WHERE id = $1", [compId]);
@@ -180,8 +184,8 @@ router.post(
 
       const inserted = await pool.query(
         `INSERT INTO competition_flows
-           (comp_id, step_order, step_key, title, title_id, description, description_id, check_type)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           (comp_id, step_order, step_key, title, title_id, description, description_id, check_type, starts_on, ends_on, location)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING ${FLOW_COLS}`,
         [
           compId,
@@ -192,6 +196,9 @@ router.post(
           description ?? null,
           norm(descriptionId),
           ct,
+          normDate(startsOn),
+          normDate(endsOn),
+          norm(location),
         ]
       );
       res.status(201).json(mapStep(inserted.rows[0]));
@@ -257,7 +264,7 @@ router.put(
   async (req: Request, res: Response) => {
     try {
       const { compId, stepId } = req.params;
-      const { stepKey, title, titleId, description, descriptionId, location, locationId, checkType } =
+      const { stepKey, title, titleId, description, descriptionId, location, locationId, checkType, startsOn, endsOn } =
         req.body ?? {};
       const norm = (v: unknown): string | null =>
         typeof v === "string" && v.trim() ? v.trim() : null;
@@ -288,6 +295,15 @@ router.put(
       if (locationId !== undefined) {
         sets.push(`location_id = $${i++}`);
         values.push(norm(locationId));
+      }
+      // DATE columns reject '' — a blank clears the date (NULL).
+      if (startsOn !== undefined) {
+        sets.push(`starts_on = $${i++}`);
+        values.push(norm(startsOn));
+      }
+      if (endsOn !== undefined) {
+        sets.push(`ends_on = $${i++}`);
+        values.push(norm(endsOn));
       }
       if (typeof stepKey === "string") {
         sets.push(`step_key = $${i++}`);

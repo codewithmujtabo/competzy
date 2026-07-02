@@ -12,6 +12,7 @@ import { adminHttp } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { BilingualInput } from '@/components/ui/bilingual-input';
 import {
   Dialog,
@@ -39,6 +40,25 @@ interface FlowStep {
   description: string | null;
   descriptionId: string | null;
   checkType: CheckType;
+  startsOn: string | null;
+  endsOn: string | null;
+  location: string | null;
+}
+
+// An API date (ISO or null) → the YYYY-MM-DD a <input type="date"> expects.
+function toDateInput(v: string | null): string {
+  if (!v) return '';
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+}
+
+// Short "2 Jun – 1 Aug 2026" label for the step list.
+function fmtStepDates(startsOn: string | null, endsOn: string | null): string {
+  const f = (v: string) =>
+    new Date(v).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (startsOn && endsOn) return `${f(startsOn)} – ${f(endsOn)}`;
+  if (startsOn) return f(startsOn);
+  return endsOn ? f(endsOn) : '';
 }
 
 const CHECK_TYPE_OPTIONS: { value: CheckType; label: string }[] = [
@@ -63,6 +83,9 @@ const FORM_DEFAULTS = {
   description: '',
   descriptionId: '',
   checkType: 'none' as CheckType,
+  startsOn: '',
+  endsOn: '',
+  location: '',
 };
 
 export function FlowEditorDialog({
@@ -114,6 +137,9 @@ export function FlowEditorDialog({
         description: form.description.trim() || null,
         descriptionId: form.descriptionId.trim() || null,
         checkType: form.checkType,
+        startsOn: form.startsOn || null,
+        endsOn: form.endsOn || null,
+        location: form.location.trim() || null,
       };
       if (editId) {
         await adminHttp.put(`/admin/competitions/${competitionId}/flow/${editId}`, body);
@@ -139,6 +165,9 @@ export function FlowEditorDialog({
       description: s.description ?? '',
       descriptionId: s.descriptionId ?? '',
       checkType: s.checkType,
+      startsOn: toDateInput(s.startsOn),
+      endsOn: toDateInput(s.endsOn),
+      location: s.location ?? '',
     });
   };
 
@@ -211,9 +240,14 @@ export function FlowEditorDialog({
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
                   {s.stepOrder}
                 </span>
-                <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                  {s.title}
-                </p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{s.title}</p>
+                  {(s.startsOn || s.endsOn) && (
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {fmtStepDates(s.startsOn, s.endsOn)}
+                    </p>
+                  )}
+                </div>
                 <Badge variant="secondary" className="shrink-0 font-normal">
                   {CHECK_TYPE_LABEL[s.checkType]}
                 </Badge>
@@ -303,6 +337,43 @@ export function FlowEditorDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          {/* Timeline dates shown on the student dashboard. Both optional — set
+              the start alone for a single-day stage, or both for a range. */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="flow-start" className="mb-1.5 text-xs text-muted-foreground">
+                Start date
+              </Label>
+              <Input
+                id="flow-start"
+                type="date"
+                value={form.startsOn}
+                onChange={(e) => setForm((f) => ({ ...f, startsOn: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="flow-end" className="mb-1.5 text-xs text-muted-foreground">
+                End date (optional)
+              </Label>
+              <Input
+                id="flow-end"
+                type="date"
+                value={form.endsOn}
+                onChange={(e) => setForm((f) => ({ ...f, endsOn: e.target.value }))}
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="flow-location" className="mb-1.5 text-xs text-muted-foreground">
+              Location / mode (optional)
+            </Label>
+            <Input
+              id="flow-location"
+              value={form.location}
+              onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+              placeholder="e.g. Online, or Online / Test Center"
+            />
           </div>
           <div className="flex justify-end gap-2">
             {editId && (
