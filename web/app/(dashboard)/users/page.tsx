@@ -35,11 +35,18 @@ const ROLES = [
   { key: 'parent', label: 'Parent' },
   { key: 'teacher', label: 'Teacher' },
   { key: 'school_admin', label: 'School Admin' },
+  { key: 'organizer', label: 'Organizer' },
+  { key: 'country_representative', label: 'Country Rep' },
+  { key: 'question_maker', label: 'Question Maker' },
+  { key: 'manager', label: 'Manager' },
   { key: 'admin', label: 'Admin' },
 ];
 
 const ROLE_STYLE: Record<string, string> = {
   admin: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200',
+  manager: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200',
+  country_representative: 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200',
+  question_maker: 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-200',
   school_admin: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200',
   organizer: 'bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200',
   teacher: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
@@ -174,7 +181,8 @@ export default function UsersPage() {
           }}
           className="ml-auto"
         >
-          <TabsList>
+          {/* 10 roles — allow the pill bar to wrap instead of overflowing. */}
+          <TabsList className="h-auto flex-wrap justify-end">
             {ROLES.map((r) => (
               <TabsTrigger key={r.key} value={r.key}>
                 {r.label}
