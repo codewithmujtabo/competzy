@@ -26,6 +26,7 @@ const LOGO_MATCHERS: { file: string; test: RegExp }[] = [
   { file: 'genius', test: /genius/i },
   { file: 'igo', test: /\bigo\b|greenwich/i },
   { file: 'nextgen', test: /next\s*gen/i },
+  { file: 'coding', test: /coding/i },
   { file: 'ispo', test: /\bispo\b/i },
   { file: 'osebi', test: /osebi/i },
   { file: 'emc', test: /\bemc\b/i },
