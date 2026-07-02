@@ -123,6 +123,8 @@ export const en = {
   'dashboard.welcomeTo': 'Welcome to {name}',
   'dashboard.noRegistration': "You don't have a registration yet. Enroll now to claim your spot.",
   'dashboard.registerFor': 'Register for {name}',
+  'dashboard.regNotOpen': "Registration hasn't opened yet — check back soon.",
+  'dashboard.regOpensOn': 'Registration opens on {date}.',
   'dashboard.enrolling': 'Enrolling…',
   'dashboard.competitionRounds': 'Competition rounds',
   'dashboard.roundsSubtitle': 'Register and pay for each round of {name} you want to enter.',

@@ -318,14 +318,31 @@ router.post("/", async (req: Request, res: Response) => {
       return;
     }
 
-    // Look up the competition fee to decide initial status
+    // Look up the competition fee (to decide initial status) + the registration
+    // window (to gate "not open yet").
     const compResult = await pool.query(
-      "SELECT fee FROM competitions WHERE id = $1",
+      "SELECT fee, registration_status, reg_open_date FROM competitions WHERE id = $1",
       [compId]
     );
 
     if (compResult.rows.length === 0) {
       res.status(404).json({ message: "Competition not found" });
+      return;
+    }
+
+    // Registration-window gate: refuse to create a registration while the
+    // competition is still "Coming Soon" or its registration open date is in
+    // the future. Keeps students from registering before the operator opens it.
+    // (Per-round windows are enforced separately by checkRoundGating below.)
+    const { registration_status: regStatus, reg_open_date: regOpenDate } = compResult.rows[0];
+    const notOpenByStatus = regStatus === "Coming Soon";
+    const notOpenByDate = !!regOpenDate && new Date(regOpenDate).getTime() > Date.now();
+    if (notOpenByStatus || notOpenByDate) {
+      res.status(403).json({
+        code: "REGISTRATION_NOT_OPEN",
+        message: "Registration for this competition hasn't opened yet.",
+        regOpenDate: regOpenDate ?? null,
+      });
       return;
     }
 

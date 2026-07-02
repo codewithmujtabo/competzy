@@ -123,6 +123,8 @@ export const id: Partial<Record<MessageKey, string>> = {
   'dashboard.welcomeTo': 'Selamat datang di {name}',
   'dashboard.noRegistration': 'Kamu belum terdaftar. Daftar sekarang untuk mengamankan tempatmu.',
   'dashboard.registerFor': 'Daftar {name}',
+  'dashboard.regNotOpen': 'Pendaftaran belum dibuka — cek lagi nanti.',
+  'dashboard.regOpensOn': 'Pendaftaran dibuka pada {date}.',
   'dashboard.enrolling': 'Mendaftar…',
   'dashboard.competitionRounds': 'Babak Kompetisi',
   'dashboard.roundsSubtitle': 'Daftar dan bayar untuk setiap babak {name} yang ingin kamu ikuti.',

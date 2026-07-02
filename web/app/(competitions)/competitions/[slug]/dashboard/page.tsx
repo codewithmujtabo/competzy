@@ -1713,8 +1713,26 @@ export default function CompetitionDashboardPage() {
     return raw.filter((x): x is ProfileFieldKey => typeof x === 'string');
   };
 
+  // Registration window gate (mirrors the backend POST /registrations check).
+  // Registration is blocked while the competition is "Coming Soon" or its open
+  // date is still in the future — so students can't register before it opens.
+  const registrationOpen =
+    comp?.registrationStatus !== 'Coming Soon' &&
+    !(comp?.regOpenDate && new Date(comp.regOpenDate).getTime() > Date.now());
+  const regOpensLabel = comp?.regOpenDate
+    ? new Date(comp.regOpenDate).toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
+  const notOpenNote = regOpensLabel
+    ? t('dashboard.regOpensOn', { date: regOpensLabel })
+    : t('dashboard.regNotOpen');
+
   const enrollNow = async () => {
     if (!comp?.id) return;
+    if (!registrationOpen) { setErr(notOpenNote); return; }
     // If the competition declares required profile fields, open the dialog
     // FIRST so the student reviews every field with their current values
     // pre-filled — not only the ones currently blank. The dialog's onCompleted
@@ -1750,6 +1768,7 @@ export default function CompetitionDashboardPage() {
 
   const enrollRound = async (roundId: string, meta?: Record<string, unknown>) => {
     if (!comp?.id) return;
+    if (!registrationOpen) { setErr(notOpenNote); return; }
     if (requiredProfileFields.length > 0) {
       setProfileGate({ roundId, meta, missingFields: requiredProfileFields });
       return;
@@ -2019,9 +2038,18 @@ export default function CompetitionDashboardPage() {
               {t('dashboard.welcomeTo', { name: config.wordmark })}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">{t('dashboard.noRegistration')}</p>
-            <Button className="mx-auto mt-5 w-fit" onClick={enrollNow} disabled={enroll || !comp?.id}>
-              {enroll ? t('dashboard.enrolling') : t('dashboard.registerFor', { name: `${config.shortName} 2026` })}
-            </Button>
+            {registrationOpen ? (
+              <Button className="mx-auto mt-5 w-fit" onClick={enrollNow} disabled={enroll || !comp?.id}>
+                {enroll ? t('dashboard.enrolling') : t('dashboard.registerFor', { name: `${config.shortName} 2026` })}
+              </Button>
+            ) : (
+              <>
+                <Button className="mx-auto mt-5 w-fit" disabled>
+                  {t('compStatus.comingSoon')}
+                </Button>
+                <p className="mt-2 text-xs text-muted-foreground">{notOpenNote}</p>
+              </>
+            )}
             {!comp?.id && (
               <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
                 {config.shortName} 2026 isn’t configured yet. Ask an admin to run the latest migration.

@@ -12,7 +12,11 @@ export interface PortalCompetition {
   slug: string | null;
   name: string;
   fee: number;
-  registrationStatus?: 'On Going' | 'Closed' | 'Coming Soon';
+  // Free-text; canonical values are 'Coming Soon' | 'Registration Opened' |
+  // 'Registration Closed' (see lib/competitions/status).
+  registrationStatus?: string;
+  /** ISO date the registration window opens — null/absent = no gate. */
+  regOpenDate?: string | null;
 }
 
 export function usePortalComp(slug: string) {
