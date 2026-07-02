@@ -1459,7 +1459,9 @@ router.get("/users", async (req, res) => {
     const search = req.query.search as string | undefined;
     const offset = (page - 1) * limit;
 
-    const conditions: string[] = [];
+    // Soft-deleted accounts never appear in the browse list (they can no
+    // longer sign in; history lives on in their registrations/payments).
+    const conditions: string[] = ["u.deleted_at IS NULL"];
     const params: unknown[]    = [];
     let   i = 1;
 
