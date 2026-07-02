@@ -1644,7 +1644,24 @@ router.get("/users/:id", async (req, res) => {
       linkedStudents = ls.rows;
     }
 
-    res.json({ user, linkedStudents });
+    // Role-detail blocks for the comprehensive edit form.
+    let studentDetail: Record<string, unknown> | null = null;
+    let teacherDetail: Record<string, unknown> | null = null;
+    if (user.role === "student") {
+      const r = await pool.query(
+        "SELECT grade, nisn, date_of_birth FROM students WHERE id = $1",
+        [req.params.id]
+      );
+      studentDetail = r.rows[0] ?? {};
+    } else if (user.role === "teacher") {
+      const r = await pool.query(
+        "SELECT school, subject, department FROM teachers WHERE id = $1",
+        [req.params.id]
+      );
+      teacherDetail = r.rows[0] ?? {};
+    }
+
+    res.json({ user, linkedStudents, studentDetail, teacherDetail });
   } catch (err) {
     console.error("Admin user detail error:", err);
     res.status(500).json({ message: "Failed to fetch user" });
@@ -1660,19 +1677,88 @@ router.put(
   audit({ action: "admin.user.update", resourceType: "user", resourceIdParam: "id" }),
   async (req, res) => {
     try {
-      const { fullName, phone, schoolId } = req.body as {
+      const {
+        fullName, phone, schoolId, email, city, country, role,
+        grade, nisn, dateOfBirth, subject, department, teacherSchool,
+      } = req.body as {
         fullName?: string;
         phone?: string;
         schoolId?: string | null;
+        email?: string;
+        city?: string | null;
+        country?: string | null;
+        role?: string;
+        grade?: string | null;
+        nisn?: string | null;
+        dateOfBirth?: string | null;
+        subject?: string | null;
+        department?: string | null;
+        teacherSchool?: string | null;
       };
 
       const existing = await pool.query(
-        "SELECT role FROM users WHERE id = $1 AND deleted_at IS NULL",
+        "SELECT role, email FROM users WHERE id = $1 AND deleted_at IS NULL",
         [req.params.id]
       );
       if (existing.rows.length === 0) {
         res.status(404).json({ message: "User not found" });
         return;
+      }
+      const currentRole = existing.rows[0].role as string;
+
+      // ── Role switching — SUPER-ADMIN ONLY ─────────────────────────────
+      const ALL_ROLES = new Set([
+        "student", "parent", "teacher", "school_admin", "admin",
+        "manager", "organizer", "country_representative", "question_maker",
+      ]);
+      let newRole: string | null = null;
+      if (role !== undefined && role !== currentRole) {
+        if (!ALL_ROLES.has(role)) {
+          res.status(400).json({ message: "Unknown role" });
+          return;
+        }
+        const caller = await pool.query("SELECT email FROM users WHERE id = $1", [req.userId]);
+        if (!isSuperAdminEmail(caller.rows[0]?.email ?? "")) {
+          res.status(403).json({ message: "Only the super-admin can change a user's role" });
+          return;
+        }
+        if (String(req.params.id) === req.userId) {
+          res.status(400).json({ message: "You cannot change your own role" });
+          return;
+        }
+        if (isSuperAdminEmail(existing.rows[0].email ?? "")) {
+          res.status(403).json({ message: "The super-admin account's role cannot be changed" });
+          return;
+        }
+        newRole = role;
+      }
+      const effectiveRole = newRole ?? currentRole;
+
+      // ── Field validation ──────────────────────────────────────────────
+      const normalizedEmail =
+        email !== undefined ? String(email).trim().toLowerCase() : undefined;
+      if (normalizedEmail !== undefined && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+        res.status(400).json({ message: "Invalid email address" });
+        return;
+      }
+      const normalizedCountry =
+        country === undefined ? undefined : country ? String(country).toUpperCase() : null;
+      if (normalizedCountry && !/^[A-Z]{2}$/.test(normalizedCountry)) {
+        res.status(400).json({ message: "Country must be a 2-letter ISO code" });
+        return;
+      }
+      if (grade !== undefined && grade !== null && grade !== "") {
+        const g = parseInt(String(grade), 10);
+        if (!Number.isFinite(g) || g < 1 || g > 12) {
+          res.status(400).json({ message: "Grade must be 1-12" });
+          return;
+        }
+      }
+      if (dateOfBirth) {
+        if (Number.isNaN(Date.parse(String(dateOfBirth)))) {
+          res.status(400).json({ message: "Invalid date of birth" });
+          return;
+        }
       }
 
       // Validate school exists when one was provided (null = unlink).
@@ -1699,20 +1785,94 @@ router.put(
         values.push(normalized);
       }
       if (schoolId !== undefined) { fields.push(`school_id = $${i++}`); values.push(schoolId || null); }
+      if (normalizedEmail !== undefined) { fields.push(`email = $${i++}`); values.push(normalizedEmail); }
+      if (city !== undefined) { fields.push(`city = $${i++}`); values.push(city ? String(city).trim() : null); }
+      if (normalizedCountry !== undefined) { fields.push(`country = $${i++}`); values.push(normalizedCountry); }
+      if (newRole) { fields.push(`role = $${i++}`); values.push(newRole); }
 
-      if (fields.length === 0) {
+      const touchesStudent =
+        effectiveRole === "student" &&
+        (grade !== undefined || nisn !== undefined || dateOfBirth !== undefined);
+      const touchesTeacher =
+        effectiveRole === "teacher" &&
+        (subject !== undefined || department !== undefined || teacherSchool !== undefined);
+
+      if (fields.length === 0 && !newRole && !touchesStudent && !touchesTeacher) {
         res.json({ message: "Nothing to update" });
         return;
       }
 
-      fields.push(`updated_at = now()`);
-      values.push(req.params.id);
-      await pool.query(`UPDATE users SET ${fields.join(", ")} WHERE id = $${i}`, values);
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+
+        if (fields.length > 0) {
+          fields.push(`updated_at = now()`);
+          values.push(req.params.id);
+          await client.query(`UPDATE users SET ${fields.join(", ")} WHERE id = $${i}`, values);
+        }
+
+        // Switching into a participant role must guarantee its role row —
+        // profile pages and joins assume it exists.
+        if (newRole === "student" || effectiveRole === "student") {
+          await client.query(
+            "INSERT INTO students (id) VALUES ($1) ON CONFLICT (id) DO NOTHING",
+            [req.params.id]
+          );
+        }
+        if (newRole === "teacher" || effectiveRole === "teacher") {
+          await client.query(
+            "INSERT INTO teachers (id) VALUES ($1) ON CONFLICT (id) DO NOTHING",
+            [req.params.id]
+          );
+        }
+        if (newRole === "parent") {
+          await client.query(
+            "INSERT INTO parents (id) VALUES ($1) ON CONFLICT (id) DO NOTHING",
+            [req.params.id]
+          );
+        }
+
+        if (touchesStudent) {
+          const sf: string[] = [];
+          const sv: unknown[] = [];
+          let si = 1;
+          // '' → NULL: the partial-unique idx_students_nisn treats '' as a value.
+          if (grade !== undefined) { sf.push(`grade = $${si++}`); sv.push(grade ? String(grade) : null); }
+          if (nisn !== undefined) { sf.push(`nisn = $${si++}`); sv.push(nisn ? String(nisn).trim() : null); }
+          if (dateOfBirth !== undefined) { sf.push(`date_of_birth = $${si++}`); sv.push(dateOfBirth || null); }
+          if (sf.length > 0) {
+            sv.push(req.params.id);
+            await client.query(`UPDATE students SET ${sf.join(", ")} WHERE id = $${si}`, sv);
+          }
+        }
+
+        if (touchesTeacher) {
+          const tf: string[] = [];
+          const tv: unknown[] = [];
+          let ti = 1;
+          if (teacherSchool !== undefined) { tf.push(`school = $${ti++}`); tv.push(teacherSchool ? String(teacherSchool).trim() : null); }
+          if (subject !== undefined) { tf.push(`subject = $${ti++}`); tv.push(subject ? String(subject).trim() : null); }
+          if (department !== undefined) { tf.push(`department = $${ti++}`); tv.push(department ? String(department).trim() : null); }
+          if (tf.length > 0) {
+            tv.push(req.params.id);
+            await client.query(`UPDATE teachers SET ${tf.join(", ")} WHERE id = $${ti}`, tv);
+          }
+        }
+
+        await client.query("COMMIT");
+      } catch (txErr) {
+        await client.query("ROLLBACK");
+        throw txErr;
+      } finally {
+        client.release();
+      }
 
       res.json({ message: "User updated" });
     } catch (err) {
       const mapped = dbErrorResponse(err, {
         users_email_key: "Email is already registered.",
+        idx_students_nisn: "That NISN is already linked to another student.",
       });
       if (mapped) {
         console.warn("Admin user update constraint:", (err as any)?.code);

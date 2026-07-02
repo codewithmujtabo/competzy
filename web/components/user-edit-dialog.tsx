@@ -1,22 +1,28 @@
 'use client';
 
-// Admin Edit User dialog — common identity fields + role-specific
-// assignment widgets:
-//   • Student / Teacher / School Admin → school picker (single)
+// Admin Edit User dialog — the comprehensive form:
+//   • Identity (all roles): full name, email, phone, city, country
+//   • Role switcher — SUPER-ADMIN ONLY (backend-enforced too); switching
+//     shows the target role's sections immediately so role + details save
+//     in one go
+//   • Student → grade (1-12), NISN, date of birth, school picker
+//   • Teacher → school picker + free-text school name, subject, department
+//   • School Admin → school picker
 //   • Parent → linked-student list with Add by email
-//   • Country Rep → an outbound link to /country-reps (multi-comp/country
-//     management lives there, not in this dialog)
+//   • Country Rep → outbound link to /country-reps
 
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Plus, ShieldAlert, Trash2 } from 'lucide-react';
 
 import { schoolsApi, usersApi } from '@/lib/api';
+import { useAuth } from '@/lib/auth/context';
 import type { School, User } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CountrySelect } from '@/components/ui/country-select';
 import {
   Dialog,
   DialogContent,
@@ -41,21 +47,57 @@ interface Props {
 
 const SCHOOL_ROLES = new Set(['student', 'teacher', 'school_admin']);
 
+const ALL_ROLES = [
+  'student',
+  'parent',
+  'teacher',
+  'school_admin',
+  'organizer',
+  'country_representative',
+  'question_maker',
+  'manager',
+  'admin',
+] as const;
+
+const GRADES = Array.from({ length: 12 }, (_, i) => String(i + 1));
+
+function roleLabel(r: string): string {
+  return r.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export function UserEditDialog({ userId, onClose, onSaved }: Props) {
+  const { user: me } = useAuth();
+  const isSuperAdmin = !!me?.isSuperAdmin;
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [u, setU] = useState<
-    (User & { school_id?: string | null; school_name?: string | null }) | null
+    (User & { school_id?: string | null; school_name?: string | null; country?: string | null }) | null
   >(null);
   const [linkedStudents, setLinkedStudents] = useState<
     Array<{ id: string; full_name: string; email: string }>
   >([]);
 
+  // Identity
   const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [schoolId, setSchoolId] = useState<string>('__none__');
+  const [city, setCity] = useState('');
+  const [country, setCountry] = useState<string | null>(null);
 
-  // Schools loaded lazily — only when the role uses a school picker.
+  // Role (super-admin only; drives which sections render)
+  const [role, setRole] = useState<string>('student');
+
+  // Role-specific
+  const [schoolId, setSchoolId] = useState<string>('__none__');
+  const [grade, setGrade] = useState<string>('__none__');
+  const [nisn, setNisn] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [teacherSchool, setTeacherSchool] = useState('');
+  const [subject, setSubject] = useState('');
+  const [department, setDepartment] = useState('');
+
+  // Schools loaded lazily — only when the (selected) role uses a picker.
   const [schools, setSchools] = useState<School[] | null>(null);
 
   // Parent ↔ student linking state.
@@ -63,32 +105,53 @@ export function UserEditDialog({ userId, onClose, onSaved }: Props) {
   const [linking, setLinking] = useState(false);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
 
+  const ensureSchools = useCallback(async () => {
+    if (schools) return;
+    const r = await schoolsApi.list({ limit: 500 });
+    setSchools(r.schools ?? []);
+  }, [schools]);
+
   const load = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     try {
-      const { user, linkedStudents } = await usersApi.get(userId);
+      const { user, linkedStudents, studentDetail, teacherDetail } = await usersApi.get(userId);
       setU(user);
       setLinkedStudents(linkedStudents);
       setFullName(user.full_name || '');
+      setEmail(user.email || '');
       setPhone(user.phone || '');
+      setCity(user.city || '');
+      setCountry(user.country ?? null);
+      setRole(user.role);
       setSchoolId(user.school_id ?? '__none__');
-      if (SCHOOL_ROLES.has(user.role)) {
-        // Pull verified schools so admin can re-assign cleanly.
-        const r = await schoolsApi.list({ limit: 500 });
-        setSchools(r.schools ?? []);
-      }
+      setGrade(studentDetail?.grade ? String(studentDetail.grade) : '__none__');
+      setNisn(studentDetail?.nisn ?? '');
+      setDateOfBirth(
+        studentDetail?.date_of_birth ? String(studentDetail.date_of_birth).slice(0, 10) : '',
+      );
+      setTeacherSchool(teacherDetail?.school ?? '');
+      setSubject(teacherDetail?.subject ?? '');
+      setDepartment(teacherDetail?.department ?? '');
+      if (SCHOOL_ROLES.has(user.role)) await ensureSchools();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to load user');
       onClose();
     } finally {
       setLoading(false);
     }
-  }, [userId, onClose]);
+  }, [userId, onClose, ensureSchools]);
 
   useEffect(() => {
     if (userId) void load();
   }, [userId, load]);
+
+  // Switching the role select to a school-bearing role needs the picker data.
+  useEffect(() => {
+    if (SCHOOL_ROLES.has(role)) void ensureSchools();
+  }, [role, ensureSchools]);
+
+  const roleChanged = !!u && role !== u.role;
 
   async function handleSave() {
     if (!u) return;
@@ -96,12 +159,30 @@ export function UserEditDialog({ userId, onClose, onSaved }: Props) {
     try {
       await usersApi.update(u.id, {
         fullName: fullName.trim(),
+        email: email.trim(),
         phone: phone.trim() || null,
-        schoolId: SCHOOL_ROLES.has(u.role)
+        city: city.trim() || null,
+        country,
+        ...(isSuperAdmin && roleChanged ? { role } : {}),
+        schoolId: SCHOOL_ROLES.has(role)
           ? schoolId === '__none__'
             ? null
             : schoolId
           : undefined,
+        ...(role === 'student'
+          ? {
+              grade: grade === '__none__' ? null : grade,
+              nisn: nisn.trim() || null,
+              dateOfBirth: dateOfBirth || null,
+            }
+          : {}),
+        ...(role === 'teacher'
+          ? {
+              teacherSchool: teacherSchool.trim() || null,
+              subject: subject.trim() || null,
+              department: department.trim() || null,
+            }
+          : {}),
       });
       toast.success('User updated');
       onSaved();
@@ -144,11 +225,11 @@ export function UserEditDialog({ userId, onClose, onSaved }: Props) {
 
   return (
     <Dialog open={!!userId} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Edit user</DialogTitle>
           <DialogDescription>
-            Update profile details and role-specific assignments.
+            Update identity, role, and role-specific assignments.
           </DialogDescription>
         </DialogHeader>
 
@@ -160,39 +241,168 @@ export function UserEditDialog({ userId, onClose, onSaved }: Props) {
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              <div className="flex items-center justify-between">
-                <span className="font-mono">{u.email}</span>
-                <span className="font-mono capitalize">{u.role.replace(/_/g, ' ')}</span>
+            {/* ── Identity ─────────────────────────────────────────────── */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="user-name">Full name</Label>
+                <Input
+                  id="user-name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Full name"
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="user-email">Email</Label>
+                <Input
+                  id="user-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@email.com"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  The sign-in identity. Changing it takes effect immediately.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="user-phone">Phone</Label>
+                <Input
+                  id="user-phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="08xxx or +628xxx"
+                  inputMode="tel"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="user-city">City</Label>
+                <Input
+                  id="user-city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="City"
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Country</Label>
+                <CountrySelect value={country} onChange={setCountry} />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="user-name">Full name</Label>
-              <Input
-                id="user-name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Full name"
-              />
-            </div>
+            {/* ── Role — super-admin only ──────────────────────────────── */}
+            {isSuperAdmin ? (
+              <div className="space-y-2 rounded-md border border-warning/60 bg-warning/10 p-3">
+                <Label>Role</Label>
+                <Select value={role} onValueChange={setRole}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALL_ROLES.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {roleLabel(r)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {roleChanged && (
+                  <p className="flex items-start gap-1.5 text-[11px] text-foreground">
+                    <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-warning-foreground" />
+                    Changing {roleLabel(u.role)} to {roleLabel(role)} changes everything this
+                    account can access, effective immediately after saving.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                Role: <span className="font-mono capitalize">{roleLabel(u.role)}</span>
+                <span className="ml-1">(only the super-admin can change roles)</span>
+              </div>
+            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="user-phone">Phone</Label>
-              <Input
-                id="user-phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="08xxx or +628xxx"
-                inputMode="tel"
-              />
-            </div>
+            {/* ── Student ──────────────────────────────────────────────── */}
+            {role === 'student' && (
+              <div className="grid gap-4 rounded-md border bg-muted/20 p-3 sm:grid-cols-2">
+                <p className="text-sm font-medium sm:col-span-2">Student details</p>
+                <div className="space-y-2">
+                  <Label>Grade (class)</Label>
+                  <Select value={grade} onValueChange={setGrade}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Grade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Not set</SelectItem>
+                      {GRADES.map((g) => (
+                        <SelectItem key={g} value={g}>
+                          Grade {g}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user-nisn">NISN</Label>
+                  <Input
+                    id="user-nisn"
+                    value={nisn}
+                    onChange={(e) => setNisn(e.target.value)}
+                    placeholder="10 digits"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="user-dob">Date of birth</Label>
+                  <Input
+                    id="user-dob"
+                    type="date"
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
 
-            {SCHOOL_ROLES.has(u.role) && (
+            {/* ── Teacher ──────────────────────────────────────────────── */}
+            {role === 'teacher' && (
+              <div className="grid gap-4 rounded-md border bg-muted/20 p-3 sm:grid-cols-2">
+                <p className="text-sm font-medium sm:col-span-2">Teacher details</p>
+                <div className="space-y-2">
+                  <Label htmlFor="user-tschool">School name (free text)</Label>
+                  <Input
+                    id="user-tschool"
+                    value={teacherSchool}
+                    onChange={(e) => setTeacherSchool(e.target.value)}
+                    placeholder="School name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user-subject">Subject</Label>
+                  <Input
+                    id="user-subject"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    placeholder="e.g. Mathematics"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="user-dept">Department</Label>
+                  <Input
+                    id="user-dept"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    placeholder="Department"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* ── School association (student / teacher / school admin) ── */}
+            {SCHOOL_ROLES.has(role) && (
               <div className="space-y-2">
                 <Label>Associated school</Label>
                 <Select value={schoolId} onValueChange={setSchoolId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Pick a school" />
                   </SelectTrigger>
                   <SelectContent className="max-h-72">
@@ -206,13 +416,14 @@ export function UserEditDialog({ userId, onClose, onSaved }: Props) {
                   </SelectContent>
                 </Select>
                 <p className="text-[11px] text-muted-foreground">
-                  Linking a {u.role.replace(/_/g, ' ')} to a school enables school-scoped
+                  Linking a {roleLabel(role).toLowerCase()} to a school enables school-scoped
                   features (bulk registration, achievement PDF, school dashboard).
                 </p>
               </div>
             )}
 
-            {u.role === 'parent' && (
+            {/* ── Parent: linked students ──────────────────────────────── */}
+            {role === 'parent' && (
               <div className="space-y-3 rounded-md border bg-muted/20 p-3">
                 <div>
                   <p className="text-sm font-medium">Linked students</p>
@@ -268,7 +479,8 @@ export function UserEditDialog({ userId, onClose, onSaved }: Props) {
               </div>
             )}
 
-            {u.role === 'country_representative' && (
+            {/* ── Country rep pointer ──────────────────────────────────── */}
+            {role === 'country_representative' && (
               <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs text-foreground">
                 <p className="font-medium">Country &amp; competition assignments</p>
                 <p className="mt-1 text-muted-foreground">

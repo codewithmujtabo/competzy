@@ -58,11 +58,34 @@ export const usersApi = {
   },
   get: (id: string) =>
     adminHttp.get<{
-      user: User & { school_id?: string | null; school_name?: string | null };
+      user: User & {
+        school_id?: string | null;
+        school_name?: string | null;
+        country?: string | null;
+      };
       linkedStudents: Array<{ id: string; full_name: string; email: string }>;
+      studentDetail: { grade?: string | null; nisn?: string | null; date_of_birth?: string | null } | null;
+      teacherDetail: { school?: string | null; subject?: string | null; department?: string | null } | null;
     }>(`/admin/users/${id}`),
-  update: (id: string, data: { fullName?: string; phone?: string | null; schoolId?: string | null }) =>
-    adminHttp.put<{ message: string }>(`/admin/users/${id}`, data),
+  update: (
+    id: string,
+    data: {
+      fullName?: string;
+      email?: string;
+      phone?: string | null;
+      city?: string | null;
+      country?: string | null;
+      /** SUPER-ADMIN only — rejected 403 otherwise. */
+      role?: string;
+      schoolId?: string | null;
+      grade?: string | null;
+      nisn?: string | null;
+      dateOfBirth?: string | null;
+      teacherSchool?: string | null;
+      subject?: string | null;
+      department?: string | null;
+    },
+  ) => adminHttp.put<{ message: string }>(`/admin/users/${id}`, data),
   linkStudent: (parentId: string, studentEmail: string) =>
     adminHttp.post<{ message: string; studentId: string }>(
       `/admin/users/${parentId}/student-links`,
