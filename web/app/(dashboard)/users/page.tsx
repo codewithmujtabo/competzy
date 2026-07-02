@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Pencil, Search, UserCog, X } from 'lucide-react';
+import { Pencil, Search, Trash2, UserCog, X } from 'lucide-react';
 import { usersApi } from '@/lib/api';
 import { adminHttp } from '@/lib/api/client';
 import { useAuth } from '@/lib/auth/context';
@@ -27,6 +27,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useT } from '@/lib/i18n/context';
 import { UserEditDialog } from '@/components/user-edit-dialog';
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog';
 
 const ROLES = [
   { key: 'all', label: 'All' },
@@ -63,6 +64,28 @@ export default function UsersPage() {
   const canImpersonate = !!me?.isSuperAdmin;
   const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Managers may not delete operator accounts (backend enforces too).
+  const OPERATOR_ROLES = new Set(['admin', 'manager', 'organizer']);
+  const canDelete = (u: User) =>
+    u.id !== me?.id && !(me?.role === 'manager' && OPERATOR_ROLES.has(u.role));
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await adminHttp.delete(`/admin/users/${deleteTarget.id}`);
+      toast.success(t('usr.del.done', { email: deleteTarget.email }));
+      setDeleteTarget(null);
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('usr.del.fail'));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const impersonate = async (u: User) => {
     setImpersonatingId(u.id);
@@ -247,6 +270,17 @@ export default function UsersPage() {
                               {impersonatingId === u.id ? 'Starting…' : 'Impersonate'}
                             </Button>
                           )}
+                          {canDelete(u) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeleteTarget(u)}
+                              title={t('usr.del.confirm')}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          )}
                         </div>
                       )}
                     </TableCell>
@@ -258,6 +292,22 @@ export default function UsersPage() {
         </div>
         <Pager page={page} total={total} limit={LIMIT} onChange={setPage} />
       </Card>
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+        title={t('usr.del.title')}
+        resourceName={deleteTarget?.email ?? ''}
+        consequences={[t('usr.del.c1'), t('usr.del.c2'), t('usr.del.c3')]}
+        typeToConfirmLabel={t('usr.del.typeHint')}
+        confirmLabel={t('usr.del.confirm')}
+        confirmingLabel={t('usr.del.deleting')}
+        cancelLabel={t('common.cancel')}
+        confirming={deleting}
+        onConfirm={confirmDelete}
+      />
+
 
       <UserEditDialog
         userId={editingId}

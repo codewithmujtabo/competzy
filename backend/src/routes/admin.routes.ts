@@ -3,6 +3,8 @@ import { pool } from "../config/database";
 import { dbErrorResponse } from "../lib/db-errors";
 import { dateOnlyToNoonUtc } from "../lib/date-utils";
 import { adminOnly, adminOrManager } from "../middleware/admin.middleware";
+import { softDelete } from "../db/query-helpers";
+import { isSuperAdminEmail } from "../services/auth.service";
 import { authMiddleware } from "../middleware/auth";
 import { audit } from "../middleware/audit";
 import * as pushService from "../services/push.service";
@@ -1494,6 +1496,69 @@ router.get("/users", async (req, res) => {
 // ── GET /api/admin/users/:id ──────────────────────────────────────────────
 // Detail view for the Edit dialog. Includes school + parent-linked
 // student list (when applicable).
+/**
+ * DELETE /api/admin/users/:id
+ * Soft-deletes a user account. The auth middleware rejects soft-deleted
+ * users with 401, so every live session of the target dies immediately.
+ * Registrations/payments history is retained (soft delete, not a purge).
+ *
+ * Safety rails:
+ *  - you cannot delete your own account
+ *  - the super-admin account can never be deleted
+ *  - admin-role accounts can only be deleted BY the super-admin
+ *  - managers can only delete participant accounts (not admin/manager/organizer)
+ */
+router.delete(
+  "/users/:id",
+  audit({ action: "admin.user.delete", resourceType: "user", resourceIdParam: "id" }),
+  async (req, res) => {
+    try {
+      const id = String(req.params.id);
+      if (id === req.userId) {
+        res.status(400).json({ message: "You cannot delete your own account" });
+        return;
+      }
+
+      const target = await pool.query(
+        "SELECT email, role, full_name FROM users WHERE id = $1 AND deleted_at IS NULL",
+        [id]
+      );
+      if (target.rows.length === 0) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+      const { email: targetEmail, role: targetRole } = target.rows[0];
+
+      if (isSuperAdminEmail(targetEmail)) {
+        res.status(403).json({ message: "The super-admin account cannot be deleted" });
+        return;
+      }
+
+      const callerRole = (req as any).userRole as string;
+      const OPERATOR_ROLES = new Set(["admin", "manager", "organizer"]);
+      if (callerRole === "manager" && OPERATOR_ROLES.has(targetRole)) {
+        res.status(403).json({
+          message: "Managers can only delete participant accounts, not operator accounts",
+        });
+        return;
+      }
+      if (targetRole === "admin") {
+        const caller = await pool.query("SELECT email FROM users WHERE id = $1", [req.userId]);
+        if (!isSuperAdminEmail(caller.rows[0]?.email ?? "")) {
+          res.status(403).json({ message: "Only the super-admin can delete an admin account" });
+          return;
+        }
+      }
+
+      await softDelete("users", id);
+      res.json({ message: "User deleted", id, email: targetEmail });
+    } catch (err) {
+      console.error("Delete user error:", err);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  }
+);
+
 router.get("/users/:id", async (req, res) => {
   try {
     const userRes = await pool.query(
